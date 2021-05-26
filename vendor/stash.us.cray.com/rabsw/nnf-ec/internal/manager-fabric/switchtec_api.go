@@ -1,0 +1,33 @@
+package fabric
+
+import (
+	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
+)
+
+type SwitchtecControllerInterface interface {
+	Open(path string) (SwitchtecDeviceInterface, error)
+}
+
+type SwitchtecDeviceInterface interface {
+	// these are ugly getters for the nvme devices to get attributes
+	// about the device interface. Not sure how to make this less crap
+	// without adding an unnecessarily large abstraction. I'll keep it
+	// for now until something better is found.
+	Device() *switchtec.Device
+	Path() *string
+
+	Close()
+
+	Identify() (int32, error)
+
+	GetFirmwareVersion() (string, error)
+	GetModel() (string, error)
+	GetManufacturer() (string, error)
+	GetSerialNumber() (string, error)
+
+	GetPortStatus() ([]switchtec.PortLinkStat, error)
+
+	EnumerateEndpoint(uint8, func(epPort *switchtec.DumpEpPortDevice) error) error
+
+	Bind(uint8, uint8, uint16) error
+}

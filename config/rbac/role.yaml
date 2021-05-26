@@ -1,0 +1,73 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: manager-role
+  namespace: nnf-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfstorages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfstorages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfstorages/status
+  verbs:
+  - get
+  - patch
+  - update

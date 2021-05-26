@@ -1,0 +1,47 @@
+version: v1
+metadata:
+  name: Rabbit Storage Manager
+id: NNF
+allocationConfig:
+  policy: spares
+  standard: strict
+remoteConfig:
+  accessMode: net
+  servers:
+    - label: "Rabbit"
+      address: "rabbit-dev-01"
+    - label: "Compute 0"
+      address: "rabbit-dev-cn-01"
+    - label: "Compute 1"
+      address: "rabbit-dev-cn-02"
+    - label: "Compute 2"
+      address: ""
+    - label: "Compute 3"
+      address: ""
+    - label: "Compute 4"
+      address: ""
+    - label: "Compute 5"
+      address: ""
+    - label: "Compute 6"
+      address: ""
+    - label: "Compute 7"
+      address: ""
+    - label: "Compute 8"
+      address: "rabbit-dev-cn-03"
+    - label: "Compute 9"
+      address: "rabbit-dev-cn-04"
+    - label: "Compute 10"
+      address: ""
+    - label: "Compute 11"
+      address: ""
+    - label: "Compute 12"
+      address: ""
+    - label: "Compute 13"
+      address: ""
+    - label: "Compute 14"
+      address: ""
+    - label: "Compute 15"
+      address: ""
+
+
+  

@@ -1,0 +1,42 @@
+version: v1
+metadata:
+  name: NNF Server Manager
+fileSystems:
+  - name: zfs
+    install:
+      - dist: el8_3
+        command: >
+          dnf install https://zfsonlinux.org/epel/zfs-release.el8_3.noarch.rpm
+          dnf install epel-release
+          dnf install kernel-devel zfs
+        gpg: C93AFFFD9F3F7B03C310CEB6A9D5A1C0F14AB620
+    operations:
+    - label: create
+      command: zpool create
+      arguments:
+        - "{name}"
+        - "{devices}"
+      options:
+        - mountpoint: -m {mountpoint}
+    - label: delete
+      command: zpool destroy {name}
+    - label: sync
+      command: zpool sync {name}
+    - label: snapshot
+      command: zpool checkpoint {name}
+      options:
+        - delete: "-d"
+    - label: rollback
+      command: >
+        zpool export {name}
+        zpool import --rewind-to-checkpoint {name}
+    - label: name
+      command: zpool get -Hp -o value name {name}
+    - label: guid
+      command: zpool get -Hp -o value guid {name}
+    - label: size
+      command: zpool get -Hp -o value size {name}
+    - label: allocated
+      command: zpool get -Hp -o value allocated {name}
+    - label: health
+      command: zpool get -Hp -o value health {name}
