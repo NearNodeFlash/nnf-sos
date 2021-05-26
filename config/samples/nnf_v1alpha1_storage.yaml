@@ -2,19 +2,11 @@ apiVersion: nnf.cray.com/v1alpha1
 kind: NnfStorage
 metadata:
   name: storage-sample
+  namespace: nnf-system
 spec:
   id: storage-sample
   capacity: 1048576
   nodes:
-    - name: kind-worker
-      servers:
-        - name: "Rabbit"
-          id: "/redfish/v1/StorageServices/NNF/Endpoints/0"
-        - name: "Compute 0"
-          id: "/redfish/v1/StorageServices/NNF/Endpoints/1"
-    - name: kind-worker2
-      servers:
-        - name: "Rabbit"
-          id: "/redfish/v1/StorageServices/NNF/Endpoints/0"
-        - name: "Compute 0"
-          id: "/redfish/v1/StorageServices/NNF/Endpoints/1"
+  - name: kind-worker
+    servers:
+      - name: Rabbit
