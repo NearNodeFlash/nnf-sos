@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ type NnfNodeReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfnodes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfnodes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,namespace=nnf-system,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,namespace=nnf-system,resources=pods,verbs=get;list;update
 
 // Start is called upon starting the component manager and will create the NNF Node CRD
 // that is representiative of this particular NNF Node.
@@ -114,22 +116,44 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Create the Service for contacting DP-API
 	service := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: r.serviceName(), Namespace: req.Namespace}, service)
+	serviceName := r.serviceName(node)
+	err = r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: req.Namespace}, service)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Creating dp-api service...", "Service.NamespacedName", types.NamespacedName{Name: r.serviceName(), Namespace: req.Namespace})
-			service = r.createService(node)
+			log.Info("Creating service...", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
 
+			// Create the correct label for this pod.
+			pod := &corev1.Pod{}
+			podName := os.Getenv("NNF_POD_NAME")
+			err = r.Get(ctx, types.NamespacedName{Name: podName, Namespace: req.Namespace}, pod)
+			if err != nil {
+				log.Error(err, "Failed to get pod", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
+				return ctrl.Result{}, err
+			}
+
+			if _, ok := pod.Labels["cray.nnf.x-name"]; !ok {
+				log.Info("Updating pod with x-name...", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
+
+				pod.Labels["cray.nnf.x-name"] = node.Name
+
+				if err := r.Update(ctx, pod); err != nil {
+					log.Error(err, "Failed to update pod", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
+					return ctrl.Result{}, err
+				}
+			}
+
+			service = r.createService(node)
 			if err := r.Create(ctx, service); err != nil {
-				log.Error(err, "Create service failed", "Service.NamespacedName", types.NamespacedName{Name: r.serviceName(), Namespace: req.Namespace})
+				log.Error(err, "Create service failed", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
 				return ctrl.Result{}, err
 			}
 
 			// Allow plenty of time for the service to start and resolve the DNS name for DP-API
+			log.Info("Created service", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
-		log.Error(err, "Failed to get service", "Service.NamespacedName", types.NamespacedName{Name: r.serviceName(), Namespace: req.Namespace})
+		log.Error(err, "Failed to get service", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
 		return ctrl.Result{}, err
 	}
 
@@ -211,7 +235,7 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 	}
 }
 
-func (r *NnfNodeReconciler) serviceName() string {
+func (r *NnfNodeReconciler) serviceName(node *nnfv1alpha1.NnfNode) string {
 	// A DNS-1035 label must consist of lower case alphanumeric characters or
 	// '-', start with an alphabetic character, and end with an alphanumeric
 	// character (e.g. 'my-name',  or 'abc-123', regex used for validation is
@@ -219,27 +243,28 @@ func (r *NnfNodeReconciler) serviceName() string {
 
 	// We should use the xname here when available, otherwise we default to
 	// a valid name for other setups.
-	if strings.HasPrefix(r.Name, "x") {
-		return r.Name + "-dpapi"
+	if strings.HasPrefix(node.Name, "x") {
+		return node.Name + "-dpapi"
 	}
 
-	return "x-name-temp-nnf-" + r.Name + "-dpapi"
+	return "x-name-temp-nnf-" + node.Name + "-dpapi"
 }
 
 func (r *NnfNodeReconciler) createService(node *nnfv1alpha1.NnfNode) *corev1.Service {
 
-	labels := map[string]string{
-		"cray.nnf.node":   "true",
-		"cray.nnf.x-name": r.Name,
-	}
+	// TODO: In order for the service to target our particular pod,
+	// the pod must have a unique label of type nnf.node.x-name=X-NAME
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.serviceName(),
+			Name:      r.serviceName(node),
 			Namespace: r.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: labels,
+			Selector: map[string]string{
+				"cray.nnf.node":   "true",
+				"cray.nnf.x-name": node.Name,
+			},
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{

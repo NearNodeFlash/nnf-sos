@@ -39,6 +39,11 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+          - name: NNF_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+
         ports:
           - containerPort: 50057
             name: nnf-ec
