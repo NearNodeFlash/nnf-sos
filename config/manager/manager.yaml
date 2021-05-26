@@ -39,6 +39,9 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
+        ports:
+          - containerPort: 50057
+            name: nnf-ec
         livenessProbe:
           httpGet:
             path: /healthz
