@@ -108,8 +108,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log := r.Log.WithValues("Node", req.NamespacedName)
 
 	node := &nnfv1alpha1.NnfNode{}
-	err := r.Get(ctx, req.NamespacedName, node)
-	if err != nil {
+	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
 		log.Error(err, "Failed to get node", "Request.NamespacedName", req.NamespacedName)
 		return ctrl.Result{}, err
 	}
@@ -117,16 +116,14 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// Create the Service for contacting DP-API
 	service := &corev1.Service{}
 	serviceName := r.serviceName(node)
-	err = r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: req.Namespace}, service)
-	if err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: req.Namespace}, service); err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("Creating service...", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
 
 			// Create the correct label for this pod.
 			pod := &corev1.Pod{}
 			podName := os.Getenv("NNF_POD_NAME")
-			err = r.Get(ctx, types.NamespacedName{Name: podName, Namespace: req.Namespace}, pod)
-			if err != nil {
+			if err := r.Get(ctx, types.NamespacedName{Name: podName, Namespace: req.Namespace}, pod); err != nil {
 				log.Error(err, "Failed to get pod", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
 				return ctrl.Result{}, err
 			}

@@ -578,6 +578,7 @@ stash.us.cray.com/rabsw/nnf-ec/internal/manager-server
 stash.us.cray.com/rabsw/nnf-ec/internal/manager-server/nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg
 # stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210504180337-d48363de461a
+## explicit
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/common
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/models
 # stash.us.cray.com/rabsw/switchtec-fabric v1.0.11

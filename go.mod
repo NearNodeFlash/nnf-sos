@@ -20,4 +20,5 @@ require (
 	k8s.io/client-go v0.19.2
 	sigs.k8s.io/controller-runtime v0.7.2
 	stash.us.cray.com/rabsw/nnf-ec v1.0.2-0.20210518181628-6879d2af0e99
+	stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210504180337-d48363de461a
 )

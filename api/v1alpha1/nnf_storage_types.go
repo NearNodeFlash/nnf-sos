@@ -28,11 +28,8 @@ type NnfStorageSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Storage. Edit storage_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-
 	// Id defines the unique ID for this storage specification.
-	Id string `json:"id"`
+	Id string `json:"id,omitempty"`
 
 	// Capacity defines the desired size, in bytes, of storage allocation for
 	// each server within the storage specification.
@@ -44,9 +41,11 @@ type NnfStorageSpec struct {
 
 	// Nodes define the list of NNF Nodes that will be the source
 	// of storage provisioning and the servers that can utilize the storage
-	Nodes []NnfStorageNodeSpec `json:"nodes,omitempty"`
+	Nodes []NnfStorageNodeSpec `json:"nodes"`
 }
 
+// NnfStorageNodeSpec defines the desired state of an individual NNF Storage
+// Node.
 type NnfStorageNodeSpec struct {
 	// Name specifies the target NNF Node that will host the storage requested
 	// by the specification.
@@ -54,17 +53,62 @@ type NnfStorageNodeSpec struct {
 
 	// Servers specifies the target NNF Servers that will be receiving the
 	// file system requested by the specification.
-	Servers []string `json:"servers"`
+	Servers []NnfStorageServerSpec `json:"servers"`
 }
 
-// StorageStatus defines the observed state of Storage
+// NnfStorageServerSpec defines the desired state of storage presented to
+// a server connecting to the NNF Storage Node.
+type NnfStorageServerSpec struct {
+	// The unique name of the NNF Storage Server, as provided by the NNF Node
+	// Server value for a given NNF Node. The Server shall receive the
+	// storage provisioned on this NNF Storage Node.
+	Name string `json:"name"`
+
+	// The unique Id for the NNF Storage Server, as provided by NNF Node
+	// Server value for a particular NNF Node
+	Id string `json:"id"`
+
+	// Defines the desired path for the provided storage onto
+	// the server listed in Name
+	Path string `json:"path,omitempty"`
+}
+
+// NnfStorageStatus defines the observed state of NNF Storage
 type NnfStorageStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Health string `json:"health"`
+	Health string `json:"health,omitempty"`
 
-	State string `json:"state"`
+	State string `json:"state,omitempty"`
+
+	Nodes []NnfStorageNodeStatus `json:"nodes"`
+}
+
+// NnfStorageNodeStatus defines the observed state of a NNF Storage
+// present on a NNF Node.
+type NnfStorageNodeStatus struct {
+	Id string `json:"id,omitempty"`
+
+	Health string `json:"health,omitempty"`
+
+	State string `json:"state,omitempty"`
+
+	Servers []NnfStorageServerStatus `json:"servers"`
+}
+
+// NnfStorageServerStatus defines the observed state of NNF Storage
+// present on a NNF Server.
+type NnfStorageServerStatus struct {
+	NnfStorageServerSpec `json:",inline"`
+
+	StorageId string `json:"storageId,omitempty"`
+
+	ShareId string `json:"shareId,omitempty"`
+
+	Health string `json:"health,omitempty"`
+
+	State string `json:"state,omitempty"`
 }
 
 //+kubebuilder:object:root=true

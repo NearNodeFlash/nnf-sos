@@ -45,10 +45,6 @@ spec:
                 description: File System defines the file system that is constructed
                   from underlying storage subsystem.
                 type: string
-              foo:
-                description: Foo is an example field of Storage. Edit storage_types.go
-                  to remove/update
-                type: string
               id:
                 description: Id defines the unique ID for this storage specification.
                 type: string
@@ -56,6 +52,8 @@ spec:
                 description: Nodes define the list of NNF Nodes that will be the source
                   of storage provisioning and the servers that can utilize the storage
                 items:
+                  description: NnfStorageNodeSpec defines the desired state of an
+                    individual NNF Storage Node.
                   properties:
                     name:
                       description: Name specifies the target NNF Node that will host
@@ -65,7 +63,29 @@ spec:
                       description: Servers specifies the target NNF Servers that will
                         be receiving the file system requested by the specification.
                       items:
-                        type: string
+                        description: NnfStorageServerSpec defines the desired state
+                          of storage presented to a server connecting to the NNF Storage
+                          Node.
+                        properties:
+                          id:
+                            description: The unique Id for the NNF Storage Server,
+                              as provided by NNF Node Server value for a particular
+                              NNF Node
+                            type: string
+                          name:
+                            description: The unique name of the NNF Storage Server,
+                              as provided by the NNF Node Server value for a given
+                              NNF Node. The Server shall receive the storage provisioned
+                              on this NNF Storage Node.
+                            type: string
+                          path:
+                            description: Defines the desired path for the provided
+                              storage onto the server listed in Name
+                            type: string
+                        required:
+                        - id
+                        - name
+                        type: object
                       type: array
                   required:
                   - name
@@ -74,18 +94,65 @@ spec:
                 type: array
             required:
             - capacity
-            - id
+            - nodes
             type: object
           status:
-            description: StorageStatus defines the observed state of Storage
+            description: NnfStorageStatus defines the observed state of NNF Storage
             properties:
               health:
                 type: string
+              nodes:
+                items:
+                  description: NnfStorageNodeStatus defines the observed state of
+                    a NNF Storage present on a NNF Node.
+                  properties:
+                    health:
+                      type: string
+                    id:
+                      type: string
+                    servers:
+                      items:
+                        description: NnfStorageServerStatus defines the observed state
+                          of NNF Storage present on a NNF Server.
+                        properties:
+                          health:
+                            type: string
+                          id:
+                            description: The unique Id for the NNF Storage Server,
+                              as provided by NNF Node Server value for a particular
+                              NNF Node
+                            type: string
+                          name:
+                            description: The unique name of the NNF Storage Server,
+                              as provided by the NNF Node Server value for a given
+                              NNF Node. The Server shall receive the storage provisioned
+                              on this NNF Storage Node.
+                            type: string
+                          path:
+                            description: Defines the desired path for the provided
+                              storage onto the server listed in Name
+                            type: string
+                          shareId:
+                            type: string
+                          state:
+                            type: string
+                          storageId:
+                            type: string
+                        required:
+                        - id
+                        - name
+                        type: object
+                      type: array
+                    state:
+                      type: string
+                  required:
+                  - servers
+                  type: object
+                type: array
               state:
                 type: string
             required:
-            - health
-            - state
+            - nodes
             type: object
         type: object
     served: true
