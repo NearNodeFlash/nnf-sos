@@ -92,7 +92,11 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !controllerutil.ContainsFinalizer(storage, finalizer) {
+
 		controllerutil.AddFinalizer(storage, finalizer)
+		if err := r.Update(ctx, storage); err != nil {
+			return ctrl.Result{}, err
+		}
 
 		// Initialze the Status' of the storage
 		storage.Status.Nodes = make([]nnfv1alpha1.NnfStorageNodeStatus, len(storage.Spec.Nodes))
@@ -120,9 +124,13 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// of NNF Node Controllers supplied in the specification. For each NNF Node Controller,
 	// we connect to the controller and allocate the required storage.
 	for nodeIdx := range storage.Status.Nodes {
-		node := &storage.Status.Nodes[nodeIdx]
 
-		addr := fmt.Sprintf("%s.%s", storage.Spec.Nodes[nodeIdx].Name, storage.Namespace)
+		node := &storage.Status.Nodes[nodeIdx]
+		nodeName := storage.Spec.Nodes[nodeIdx].Name
+
+		log.Info("Initializing storage on node", "Node.Name", nodeName)
+
+		addr := fmt.Sprintf("%s.%s", ServiceName(nodeName), storage.Namespace)
 		port := fmt.Sprintf("%d", nnf.Port)
 
 		log.Info("Connecting to storage service", "StorageService.Addr", addr, "StorageService.Port", port)
@@ -228,6 +236,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				r.Status().Update(ctx, storage)
 			}
 		}
+
+		log.Info("Initialized storage on node", "Node.Name", nodeName)
 	}
 
 	return ctrl.Result{}, nil

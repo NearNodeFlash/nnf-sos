@@ -43,7 +43,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
-
         ports:
           - containerPort: 50057
             name: nnf-ec
@@ -98,6 +97,9 @@ spec:
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+        ports:
+          - containerPort: 50057
+            name: nnf-ec
         livenessProbe:
           httpGet:
             path: /healthz

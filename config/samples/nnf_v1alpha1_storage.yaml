@@ -9,4 +9,5 @@ spec:
   nodes:
   - name: kind-worker
     servers:
-      - name: Rabbit
+    - name: Rabbit
+      id: /redfish/v1/StorageServices/NNF/Endpoints/0
