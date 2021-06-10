@@ -35,12 +35,21 @@ import (
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 	"stash.us.cray.com/RABSW/nnf-sos/controllers"
+
 	//+kubebuilder:scaffold:imports
+
+	"stash.us.cray.com/rabsw/ec"
+	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg"
 )
 
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+)
+
+const (
+	NodeLocalController = "node"
+	StorageController   = "storage"
 )
 
 func init() {
@@ -65,9 +74,37 @@ func main() {
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
+
+	nnfopts := nnf.BindFlags(flag.CommandLine)
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	namespace := ""
+	switch controller {
+	case NodeLocalController:
+		namespace = os.Getenv("NNF_NODE_NAME")
+
+		// Initialize & Run the NNF Element Controller - this allows external entities
+		// to access the Rabbit via Redfish/Swordfish APIs via HTTP server. Internally,
+		// the APIs are accesses directly (not through HTTP).
+		c := nnf.NewController(nnfopts)
+		c.Init(&ec.Options{
+			Http:    true,
+			Port:    nnf.Port,
+			Log:     false,
+			Verbose: false,
+		})
+
+		go c.Run()
+
+	case StorageController:
+		namespace = "nnf-system"
+	default:
+		setupLog.Info("unsupported controller type", "controller", controller)
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -76,7 +113,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "6cf68fa5.cray.com",
-		Namespace:              "nnf-system", // TODO: Should load from config
+		Namespace:              namespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -84,20 +121,20 @@ func main() {
 	}
 
 	switch controller {
-	case "node":
+	case NodeLocalController:
 		if err = (&controllers.NnfNodeReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
 			Scheme: mgr.GetScheme(),
 			NamespacedName: types.NamespacedName{
-				Name:      os.Getenv("NNF_NODE_NAME"), // TODO: This should be x-name
-				Namespace: "nnf-system",
+				Name:      "nnf-nlc",
+				Namespace: namespace,
 			},
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "Node")
 			os.Exit(1)
 		}
-	case "storage":
+	case StorageController:
 		if err = (&controllers.NnfStorageReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
@@ -107,7 +144,7 @@ func main() {
 			os.Exit(1)
 		}
 	default:
-		setupLog.Error(err, "unsupported controller type", "controller", controller)
+		setupLog.Info("unsupported controller type", "controller", controller)
 		os.Exit(1)
 	}
 

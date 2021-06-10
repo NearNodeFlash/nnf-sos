@@ -13,6 +13,8 @@ import (
 type Api interface {
 	Initialize(NnfControllerInterface) error
 
+	Id() string
+
 	RedfishV1StorageServicesGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdGet(w http.ResponseWriter, r *http.Request)
 
@@ -51,6 +53,8 @@ type Api interface {
 // an equivalent method. Methods take request paramters and a Redfish / Swordfish model to populate.
 type StorageServiceApi interface {
 	Initialize(NnfControllerInterface) error
+
+	Id() string
 
 	StorageServicesGet(*sf.StorageServiceCollectionStorageServiceCollection) error
 	StorageServiceIdGet(string, *sf.StorageServiceV150StorageService) error

@@ -11,8 +11,8 @@ import (
 	"github.com/HewlettPackard/structex"
 	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
 
-	"stash.us.cray.com/rabsw/nnf-ec/internal/logging"
-	fabric "stash.us.cray.com/rabsw/nnf-ec/internal/manager-fabric"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/logging"
+	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
 )
 
 func NewCliNvmeController() NvmeController {

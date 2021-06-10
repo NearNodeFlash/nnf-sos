@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -34,7 +33,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg"
+	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
+	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 )
@@ -48,50 +49,58 @@ type NnfNodeReconciler struct {
 	types.NamespacedName
 }
 
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfnodes,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfnodes/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfnodes/finalizers,verbs=update
-//+kubebuilder:rbac:groups=core,namespace=nnf-system,resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,namespace=nnf-system,resources=pods,verbs=get;list;update
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes/finalizers,verbs=update
+//+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update
 
-// Start is called upon starting the component manager and will create the NNF Node CRD
-// that is representiative of this particular NNF Node.
+// Start is called upon starting the component manager and will create the Namespace for controlling the
+// NNF Node CRD that is representiative of this particular NNF Node.
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("Node", "Start")
 
 	log.Info("Starting Node...", "Node.NamespacedName", r.NamespacedName)
 
-	node := &nnfv1alpha1.NnfNode{}
-	err := r.Get(ctx, r.NamespacedName, node)
-	if err != nil {
+	// Create a namespace unique to this node based on the node's x-name.
+	namespace := &corev1.Namespace{}
+	if err := r.Get(ctx, types.NamespacedName{Name: r.Namespace}, namespace); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Creating Node...", "Node.NamespacedName", r.NamespacedName)
+			log.Info("Creating Namespace...", "Namespace.NamespacedName", r.NamespacedName)
+			namespace = r.createNamespace()
+
+			if err := r.Create(ctx, namespace); err != nil {
+				log.Error(err, "Create Namespace failed")
+				return err
+			}
+
+			log.Info("Created Namespace", "Namespace.NamespacedName", r.NamespacedName)
+		} else if !errors.IsAlreadyExists(err) {
+			log.Error(err, "Get Namespace failed", "Namespace.NamespacedName", r.NamespacedName)
+			return err
+		}
+	}
+
+	node := &nnfv1alpha1.NnfNode{}
+	if err := r.Get(ctx, r.NamespacedName, node); err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("Creating NNF Node...", "Node.NamespacedName", r.NamespacedName)
 			node = r.createNode()
 
 			if err := r.Create(ctx, node); err != nil {
-				log.Error(err, "Create Node failed")
-				return err
-			}
-
-			if err := r.Update(ctx, node); err != nil {
-				log.Error(err, "Update Node failed")
-				return err
-			}
-
-			if err := r.Status().Update(ctx, node); err != nil {
-				log.Error(err, "Update Node status failed")
+				log.Error(err, "Create NNF Node failed")
 				return err
 			}
 
 			log.Info("Created Node", "Node.NamespacedName", r.NamespacedName)
-			return nil
+		} else if !errors.IsAlreadyExists(err) {
+			log.Error(err, "Get NNF-Node failed", "Node.NamespacedName", r.NamespacedName)
+			return err
 		}
-
-		log.Error(err, "Start Node failed", "Node.NamespacedName", r.NamespacedName)
-		return err
 	}
 
-	log.Info("Node Present", "Node.NamespacedName", r.NamespacedName)
+	log.Info("NNF Node Started")
 	return nil
 }
 
@@ -104,7 +113,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
-func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("Node", req.NamespacedName)
 
 	node := &nnfv1alpha1.NnfNode{}
@@ -118,26 +127,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	serviceName := ServiceName(node.Name)
 	if err := r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: req.Namespace}, service); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("Creating service...", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
-
-			// Create the correct label for this pod.
-			pod := &corev1.Pod{}
-			podName := os.Getenv("NNF_POD_NAME")
-			if err := r.Get(ctx, types.NamespacedName{Name: podName, Namespace: req.Namespace}, pod); err != nil {
-				log.Error(err, "Failed to get pod", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
-				return ctrl.Result{}, err
-			}
-
-			if _, ok := pod.Labels["cray.nnf.x-name"]; !ok {
-				log.Info("Updating pod with x-name...", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
-
-				pod.Labels["cray.nnf.x-name"] = node.Name
-
-				if err := r.Update(ctx, pod); err != nil {
-					log.Error(err, "Failed to update pod", "Pod.NamespacedName", types.NamespacedName{Name: podName, Namespace: req.Namespace})
-					return ctrl.Result{}, err
-				}
-			}
+			log.Info("Creating Service...", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
 
 			service = r.createService(node)
 			if err := r.Create(ctx, service); err != nil {
@@ -146,7 +136,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			}
 
 			// Allow plenty of time for the service to start and resolve the DNS name for DP-API
-			log.Info("Created service", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
+			log.Info("Created Service", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
 			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 
@@ -154,66 +144,110 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	addr := fmt.Sprintf("%s.%s", service.ObjectMeta.Name, service.ObjectMeta.Namespace)
-	port := fmt.Sprintf("%d", service.Spec.Ports[0].Port)
+	// Prepare to update the node's status
+	status := NewStatusUpdater(node)
 
-	log.Info("Connecting to service", "Service.Addr", addr, "Service.Port", port)
-	conn, err := nnf.NewStorageServiceConnection(addr, port)
+	// Use the defer logic to submit a final update to the node's status, if required.
+	// This modifies the return err on failure, such that it is automatically retried
+	// by the controller if non-nil error is returned.
+	defer func(c context.Context, r *NnfNodeReconciler, s *statusUpdater) {
+		if s.requiresUpdate {
+			if err = r.Status().Update(c, s.node); err != nil { // NOTE: err here is the named returned value
+				r.Log.Info(fmt.Sprintf("Failed to update status with error %s", err))
+			}
+		}
+	}(ctx, r, status)
 
-	/*
-		I can't for the life of me figure out a valid error that distiguishes a DNS or Connnection Refused error before the
-		service is up and running. So I'm just going to default to handling all connection errors as retryable
-		if err != nil {
-			log.Error(err, "Failed to create connection to storage service", "StorageService.Address", address, "StorageService.Port", port)
+	// Access the the default storage service running in the NNF Element
+	// Controller. Check for any State/Health change.
+	ss := nnf.NewDefaultStorageService()
+
+	storageService := &sf.StorageServiceV150StorageService{}
+	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
+		log.Error(err, "Failed to retrieve Storage Service")
+		return ctrl.Result{}, err
+	}
+
+	if node.Status.State != string(storageService.Status.State) ||
+		node.Status.Health != string(storageService.Status.Health) {
+		status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+			s.State = string(storageService.Status.State)
+			s.Health = string(storageService.Status.Health)
+		})
+	}
+
+	// Update the capacity and capacity allocated to reflect the current
+	// values.
+	capacitySource := &sf.CapacityCapacitySource{}
+	if err := ss.StorageServiceIdCapacitySourceGet(ss.Id(), capacitySource); err != nil {
+		log.Error(err, "Failed to retrieve Storage Service Capacity")
+		return ctrl.Result{}, err
+	}
+
+	if node.Status.Capacity != capacitySource.ProvidedCapacity.Data.GuaranteedBytes ||
+		node.Status.CapacityAllocated != capacitySource.ProvidedCapacity.Data.AllocatedBytes {
+		status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+			s.Capacity = capacitySource.ProvidedCapacity.Data.GuaranteedBytes
+			s.CapacityAllocated = capacitySource.ProvidedCapacity.Data.AllocatedBytes
+		})
+	}
+
+	// Update the server status' with the current values
+	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
+	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
+		log.Error(err, "Failed to retrieve Storage Service Endpoints")
+		return ctrl.Result{}, err
+	}
+
+	if len(node.Status.Servers) < len(serverEndpointCollection.Members) {
+		status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+			s.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
+		})
+	}
+
+	// Iterate over the server endpoints to ensure we've reflected
+	// the status of each server (Compute & Rabbit)
+	for idx, serverEndpoint := range serverEndpointCollection.Members {
+
+		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
+		serverEndpoint := &sf.EndpointV150Endpoint{}
+		if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), id, serverEndpoint); err != nil {
+			log.Error(err, fmt.Sprintf("Failed to retrieve Storage Service Endpoint %s", id))
 			return ctrl.Result{}, err
 		}
-	*/
 
-	if conn == nil {
-		requeueAfter := 10 * time.Second
-		log.Info("Failed to make connection to storage service - this may be because the service is not running", "Service.Addr", addr, "Service.Port", port, "Requeue.After", requeueAfter)
-		return ctrl.Result{RequeueAfter: requeueAfter}, nil
-	}
+		if node.Status.Servers[idx].Id != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
+			status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+				s.Servers[idx].Id = serverEndpoint.Id
+				s.Servers[idx].Name = serverEndpoint.Name
+			})
+		}
 
-	status := &node.Status
-	defer r.Status().Update(ctx, node)
-
-	ss, err := conn.Get()
-	if err != nil {
-		log.Error(err, "Failed to get storage service")
-		return ctrl.Result{}, err
-	}
-
-	log.Info("Retrieve storage service", "StorageService.Id", ss.Id, "StorageService.Status.Health", string(ss.Status.Health), "StorgeService.Status.State", string(ss.Status.State))
-	status.State = string(ss.Status.State)
-	status.Health = string(ss.Status.Health)
-
-	cap, err := conn.GetCapacity()
-	if err != nil {
-		log.Error(err, "Failed to get storge service capacity")
-		return ctrl.Result{}, err
-	}
-
-	status.Capacity = cap.ProvidedCapacity.Data.GuaranteedBytes
-	status.CapacityAllocated = cap.ProvidedCapacity.Data.AllocatedBytes
-
-	servers, err := conn.GetServers()
-	if err != nil {
-		log.Error(err, "Failed to get storage service servers")
-		return ctrl.Result{}, err
-	}
-
-	status.Servers = make([]nnfv1alpha1.NnfServerStatus, len(servers))
-	for idx, server := range servers {
-		status.Servers[idx] = nnfv1alpha1.NnfServerStatus{
-			Id:     server.OdataId,
-			Name:   server.Name,
-			Health: string(server.Status.Health),
-			State:  string(server.Status.State),
+		if node.Status.Servers[idx].State != string(serverEndpoint.Status.State) || node.Status.Servers[idx].Health != string(serverEndpoint.Status.Health) {
+			status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+				s.Servers[idx].State = string(serverEndpoint.Status.State)
+				s.Servers[idx].Health = string(serverEndpoint.Status.Health)
+			})
 		}
 	}
 
+	// TODO: Storage is allocated by updates to the .spec. Here code will reside
+	// that reads the current .spec file and ensures that all resources pertaining
+	// to the .spec are resolved. There should be a compainion .status field that
+	// reflects the status of the .spec.
+
 	return ctrl.Result{}, nil
+}
+
+func (r *NnfNodeReconciler) createNamespace() *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: r.Namespace,
+			Labels: map[string]string{ // TODO: Check if this is necessary
+				"control-plane": "controller-manager",
+			},
+		},
+	}
 }
 
 func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
@@ -227,7 +261,8 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 			State: "Enabled",
 		},
 		Status: nnfv1alpha1.NnfNodeStatus{
-			State: "Starting",
+			State:    "Starting",
+			Capacity: 0,
 		},
 	}
 }
@@ -238,13 +273,7 @@ func ServiceName(nodeName string) string {
 	// character (e.g. 'my-name',  or 'abc-123', regex used for validation is
 	// '[a-z]([-a-z0-9]*[a-z0-9])?')"
 
-	// We should use the xname here when available, otherwise we default to
-	// a valid name for other setups.
-	if strings.HasPrefix(nodeName, "x") {
-		return nodeName + "-dpapi"
-	}
-
-	return "x-name-temp-nnf-" + nodeName + "-dpapi"
+	return "nnf-ec"
 }
 
 func (r *NnfNodeReconciler) createService(node *nnfv1alpha1.NnfNode) *corev1.Service {
@@ -259,16 +288,16 @@ func (r *NnfNodeReconciler) createService(node *nnfv1alpha1.NnfNode) *corev1.Ser
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"cray.nnf.node":   "true",
-				"cray.nnf.x-name": node.Name,
+				"cray.nnf.node": "true",
+				//"cray.nnf.x-name": node.Name,
 			},
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "nnf-ec",
 					Protocol:   corev1.ProtocolTCP,
-					Port:       nnf.Port,
-					TargetPort: intstr.FromInt(nnf.Port),
+					Port:       ec.Port,
+					TargetPort: intstr.FromInt(ec.Port),
 				},
 			},
 		},
@@ -287,6 +316,24 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfNode{}).
-		Owns(&corev1.Service{}). // The Node will create a service for the corresponding x-name
+		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
+		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
 		Complete(r)
+}
+
+type statusUpdater struct {
+	node           *nnfv1alpha1.NnfNode
+	requiresUpdate bool
+}
+
+func NewStatusUpdater(node *nnfv1alpha1.NnfNode) *statusUpdater {
+	return &statusUpdater{
+		node:           node,
+		requiresUpdate: false,
+	}
+}
+
+func (s *statusUpdater) Update(update func(status *nnfv1alpha1.NnfNodeStatus)) {
+	update(&s.node.Status)
+	s.requiresUpdate = true
 }

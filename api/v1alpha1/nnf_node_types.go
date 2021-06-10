@@ -49,10 +49,10 @@ type NnfNodeStatus struct {
 	// State reflects the current state of this NNF NnfNode
 	State string `json:"state"`
 
-	Capacity          int64 `json:"capacity"`
-	CapacityAllocated int64 `json:"capacityAllocated"`
+	Capacity          int64 `json:"capacity,omitempty"`
+	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 
-	Servers []NnfServerStatus `json:"servers"`
+	Servers []NnfServerStatus `json:"servers,omitempty"`
 }
 
 // NnfServerStatus defines the observed state of servers connected to this NNF Node

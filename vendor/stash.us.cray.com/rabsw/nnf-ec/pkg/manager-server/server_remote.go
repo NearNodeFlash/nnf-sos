@@ -116,11 +116,11 @@ func (c *RemoteServerController) GetStatus(s *Storage) StorageStatus {
 	}
 }
 
-func (c *RemoteServerController) CreateFileSystem(s *Storage, f FileSystemApi, mp string) error {
+func (c *RemoteServerController) CreateFileSystem(s *Storage, f FileSystemApi, opts FileSystemOptions) error {
 
 	model := sf.FileSystemV122FileSystem{
 		StoragePool: sf.OdataV4IdRef{OdataId: fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s", RemoteStorageServiceId, s.Id.String())},
-		Oem:         map[string]interface{}{"FileSystem": FileSystemOem{Name: f.Name()}},
+		Oem:         map[string]interface{}{"FileSystem": FileSystemOem{Type: f.Type(), Name: f.Name()}},
 	}
 
 	req, err := json.Marshal(model)
@@ -148,13 +148,19 @@ func (c *RemoteServerController) CreateFileSystem(s *Storage, f FileSystemApi, m
 		return err
 	}
 
-	return c.createMountPoint(&model, mp)
+	return c.createMountPoint(&model, opts)
 }
 
-func (c *RemoteServerController) createMountPoint(fs *sf.FileSystemV122FileSystem, mp string) error {
+func (c *RemoteServerController) createMountPoint(fs *sf.FileSystemV122FileSystem, opts FileSystemOptions) error {
+
+	mp, ok := opts["mountpoint"].(string)
+	if !ok {
+		return fmt.Errorf("Mountpoint not present in controller options")
+	}
 
 	model := sf.FileShareV120FileShare{
 		FileSharePath: mp,
+		Oem:           opts,
 	}
 
 	req, _ := json.Marshal(model)

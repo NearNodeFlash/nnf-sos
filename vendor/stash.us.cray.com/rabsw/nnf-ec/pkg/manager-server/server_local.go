@@ -10,10 +10,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
-	"stash.us.cray.com/rabsw/nnf-ec/internal/common"
-	"stash.us.cray.com/rabsw/nnf-ec/internal/logging"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/common"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/logging"
 
-	"stash.us.cray.com/rabsw/nnf-ec/internal/manager-server/nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme"
 )
 
 type DefaultServerControllerProvider struct{}
@@ -75,17 +75,21 @@ func (c *LocalServerController) GetStatus(s *Storage) StorageStatus {
 	return StorageStatus_Error
 }
 
-func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, mp string) error {
+func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
 	s.fileSystem = fs
 
-	opts := FileSystemCreateOptions{
-		"mountpoint": mp,
+	if err := fs.Create(s.Devices(), opts); err != nil {
+		return err
 	}
 
-	return fs.Create(s.Devices(), opts)
+	return fs.Mount(opts["mountpoint"].(string))
 }
 
 func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
+	if err := s.fileSystem.Unmount(); err != nil {
+		return err
+	}
+	
 	return s.fileSystem.Delete()
 }
 
@@ -140,7 +144,7 @@ func (c *LocalServerController) findStorage(pid uuid.UUID) *Storage {
 }
 
 func (c *LocalServerController) namespaces() ([]string, error) {
-	nss, err := c.run("ls -A1 /dev/nvme* | grep -E \"nvme[0-9]+n[0-9]+\"")
+	nss, err := c.run("ls -A1 /dev/nvme* | { grep -E 'nvme[0-9]+n[0-9]+' || :; }")
 
 	// The above will return an err if zero namespaces exist. In
 	// this case, ENOENT is returned and we should instead return

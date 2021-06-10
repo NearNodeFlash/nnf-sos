@@ -80,7 +80,9 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 
-		// TODO: Delete the storage instance
+		if err := r.teardownStorage(ctx, storage); err != nil {
+			return ctrl.Result{}, err
+		}
 
 		log.Info("Finalizing storage", "Storage.NamespacedName", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 		controllerutil.RemoveFinalizer(storage, finalizer)
@@ -91,6 +93,9 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// First time setup adds the finalizer to the storage object and prepares
+	// the status fields with initial data reflecting the present specification
+	// values.
 	if !controllerutil.ContainsFinalizer(storage, finalizer) {
 
 		controllerutil.AddFinalizer(storage, finalizer)
@@ -125,22 +130,18 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// we connect to the controller and allocate the required storage.
 	for nodeIdx := range storage.Status.Nodes {
 
-		node := &storage.Status.Nodes[nodeIdx]
-		nodeName := storage.Spec.Nodes[nodeIdx].Name
+		node := &storage.Spec.Nodes[nodeIdx]
+		nodeStatus := &storage.Status.Nodes[nodeIdx]
 
-		log.Info("Initializing storage on node", "Node.Name", nodeName)
+		log.Info("Initializing storage on node", "Node.Name", node.Name)
 
-		addr := fmt.Sprintf("%s.%s", ServiceName(nodeName), storage.Namespace)
-		port := fmt.Sprintf("%d", nnf.Port)
-
-		log.Info("Connecting to storage service", "StorageService.Addr", addr, "StorageService.Port", port)
-		conn, err := nnf.NewStorageServiceConnection(addr, port)
-		if conn == nil {
-			log.Error(err, "Failed to connect to storage service", "StorageService.Addr", addr, "StorageService.Port", port)
+		conn, err := r.connectStorageService(node, storage.Namespace)
+		if err != nil {
+			log.Error(err, "Failed to connect to storage service")
 			return ctrl.Result{}, err
 		}
 
-		if len(node.Id) == 0 {
+		if len(nodeStatus.Id) == 0 {
 			// Request a storage pool is created with the desired capacity
 			log.Info("Creating storage pool...")
 			pool, err := conn.CreateStoragePool(storage.Spec.Capacity)
@@ -154,24 +155,27 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			log.Info("Created storage pool", "StoragePool.Id", pool.Id)
 
-			node.Id = pool.Id
+			nodeStatus.Id = pool.Id
 			if err := r.Status().Update(ctx, storage); err != nil {
 				log.Error(err, "Storage status update failed")
 				return ctrl.Result{}, err
 			}
 		}
 
-		pool, err := conn.GetStoragePool(node.Id)
+		pool, err := conn.GetStoragePool(nodeStatus.Id)
 		if err != nil {
-			log.Error(err, "Failed to retrieve storage pool", "StoragePool.Id", node.Id)
+			log.Error(err, "Failed to retrieve storage pool", "StoragePool.Id", nodeStatus.Id)
 			return ctrl.Result{}, err
 		}
 
 		log.Info("Retrieved storage pool", "StoragePool.Id", pool.Id, "StoragePool.Status.Health", string(pool.Status.Health), "StoragePool.Status.State", string(pool.Status.State))
-		if node.Health != string(pool.Status.Health) || node.State != string(pool.Status.State) {
-			node.Health = string(pool.Status.Health)
-			node.State = string(pool.Status.State)
-			r.Status().Update(ctx, storage)
+		if nodeStatus.Health != string(pool.Status.Health) || nodeStatus.State != string(pool.Status.State) {
+			nodeStatus.Health = string(pool.Status.Health)
+			nodeStatus.State = string(pool.Status.State)
+			if err := r.Status().Update(ctx, storage); err != nil {
+				log.Error(err, "Storage status update failed")
+				return ctrl.Result{}, err
+			}
 		}
 
 		// Check if a file system is defined
@@ -194,8 +198,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 		}
 
-		for serverIdx := range node.Servers {
-			server := &node.Servers[serverIdx]
+		for serverIdx := range nodeStatus.Servers {
+			server := &nodeStatus.Servers[serverIdx]
 
 			s, err := conn.GetServer(server.Id)
 			if err != nil {
@@ -214,7 +218,10 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				log.Info("Created storage group", "StorageGroup.Id", sg.Id)
 				server.StorageId = sg.Id
-				r.Status().Update(ctx, storage)
+				if err := r.Status().Update(ctx, storage); err != nil {
+					log.Error(err, "Storage status update failed")
+					return ctrl.Result{}, err
+				}
 			}
 
 			if len(server.ShareId) != 0 {
@@ -233,14 +240,47 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				log.Info("Created file share", "FileShare.Id", sh.Id)
 				server.ShareId = sh.Id
-				r.Status().Update(ctx, storage)
+				if err := r.Status().Update(ctx, storage); err != nil {
+					log.Error(err, "Storage status update failed")
+					return ctrl.Result{}, err
+				}
 			}
 		}
 
-		log.Info("Initialized storage on node", "Node.Name", nodeName)
+		log.Info("Initialized storage on node", "Node.Name", node.Name)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// teardownStorage will process the storage object in reverse of setupStorage, deleting
+// all the objects that were created as part of setup. The bulk of this operation is handled
+// by the NNF Element Controller, which supports deletion of the master Storage Pool object
+// which will delete the tree of objects attached to the pool as well as the pool itself.
+func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
+	for nodeIdx, node := range storage.Spec.Nodes {
+
+		conn, err := r.connectStorageService(&node, storage.Namespace)
+		if err != nil {
+			return err
+		}
+
+		status := &storage.Status.Nodes[nodeIdx]
+		if err := conn.DeleteStoragePool(status.Id); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// connectStorageService makes a connection to the NNF Storage Service for the provded node/namespace combination.
+func (r *NnfStorageReconciler) connectStorageService(node *nnfv1alpha1.NnfStorageNodeSpec, namespace string) (*nnf.StorageService, error) {
+	addr := fmt.Sprintf("%s.%s", ServiceName(node.Name), namespace)
+	port := fmt.Sprintf("%d", nnf.Port)
+
+	r.Log.Info("Connecting to storage service", "Address", addr, "Port", port)
+	return nnf.NewStorageServiceConnection(addr, port)
 }
 
 // SetupWithManager sets up the controller with the Manager.

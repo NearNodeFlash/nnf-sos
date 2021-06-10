@@ -49,6 +49,6 @@ type ServerControllerApi interface {
 	// Retrieve the status of the provided Storage object from the controller
 	GetStatus(*Storage) StorageStatus
 
-	CreateFileSystem(*Storage, FileSystemApi, string) error
+	CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
 	DeleteFileSystem(*Storage) error
 }

@@ -81,10 +81,7 @@ spec:
                 description: State reflects the current state of this NNF NnfNode
                 type: string
             required:
-            - capacity
-            - capacityAllocated
             - health
-            - servers
             - state
             type: object
         type: object

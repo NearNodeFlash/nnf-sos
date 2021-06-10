@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	. "stash.us.cray.com/rabsw/nnf-ec/internal/api"
-	. "stash.us.cray.com/rabsw/nnf-ec/internal/events"
+	. "stash.us.cray.com/rabsw/nnf-ec/pkg/api"
+	. "stash.us.cray.com/rabsw/nnf-ec/pkg/events"
 
 	log "github.com/sirupsen/logrus"
 

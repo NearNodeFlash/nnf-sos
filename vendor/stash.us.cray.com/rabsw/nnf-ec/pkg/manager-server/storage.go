@@ -52,8 +52,8 @@ func (s *Storage) Delete() error {
 	return s.ctrl.Delete(s)
 }
 
-func (s *Storage) CreateFileSystem(fs FileSystemApi, mountpoint string) error {
-	return s.ctrl.CreateFileSystem(s, fs, mountpoint)
+func (s *Storage) CreateFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
+	return s.ctrl.CreateFileSystem(s, fs, opts)
 }
 
 func (s *Storage) DeleteFileSystem(fs FileSystemApi) error {

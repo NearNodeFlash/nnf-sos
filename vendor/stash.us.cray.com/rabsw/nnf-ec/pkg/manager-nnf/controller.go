@@ -1,7 +1,7 @@
 package nnf
 
 import (
-	server "stash.us.cray.com/rabsw/nnf-ec/internal/manager-server"
+	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
 )
 
 type NnfControllerInterface interface {

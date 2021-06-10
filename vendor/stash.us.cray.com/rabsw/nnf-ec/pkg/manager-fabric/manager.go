@@ -8,8 +8,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"stash.us.cray.com/rabsw/ec"
-	"stash.us.cray.com/rabsw/nnf-ec/internal/api"
-	"stash.us.cray.com/rabsw/nnf-ec/internal/events"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/api"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/events"
 	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
 
 	openapi "stash.us.cray.com/rabsw/rfsf-openapi/pkg/common"

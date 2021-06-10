@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	fabric "stash.us.cray.com/rabsw/nnf-ec/internal/manager-fabric"
+	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
 
 	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
 )

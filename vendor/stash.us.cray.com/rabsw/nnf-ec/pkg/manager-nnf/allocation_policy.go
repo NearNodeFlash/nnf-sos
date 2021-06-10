@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"stash.us.cray.com/rabsw/nnf-ec/internal/common"
-	nvme "stash.us.cray.com/rabsw/nnf-ec/internal/manager-nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/common"
+	nvme "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme"
 
 	openapi "stash.us.cray.com/rabsw/rfsf-openapi/pkg/common"
 )
@@ -70,10 +70,14 @@ func NewAllocationPolicy(config AllocationConfig, oem map[string]interface{}) Al
 		}
 
 		if err := openapi.UnmarshalOem(oem, &overrides); err == nil {
-			policy = overrides.Policy
-			compliance = overrides.Compliance
-		}
+			if overrides.Policy != "default" {
+				policy = overrides.Policy
+			}
 
+			if overrides.Compliance != "default" {
+				compliance = overrides.Compliance
+			}
+		}
 	}
 
 	switch policy {

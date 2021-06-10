@@ -30,6 +30,7 @@ spec:
         - /manager
         args:
         - --controller=node
+        - --mock
         image: controller:latest
         name: manager
         securityContext:

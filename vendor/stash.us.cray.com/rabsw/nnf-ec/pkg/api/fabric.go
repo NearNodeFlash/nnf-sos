@@ -1,7 +1,7 @@
 package api
 
 import (
-	"stash.us.cray.com/rabsw/nnf-ec/internal/events"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/events"
 )
 
 // FabricApi - Presents an API into the fabric outside of the fabric manager

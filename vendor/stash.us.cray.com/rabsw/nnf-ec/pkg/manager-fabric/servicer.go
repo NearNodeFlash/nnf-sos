@@ -7,7 +7,7 @@ import (
 	"stash.us.cray.com/rabsw/ec"
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
-	cmn "stash.us.cray.com/rabsw/nnf-ec/internal/common"
+	cmn "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 )
 
 // DefaultApiService -

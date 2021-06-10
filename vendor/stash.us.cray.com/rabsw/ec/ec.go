@@ -3,6 +3,8 @@ package ec
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -29,10 +31,10 @@ import (
 )
 
 var (
-	GET_METHOD    = strings.ToUpper("Get")
-	POST_METHOD   = strings.ToUpper("Post")
-	PATCH_METHOD  = strings.ToUpper("Patch")
-	DELETE_METHOD = strings.ToUpper("Delete")
+	GET_METHOD    = http.MethodGet
+	POST_METHOD   = http.MethodPost
+	PATCH_METHOD  = http.MethodPatch
+	DELETE_METHOD = http.MethodDelete
 )
 
 // Route -
@@ -94,29 +96,29 @@ func BindFlags(fs *flag.FlagSet) *Options {
 
 // ResponseWriter -
 type ResponseWriter struct {
-	Hdr        http.Header
 	StatusCode int
+	Hdr        http.Header
 	Buffer     *bytes.Buffer
 }
 
-func NewResponseWriter() ResponseWriter {
-	return ResponseWriter{
-		Hdr:        http.Header{},
+func NewResponseWriter() *ResponseWriter {
+	return &ResponseWriter{
 		StatusCode: http.StatusOK,
-		Buffer:     bytes.NewBuffer([]byte{}),
+		Hdr:        make(http.Header),
+		Buffer:     new(bytes.Buffer),
 	}
 }
 
-func (r ResponseWriter) Header() http.Header {
+func (r *ResponseWriter) Header() http.Header {
 	return r.Hdr
 }
 
-func (r ResponseWriter) Write(b []byte) (int, error) {
+func (r *ResponseWriter) Write(b []byte) (int, error) {
 	return r.Buffer.Write(b)
 }
 
-func (r ResponseWriter) WriteHeader(s int) {
-	r.StatusCode = s
+func (r *ResponseWriter) WriteHeader(code int) {
+	r.StatusCode = code
 }
 
 // checkAPI -
@@ -218,6 +220,7 @@ func (*HttpControllerProcessor) Run(c *Controller, options Options) error {
 func (p *HttpControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *http.Request) {
 	rsp, _ := p.client.Do(r)
 
+	w.WriteHeader(rsp.StatusCode)
 	w.Header().Set("Content-Type", rsp.Header.Get("Content-Type"))
 	io.Copy(w, rsp.Body)
 
@@ -375,5 +378,36 @@ func (c *Controller) Attach(router *mux.Router, handlerFunc HandlerFunc) {
 				route.Handler(handlerFunc(c))
 			}
 		}
+	}
+}
+
+// EncodeResponse -
+func EncodeResponse(s interface{}, err error, w http.ResponseWriter) {
+
+	if err != nil {
+		// If the supplied error is of an Element Controller Controller Error type,
+		// encode the response to a new error response packet.
+		var e *ControllerError
+		if errors.As(err, &e) {
+			w.WriteHeader(e.StatusCode)
+			s = NewErrorResponse(e, s)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}
+
+	if s != nil {
+		w.Header().Set("Content-Type", "application/json")
+		response, err := json.Marshal(s)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal json response")
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		_, err = w.Write(response)
+		if err != nil {
+			log.WithError(err).Error("Failed to write json response")
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
 	}
 }

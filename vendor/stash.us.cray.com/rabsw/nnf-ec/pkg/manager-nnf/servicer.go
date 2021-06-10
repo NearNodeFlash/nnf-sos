@@ -6,7 +6,7 @@ import (
 
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
-	. "stash.us.cray.com/rabsw/nnf-ec/internal/common"
+	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 )
 
 // DefaultApiService -
@@ -17,6 +17,10 @@ type DefaultApiService struct {
 // NewDefaultApiService -
 func NewDefaultApiService(ss StorageServiceApi) Api {
 	return &DefaultApiService{ss: ss}
+}
+
+func (s *DefaultApiService) Id() string {
+	return s.ss.Id()
 }
 
 func (s *DefaultApiService) Initialize(ctrl NnfControllerInterface) error {

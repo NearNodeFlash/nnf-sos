@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	. "stash.us.cray.com/rabsw/nnf-ec/internal/events"
+	. "stash.us.cray.com/rabsw/nnf-ec/pkg/events"
 
-	fabric "stash.us.cray.com/rabsw/nnf-ec/internal/manager-fabric"
-	nvme "stash.us.cray.com/rabsw/nnf-ec/internal/manager-nvme"
-	server "stash.us.cray.com/rabsw/nnf-ec/internal/manager-server"
+	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
+	nvme "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme"
+	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -443,7 +444,12 @@ func (fs *FileSystem) createFileShare(sg *StorageGroup, mountRoot string) *Expor
 }
 
 func (sh *ExportedFileShare) initialize(mountpoint string) error {
-	return sh.storageGroup.serverStorage.CreateFileSystem(sh.fileSystem.fsApi, mountpoint)
+
+	opts := server.FileSystemOptions{
+		"mountpoint": mountpoint,
+	}
+
+	return sh.storageGroup.serverStorage.CreateFileSystem(sh.fileSystem.fsApi, opts)
 }
 
 func (sh *ExportedFileShare) getStatus() *sf.ResourceStatus {
@@ -456,6 +462,10 @@ func (sh *ExportedFileShare) getStatus() *sf.ResourceStatus {
 
 func (sh *ExportedFileShare) fmt(format string, a ...interface{}) string {
 	return sh.fileSystem.fmt("/ExportedFileShares/%s", sh.id) + fmt.Sprintf(format, a...)
+}
+
+func (s *StorageService) Id() string {
+	return s.id
 }
 
 func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
@@ -737,6 +747,18 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 		return ec.ErrNotFound
 	}
 
+	if p.fileSystem != nil {
+		if err := s.StorageServiceIdFileSystemIdDelete(s.id, p.fileSystem.id); err != nil {
+			return err
+		}
+	}
+
+	for _, sg := range p.storageGroups {
+		if err := s.StorageServiceIdStorageGroupIdDelete(s.id, sg.id); err != nil {
+			return err
+		}
+	}
+
 	for _, pv := range p.providingVolumes {
 		if err := nvme.DeleteVolume(pv.volume); err != nil {
 			log.WithError(err).Errorf("Failed to delete volume from storage pool %s", p.id)
@@ -891,7 +913,6 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 	}
 
 	fields = strings.Split(model.Links.ServerEndpoint.OdataId, "/")
-
 	if len(fields) != s.resourceIndex+1 {
 		return ec.ErrNotAcceptable
 	}
@@ -1088,12 +1109,11 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 	}
 
 	oem := server.FileSystemOem{}
-
 	if err := openapi.UnmarshalOem(modelFsOem, &oem); err != nil {
 		return ec.ErrBadRequest
 	}
 
-	fsApi := server.FileSystemController.NewFileSystem(oem.Name)
+	fsApi := server.FileSystemController.NewFileSystem(oem.Type, oem.Name)
 	if fsApi == nil {
 		return ec.ErrNotAcceptable
 	}
@@ -1129,10 +1149,10 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 		return ec.ErrNotFound
 	}
 
-	// Require all shares to be unmounted prior deletion
-	// TODO: Or do it automatically?
-	if len(fs.shares) != 0 {
-		return ec.ErrNotAcceptable
+	for _, sh := range fs.shares {
+		if err := s.StorageServiceIdFileSystemIdExportedShareIdDelete(s.id, fs.id, sh.id); err != nil {
+			return err
+		}
 	}
 
 	if err := fs.fsApi.Delete(); err != nil {
@@ -1195,6 +1215,18 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 		return ec.ErrNotAcceptable
 	}
 
+refreshState:
+	switch sg.status().State {
+	case sf.ENABLED_RST:
+		break
+	case sf.STARTING_RST:
+		log.Infof("Storage group starting, delay 1s")
+		time.Sleep(time.Second)
+		goto refreshState
+	default:
+		return ec.ErrNotAcceptable
+	}
+
 	sh := fs.createFileShare(sg, model.FileSharePath)
 	sg.fileShare = sh
 	fs.shares = append(fs.shares, *sh)
@@ -1235,6 +1267,10 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 		return ec.ErrNotFound
 	}
 
+	if err := sh.storageGroup.serverStorage.Delete(); err != nil {
+		return ec.ErrInternalServerError
+	}
+
 	for shareIdx, share := range fs.shares {
 		if share.id == exportedShareId {
 			fs.shares = append(fs.shares[:shareIdx], fs.shares[shareIdx+1:]...)
@@ -1242,7 +1278,6 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 		}
 	}
 
-	//sh.storageGroup.serverStorage.
 
 	return nil
 }

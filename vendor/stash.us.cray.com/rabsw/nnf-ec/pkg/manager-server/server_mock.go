@@ -32,7 +32,7 @@ func (*MockServerController) GetStatus(s *Storage) StorageStatus {
 	return StorageStatus_Ready
 }
 
-func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, mountpoint string) error {
+func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
 	return nil
 }
 
