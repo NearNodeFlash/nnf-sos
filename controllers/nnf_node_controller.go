@@ -238,13 +238,13 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	// the desired state of each storage spec, and bring the corresponding storage
 	// status up to date.
 StorageSpecLoop:
-	for _, storage := range node.Spec.Storage {
+	for storageIdx, storage := range node.Spec.Storage {
 
 		// Each storage spec should have a corresponding status
 		var storageStatus *nnfv1alpha1.NnfNodeStorageStatus = nil
-		for idx := range node.Status.Storage {
-			if storage.Uuid == node.Status.Storage[idx].Uuid {
-				storageStatus = &node.Status.Storage[idx]
+		for statusIdx := range node.Status.Storage {
+			if storage.Uuid == node.Status.Storage[statusIdx].Uuid {
+				storageStatus = &node.Status.Storage[statusIdx]
 				break
 			}
 		}
@@ -305,7 +305,6 @@ StorageSpecLoop:
 			continue StorageSpecLoop
 		}
 
-		log.Info("Retriving Storage Pool %s", storageStatus.Id)
 		sp := sf.StoragePoolV150StoragePool{}
 		if err := ss.StorageServiceIdStoragePoolIdGet(ss.Id(), storageStatus.Id, &sp); err != nil {
 			log.Info(fmt.Sprintf("Failed to retrive Storage Pool: %s", err))
@@ -313,10 +312,47 @@ StorageSpecLoop:
 			continue StorageSpecLoop
 		}
 
-		if storage.State == "Delete" {
-			if err := ss.StorageServiceIdStoragePoolIdDelete(ss.Id(), sp.Id); err != nil {
-				// TODO: Delete logic
+		// Check if the resource is to be destroyed
+		if storage.State == nnfv1alpha1.ResourceDestroy {
+			if storageStatus.Status == nnfv1alpha1.ResourceDeleting {
+				continue StorageSpecLoop
 			}
+
+			log.Info(fmt.Sprintf("Deleting Storage Pool %s", sp.Id))
+
+			status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+				storageStatus.Status = nnfv1alpha1.ResourceDeleting
+				// TODO: Log Condition
+			})
+
+			if err := ss.StorageServiceIdStoragePoolIdDelete(ss.Id(), sp.Id); err != nil {
+				log.Info(fmt.Sprintf("Failed to delete Storage Pool %s: %s", sp.Id, err))
+
+				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+					storageStatus.Status = nnfv1alpha1.ResourceFailed
+					// TODO: Log Condition
+				})
+
+				continue StorageSpecLoop
+			}
+
+			// Remove this storage and storage status from the list of managed resources.
+			// This will cause the correspoding arrays to shift in order, so we can no
+			// longer rely on the processing loop; thus we need to return with a requeue
+			// to continue processing the other elements in correct order.
+
+			node.Spec.Storage = append(node.Spec.Storage[:storageIdx], node.Spec.Storage[storageIdx+1:]...)
+			node.Status.Storage = append(node.Status.Storage[:storageIdx], node.Status.Storage[storageIdx+1:]...)
+
+			// Perform the updates required to update the node spec/status. Note that the
+			// status is updated via the defer method above.
+			// TODO: We will need to handle failure here where the Spec/Status fields get out-of-sync.
+			if err := r.Update(ctx, node); err != nil {
+				log.Error(err, "Failed to update Node", "Node.Name", node.Name, "Node.Namespace", node.Namespace)
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		if storageStatus.Status != nnfv1alpha1.ResourceStatus(sp.Status) || storageStatus.Health != nnfv1alpha1.ResourceHealth(sp.Status) {
