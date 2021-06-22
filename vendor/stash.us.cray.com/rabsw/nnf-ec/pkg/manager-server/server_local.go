@@ -89,7 +89,7 @@ func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
 	if err := s.fileSystem.Unmount(); err != nil {
 		return err
 	}
-	
+
 	return s.fileSystem.Delete()
 }
 

@@ -566,7 +566,7 @@ sigs.k8s.io/yaml
 # stash.us.cray.com/rabsw/ec v1.0.9
 ## explicit
 stash.us.cray.com/rabsw/ec
-# stash.us.cray.com/rabsw/nnf-ec v1.0.2
+# stash.us.cray.com/rabsw/nnf-ec v1.0.4
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api

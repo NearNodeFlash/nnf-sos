@@ -242,16 +242,17 @@ StorageSpecLoop:
 
 		// Each storage spec should have a corresponding status
 		var storageStatus *nnfv1alpha1.NnfNodeStorageStatus = nil
+		var storageConditions []metav1.Condition = nil
 		for statusIdx := range node.Status.Storage {
 			if storage.Uuid == node.Status.Storage[statusIdx].Uuid {
 				storageStatus = &node.Status.Storage[statusIdx]
+				storageConditions = storageStatus.Conditions
 				break
 			}
 		}
 
 		if storageStatus == nil {
 
-			log.Info(fmt.Sprintf("Creating new storage of capacity %d bytes", storage.Capacity))
 			status.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
 				creationTime := metav1.Now()
 				s.Storage = append(s.Storage, nnfv1alpha1.NnfNodeStorageStatus{
@@ -260,10 +261,12 @@ StorageSpecLoop:
 					Status:            nnfv1alpha1.ResourceStarting,
 					CapacityAllocated: 0,
 					CapacityUsed:      0,
+					Conditions:        nnfv1alpha1.NewConditions(),
 				})
 			})
 
 			storageStatus = &node.Status.Storage[len(node.Status.Storage)-1]
+			storageConditions = storageStatus.Conditions
 
 			storagePool := &sf.StoragePoolV150StoragePool{
 				CapacityBytes: storage.Capacity,
@@ -273,17 +276,19 @@ StorageSpecLoop:
 				}),
 			}
 
-			log.Info("Allocating new Storage Pool")
+			condition := &storageConditions[nnfv1alpha1.ConditionIndexCreateStoragePool]
+
 			if err := ss.StorageServiceIdStoragePoolsPost(ss.Id(), storagePool); err != nil {
-				log.Info(fmt.Sprintf("Failed to allocate storage pool: %s", err))
 				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 					storageStatus.Status = nnfv1alpha1.ResourceFailed
-					// TODO: Log Condition
+
+					condition.Reason = nnfv1alpha1.ConditionFailed
+					condition.Message = err.Error()
 				})
+
 				continue StorageSpecLoop
 			}
 
-			log.Info("Allocated Storage Pool %s", storagePool.Id)
 			status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 				storageStatus.Id = storagePool.Id
 				storageStatus.Status = nnfv1alpha1.ResourceStatus(storagePool.Status)
@@ -296,6 +301,9 @@ StorageSpecLoop:
 					serverStatus.Status = nnfv1alpha1.ResourceStarting
 					storage.Servers[serverIdx].DeepCopyInto(&serverStatus.NnfNodeStorageServerSpec)
 				}
+
+				condition.Status = metav1.ConditionFalse
+				condition.Reason = nnfv1alpha1.ConditionSuccess
 			})
 
 		} // if storageStatus == nil
@@ -307,8 +315,11 @@ StorageSpecLoop:
 
 		sp := sf.StoragePoolV150StoragePool{}
 		if err := ss.StorageServiceIdStoragePoolIdGet(ss.Id(), storageStatus.Id, &sp); err != nil {
-			log.Info(fmt.Sprintf("Failed to retrive Storage Pool: %s", err))
-			// TODO: Log Condition
+			status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+				storageStatus.Status = nnfv1alpha1.ResourceFailed
+				nnfv1alpha1.SetGetResourceFailureCondition(storageConditions, err)
+			})
+
 			continue StorageSpecLoop
 		}
 
@@ -318,19 +329,22 @@ StorageSpecLoop:
 				continue StorageSpecLoop
 			}
 
-			log.Info(fmt.Sprintf("Deleting Storage Pool %s", sp.Id))
+			condition := &storageConditions[nnfv1alpha1.ConditionIndexDeleteStoragePool]
 
 			status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 				storageStatus.Status = nnfv1alpha1.ResourceDeleting
-				// TODO: Log Condition
+
+				condition.Status = metav1.ConditionTrue
+				condition.LastTransitionTime = metav1.Now()
 			})
 
 			if err := ss.StorageServiceIdStoragePoolIdDelete(ss.Id(), sp.Id); err != nil {
-				log.Info(fmt.Sprintf("Failed to delete Storage Pool %s: %s", sp.Id, err))
 
 				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 					storageStatus.Status = nnfv1alpha1.ResourceFailed
-					// TODO: Log Condition
+
+					condition.Reason = nnfv1alpha1.ConditionFailed
+					condition.Message = err.Error()
 				})
 
 				continue StorageSpecLoop
@@ -353,8 +367,10 @@ StorageSpecLoop:
 			}
 
 			return ctrl.Result{Requeue: true}, nil
-		}
+		} // if storage.State == nnfv1alpha1.ResourceDestroy
 
+		// Check if the storage status or health need to change to reflect the
+		// current storage pool status.
 		if storageStatus.Status != nnfv1alpha1.ResourceStatus(sp.Status) || storageStatus.Health != nnfv1alpha1.ResourceHealth(sp.Status) {
 			status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 				storageStatus.Status = nnfv1alpha1.ResourceStatus(sp.Status)
@@ -378,25 +394,36 @@ StorageSpecLoop:
 					}),
 				}
 
-				log.Info("Creating file system for storage pool %s", sp.Id)
-				if err := ss.StorageServiceIdFileSystemsPost(ss.Id(), &fs); err != nil {
-					log.Info(fmt.Sprintf("Failed to create file system for storage pool %s: %s", sp.Id, err))
+				condition := &storageConditions[nnfv1alpha1.ConditionIndexCreateFileSystem]
 
+				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+					condition.Status = metav1.ConditionTrue
+					condition.LastTransitionTime = metav1.Now()
+				})
+
+				if err := ss.StorageServiceIdFileSystemsPost(ss.Id(), &fs); err != nil {
 					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 						storageStatus.Status = nnfv1alpha1.ResourceFailed
-						// TODO: Log Condition
+
+						condition.Reason = nnfv1alpha1.ConditionFailed
+						condition.Message = err.Error()
 					})
 
 					continue StorageSpecLoop
 				}
+
+				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+					condition.Status = metav1.ConditionFalse
+					condition.Reason = nnfv1alpha1.ConditionSuccess
+				})
+
 			} else {
+
 				fsid := sp.Links.FileSystem.OdataId[strings.LastIndex(sp.Links.FileSystem.OdataId, "/")+1:]
 				if err := ss.StorageServiceIdFileSystemIdGet(ss.Id(), fsid, &fs); err != nil {
-					log.Info(fmt.Sprintf("Failed to retrieve file system %s: %s", fsid, err))
-
 					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 						storageStatus.Status = nnfv1alpha1.ResourceFailed
-						// TODO: Log Condition
+						nnfv1alpha1.SetGetResourceFailureCondition(storageConditions, err)
 					})
 
 					continue StorageSpecLoop
@@ -419,23 +446,26 @@ StorageSpecLoop:
 			if storageServer.Id != storageServerStatus.Id {
 				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 					storageStatus.Status = nnfv1alpha1.ResourceInvalid
-					// TODO: Log Condition
+
+					nnfv1alpha1.SetResourceInvalidCondition(
+						storageConditions,
+						fmt.Errorf("Server Id %s does not match Server Status Id %s", storageServer.Id, storageServerStatus.Id),
+					)
 				})
 
 				continue StorageSpecLoop
 			}
 
 			// Retrieve the server to confirm it is up and available for storage
-			serverEndpoint := sf.EndpointV150Endpoint{}
-			if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), storageServer.Id, &serverEndpoint); err != nil {
-				log.Info(fmt.Sprintf("Failed to retrieve server endpoint %s: %s", storageServer.Id, err))
+			srvr := sf.EndpointV150Endpoint{}
+			if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), storageServer.Id, &srvr); err != nil {
 
 				// TODO: We should differentiate between a bad request (bad server id/name) and a failed
 				// request (could not get status)
 
 				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-					storageStatus.Status = nnfv1alpha1.ResourceInvalid
-					// TODO: Log Condition
+					storageStatus.Status = nnfv1alpha1.ResourceFailed
+					nnfv1alpha1.SetGetResourceFailureCondition(storageConditions, err)
 				})
 
 				continue StorageSpecLoop
@@ -445,43 +475,49 @@ StorageSpecLoop:
 			shid := storageServerStatus.FileShare.Id
 
 			if len(sgid) == 0 {
-				log.Info("Creating storage group for storage pool %s server %s", sp.Id, storageServer.Id)
+
+				condition := &storageConditions[nnfv1alpha1.ConditionIndexCreateStorageGroup]
+
+				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+					condition.Status = metav1.ConditionTrue
+					condition.ObservedGeneration = int64(serverIdx)
+					condition.LastTransitionTime = metav1.Now()
+				})
 
 				sg := sf.StorageGroupV150StorageGroup{
 					Links: sf.StorageGroupV150Links{
 						StoragePool:    sf.OdataV4IdRef{OdataId: sp.OdataId},
-						ServerEndpoint: sf.OdataV4IdRef{OdataId: serverEndpoint.OdataId},
+						ServerEndpoint: sf.OdataV4IdRef{OdataId: srvr.OdataId},
 					},
 				}
 
 				if err := ss.StorageServiceIdStorageGroupPost(ss.Id(), &sg); err != nil {
-					log.Info("Failed to create storage group for storage pool %s server %s: %s", sp.Id, storageServer.Id, err)
-
 					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 						storageServerStatus.Status = nnfv1alpha1.ResourceFailed
-						// TODO: Log Condition
+
+						condition.Reason = nnfv1alpha1.ResourceFailed
+						condition.Message = err.Error()
 					})
 
 					continue StorageSpecLoop
 				}
 
-				log.Info("Created storage group %s for storage pool %s server %s", sg.Id, sp.Id, storageServer.Id)
-
 				status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 					storageServerStatus.StorageGroup.Id = sg.Id
 					storageServerStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
 					storageServerStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
+
+					condition.Status = metav1.ConditionFalse
+					condition.Reason = nnfv1alpha1.ConditionSuccess
 				})
 
 			} else {
 
 				sg := sf.StorageGroupV150StorageGroup{}
 				if err := ss.StorageServiceIdStorageGroupIdGet(ss.Id(), sgid, &sg); err != nil {
-					log.Info(fmt.Sprintf("Failed to retrieve storage group for storage pool %s server %s: %s", sp.Id, sgid, err))
-
 					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 						storageServerStatus.Status = nnfv1alpha1.ResourceFailed
-						// TODO: Log Condition
+						nnfv1alpha1.SetGetResourceFailureCondition(storageConditions, err)
 					})
 
 					continue StorageSpecLoop
@@ -498,58 +534,73 @@ StorageSpecLoop:
 			if len(storageServer.Path) != 0 {
 
 				if len(shid) == 0 {
-					log.Info("Creating file share for storage pool %s server %s", sp.Id, storageServer.Id)
+
+					condition := &storageConditions[nnfv1alpha1.ConditionIndexCreateFileShare]
+
+					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+						condition.Status = metav1.ConditionTrue
+						condition.ObservedGeneration = int64(serverIdx)
+						condition.LastTransitionTime = metav1.Now()
+					})
 
 					sh := sf.FileShareV120FileShare{
 						FileSharePath: storageServer.Path,
 						Links: sf.FileShareV120Links{
 							FileSystem: sf.OdataV4IdRef{OdataId: fs.OdataId},
-							Endpoint:   sf.OdataV4IdRef{OdataId: serverEndpoint.OdataId},
+							Endpoint:   sf.OdataV4IdRef{OdataId: srvr.OdataId},
 						},
 					}
 
 					if err := ss.StorageServiceIdFileSystemIdExportedSharesPost(ss.Id(), fs.Id, &sh); err != nil {
-						log.Info(fmt.Sprintf("Failed to create file share for storage pool %s server %s: %s", sp.Id, storageServer.Id, err))
-
 						status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 							storageServerStatus.Status = nnfv1alpha1.ResourceFailed
-							// TODO: Log Condition
+
+							condition.Reason = nnfv1alpha1.ConditionFailed
+							condition.Message = err.Error()
 						})
 
 						continue StorageSpecLoop
 					}
 
-					log.Info("Created file share %s for storage pool %s server %s", sh.Id, sp.Id, storageServer.Id)
-
 					status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 						storageServerStatus.FileShare.Id = sh.Id
-						storageServerStatus.FileShare.State = nnfv1alpha1.ResourceStatus(sh.Status)
+						storageServerStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
 						storageServerStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
+
+						condition.Status = metav1.ConditionFalse
+						condition.Reason = nnfv1alpha1.ConditionSuccess
 					})
 
 				} else {
 
 					sh := sf.FileShareV120FileShare{}
 					if err := ss.StorageServiceIdFileSystemIdExportedShareIdGet(ss.Id(), fs.Id, shid, &sh); err != nil {
-						log.Info(fmt.Sprintf("Failed to retrieve file share for storage pool %s file system %s share %s: %s", sp.Id, fs.Id, shid, err))
-
 						status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 							storageServerStatus.Status = nnfv1alpha1.ResourceFailed
-							// TODO: Log Condition
+							nnfv1alpha1.SetGetResourceFailureCondition(storageConditions, err)
 						})
 
 						continue StorageSpecLoop
 					}
 
-					if storageServerStatus.FileShare.State != nnfv1alpha1.ResourceStatus(sh.Status) || storageServerStatus.FileShare.Health != nnfv1alpha1.ResourceHealth(sh.Status) {
+					if storageServerStatus.FileShare.Status != nnfv1alpha1.ResourceStatus(sh.Status) || storageServerStatus.FileShare.Health != nnfv1alpha1.ResourceHealth(sh.Status) {
 						status.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-							storageServerStatus.FileShare.State = nnfv1alpha1.ResourceStatus(sh.Status)
+							storageServerStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
 							storageServerStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
 						})
 					}
 				}
-			} // if len(storageServer.Path) != 0 {
+			} // if len(storageServer.Path) != 0
 		} // for serverIdx := range storageStatus.Servers
+
+		// At this point, any storage resource has fully initialized
+		// and is ready for use - transition to the Ready state.
+		if storageStatus.Status == nnfv1alpha1.ResourceStarting {
+			status.Update(func(status *nnfv1alpha1.NnfNodeStatus) {
+				storageStatus.Status = nnfv1alpha1.ResourceReady
+			})
+		}
+
 	} // for _, storage := range node.Spec.Storage
 
 	return ctrl.Result{}, nil

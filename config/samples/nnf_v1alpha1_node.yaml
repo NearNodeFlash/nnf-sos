@@ -1,7 +1,14 @@
 apiVersion: nnf.cray.com/v1alpha1
 kind: NnfNode
 metadata:
-  name: nnf-node-sample
+  name: nnf-nlc
+  namespace: kind-worker
 spec:
   # Add fields here
-  foo: bar
+  state: Enable
+  storage:
+    - uuid: "47e2f33c-ccb0-46cf-8459-6aaf628c13a2"
+      capacity: 100000
+      state: 
+      servers:
+        - id: "0"

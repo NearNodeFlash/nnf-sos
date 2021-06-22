@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
-	
+
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 )
 

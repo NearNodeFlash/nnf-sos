@@ -85,9 +85,9 @@ type NnfNodeStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Status reflects the current status of the NNF Node
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 
 	Capacity          int64 `json:"capacity,omitempty"`
 	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
@@ -101,40 +101,40 @@ type NnfNodeStatus struct {
 type NnfServerStatus struct {
 
 	// Id reflects the NNF Node unique identifier for this NNF Server resource.
-	Id string `json:"id"`
+	Id string `json:"id,omitempty"`
 
 	// Name reflects the common name of this NNF Server resource.
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 }
 
 type NnfNodeStorageStatus struct {
 
 	// Reflects the unique identifier for the storage. When a storage spec is received
 	// the controller will create a status object with the same UUID.
-	Uuid string `json:"uuid"`
+	Uuid string `json:"uuid,omitempty"`
 
 	// Reflects the ID of the storage. Used internally to the controller and can be
 	// safely ignored by the client.
-	Id string `json:"id"`
+	Id string `json:"id,omitempty"`
 
 	// The current state of the storage
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
 	// The current health of the storage
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 
 	// Total capacity allocated for the storage. This may differ than the requested storage
 	// capacity as the system may round up to the requested capacity satisifiy underlying
 	// storage requirements (i.e. block size / stripe size).
-	CapacityAllocated int64 `json:"capacityAllocated"`
+	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 
 	// Represents the used capacity. This is an aggregation of all the used capacities of
 	// the underlying storage objects.
-	CapacityUsed int64 `json:"capacityUsed"`
+	CapacityUsed int64 `json:"capacityUsed,omitempty"`
 
 	// Represents the time when the storage was created by the controller
 	// It is represented in RFC3339 form and is in UTC.
@@ -149,50 +149,52 @@ type NnfNodeStorageStatus struct {
 	Servers []NnfNodeStorageServerStatus `json:"servers,omitempty"`
 
 	Drives []NnfNodeStorageDriveStatus `json:"drives,omitempty"`
+
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type NnfNodeStorageServerStatus struct {
 	NnfNodeStorageServerSpec `json:",inline"`
 
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 
 	// Represents the storage group that is supporting this server. A storage group is
 	// the mapping from a group of drive namespaces to an individual server. This value
 	// can be safely ignored by the client.
-	StorageGroup NnfNodeStorageServerStorageGroupStatus `json:"storageGroup"`
+	StorageGroup NnfNodeStorageServerStorageGroupStatus `json:"storageGroup,omitempty"`
 
 	// Represents the file share that is supporting this server. A file share is the
 	// combination of a storage group and the associated file system parameters (type, mountpoint)
 	// that makes up the available storage.
-	FileShare NnfNodeStorageServerFileShareStatus `json:"fileShare"`
+	FileShare NnfNodeStorageServerFileShareStatus `json:"fileShare,omitempty"`
 }
 
 type NnfNodeStorageServerStorageGroupStatus struct {
 	Id string `json:"id,omitempty"`
 
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 }
 
 type NnfNodeStorageServerFileShareStatus struct {
 	Id string `json:"id,omitempty"`
 
-	State NnfResourceStatusType `json:"status,omitempty"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
 	Health NnfResourceHealthType `json:"health,omitempty"`
 }
 
 type NnfNodeStorageDriveStatus struct {
-	Id string `json:"id"`
+	Id string `json:"id,omitempty"`
 
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
-	Status NnfResourceStatusType `json:"status"`
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	Health NnfResourceHealthType `json:"health"`
+	Health NnfResourceHealthType `json:"health,omitempty"`
 }
 
 //+kubebuilder:object:root=true
