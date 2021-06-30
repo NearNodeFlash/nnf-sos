@@ -38,121 +38,309 @@ spec:
             properties:
               capacity:
                 description: Capacity defines the desired size, in bytes, of storage
-                  allocation for each server within the storage specification.
+                  allocation for each NNF Node listed by the storage specification.
+                  The allocated capacity may be larger to meet underlying storage
+                  requirements (i.e. allocated capacity may round up to a multiple
+                  of the stripe size)
                 format: int64
                 type: integer
               fileSystem:
                 description: File System defines the file system that is constructed
                   from underlying storage subsystem.
                 type: string
-              id:
-                description: Id defines the unique ID for this storage specification.
-                type: string
               nodes:
                 description: Nodes define the list of NNF Nodes that will be the source
                   of storage provisioning and the servers that can utilize the storage
                 items:
                   description: NnfStorageNodeSpec defines the desired state of an
-                    individual NNF Storage Node.
+                    individual NNF Node.
                   properties:
-                    name:
-                      description: Name specifies the target NNF Node that will host
-                        the storage requested by the specification.
+                    index:
+                      description: Index specifies the unique index of this NNF Storage
+                        Node specification within the context of the parent Storage
+                        specification.
+                      type: integer
+                    node:
+                      description: Node specifies the target NNF Node that will host
+                        the storage requested by the specification. Duplicate names
+                        within the parent's list of nodes is not allowed.
                       type: string
                     servers:
                       description: Servers specifies the target NNF Servers that will
-                        be receiving the file system requested by the specification.
+                        be receiving the storage requested by the specification's
+                        file system type, or block storage if no file system is specified.
                       items:
                         description: NnfStorageServerSpec defines the desired state
                           of storage presented to a server connecting to the NNF Storage
                           Node.
                         properties:
                           id:
-                            description: The unique Id for the NNF Storage Server,
-                              as provided by NNF Node Server value for a particular
-                              NNF Node
+                            description: Id defines the NNF Node unique identifier
+                              for this NNF Server resource. A valid Id field will
+                              receive the storage allocated by the parent NNF Storage
+                              specification.
                             type: string
                           name:
-                            description: The unique name of the NNF Storage Server,
-                              as provided by the NNF Node Server value for a given
-                              NNF Node. The Server shall receive the storage provisioned
-                              on this NNF Storage Node.
+                            description: 'Name defines the name of the NNF Server
+                              resource. If provided, the name is validated against
+                              the supplied Id. Can be used to identify a NNF Server
+                              resource by a human-readable value. TODO: Validate name/id
+                              pair in nnf_node_controller.go'
                             type: string
-                          path:
-                            description: Defines the desired path for the provided
-                              storage onto the server listed in Name
+                          string:
+                            description: Path defines an option path for which the
+                              resource is made available on the NNF Server resource.
+                              A valid path must adhear to the system's directory name
+                              rules and conventions and cannot already exist on the
+                              system. The path is analogous to the mountpoint of the
+                              file system.
                             type: string
                         required:
                         - id
-                        - name
                         type: object
                       type: array
                   required:
-                  - name
-                  - servers
+                  - node
                   type: object
                 type: array
+              uuid:
+                description: Uuid defines the unique identifier for this storage specification.
+                  Can be any value specified by the user, but must be unique against
+                  all existing storage specifications.
+                type: string
             required:
             - capacity
-            - nodes
             type: object
           status:
-            description: NnfStorageStatus defines the observed state of NNF Storage
+            description: NnfStorageStatus defines the observed status of NNF Storage
+              specification
             properties:
               health:
+                description: Health reflects the health of this NNF Storage
                 type: string
               nodes:
+                description: Nodes defines status of inidividual NNF Nodes that are
+                  managed by the parent NNF Storage specification. Each node in the
+                  specification has a companion status element of the same name.
                 items:
-                  description: NnfStorageNodeStatus defines the observed state of
-                    a NNF Storage present on a NNF Node.
+                  description: NnfStorageNodeStatus defines the observed status of
+                    a storage present on one particular NNF Node defined within the
+                    specifiction
                   properties:
                     health:
+                      description: Health reflects the current health of the NNF Node
                       type: string
-                    id:
+                    status:
+                      description: Status reflects the current status of the NNF Node
                       type: string
-                    servers:
-                      items:
-                        description: NnfStorageServerStatus defines the observed state
-                          of NNF Storage present on a NNF Server.
-                        properties:
-                          health:
-                            type: string
-                          id:
-                            description: The unique Id for the NNF Storage Server,
-                              as provided by NNF Node Server value for a particular
-                              NNF Node
-                            type: string
-                          name:
-                            description: The unique name of the NNF Storage Server,
-                              as provided by the NNF Node Server value for a given
-                              NNF Node. The Server shall receive the storage provisioned
-                              on this NNF Storage Node.
-                            type: string
-                          path:
-                            description: Defines the desired path for the provided
-                              storage onto the server listed in Name
-                            type: string
-                          shareId:
-                            type: string
-                          state:
-                            type: string
-                          storageId:
-                            type: string
-                        required:
-                        - id
-                        - name
-                        type: object
-                      type: array
-                    state:
-                      type: string
-                  required:
-                  - servers
+                    storage:
+                      description: Storage reflects the current health of NNF Storage
+                        on the NNF Node
+                      properties:
+                        capacityAllocated:
+                          description: Total capacity allocated for the storage. This
+                            may differ than the requested storage capacity as the
+                            system may round up to the requested capacity satisifiy
+                            underlying storage requirements (i.e. block size / stripe
+                            size).
+                          format: int64
+                          type: integer
+                        capacityUsed:
+                          description: Represents the used capacity. This is an aggregation
+                            of all the used capacities of the underlying storage objects.
+                          format: int64
+                          type: integer
+                        conditions:
+                          items:
+                            description: "Condition contains details for one aspect
+                              of the current state of this API Resource. --- This
+                              struct is intended for direct use as an array at the
+                              field path .status.conditions.  For example, type FooStatus
+                              struct{     // Represents the observations of a foo's
+                              current state.     // Known .status.conditions.type
+                              are: \"Available\", \"Progressing\", and \"Degraded\"
+                              \    // +patchMergeKey=type     // +patchStrategy=merge
+                              \    // +listType=map     // +listMapKey=type     Conditions
+                              []metav1.Condition `json:\"conditions,omitempty\" patchStrategy:\"merge\"
+                              patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
+                              \n     // other fields }"
+                            properties:
+                              lastTransitionTime:
+                                description: lastTransitionTime is the last time the
+                                  condition transitioned from one status to another.
+                                  This should be when the underlying condition changed.  If
+                                  that is not known, then using the time when the
+                                  API field changed is acceptable.
+                                format: date-time
+                                type: string
+                              message:
+                                description: message is a human readable message indicating
+                                  details about the transition. This may be an empty
+                                  string.
+                                maxLength: 32768
+                                type: string
+                              observedGeneration:
+                                description: observedGeneration represents the .metadata.generation
+                                  that the condition was set based upon. For instance,
+                                  if .metadata.generation is currently 12, but the
+                                  .status.conditions[x].observedGeneration is 9, the
+                                  condition is out of date with respect to the current
+                                  state of the instance.
+                                format: int64
+                                minimum: 0
+                                type: integer
+                              reason:
+                                description: reason contains a programmatic identifier
+                                  indicating the reason for the condition's last transition.
+                                  Producers of specific condition types may define
+                                  expected values and meanings for this field, and
+                                  whether the values are considered a guaranteed API.
+                                  The value should be a CamelCase string. This field
+                                  may not be empty.
+                                maxLength: 1024
+                                minLength: 1
+                                pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                                type: string
+                              status:
+                                description: status of the condition, one of True,
+                                  False, Unknown.
+                                enum:
+                                - "True"
+                                - "False"
+                                - Unknown
+                                type: string
+                              type:
+                                description: type of condition in CamelCase or in
+                                  foo.example.com/CamelCase. --- Many .condition.type
+                                  values are consistent across resources like Available,
+                                  but because arbitrary conditions can be useful (see
+                                  .node.status.conditions), the ability to deconflict
+                                  is important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                                maxLength: 316
+                                pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                                type: string
+                            required:
+                            - lastTransitionTime
+                            - message
+                            - reason
+                            - status
+                            - type
+                            type: object
+                          type: array
+                        creationTime:
+                          description: Represents the time when the storage was created
+                            by the controller It is represented in RFC3339 form and
+                            is in UTC.
+                          format: date-time
+                          type: string
+                        deletionTime:
+                          description: Represents the time when the storage was deleted
+                            by the controller. This field is updated when the Storage
+                            specification State transitions to 'Delete' by the client.
+                            It is represented in RFC3339 form and is in UTC.
+                          format: date-time
+                          type: string
+                        drives:
+                          items:
+                            properties:
+                              health:
+                                description: NnfResourceHealthType defines the health
+                                  of an NNF resource.
+                                type: string
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              status:
+                                type: string
+                            type: object
+                          type: array
+                        health:
+                          description: The current health of the storage
+                          type: string
+                        id:
+                          description: Reflects the ID of the storage. Used internally
+                            to the controller and can be safely ignored by the client.
+                          type: string
+                        servers:
+                          items:
+                            properties:
+                              fileShare:
+                                description: Represents the file share that is supporting
+                                  this server. A file share is the combination of
+                                  a storage group and the associated file system parameters
+                                  (type, mountpoint) that makes up the available storage.
+                                properties:
+                                  health:
+                                    description: NnfResourceHealthType defines the
+                                      health of an NNF resource.
+                                    type: string
+                                  id:
+                                    type: string
+                                  status:
+                                    type: string
+                                type: object
+                              health:
+                                description: NnfResourceHealthType defines the health
+                                  of an NNF resource.
+                                type: string
+                              id:
+                                description: Id defines the NNF Node unique identifier
+                                  for this NNF Server resource. A valid Id field will
+                                  receive the storage allocated by the parent NNF
+                                  Storage specification.
+                                type: string
+                              name:
+                                description: 'Name defines the name of the NNF Server
+                                  resource. If provided, the name is validated against
+                                  the supplied Id. Can be used to identify a NNF Server
+                                  resource by a human-readable value. TODO: Validate
+                                  name/id pair in nnf_node_controller.go'
+                                type: string
+                              status:
+                                type: string
+                              storageGroup:
+                                description: Represents the storage group that is
+                                  supporting this server. A storage group is the mapping
+                                  from a group of drive namespaces to an individual
+                                  server. This value can be safely ignored by the
+                                  client.
+                                properties:
+                                  health:
+                                    description: NnfResourceHealthType defines the
+                                      health of an NNF resource.
+                                    type: string
+                                  id:
+                                    type: string
+                                  status:
+                                    type: string
+                                type: object
+                              string:
+                                description: Path defines an option path for which
+                                  the resource is made available on the NNF Server
+                                  resource. A valid path must adhear to the system's
+                                  directory name rules and conventions and cannot
+                                  already exist on the system. The path is analogous
+                                  to the mountpoint of the file system.
+                                type: string
+                            required:
+                            - id
+                            type: object
+                          type: array
+                        status:
+                          description: The current state of the storage
+                          type: string
+                        uuid:
+                          description: Reflects the unique identifier for the storage.
+                            When a storage spec is received the controller will create
+                            a status object with the same UUID.
+                          type: string
+                      type: object
                   type: object
                 type: array
-              state:
+              status:
+                description: Status reflects the status of this NNF Storage
                 type: string
-            required:
-            - nodes
             type: object
         type: object
     served: true

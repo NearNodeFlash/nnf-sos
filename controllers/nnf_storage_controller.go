@@ -7,18 +7,15 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/go-logr/logr"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 )
@@ -38,9 +35,14 @@ const (
 	finalizer = "nnf.cray.com/finalizer"
 )
 
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfstorages/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=nnf.cray.com,namespace=nnf-system,resources=nnfstorages/finalizers,verbs=update
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages/finalizers,verbs=update
+
+// The Storage Controller will list and make modifications to individual NNF Nodes, so include the
+// RBAC policy for nnfnodes. This isn't strictly necessary since the same ClusterRole is shared for
+// both controllers, but we include it here for completeness
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes,verbs=get;list;watch;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -68,9 +70,12 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 
-		if err := r.teardownStorage(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
+		// TODO: Teardown storage
+		/*
+			if err := r.teardownStorage(ctx, storage); err != nil {
+				return ctrl.Result{}, err
+			}
+		*/
 
 		log.Info("Finalizing storage", "Storage.NamespacedName", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 		controllerutil.RemoveFinalizer(storage, finalizer)
@@ -86,159 +91,109 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// values.
 	if !controllerutil.ContainsFinalizer(storage, finalizer) {
 
+		// Prepare the status fields; For each NNF Node in specification, there
+		// must be a companion NNF Node Status.
+		if storage.Status.Status != nnfv1alpha1.ResourceStarting {
+			storage.Status.Status = nnfv1alpha1.ResourceStarting
+			storage.Status.Health = nnfv1alpha1.ResourceOkay
+			storage.Status.Nodes = make([]nnfv1alpha1.NnfStorageNodeStatus, len(storage.Spec.Nodes))
+			if err := r.Status().Update(ctx, storage); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			// Force a requeue after applying changes. Otherwise this results in
+			// future updates to be unfullfilled.
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// Ensure the storage specification supplied correct indicies
+		for idx := range storage.Spec.Nodes {
+			storage.Spec.Nodes[idx].Index = idx
+		}
+
 		controllerutil.AddFinalizer(storage, finalizer)
 		if err := r.Update(ctx, storage); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		// Initialze the Status' of the storage
-		storage.Status.Nodes = make([]nnfv1alpha1.NnfStorageNodeStatus, len(storage.Spec.Nodes))
-		for nodeIdx := range storage.Status.Nodes {
-			spec := &storage.Spec.Nodes[nodeIdx]
-			status := &storage.Status.Nodes[nodeIdx]
-
-			status.State = "Starting"
-			status.Servers = make([]nnfv1alpha1.NnfStorageServerStatus, len(spec.Servers))
-			for serverIdx := range spec.Servers {
-				serverStatus := &status.Servers[serverIdx]
-				serverStatus.State = "Starting"
-				spec.Servers[serverIdx].DeepCopyInto(&serverStatus.NnfStorageServerSpec)
-			}
-		}
-
-		log.Info("Initialized storage status", "NnfStorage", fmt.Sprintf("%+v", storage))
-
-		if err := r.Status().Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
+		// Now that we've prepared the spec & status fields, force a requeue
+		// to ensure Update() calls are clear of conflicts
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// At this point we've received a request to provision storage based on the list
 	// of NNF Node Controllers supplied in the specification. For each NNF Node Controller,
-	// we connect to the controller and allocate the required storage.
+	// we connect to the controller and allocate the required storage. This is done by fanning
+	// out the required work to all NNF Nodes, and aggregating those results in the response
+	// channel.
+
 	for nodeIdx := range storage.Status.Nodes {
-
-		node := &storage.Spec.Nodes[nodeIdx]
-		nodeStatus := &storage.Status.Nodes[nodeIdx]
-
-		log.Info("Initializing storage on node", "Node.Name", node.Name)
-
-		conn, err := r.connectStorageService(node, storage.Namespace)
-		if err != nil {
-			log.Error(err, "Failed to connect to storage service")
+		if err := r.reconcileNodeController(ctx, storage.Spec, &storage.Spec.Nodes[nodeIdx], &storage.Status.Nodes[nodeIdx]); err != nil {
+			//log.Error(err, "Failed to reconcile node")
 			return ctrl.Result{}, err
 		}
-
-		if len(nodeStatus.Id) == 0 {
-			// Request a storage pool is created with the desired capacity
-			log.Info("Creating storage pool...")
-			pool, err := conn.CreateStoragePool(storage.Spec.Capacity)
-			if err != nil {
-				log.Error(err, "Failed to create storage pool")
-
-				// TODO: If the storage pool cannot be created because of inadaquate resources, we
-				// should reflect that the status, not continuously return an error.
-				return ctrl.Result{}, errors.NewBadRequest(err.Error())
-			}
-
-			log.Info("Created storage pool", "StoragePool.Id", pool.Id)
-
-			nodeStatus.Id = pool.Id
-			if err := r.Status().Update(ctx, storage); err != nil {
-				log.Error(err, "Storage status update failed")
-				return ctrl.Result{}, err
-			}
-		}
-
-		pool, err := conn.GetStoragePool(nodeStatus.Id)
-		if err != nil {
-			log.Error(err, "Failed to retrieve storage pool", "StoragePool.Id", nodeStatus.Id)
-			return ctrl.Result{}, err
-		}
-
-		log.Info("Retrieved storage pool", "StoragePool.Id", pool.Id, "StoragePool.Status.Health", string(pool.Status.Health), "StoragePool.Status.State", string(pool.Status.State))
-		if nodeStatus.Health != string(pool.Status.Health) || nodeStatus.State != string(pool.Status.State) {
-			nodeStatus.Health = string(pool.Status.Health)
-			nodeStatus.State = string(pool.Status.State)
-			if err := r.Status().Update(ctx, storage); err != nil {
-				log.Error(err, "Storage status update failed")
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Check if a file system is defined
-		var fs *sf.FileSystemV122FileSystem = nil
-		if len(storage.Spec.FileSystem) != 0 {
-
-			if len(pool.Links.FileSystem.OdataId) == 0 {
-				log.Info("Creating file system...", "StoragePool.Id", pool.Id, "FileSystem", storage.Spec.FileSystem)
-				fs, err = conn.CreateFileSystem(pool, storage.Spec.FileSystem)
-				if err != nil {
-					log.Error(err, "Failed to create file system")
-					return ctrl.Result{}, err
-				}
-			} else {
-				fs, err = conn.GetFileSystem(pool.Links.FileSystem.OdataId)
-				if err != nil {
-					log.Error(err, "Failed to retrieve file system")
-					return ctrl.Result{}, err
-				}
-			}
-		}
-
-		for serverIdx := range nodeStatus.Servers {
-			server := &nodeStatus.Servers[serverIdx]
-
-			s, err := conn.GetServer(server.Id)
-			if err != nil {
-				log.Error(err, "Failed to retrieve server", "Server.Id", server.Id)
-				return ctrl.Result{}, err
-			}
-
-			if len(server.StorageId) == 0 {
-				log.Info("Creating storage group...", "StoragePool.Id", pool.Id)
-
-				sg, err := conn.CreateStorageGroup(pool, s)
-				if err != nil {
-					log.Error(err, "Failed to create storage group")
-					return ctrl.Result{}, err
-				}
-
-				log.Info("Created storage group", "StorageGroup.Id", sg.Id)
-				server.StorageId = sg.Id
-				if err := r.Status().Update(ctx, storage); err != nil {
-					log.Error(err, "Storage status update failed")
-					return ctrl.Result{}, err
-				}
-			}
-
-			if len(server.ShareId) != 0 {
-				if fs == nil {
-					err = errors.NewInternalError(fmt.Errorf("File System not present for pool"))
-					log.Error(err, "Failed to find file system", "Pool.Id", pool.Id)
-					return ctrl.Result{}, err
-				}
-
-				log.Info("Creating file share...", "FileSystem.Id", fs.Id)
-				sh, err := conn.CreateFileShare(fs, s, server.Path)
-				if err != nil {
-					log.Error(err, "Failed to create file share")
-					return ctrl.Result{}, err
-				}
-
-				log.Info("Created file share", "FileShare.Id", sh.Id)
-				server.ShareId = sh.Id
-				if err := r.Status().Update(ctx, storage); err != nil {
-					log.Error(err, "Storage status update failed")
-					return ctrl.Result{}, err
-				}
-			}
-		}
-
-		log.Info("Initialized storage on node", "Node.Name", node.Name)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec nnfv1alpha1.NnfStorageSpec, nodeSpec *nnfv1alpha1.NnfStorageNodeSpec, nodeStatus *nnfv1alpha1.NnfStorageNodeStatus) error {
+	log := r.Log.WithValues("node", nodeSpec.Node)
+
+	node := &nnfv1alpha1.NnfNode{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-nlc", Namespace: nodeSpec.Node}, node); err != nil {
+		log.Error(err, "Unable to get NNF Node", "NamespacedName", types.NamespacedName{Name: "nnf-nlc", Namespace: nodeSpec.Node})
+		return err
+	}
+
+	var storageSpec *nnfv1alpha1.NnfNodeStorageSpec = nil
+	var storageStatus *nnfv1alpha1.NnfNodeStorageStatus = nil
+	for idx := range node.Spec.Storage {
+		if node.Spec.Storage[idx].Uuid == fmt.Sprintf("%s:%d", spec.Uuid, nodeSpec.Index) {
+			storageSpec = &node.Spec.Storage[idx]
+			storageStatus = &node.Status.Storage[idx]
+		}
+	}
+
+	if storageSpec == nil {
+		// Prepare the node storage specification
+		storageSpec := nnfv1alpha1.NnfNodeStorageSpec{
+			Uuid:       fmt.Sprintf("%s:%d", spec.Uuid, nodeSpec.Index),
+			Capacity:   spec.Capacity,
+			FileSystem: spec.FileSystem,
+			State:      nnfv1alpha1.ResourceCreate,
+			Servers:    make([]nnfv1alpha1.NnfNodeStorageServerSpec, len(nodeSpec.Servers)),
+		}
+
+		for idx := range nodeSpec.Servers {
+			nodeSpec.Servers[idx].NnfNodeStorageServerSpec.DeepCopyInto(&storageSpec.Servers[idx])
+		}
+
+		node.Spec.Storage = append(node.Spec.Storage, storageSpec)
+
+		if err := r.Update(ctx, node); err != nil {
+			log.Error(err, "Failed to update NNF Node Storage spec")
+			return err
+		}
+
+		log.Info("Created node storage spec")
+		return nil
+	}
+
+	// Update the status of the node to reflect the current values
+	// TODO: We should only be updating the status elements if changed
+	//       then call r.Status().Update()
+	nodeStatus.Status = node.Status.Status
+	nodeStatus.Health = node.Status.Health
+
+	// Update the status of the storage with the current values
+	if !reflect.DeepEqual(storageStatus, &nodeStatus.Storage) {
+		storageStatus.DeepCopyInto(&nodeStatus.Storage)
+
+		//r.Status().Update(ctx, )
+	}
+
+	return nil
 }
 
 // teardownStorage will process the storage object in reverse of setupStorage, deleting
@@ -246,29 +201,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // by the NNF Element Controller, which supports deletion of the master Storage Pool object
 // which will delete the tree of objects attached to the pool as well as the pool itself.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
-	for nodeIdx, node := range storage.Spec.Nodes {
-
-		conn, err := r.connectStorageService(&node, storage.Namespace)
-		if err != nil {
-			return err
-		}
-
-		status := &storage.Status.Nodes[nodeIdx]
-		if err := conn.DeleteStoragePool(status.Id); err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-// connectStorageService makes a connection to the NNF Storage Service for the provded node/namespace combination.
-func (r *NnfStorageReconciler) connectStorageService(node *nnfv1alpha1.NnfStorageNodeSpec, namespace string) (*nnf.StorageService, error) {
-	addr := fmt.Sprintf("%s.%s", ServiceName(node.Name), namespace)
-	port := fmt.Sprintf("%d", nnf.Port)
-
-	r.Log.Info("Connecting to storage service", "Address", addr, "Port", port)
-	return nnf.NewStorageServiceConnection(addr, port)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -276,4 +209,12 @@ func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfStorage{}).
 		Complete(r)
+}
+
+type result struct{}
+
+type nodeController struct {
+	index  int
+	spec   *nnfv1alpha1.NnfStorageNodeSpec
+	status *nnfv1alpha1.NnfStorageNodeStatus
 }

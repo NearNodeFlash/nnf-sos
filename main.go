@@ -20,6 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 	"stash.us.cray.com/RABSW/nnf-sos/controllers"
@@ -69,28 +70,14 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	namespace := ""
-	switch controller {
-	case NodeLocalController:
-		namespace = os.Getenv("NNF_NODE_NAME")
-
-		// Initialize & Run the NNF Element Controller - this allows external entities
-		// to access the Rabbit via Redfish/Swordfish APIs via HTTP server. Internally,
-		// the APIs are accesses directly (not through HTTP).
-		c := nnf.NewController(nnfopts)
-		c.Init(&ec.Options{
-			Http:    true,
-			Port:    nnf.Port,
-			Log:     false,
-			Verbose: false,
-		})
-
-		go c.Run()
-
-	case StorageController:
-		namespace = "nnf-system"
-	default:
+	nnfCtrl := newNnfControllerInitializer(controller)
+	if nnfCtrl == nil {
 		setupLog.Info("unsupported controller type", "controller", controller)
+		os.Exit(1)
+	}
+
+	if err := nnfCtrl.Start(nnfopts); err != nil {
+		setupLog.Error(err, "failed to start nnf controller")
 		os.Exit(1)
 	}
 
@@ -101,38 +88,15 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "6cf68fa5.cray.com",
-		Namespace:              namespace,
+		Namespace:              nnfCtrl.GetNamespace(),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	switch controller {
-	case NodeLocalController:
-		if err = (&controllers.NnfNodeReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
-			Scheme: mgr.GetScheme(),
-			NamespacedName: types.NamespacedName{
-				Name:      "nnf-nlc",
-				Namespace: namespace,
-			},
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Node")
-			os.Exit(1)
-		}
-	case StorageController:
-		if err = (&controllers.NnfStorageReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "Storage")
-			os.Exit(1)
-		}
-	default:
-		setupLog.Info("unsupported controller type", "controller", controller)
+	if err := nnfCtrl.SetupReconciler(mgr); err != nil {
+		setupLog.Error(err, "unable to create nnf controller reconciler", "controller", nnfCtrl.GetType())
 		os.Exit(1)
 	}
 
@@ -152,4 +116,73 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// Type NNF Controller Initializer defines an interface to initialize one of the
+// NNF Controller types.
+type nnfControllerInitializer interface {
+	GetType() string
+	GetNamespace() string
+	Start(*nnf.Options) error
+	SetupReconciler(manager.Manager) error
+}
+
+// Create a new NNF Controller Initializer for the given type, or nil if not found.
+func newNnfControllerInitializer(typ string) nnfControllerInitializer {
+	switch typ {
+	case NodeLocalController:
+		return &nodeLocalController{}
+	case StorageController:
+		return &storageController{}
+	}
+	return nil
+}
+
+// Type NodeLocalController defines initializer for the per NNF Node Controller
+type nodeLocalController struct{}
+
+func (*nodeLocalController) GetType() string      { return NodeLocalController }
+func (*nodeLocalController) GetNamespace() string { return os.Getenv("NNF_NODE_NAME") }
+
+func (*nodeLocalController) Start(opts *nnf.Options) error {
+	c := nnf.NewController(opts)
+	if err := c.Init(&ec.Options{
+		Http:    true,
+		Port:    nnf.Port,
+		Log:     false,
+		Verbose: false,
+	}); err != nil {
+		return err
+	}
+
+	go c.Run()
+
+	return nil
+}
+
+func (c *nodeLocalController) SetupReconciler(mgr manager.Manager) error {
+	return (&controllers.NnfNodeReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Scheme: mgr.GetScheme(),
+		NamespacedName: types.NamespacedName{
+			Name:      "nnf-nlc",
+			Namespace: c.GetNamespace(),
+		},
+	}).SetupWithManager(mgr)
+}
+
+// Type StorageController defines the initializer for the NNF Storage Controller
+type storageController struct{}
+
+func (*storageController) GetType() string          { return StorageController }
+func (*storageController) GetNamespace() string     { return "" }
+func (*storageController) Start(*nnf.Options) error { return nil }
+
+func (c *storageController) SetupReconciler(mgr manager.Manager) error {
+	return (&controllers.NnfStorageReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
 }

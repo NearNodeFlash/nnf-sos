@@ -4,10 +4,10 @@ metadata:
   name: storage-sample
   namespace: nnf-system
 spec:
-  id: storage-sample
+  uuid: "af7dfc28-2e74-4d60-803c-4a11a72e5b49"
   capacity: 1048576
   nodes:
-  - name: kind-worker
+  - node: kind-worker
     servers:
-    - name: Rabbit
-      id: /redfish/v1/StorageServices/NNF/Endpoints/0
+    - id: "0"
+      name: "Rabbit"

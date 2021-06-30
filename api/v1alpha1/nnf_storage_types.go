@@ -13,90 +13,100 @@ import (
 
 // StorageSpec defines the desired state of Storage
 type NnfStorageSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Id defines the unique ID for this storage specification.
-	Id string `json:"id,omitempty"`
+	// Uuid defines the unique identifier for this storage specification. Can
+	// be any value specified by the user, but must be unique against all
+	// existing storage specifications.
+	Uuid string `json:"uuid,omitempty"`
 
 	// Capacity defines the desired size, in bytes, of storage allocation for
-	// each server within the storage specification.
+	// each NNF Node listed by the storage specification. The allocated capacity
+	// may be larger to meet underlying storage requirements (i.e. allocated
+	// capacity may round up to a multiple of the stripe size)
 	Capacity int64 `json:"capacity"`
 
 	// File System defines the file system that is constructed from underlying
 	// storage subsystem.
 	FileSystem string `json:"fileSystem,omitempty"`
 
-	// Nodes define the list of NNF Nodes that will be the source
-	// of storage provisioning and the servers that can utilize the storage
-	Nodes []NnfStorageNodeSpec `json:"nodes"`
+	// Nodes define the list of NNF Nodes that will be the source of storage provisioning
+	// and the servers that can utilize the storage
+	Nodes []NnfStorageNodeSpec `json:"nodes,omitempty"`
 }
 
-// NnfStorageNodeSpec defines the desired state of an individual NNF Storage
-// Node.
+// NnfStorageNodeSpec defines the desired state of an individual NNF Node.
 type NnfStorageNodeSpec struct {
-	// Name specifies the target NNF Node that will host the storage requested
-	// by the specification.
-	Name string `json:"name"`
+
+	// Index specifies the unique index of this NNF Storage Node specification within
+	// the context of the parent Storage specification.
+	Index int `json:"index,omitempty"`
+
+	// Node specifies the target NNF Node that will host the storage requested
+	// by the specification. Duplicate names within the parent's list of
+	// nodes is not allowed.
+	Node string `json:"node"`
 
 	// Servers specifies the target NNF Servers that will be receiving the
-	// file system requested by the specification.
-	Servers []NnfStorageServerSpec `json:"servers"`
+	// storage requested by the specification's file system type, or block
+	// storage if no file system is specified.
+	Servers []NnfStorageServerSpec `json:"servers,omitempty"`
 }
 
 // NnfStorageServerSpec defines the desired state of storage presented to
 // a server connecting to the NNF Storage Node.
 type NnfStorageServerSpec struct {
-	// The unique name of the NNF Storage Server, as provided by the NNF Node
-	// Server value for a given NNF Node. The Server shall receive the
-	// storage provisioned on this NNF Storage Node.
-	Name string `json:"name"`
+	NnfNodeStorageServerSpec `json:",inline"`
 
-	// The unique Id for the NNF Storage Server, as provided by NNF Node
-	// Server value for a particular NNF Node
-	Id string `json:"id"`
+	/*
+		// The unique Id for the NNF Storage Server, as provided by NNF Node
+		// Storage Server value for a particular NNF Node. Valid ID's can
+		// be reported by querying the NNF Node's status and looking at the
+		// {.status.servers[*]} listing
+		Id string `json:"id"`
 
-	// Defines the desired path for the provided storage onto
-	// the server listed in Name
-	Path string `json:"path,omitempty"`
+		// The name of the NNF Storage Server, as provided by the NNF Node
+		// Storage Server value for a given NNF Node. This is an informative
+		// field and can be omitted. If provided, the Name must match the name
+		// field of the {.status.servers[*]} with the ID.
+		Name string `json:"name,omitempty"`
+
+		// Path defines the path on the NNF Storage Server where the file system
+		// will appear. Only applicable for non raw-block storage.
+		Path string `json:"path,omitempty"`
+	*/
 }
 
-// NnfStorageStatus defines the observed state of NNF Storage
+// NnfStorageStatus defines the observed status of NNF Storage specification
 type NnfStorageStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Health string `json:"health,omitempty"`
+	// Status reflects the status of this NNF Storage
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	State string `json:"state,omitempty"`
+	// Health reflects the health of this NNF Storage
+	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	Nodes []NnfStorageNodeStatus `json:"nodes"`
+	// Nodes defines status of inidividual NNF Nodes that are managed by
+	// the parent NNF Storage specification. Each node in the specification
+	// has a companion status element of the same name.
+	Nodes []NnfStorageNodeStatus `json:"nodes,omitempty"`
+
+	// TODO: Conditions
 }
 
-// NnfStorageNodeStatus defines the observed state of a NNF Storage
-// present on a NNF Node.
+// NnfStorageNodeStatus defines the observed status of a storage present
+// on one particular NNF Node defined within the specifiction
 type NnfStorageNodeStatus struct {
-	Id string `json:"id,omitempty"`
 
-	Health string `json:"health,omitempty"`
+	// Status reflects the current status of the NNF Node
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	State string `json:"state,omitempty"`
+	// Health reflects the current health of the NNF Node
+	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	Servers []NnfStorageServerStatus `json:"servers"`
-}
-
-// NnfStorageServerStatus defines the observed state of NNF Storage
-// present on a NNF Server.
-type NnfStorageServerStatus struct {
-	NnfStorageServerSpec `json:",inline"`
-
-	StorageId string `json:"storageId,omitempty"`
-
-	ShareId string `json:"shareId,omitempty"`
-
-	Health string `json:"health,omitempty"`
-
-	State string `json:"state,omitempty"`
+	// Storage reflects the current health of NNF Storage on the NNF Node
+	Storage NnfNodeStorageStatus `json:"storage,omitempty"`
 }
 
 //+kubebuilder:object:root=true

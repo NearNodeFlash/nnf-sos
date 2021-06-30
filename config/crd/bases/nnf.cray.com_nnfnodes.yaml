@@ -39,11 +39,6 @@ spec:
               name:
                 description: The unique name for this NNF Node https://connect.us.cray.com/confluence/display/HSOS/Shasta+HSS+Component+Naming+Convention#ShastaHSSComponentNamingConvention-2.1.4.3MountainCabinetComponents
                 type: string
-              pod:
-                description: 'The name of the pod managing this NNF node. The Pod
-                  Name can be used to retrieve the system logs for a particular NNF
-                  Node. TODO: Fill this in.'
-                type: string
               state:
                 description: State reflects the desired state of this NNF Node resource
                 enum:
@@ -84,6 +79,13 @@ spec:
                               for this NNF Server resource. A valid Id field will
                               receive the storage allocated by the parent NNF Storage
                               specification.
+                            type: string
+                          name:
+                            description: 'Name defines the name of the NNF Server
+                              resource. If provided, the name is validated against
+                              the supplied Id. Can be used to identify a NNF Server
+                              resource by a human-readable value. TODO: Validate name/id
+                              pair in nnf_node_controller.go'
                             type: string
                           string:
                             description: Path defines an option path for which the
@@ -301,6 +303,13 @@ spec:
                               for this NNF Server resource. A valid Id field will
                               receive the storage allocated by the parent NNF Storage
                               specification.
+                            type: string
+                          name:
+                            description: 'Name defines the name of the NNF Server
+                              resource. If provided, the name is validated against
+                              the supplied Id. Can be used to identify a NNF Server
+                              resource by a human-readable value. TODO: Validate name/id
+                              pair in nnf_node_controller.go'
                             type: string
                           status:
                             type: string

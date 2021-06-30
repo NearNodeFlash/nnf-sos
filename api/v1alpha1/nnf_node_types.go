@@ -61,6 +61,11 @@ type NnfNodeStorageServerSpec struct {
 	// will receive the storage allocated by the parent NNF Storage specification.
 	Id string `json:"id"`
 
+	// Name defines the name of the NNF Server resource. If provided, the name is validated against
+	// the supplied Id. Can be used to identify a NNF Server resource by a human-readable value.
+	// TODO: Validate name/id pair in nnf_node_controller.go
+	Name string `json:"name,omitempty"`
+
 	// Path defines an option path for which the resource is made available on the NNF Server
 	// resource. A valid path must adhear to the system's directory name rules and conventions and
 	// cannot already exist on the system. The path is analogous to the mountpoint of the file system.
@@ -69,7 +74,6 @@ type NnfNodeStorageServerSpec struct {
 
 // NnfNodeStatus defines the observed status of NNF Node
 type NnfNodeStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Status reflects the current status of the NNF Node
