@@ -19,6 +19,9 @@ type NnfNodeSpec struct {
 	// https://connect.us.cray.com/confluence/display/HSOS/Shasta+HSS+Component+Naming+Convention#ShastaHSSComponentNamingConvention-2.1.4.3MountainCabinetComponents
 	Name string `json:"name,omitempty"`
 
+	// Pod name for this NNF Node
+	Pod string `json:"pod,omitempty"`
+
 	// State reflects the desired state of this NNF Node resource
 	// +kubebuilder:validation:Enum=Enable;Disable
 	State NnfResourceStateType `json:"state,omitempty"`

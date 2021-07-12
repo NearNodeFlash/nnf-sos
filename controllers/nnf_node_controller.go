@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -612,7 +613,8 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 			Namespace: r.Namespace,
 		},
 		Spec: nnfv1alpha1.NnfNodeSpec{
-			Name:  r.Name,
+			Name:  r.Namespace, // Note the conversion here from namespace to name, each NNF Node is given a unique namespace, which then becomes how the NLC is controlled.
+			Pod:   os.ExpandEnv("NNF_POD_NAME"), // Providing the podname gives users quick means to query the pod for a particular NNF Node
 			State: nnfv1alpha1.ResourceEnable,
 		},
 		Status: nnfv1alpha1.NnfNodeStatus{
