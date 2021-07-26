@@ -341,6 +341,33 @@ func (s *Switch) identify() error {
 		}
 	}
 
+	// At this point we've failed to locate our switch with the desired PAX ID. Check
+	// if we're using management routing, which enables forwarding of commands to
+	// the secondary PAX through the primary PAX
+	if f.config.IsManagementRoutingEnabled() {
+		log.Warningf("Switch %d is acting as primary device for switch %d", f.config.ManagementConfig.PrimaryDevice, f.config.ManagementConfig.SecondaryDevice)
+		for _, sw := range f.switches {
+			if sw.dev.Device().ID() == f.config.ManagementConfig.PrimaryDevice {
+
+				// Open another path to the primary device
+				s.dev, _ = f.ctrl.Open(sw.path)
+
+				// Configure this device to access the secondary pax device
+				s.dev.Device().SetID(f.config.ManagementConfig.SecondaryDevice)
+
+				s.path = sw.path
+				s.paxId = s.dev.Device().ID()
+
+				s.model = sw.model
+				s.manufacturer = sw.manufacturer
+				s.serialNumber = sw.serialNumber
+				s.firmwareVersion = sw.firmwareVersion
+
+				return nil
+			}
+		}
+	}
+
 	return fmt.Errorf("Identify Switch %s: Could Not ID Switch", s.id) // TODO: Switch not found
 }
 
@@ -387,8 +414,6 @@ StatusLoop:
 				continue StatusLoop
 			}
 		}
-
-		log.Fatalf("Port not found for Physical Port ID %d", st.PhysPortId)
 	}
 
 	return nil
@@ -596,9 +621,11 @@ func (p *Port) bind() error {
 						s := initiatorPort.swtch
 
 						if initiator.endpointType == sf.PROCESSOR_EV150ET {
-							if p.swtch.id != s.id {
-								logicalPortId -= s.config.DownstreamPortCount
-								continue
+							if !f.config.IsManagementRoutingEnabled() {
+								if p.swtch.id != s.id {
+									logicalPortId -= s.config.DownstreamPortCount
+									continue
+								}
 							}
 						}
 

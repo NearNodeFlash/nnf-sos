@@ -2,4 +2,5 @@
 resources:
 - nnf_v1alpha1_node.yaml
 - nnf_v1alpha1_storage.yaml
+- nnf_v1alpha1_nodestorage.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

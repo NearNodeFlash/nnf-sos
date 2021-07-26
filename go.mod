@@ -19,7 +19,7 @@ require (
 	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.19.2
 	sigs.k8s.io/controller-runtime v0.7.2
-	stash.us.cray.com/rabsw/ec v1.0.9
-	stash.us.cray.com/rabsw/nnf-ec v1.0.4
+	stash.us.cray.com/rabsw/ec v1.0.10
+	stash.us.cray.com/rabsw/nnf-ec v1.0.5
 	stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210504180337-d48363de461a
 )

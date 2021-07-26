@@ -43,6 +43,11 @@ const (
 	// deletion, the resource will be removed from the list of managed NNF resources
 	ResourceDeleting = "Deleting"
 
+	// Deleted means the NNF resource was deleted. This reflects the state where the NNF resource does
+	// not exist in the NNF space, but the resource might still exist in Kubernetes. A resource in
+	// this state suggests that Kubernetes is unable to delete the object.
+	ResourceDeleted = "Deleted"
+
 	// Ready means the NNF resource is ready for use.
 	ResourceReady = "Ready"
 

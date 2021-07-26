@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -37,35 +36,12 @@ func EncodeResponse(s interface{}, err error, w http.ResponseWriter) {
 		log.WithError(err).Warn("Element Controller Error")
 	}
 
-	if err != nil {
-		// If the supplied error is of an Element Controller Controller Error type,
-		// extract the status code from the error to return as the response.
-		var e *ec.ControllerError
-		if errors.As(err, &e) {
-			// TODO: Make some form of a redfish error response
-			w.WriteHeader(e.StatusCode)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-	}
-
-	if s != nil {
-		response, err := json.Marshal(s)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal json response")
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		_, err = w.Write(response)
-		if err != nil {
-			log.WithError(err).Error("Failed to write json response")
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-	}
+	ec.EncodeResponse(s, err, w)
 }
 
 const (
-	NamespaceMeatadataSignature = 0x54424252 // "RBBT"
-	NamespaceMeatadataRevision  = 1
+	NamespaceMetadataSignature = 0x54424252 // "RBBT"
+	NamespaceMetadataRevision  = 1
 )
 
 type NamespaceMetadata struct {
@@ -86,12 +62,12 @@ func NewNamespaceMetadataError(data *NamespaceMetadata) *NamespaceMetadataError 
 }
 
 func (e *NamespaceMetadataError) Error() string {
-	if NamespaceMeatadataSignature != e.data.Signature {
-		return fmt.Sprintf("Namespace Metadata Signature Invalid: Expected: %#08x Actual: %#08x", NamespaceMeatadataSignature, e.data.Signature)
+	if NamespaceMetadataSignature != e.data.Signature {
+		return fmt.Sprintf("Namespace Metadata Signature Invalid: Expected: %#08x Actual: %#08x", NamespaceMetadataSignature, e.data.Signature)
 	}
 
-	if NamespaceMeatadataRevision != e.data.Revision {
-		return fmt.Sprintf("Namespace Metadata Revision Invalid: Expected: %d Actual: %d", NamespaceMeatadataRevision, e.data.Revision)
+	if NamespaceMetadataRevision != e.data.Revision {
+		return fmt.Sprintf("Namespace Metadata Revision Invalid: Expected: %d Actual: %d", NamespaceMetadataRevision, e.data.Revision)
 	}
 
 	return "Unknown"
@@ -110,8 +86,8 @@ func EncodeNamespaceMetadata(pid uuid.UUID, index uint16, count uint16) ([]byte,
 	buf := new(bytes.Buffer)
 
 	md := NamespaceMetadata{
-		Signature: NamespaceMeatadataSignature,
-		Revision:  NamespaceMeatadataRevision,
+		Signature: NamespaceMetadataSignature,
+		Revision:  NamespaceMetadataRevision,
 		Index:     index,
 		Count:     count,
 		Id:        pid,
@@ -130,7 +106,7 @@ func DecodeNamespaceMetadata(buf []byte) (*NamespaceMetadata, error) {
 		return nil, err
 	}
 
-	if (data.Signature != NamespaceMeatadataSignature) || (data.Revision != NamespaceMeatadataRevision) {
+	if (data.Signature != NamespaceMetadataSignature) || (data.Revision != NamespaceMetadataRevision) {
 		return data, NewNamespaceMetadataError(data)
 	}
 

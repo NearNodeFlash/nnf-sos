@@ -5,10 +5,3 @@ metadata:
   namespace: kind-worker
 spec:
   # Add fields here
-  state: Enable
-  storage:
-    - uuid: "47e2f33c-ccb0-46cf-8459-6aaf628c13a2"
-      capacity: 100000
-      state: 
-      servers:
-        - id: "0"

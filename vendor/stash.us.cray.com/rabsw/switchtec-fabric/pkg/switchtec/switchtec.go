@@ -15,7 +15,6 @@ type Device struct {
 	file           *os.File
 	name           string
 	paxID          int32
-	localPaxID     int32
 	ops            ops
 	partition      uint8
 	partitionCount uint8
@@ -135,6 +134,10 @@ func (dev *Device) RunCommandRawBytes(cmd Command, payload []byte, response []by
 
 func (dev *Device) ID() int32 {
 	return dev.paxID
+}
+
+func (dev *Device) SetID(id int32) {
+	dev.paxID = id
 }
 
 func (dev *Device) IsLocal() bool {

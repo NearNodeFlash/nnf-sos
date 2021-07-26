@@ -563,10 +563,10 @@ sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/rabsw/ec v1.0.9
+# stash.us.cray.com/rabsw/ec v1.0.10
 ## explicit
 stash.us.cray.com/rabsw/ec
-# stash.us.cray.com/rabsw/nnf-ec v1.0.4
+# stash.us.cray.com/rabsw/nnf-ec v1.0.5
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api
@@ -582,7 +582,7 @@ stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme
 ## explicit
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/common
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/models
-# stash.us.cray.com/rabsw/switchtec-fabric v1.0.11
+# stash.us.cray.com/rabsw/switchtec-fabric v1.0.12
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec
 # stash.us.cray.com/sp/dp-api v0.1.8

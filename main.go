@@ -161,14 +161,19 @@ func (*nodeLocalController) Start(opts *nnf.Options) error {
 }
 
 func (c *nodeLocalController) SetupReconciler(mgr manager.Manager) error {
-	return (&controllers.NnfNodeReconciler{
+	if err := (&controllers.NnfNodeReconciler{
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Scheme:         mgr.GetScheme(),
+		NamespacedName: types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: c.GetNamespace()},
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	return (&controllers.NnfNodeStorageReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
 		Scheme: mgr.GetScheme(),
-		NamespacedName: types.NamespacedName{
-			Name:      "nnf-nlc",
-			Namespace: c.GetNamespace(),
-		},
 	}).SetupWithManager(mgr)
 }
 

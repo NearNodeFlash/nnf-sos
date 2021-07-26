@@ -3,25 +3,36 @@ package fabric
 import (
 	_ "embed"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 )
 
-//go:embed config.yaml
-var configFile []byte
+//go:embed config_default.yaml
+var configFileDefault []byte
+
+//go:embed config_dp1a.yaml
+var configFileDP1a []byte
 
 type ConfigFile struct {
 	Version  string
 	Metadata struct {
 		Name string
 	}
-	Switches []SwitchConfig
+	ManagementConfig ManagementConfig `yaml:"managementConfig"`
+	Switches         []SwitchConfig
 
 	ManagementPortCount int
 	UpstreamPortCount   int
 	DownstreamPortCount int
+}
+
+type ManagementConfig struct {
+	PrimaryDevice   int32 `yaml:"primaryDevice"`
+	SecondaryDevice int32 `yaml:"secondaryDevice"`
 }
 
 type SwitchConfig struct {
@@ -47,6 +58,8 @@ type PortConfig struct {
 func loadConfig() (*ConfigFile, error) {
 
 	var config = new(ConfigFile)
+	var configFile = findConfig()
+
 	if err := yaml.Unmarshal(configFile, config); err != nil {
 		return config, err
 	}
@@ -82,10 +95,34 @@ func loadConfig() (*ConfigFile, error) {
 
 	// Only a single management endpoint for ALL switches (but unique ports)
 	if config.ManagementPortCount != len(config.Switches) {
-		return nil, fmt.Errorf("isconfigured Switch Ports: Expected %d Management Ports, Received: %d", len(config.Switches), config.ManagementPortCount)
+		if !config.IsManagementRoutingEnabled() {
+			return nil, fmt.Errorf("Switch Ports: Expected %d Management Ports, Received: %d", len(config.Switches), config.ManagementPortCount)
+		}
 	}
 
 	return config, nil
+}
+
+func findConfig() []byte {
+	// Detect which configuration we are running. DP1a is using port 32, which is a x4 port which
+	// maps to all drives (9 locally, 9 over the fabric interconnect). We identify this configuration
+	// using the known PCIe topology for DP1a, which has the device listed at address 0b:00.1.
+	devicePath := "/sys/bus/pci/devices/0000:0b:00.1/device"
+	if _, err := os.Stat(devicePath); !os.IsNotExist(err) {
+		device, _ := ioutil.ReadFile(devicePath)
+		if string(device) == "0x4200\n" {
+			return configFileDP1a
+		}
+	}
+
+	return configFileDefault
+}
+
+// Method returns True if the management configuration has routing enabled, False otherwise.
+// Management Routing is when one PAX is controlled through another device - this is needed
+// on bringup configurations where there is not a Rabbit-P that is connected to both systems.
+func (c *ConfigFile) IsManagementRoutingEnabled() bool {
+	return c.ManagementConfig.PrimaryDevice != c.ManagementConfig.SecondaryDevice
 }
 
 // func (c *ConfigFile) findSwitch(switchId string) (*SwitchConfig, error) {

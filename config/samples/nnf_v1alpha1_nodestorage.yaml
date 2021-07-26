@@ -1,0 +1,13 @@
+apiVersion: nnf.cray.com/v1alpha1
+kind: NnfNodeStorage
+metadata:
+  name: nnfnodestorage-sample
+  namespace: kind-worker
+spec:
+  # Add fields here
+  state: Create
+  capacity: 100000
+  servers:
+    - id: "0"
+
+

@@ -484,6 +484,12 @@ func (s *StorageService) Id() string {
 	return s.id
 }
 
+//
+// Initialize is responsible for initializing the NNF Storage Service; the
+// Storage Service must complete initialization without error prior any
+// access to the Storage Service. Failure to initialize will cause the
+// storage service to misbehave.
+//
 func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 
 	storageService = StorageService{
@@ -535,6 +541,8 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 	return nil
 }
 
+// PortEventHandler is a callback to the Port Event Manager for receiving
+// Port Events.
 func PortEventHandler(event PortEvent, data interface{}) {
 	s := data.(*StorageService)
 
@@ -583,6 +591,27 @@ func PortEventHandler(event PortEvent, data interface{}) {
 	}
 }
 
+//
+// Methods below this comment block are all service handlers that provide the various
+// CRUD (Create, Read, Update, and Delete) functionality. The method pattern is always
+// the same:
+//    StorageService[Sub Resource ...][HTTP Method]([Ids string...], model *[Swordfish Model])
+// where
+//    Sub Resource: defines the hierarchy of resources, beginning at the NNF Storage
+//       Service and into the Redfish/Swordfish object tree
+//    HTTP Method: defines a HTTP access method. One of...
+//       Post (Create): Used to create an object in the Storage Service
+//       Get (Read): Used to read an object from the Storage Service
+//       Patch (Update): Used to update an existing object managed by the Storage Service
+//       Delete: Used to delete an object managed by the Storage Service
+//    IDs: defines one or more IDs that identify a resource
+//    Swordfish Model: a Swordfish structure for which HTTP Method should act on.
+//       Create: the method will attempt to create the object from the provided model
+//       Get: the method will populate the model.
+//       Patch: the method will update parameters with parameters from the model
+//       Delete: There is no model parameter.
+//
+
 func (*StorageService) StorageServicesGet(model *sf.StorageServiceCollectionStorageServiceCollection) error {
 
 	model.MembersodataCount = 1
@@ -597,7 +626,7 @@ func (*StorageService) StorageServicesGet(model *sf.StorageServiceCollectionStor
 func (*StorageService) StorageServiceIdGet(storageServiceId string, model *sf.StorageServiceV150StorageService) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.Id = s.id
@@ -617,7 +646,7 @@ func (*StorageService) StorageServiceIdGet(storageServiceId string, model *sf.St
 func (*StorageService) StorageServiceIdCapacitySourceGet(storageServiceId string, model *sf.CapacityCapacitySource) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.Id = DefaultCapacitySourceId
@@ -631,7 +660,7 @@ func (*StorageService) StorageServiceIdCapacitySourceGet(storageServiceId string
 		totalCapacityBytes += capacityBytes
 		totalUnallocatedBytes += unallocatedBytes
 	}); err != nil {
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause("Failed to enumerate storage")
 	}
 
 	model.ProvidedCapacity.Data.GuaranteedBytes = int64(totalUnallocatedBytes)
@@ -645,7 +674,7 @@ func (*StorageService) StorageServiceIdCapacitySourceGet(storageServiceId string
 func (*StorageService) StorageServiceIdStoragePoolsGet(storageServiceId string, model *sf.StoragePoolCollectionStoragePoolCollection) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.MembersodataCount = int64(len(s.pools))
@@ -661,7 +690,7 @@ func (*StorageService) StorageServiceIdStoragePoolsGet(storageServiceId string, 
 func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string, model *sf.StoragePoolV150StoragePool) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrBadRequest
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	// TODO: Check the model for valid RAID configurations
@@ -669,7 +698,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 	policy := NewAllocationPolicy(s.config.AllocationConfig, model.Oem)
 	if policy == nil {
 		log.Errorf("Failed to allocate storage policy. Config: %+v Oem: %+v", s.config.AllocationConfig, model.Oem)
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause("Failed to allocate storage policy")
 	}
 
 	capacityBytes := model.CapacityBytes
@@ -678,17 +707,17 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 	}
 
 	if capacityBytes == 0 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause("No capacity defined")
 	}
 
 	if err := policy.Initialize(uint64(capacityBytes)); err != nil {
 		log.WithError(err).Errorf("Failed to initialize storage policy")
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause("Failed to initialize storage policy")
 	}
 
 	if err := policy.CheckCapacity(); err != nil {
 		log.WithError(err).Warnf("Storage Policy does not provide sufficient capacity to support requested %d bytes", capacityBytes)
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithError(err).WithCause("Insufficient capacity available")
 	}
 
 	// All checks have completed; we're ready to create the storage pool
@@ -702,7 +731,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		// them for delete in the ledger and attempt to release them.
 
 		log.WithError(err).Errorf("Storage Policy allocation failed.")
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause("Failed to allocate storage volumes")
 	}
 
 	p := s.createStoragePool(uid, model.Name, model.Description, policy, volumes)
@@ -715,7 +744,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 func (*StorageService) StorageServiceIdStoragePoolIdGet(storageServiceId, storagePoolId string, model *sf.StoragePoolV150StoragePool) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage Pool '%s' not found", storagePoolId))
 	}
 
 	model.Id = p.id
@@ -760,25 +789,25 @@ func (*StorageService) StorageServiceIdStoragePoolIdGet(storageServiceId, storag
 func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, storagePoolId string) error {
 	s, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage Pool '%s' not found", storagePoolId))
 	}
 
 	if p.fileSystem != nil {
 		if err := s.StorageServiceIdFileSystemIdDelete(s.id, p.fileSystem.id); err != nil {
-			return err
+			return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Failed to delete file system '%s'", p.fileSystem.id))
 		}
 	}
 
 	for _, sg := range p.storageGroups {
 		if err := s.StorageServiceIdStorageGroupIdDelete(s.id, sg.id); err != nil {
-			return err
+			return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Failed to delete storage group '%s'", sg.id))
 		}
 	}
 
 	for _, pv := range p.providingVolumes {
 		if err := nvme.DeleteVolume(pv.volume); err != nil {
 			log.WithError(err).Errorf("Failed to delete volume from storage pool %s", p.id)
-			return ec.ErrInternalServerError
+			return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Failed to delete volume"))
 		}
 
 		// TODO: If any delete fails, we're left with dangling volumes preventing
@@ -800,7 +829,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourcesGet(storageServiceId, storagePoolId string, model *sf.CapacitySourceCollectionCapacitySourceCollection) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	model.Members = p.capacitySourcesGet()
@@ -813,11 +842,11 @@ func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourcesGet(storageSe
 func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdGet(storageServiceId, storagePoolId, capacitySourceId string, model *sf.CapacityCapacitySource) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	if !p.isCapacitySource(capacitySourceId) {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Capacity source '%s' not found", capacitySourceId))
 	}
 
 	s := p.capacitySourcesGet()[0]
@@ -833,11 +862,11 @@ func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdGet(storageS
 func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVolumesGet(storageServiceId, storagePoolId, capacitySourceId string, model *sf.VolumeCollectionVolumeCollection) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	if !p.isCapacitySource(capacitySourceId) {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Capacity source '%s' not found", capacitySourceId))
 	}
 
 	model.MembersodataCount = int64(len(p.providingVolumes))
@@ -853,7 +882,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVol
 func (*StorageService) StorageServiceIdStoragePoolIdAlloctedVolumesGet(storageServiceId, storagePoolId string, model *sf.VolumeCollectionVolumeCollection) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	model.MembersodataCount = 1
@@ -868,11 +897,11 @@ func (*StorageService) StorageServiceIdStoragePoolIdAlloctedVolumesGet(storageSe
 func (*StorageService) StorageServiceIdStoragePoolIdAllocatedVolumeIdGet(storageServiceId, storagePoolId, volumeId string, model *sf.VolumeV161Volume) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	if !p.isAllocatedVolume(volumeId) {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Volume '%s' not found", volumeId))
 	}
 
 	model.Id = DefaultAllocatedVolumeId
@@ -897,7 +926,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdAllocatedVolumeIdGet(storage
 func (*StorageService) StorageServiceIdStorageGroupsGet(storageServiceId string, model *sf.StorageGroupCollectionStorageGroupCollection) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.MembersodataCount = int64(len(s.groups))
@@ -913,35 +942,35 @@ func (*StorageService) StorageServiceIdStorageGroupsGet(storageServiceId string,
 func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string, model *sf.StorageGroupV150StorageGroup) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	fields := strings.Split(model.Links.StoragePool.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool @odata.id '%s' malformed", model.Links.StoragePool.OdataId))
 	}
 
 	storagePoolId := fields[s.resourceIndex]
 
 	_, sp := findStoragePool(storageServiceId, storagePoolId)
 	if sp == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	fields = strings.Split(model.Links.ServerEndpoint.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Server endpoint @odata.id '%s' malformed", model.Links.ServerEndpoint.OdataId))
 	}
 
 	endpointId := fields[s.resourceIndex]
 
 	ep := s.findEndpoint(endpointId)
 	if ep == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Server endpoint '%s' not found", storagePoolId))
 	}
 
 	if !ep.serverCtrl.Connected() {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Server endpoint '%s' not connected", endpointId))
 	}
 
 	// Everything validated OK - create the Storage Group
@@ -970,7 +999,7 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, storageGroupId string, model *sf.StorageGroupV150StorageGroup) error {
 	_, sg := findStorageGroup(storageServiceId, storageGroupId)
 	if sg == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage group '%s' not found", storageGroupId))
 	}
 
 	model.Id = sg.id
@@ -1002,11 +1031,11 @@ func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, stora
 func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, storageGroupId string) error {
 	s, sg := findStorageGroup(storageServiceId, storageGroupId)
 	if sg == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage group '%s' not found", storageGroupId))
 	}
 
 	if sg.fileShare != nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage group '%s' file share present", storageGroupId))
 	}
 
 	sp := sg.storagePool
@@ -1016,14 +1045,14 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 	for _, volume := range sp.providingVolumes {
 		if err := nvme.DetachControllers(volume.volume, []uint16{sg.endpoint.controllerId}); err != nil {
 			log.WithError(err).Errorf("Failed to detach controllers")
-			return ec.ErrInternalServerError
+			return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Storage group '%s' Failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
 		}
 	}
 
 	// Notify the Server the namespaces were removed
 
 	if err := sg.serverStorage.Delete(); err != nil {
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Storage group '%s' server delete failed", storageGroupId))
 	}
 
 	s.deleteStorageGroup(sg)
@@ -1035,7 +1064,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 func (*StorageService) StorageServiceIdEndpointsGet(storageServiceId string, model *sf.EndpointCollectionEndpointCollection) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.MembersodataCount = int64(len(s.endpoints))
@@ -1051,7 +1080,7 @@ func (*StorageService) StorageServiceIdEndpointsGet(storageServiceId string, mod
 func (*StorageService) StorageServiceIdEndpointIdGet(storageServiceId, endpointId string, model *sf.EndpointV150Endpoint) error {
 	_, ep := findEndpoint(storageServiceId, endpointId)
 	if ep == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Endpoint '%s' not found", endpointId))
 	}
 
 	model.Id = ep.id
@@ -1059,7 +1088,7 @@ func (*StorageService) StorageServiceIdEndpointIdGet(storageServiceId, endpointI
 
 	// Ask the fabric manager to fill it the endpoint details
 	if err := fabric.FabricIdEndpointsEndpointIdGet(ep.fabricId, ep.id, model); err != nil {
-		return err
+		return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Fabric endpoint '%s' not found", ep.id))
 	}
 
 	model.OdataId = ep.OdataId() // Done twice so the fabric manager doesn't hijak the @odata.id
@@ -1083,7 +1112,7 @@ func (*StorageService) StorageServiceIdEndpointIdGet(storageServiceId, endpointI
 func (*StorageService) StorageServiceIdFileSystemsGet(storageServiceId string, model *sf.FileSystemCollectionFileSystemCollection) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	model.MembersodataCount = int64(len(s.fileSystems))
@@ -1099,44 +1128,44 @@ func (*StorageService) StorageServiceIdFileSystemsGet(storageServiceId string, m
 func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, model *sf.FileSystemV122FileSystem) error {
 	s := findStorageService(storageServiceId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("Storage service '%s' not found", storageServiceId))
 	}
 
 	// Extract the StoragePoolId from the POST model
 	fields := strings.Split(model.Links.StoragePool.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool @odata.id '%s' malformed", model.Links.StoragePool.OdataId))
 	}
 	storagePoolId := fields[s.resourceIndex]
 
 	// Find the existing storage pool - the file system will link to the providing pool
 	sp := s.findStoragePool(storagePoolId)
 	if sp == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool '%s' not found", storagePoolId))
 	}
 
 	if sp.fileSystem != nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool '%s' no file system defined", storagePoolId))
 	}
 
 	modelFs, ok := model.Oem["FileSystem"]
 	if !ok {
-		return ec.ErrBadRequest
+		return ec.ErrBadRequest.WithCause("No file system defined")
 	}
 
 	modelFsOem, ok := modelFs.(map[string]interface{})
 	if !ok {
-		return ec.ErrBadRequest
+		return ec.ErrBadRequest.WithCause("No file system OEM field defined")
 	}
 
 	oem := server.FileSystemOem{}
 	if err := openapi.UnmarshalOem(modelFsOem, &oem); err != nil {
-		return ec.ErrBadRequest
+		return ec.ErrBadRequest.WithError(err).WithCause("Failed to unmarshal file system OEM fields")
 	}
 
 	fsApi := server.FileSystemController.NewFileSystem(oem.Type, oem.Name)
 	if fsApi == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("File system '%s' not found", oem.Type))
 	}
 
 	fs := s.createFileSystem(sp, fsApi)
@@ -1150,7 +1179,7 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 func (*StorageService) StorageServiceIdFileSystemIdGet(storageServiceId, fileSystemId string, model *sf.FileSystemV122FileSystem) error {
 	_, fs := findFileSystem(storageServiceId, fileSystemId)
 	if fs == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File system '%s' not found", fileSystemId))
 	}
 
 	model.Id = fs.id
@@ -1167,17 +1196,17 @@ func (*StorageService) StorageServiceIdFileSystemIdGet(storageServiceId, fileSys
 func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, fileSystemId string) error {
 	s, fs := findFileSystem(storageServiceId, fileSystemId)
 	if fs == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File system '%s' not found", fileSystemId))
 	}
 
 	for _, sh := range fs.shares {
 		if err := s.StorageServiceIdFileSystemIdExportedShareIdDelete(s.id, fs.id, sh.id); err != nil {
-			return err
+			return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("Exported share '%s' failed delete", sh.id))
 		}
 	}
 
 	if err := fs.fsApi.Delete(); err != nil {
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("File system '%s' failed delete", fileSystemId))
 	}
 
 	for fileSystemIdx, fileSystem := range s.fileSystems {
@@ -1194,7 +1223,7 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 func (*StorageService) StorageServiceIdFileSystemIdExportedSharesGet(storageServiceId, fileSystemId string, model *sf.FileShareCollectionFileShareCollection) error {
 	_, fs := findFileSystem(storageServiceId, fileSystemId)
 	if fs == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File system '%s' not found", fileSystemId))
 	}
 
 	model.MembersodataCount = int64(len(fs.shares))
@@ -1209,22 +1238,22 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesGet(storageServ
 func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageServiceId, fileSystemId string, model *sf.FileShareV120FileShare) error {
 	s, fs := findFileSystem(storageServiceId, fileSystemId)
 	if fs == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File system '%s' not found", fileSystemId))
 	}
 
 	fields := strings.Split(model.Links.Endpoint.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool @odata.id '%s' malformed", model.Links.Endpoint.OdataId))
 	}
 
 	endpointId := fields[s.resourceIndex]
 	ep := s.findEndpoint(endpointId)
 	if ep == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Endpoint '%s' not found", endpointId))
 	}
 
 	if len(model.FileSharePath) == 0 {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause("File share path not defined")
 	}
 
 	// Find the Storage Group Endpoint - There should be a Storage Group
@@ -1233,7 +1262,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 	// File System and supports the Exported Share.
 	sg := fs.storagePool.findStorageGroupByEndpoint(ep)
 	if sg == nil {
-		return ec.ErrNotAcceptable
+		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage group not found"))
 	}
 
 refreshState:
@@ -1254,6 +1283,7 @@ refreshState:
 
 	if err := sh.initialize(model.FileSharePath); err != nil {
 		log.WithError(err).Errorf("Failed to initialize file share for path %s", model.FileSharePath)
+		// No error is returned, status is reflected in model
 	}
 
 	model.Id = sh.id
@@ -1266,7 +1296,7 @@ refreshState:
 func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, exportedShareId string, model *sf.FileShareV120FileShare) error {
 	_, fs, sh := findExportedFileShare(storageServiceId, fileSystemId, exportedShareId)
 	if sh == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File share '%s' not found", exportedShareId))
 	}
 
 	model.Id = sh.id
@@ -1284,11 +1314,11 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdGet(storageSer
 func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storageServiceId, fileSystemId, exportedShareId string) error {
 	_, fs, sh := findExportedFileShare(storageServiceId, fileSystemId, exportedShareId)
 	if sh == nil {
-		return ec.ErrNotFound
+		return ec.ErrNotFound.WithCause(fmt.Sprintf("File share '%s' not found", exportedShareId))
 	}
 
 	if err := sh.storageGroup.serverStorage.Delete(); err != nil {
-		return ec.ErrInternalServerError
+		return ec.ErrInternalServerError.WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
 	}
 
 	for shareIdx, share := range fs.shares {

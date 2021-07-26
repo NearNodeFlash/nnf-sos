@@ -6,35 +6,36 @@ import (
 	"net/http"
 )
 
-type ControllerError struct {
-	StatusCode int
+type controllerError struct {
+	statusCode int
 	cause      string
 	err        error
 }
 
-func NewControllerError(sc int) *ControllerError {
-	return &ControllerError{StatusCode: sc}
+func NewControllerError(sc int) *controllerError {
+	return &controllerError{statusCode: sc}
 }
 
-func (e *ControllerError) Error() string {
-	errorString := fmt.Sprintf("Error %d: %s", e.StatusCode, http.StatusText(e.StatusCode))
+func (e *controllerError) Error() string {
+	errorString := fmt.Sprintf("Error %d: %s", e.statusCode, http.StatusText(e.statusCode))
 	if len(e.cause) != 0 {
 		return fmt.Sprintf("%s, %s", errorString, e.cause)
 	}
 	return errorString
 }
 
-func (e *ControllerError) Unwrap() error {
+func (e *controllerError) Unwrap() error {
 	return e.err
 }
 
-func (e *ControllerError) WithError(err error) *ControllerError {
+func (e *controllerError) WithError(err error) *controllerError {
 	e.err = err
 	return e
 }
 
-func (e *ControllerError) Cause(cause string) {
+func (e *controllerError) WithCause(cause string) *controllerError {
 	e.cause = cause
+	return e
 }
 
 var (
@@ -64,7 +65,7 @@ var (
 type ErrorResponse struct {
 	Status  int    `json:"status"`
 	Error   string `json:"error"`
-	Message string `json:"message,omitempty"`
+	Cause   string `json:"cause,omitempty"`
 	Details string `json:"details,omitempty"`
 	Model   string `json:"model,omitempty"`
 }
@@ -72,12 +73,12 @@ type ErrorResponse struct {
 // New Error Response - Returns encoded byte stream for responding to
 // an http request with an error. This provides a well defined response
 // body for all unsuccessful element controller requests.
-func NewErrorResponse(e *ControllerError, v interface{}) (s interface{}) {
+func NewErrorResponse(e *controllerError, v interface{}) (s interface{}) {
 
 	rsp := ErrorResponse{
-		Status:  e.StatusCode,
-		Error:   http.StatusText(e.StatusCode),
-		Message: e.cause,
+		Status:  e.statusCode,
+		Error:   http.StatusText(e.statusCode),
+		Cause:   e.cause,
 		Details: e.Unwrap().Error(),
 	}
 

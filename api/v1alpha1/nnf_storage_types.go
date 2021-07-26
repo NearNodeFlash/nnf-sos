@@ -11,7 +11,9 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StorageSpec defines the desired state of Storage
+// NnfStorageSpec defines the specification for requesting generic storage on a set
+// of available NNF Nodes. This object is related to a #DW for NNF Storage, with the WLM
+// making the determination for which NNF Nodes it wants to untilize.
 type NnfStorageSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -35,49 +37,21 @@ type NnfStorageSpec struct {
 	Nodes []NnfStorageNodeSpec `json:"nodes,omitempty"`
 }
 
-// NnfStorageNodeSpec defines the desired state of an individual NNF Node.
+// NnfStorageNodeSpec defines the desired state of an individual NNF Node within
+// the NNF Storage Specification.
 type NnfStorageNodeSpec struct {
-
-	// Index specifies the unique index of this NNF Storage Node specification within
-	// the context of the parent Storage specification.
-	Index int `json:"index,omitempty"`
 
 	// Node specifies the target NNF Node that will host the storage requested
 	// by the specification. Duplicate names within the parent's list of
 	// nodes is not allowed.
 	Node string `json:"node"`
 
-	// Servers specifies the target NNF Servers that will be receiving the
-	// storage requested by the specification's file system type, or block
-	// storage if no file system is specified.
-	Servers []NnfStorageServerSpec `json:"servers,omitempty"`
+	// NNF Node Storage specification is an embedding of the per-node specification
+	// for storage.
+	NnfNodeStorageSpec `json:",inline"`
 }
 
-// NnfStorageServerSpec defines the desired state of storage presented to
-// a server connecting to the NNF Storage Node.
-type NnfStorageServerSpec struct {
-	NnfNodeStorageServerSpec `json:",inline"`
-
-	/*
-		// The unique Id for the NNF Storage Server, as provided by NNF Node
-		// Storage Server value for a particular NNF Node. Valid ID's can
-		// be reported by querying the NNF Node's status and looking at the
-		// {.status.servers[*]} listing
-		Id string `json:"id"`
-
-		// The name of the NNF Storage Server, as provided by the NNF Node
-		// Storage Server value for a given NNF Node. This is an informative
-		// field and can be omitted. If provided, the Name must match the name
-		// field of the {.status.servers[*]} with the ID.
-		Name string `json:"name,omitempty"`
-
-		// Path defines the path on the NNF Storage Server where the file system
-		// will appear. Only applicable for non raw-block storage.
-		Path string `json:"path,omitempty"`
-	*/
-}
-
-// NnfStorageStatus defines the observed status of NNF Storage specification
+// NnfStorageStatus defines the observed status of NNF Storage.
 type NnfStorageStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -96,17 +70,18 @@ type NnfStorageStatus struct {
 }
 
 // NnfStorageNodeStatus defines the observed status of a storage present
-// on one particular NNF Node defined within the specifiction
+// on one particular NNF Node defined within the specifiction. Each NNF Storage
+// Node Status shall have a corresponding NNF Storage Node Spec with equivalent
+// Name field. This creates a Spec-Status pair for inspecting elements.
 type NnfStorageNodeStatus struct {
 
-	// Status reflects the current status of the NNF Node
-	Status NnfResourceStatusType `json:"status,omitempty"`
+	// Node specifies the target NNF Node that will host the storage requested
+	// by the specification. Duplicate names within the parent's list of
+	// nodes is not allowed.
+	Node string `json:"node"`
 
-	// Health reflects the current health of the NNF Node
-	Health NnfResourceHealthType `json:"health,omitempty"`
-
-	// Storage reflects the current health of NNF Storage on the NNF Node
-	Storage NnfNodeStorageStatus `json:"storage,omitempty"`
+	// NnfNodeStorageStatus specifies the node storage status of a particular NNF Node.
+	NnfNodeStorageStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

@@ -7,7 +7,7 @@ import (
 	"stash.us.cray.com/rabsw/ec"
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
-	cmn "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
+	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 )
 
 // DefaultApiService -
@@ -30,12 +30,12 @@ func (*DefaultApiService) RedfishV1FabricsGet(w http.ResponseWriter, r *http.Req
 
 	err := Get(&model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 
 	model := sf.FabricV120Fabric{
@@ -47,12 +47,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdGet(w http.ResponseWriter, r *
 
 	err := FabricIdGet(fabricId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdSwitchesGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 
 	model := sf.SwitchCollectionSwitchCollection{
@@ -63,12 +63,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesGet(w http.ResponseWri
 
 	err := FabricIdSwitchesGet(fabricId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdSwitchesSwitchIdGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	switchId := params["SwitchId"]
 
@@ -80,12 +80,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdGet(w http.Res
 
 	err := FabricIdSwitchesSwitchIdGet(fabricId, switchId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdSwitchesSwitchIdPortsGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdPortsGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	switchId := params["SwitchId"]
 
@@ -97,12 +97,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdPortsGet(w htt
 
 	err := FabricIdSwitchesSwitchIdPortsGet(fabricId, switchId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdSwitchesSwitchIdPortsPortIdGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdPortsPortIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	switchId := params["SwitchId"]
 	portId := params["PortId"]
@@ -115,12 +115,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdSwitchesSwitchIdPortsPortIdGet
 
 	err := FabricIdSwitchesSwitchIdPortsPortIdGet(fabricId, switchId, portId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdEndpointsGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointsGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 
 	model := sf.EndpointCollectionEndpointCollection{
@@ -131,12 +131,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointsGet(w http.ResponseWr
 
 	err := FabricIdEndpointsGet(fabricId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdEndpointsEndpointIdGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointsEndpointIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	endpointId := params["EndpointId"]
 
@@ -148,11 +148,11 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointsEndpointIdGet(w http.
 
 	err := FabricIdEndpointsEndpointIdGet(fabricId, endpointId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointGroupsGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 
 	model := sf.EndpointGroupCollectionEndpointGroupCollection{
@@ -163,11 +163,11 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointGroupsGet(w http.Respo
 
 	err := FabricIdEndpointGroupsGet(fabricId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointGroupsEndpointGroupIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	groupId := params["EndpointGroupId"]
 
@@ -179,12 +179,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdEndpointGroupsEndpointGroupIdG
 
 	err := FabricIdEndpointGroupsEndpointIdGet(fabricId, groupId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdConnectionsGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 
 	model := sf.ConnectionCollectionConnectionCollection{
@@ -195,12 +195,12 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsGet(w http.Response
 
 	err := FabricIdConnectionsGet(fabricId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdConnectionsConnectionIdGet -
 func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsConnectionIdGet(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	connectionId := params["ConnectionId"]
 
@@ -212,23 +212,23 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsConnectionIdGet(w h
 
 	err := FabricIdConnectionsConnectionIdGet(fabricId, connectionId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1FabricsFabricIdConnectionsConnectionIdPatch -
 func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsConnectionIdPatch(w http.ResponseWriter, r *http.Request) {
-	params := cmn.Params(r)
+	params := Params(r)
 	fabricId := params["FabricId"]
 	connectionId := params["ConnectionId"]
 
 	model := sf.ConnectionV100Connection{}
 
-	if err := cmn.UnmarshalRequest(r, &model); err != nil {
-		cmn.EncodeResponse(model, ec.ErrBadRequest, w)
+	if err := UnmarshalRequest(r, &model); err != nil {
+		EncodeResponse(model, ec.ErrBadRequest, w)
 		return
 	}
 
 	err := FabricIdConnectionsConnectionIdPatch(fabricId, connectionId, &model)
 
-	cmn.EncodeResponse(model, err, w)
+	EncodeResponse(model, err, w)
 }

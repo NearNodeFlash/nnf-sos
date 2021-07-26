@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,7 +44,8 @@ const (
 // The Storage Controller will list and make modifications to individual NNF Nodes, so include the
 // RBAC policy for nnfnodes. This isn't strictly necessary since the same ClusterRole is shared for
 // both controllers, but we include it here for completeness
-//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes,verbs=get;list;watch;update;patch
+// TODO: UPDATE THIS COMMENT
+//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -53,18 +56,18 @@ const (
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
-func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("storage", req.NamespacedName)
 
 	storage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, req.NamespacedName, storage); err != nil {
-		log.Error(err, "Storage not found", "Request.NamespacedName", req.NamespacedName)
+		log.Error(err, "Storage not found")
 		return ctrl.Result{}, err
 	}
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
-		log.Info("Deleting storage...", "Storage.NamespacedName", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
+		log.Info("Deleting storage...")
 
 		if !controllerutil.ContainsFinalizer(storage, finalizer) {
 			return ctrl.Result{}, nil
@@ -77,7 +80,6 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 		*/
 
-		log.Info("Finalizing storage", "Storage.NamespacedName", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 		controllerutil.RemoveFinalizer(storage, finalizer)
 		if err := r.Update(ctx, storage); err != nil {
 			return ctrl.Result{}, err
@@ -91,13 +93,18 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// values.
 	if !controllerutil.ContainsFinalizer(storage, finalizer) {
 
-		// Prepare the status fields; For each NNF Node in specification, there
-		// must be a companion NNF Node Status.
+		// Initialize the status fields if necessary. Each storage node defined in the specification
+		// should have a corresponding storage node status field.
 		if storage.Status.Status != nnfv1alpha1.ResourceStarting {
 			storage.Status.Status = nnfv1alpha1.ResourceStarting
-			storage.Status.Health = nnfv1alpha1.ResourceOkay
 			storage.Status.Nodes = make([]nnfv1alpha1.NnfStorageNodeStatus, len(storage.Spec.Nodes))
+
+			for nodeIdx, nodeSpec := range storage.Spec.Nodes {
+				storage.Status.Nodes[nodeIdx].Node = nodeSpec.Node
+			}
+
 			if err := r.Status().Update(ctx, storage); err != nil {
+				log.Error(err, "Failed to update storage status")
 				return ctrl.Result{}, err
 			}
 
@@ -106,13 +113,9 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		// Ensure the storage specification supplied correct indicies
-		for idx := range storage.Spec.Nodes {
-			storage.Spec.Nodes[idx].Index = idx
-		}
-
 		controllerutil.AddFinalizer(storage, finalizer)
 		if err := r.Update(ctx, storage); err != nil {
+			log.Error(err, "Failed to update finalizer")
 			return ctrl.Result{}, err
 		}
 
@@ -127,73 +130,71 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// out the required work to all NNF Nodes, and aggregating those results in the response
 	// channel.
 
+	// Create an updater for the entire node. This will handle calls to r.Status().Update() such
+	// that we can repeatedly make calls to the internal update method, with the final update
+	// occuring on the on function exit.
+	statusUpdater := NewStorageStatusUpdater(storage)
+	defer func() {
+		if err == nil {
+			if err = statusUpdater.Close(r, ctx); err != nil {
+				log.Info(fmt.Sprintf("Failed to update status with error %s", err))
+			}
+		}
+	}()
+
 	for nodeIdx := range storage.Status.Nodes {
-		if err := r.reconcileNodeController(ctx, storage.Spec, &storage.Spec.Nodes[nodeIdx], &storage.Status.Nodes[nodeIdx]); err != nil {
-			//log.Error(err, "Failed to reconcile node")
-			return ctrl.Result{}, err
+		nodeStatusUpdater := NewStorageNodeStatusUpdater(statusUpdater, &storage.Status.Nodes[nodeIdx])
+
+		res, err := r.reconcileNodeController(ctx, storage.Spec, &storage.Spec.Nodes[nodeIdx], nodeStatusUpdater)
+		if err != nil || res.Requeue || res.RequeueAfter != 0 {
+			return res, err
 		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec nnfv1alpha1.NnfStorageSpec, nodeSpec *nnfv1alpha1.NnfStorageNodeSpec, nodeStatus *nnfv1alpha1.NnfStorageNodeStatus) error {
+// Reconcile the lower-level node controller Node Storage resource.
+func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec nnfv1alpha1.NnfStorageSpec, nodeSpec *nnfv1alpha1.NnfStorageNodeSpec, statusUpdater *storageNodeStatusUpdater) (ctrl.Result, error) {
 	log := r.Log.WithValues("node", nodeSpec.Node)
 
-	node := &nnfv1alpha1.NnfNode{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-nlc", Namespace: nodeSpec.Node}, node); err != nil {
-		log.Error(err, "Unable to get NNF Node", "NamespacedName", types.NamespacedName{Name: "nnf-nlc", Namespace: nodeSpec.Node})
-		return err
-	}
+	node := &nnfv1alpha1.NnfNodeStorage{}
+	if err := r.Get(ctx, types.NamespacedName{Name: spec.Uuid, Namespace: nodeSpec.Node}, node); err != nil {
 
-	var storageSpec *nnfv1alpha1.NnfNodeStorageSpec = nil
-	var storageStatus *nnfv1alpha1.NnfNodeStorageStatus = nil
-	for idx := range node.Spec.Storage {
-		if node.Spec.Storage[idx].Uuid == fmt.Sprintf("%s:%d", spec.Uuid, nodeSpec.Index) {
-			storageSpec = &node.Spec.Storage[idx]
-			storageStatus = &node.Status.Storage[idx]
-		}
-	}
+		if errors.IsNotFound(err) {
 
-	if storageSpec == nil {
-		// Prepare the node storage specification
-		storageSpec := nnfv1alpha1.NnfNodeStorageSpec{
-			Uuid:       fmt.Sprintf("%s:%d", spec.Uuid, nodeSpec.Index),
-			Capacity:   spec.Capacity,
-			FileSystem: spec.FileSystem,
-			State:      nnfv1alpha1.ResourceCreate,
-			Servers:    make([]nnfv1alpha1.NnfNodeStorageServerSpec, len(nodeSpec.Servers)),
-		}
+			node = &nnfv1alpha1.NnfNodeStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      spec.Uuid,
+					Namespace: nodeSpec.Node,
+				},
+			}
 
-		for idx := range nodeSpec.Servers {
-			nodeSpec.Servers[idx].NnfNodeStorageServerSpec.DeepCopyInto(&storageSpec.Servers[idx])
+			// Populate the global storage values into the local per-node specifications,
+			// then copy the local specifications into the new NNF Node Storage.
+			nodeSpec.NnfNodeStorageSpec.Capacity = spec.Capacity
+			nodeSpec.NnfNodeStorageSpec.FileSystem = spec.FileSystem
+			nodeSpec.NnfNodeStorageSpec.State = nnfv1alpha1.ResourceCreate
+			nodeSpec.NnfNodeStorageSpec.DeepCopyInto(&node.Spec)
+
+			if err := r.Create(ctx, node); err != nil {
+				log.Error(err, "Failed to create NNF Node Storage")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
-		node.Spec.Storage = append(node.Spec.Storage, storageSpec)
-
-		if err := r.Update(ctx, node); err != nil {
-			log.Error(err, "Failed to update NNF Node Storage spec")
-			return err
-		}
-
-		log.Info("Created node storage spec")
-		return nil
+		return ctrl.Result{}, err
 	}
 
-	// Update the status of the node to reflect the current values
-	// TODO: We should only be updating the status elements if changed
-	//       then call r.Status().Update()
-	nodeStatus.Status = node.Status.Status
-	nodeStatus.Health = node.Status.Health
-
-	// Update the status of the storage with the current values
-	if !reflect.DeepEqual(storageStatus, &nodeStatus.Storage) {
-		storageStatus.DeepCopyInto(&nodeStatus.Storage)
-
-		//r.Status().Update(ctx, )
+	if !reflect.DeepEqual(node.Status, statusUpdater.Status()) {
+		statusUpdater.Update(func(s *nnfv1alpha1.NnfStorageNodeStatus) {
+			node.Status.DeepCopyInto(&s.NnfNodeStorageStatus)
+		})
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 // teardownStorage will process the storage object in reverse of setupStorage, deleting
@@ -211,10 +212,49 @@ func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-type result struct{}
+// Storage Status Updater handles finalizing of updates to the storage object for updates to a Storage object.
+// Kubernete's requires only one such update per generation, with successive generations requiring a requeue.
+// This object allows repeated calls to Update(), with the final call to reconciler.Status().Update() occurring
+// only when the updater is Closed()
+type storageStatusUpdater struct {
+	storage     *nnfv1alpha1.NnfStorage
+	needsUpdate bool
+}
 
-type nodeController struct {
-	index  int
-	spec   *nnfv1alpha1.NnfStorageNodeSpec
-	status *nnfv1alpha1.NnfStorageNodeStatus
+func NewStorageStatusUpdater(s *nnfv1alpha1.NnfStorage) *storageStatusUpdater {
+	return &storageStatusUpdater{
+		storage:     s,
+		needsUpdate: false,
+	}
+}
+
+func (u *storageStatusUpdater) Close(r *NnfStorageReconciler, ctx context.Context) error {
+	defer func() { u.needsUpdate = false }()
+	if u.needsUpdate {
+		return r.Status().Update(ctx, u.storage)
+	}
+
+	return nil
+}
+
+// StorageNodeStatusUpdater defines a mechanism for updating a particular node's status values.
+// It attaches to the parent StorageStatusUpdater to ensure calls to r.Status().Update() occur
+// only one.
+type storageNodeStatusUpdater struct {
+	updater *storageStatusUpdater
+	status  *nnfv1alpha1.NnfStorageNodeStatus
+}
+
+func NewStorageNodeStatusUpdater(u *storageStatusUpdater, s *nnfv1alpha1.NnfStorageNodeStatus) *storageNodeStatusUpdater {
+	return &storageNodeStatusUpdater{
+		updater: u,
+		status:  s,
+	}
+}
+
+func (u *storageNodeStatusUpdater) Status() *nnfv1alpha1.NnfStorageNodeStatus { return u.status }
+
+func (u *storageNodeStatusUpdater) Update(update func(s *nnfv1alpha1.NnfStorageNodeStatus)) {
+	update(u.status)
+	u.updater.needsUpdate = true
 }

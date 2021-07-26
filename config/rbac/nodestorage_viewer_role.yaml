@@ -1,0 +1,20 @@
+# permissions for end users to view nnfnodestorages.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nnfnodestorage-viewer-role
+rules:
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodestorages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodestorages/status
+  verbs:
+  - get

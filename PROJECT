@@ -25,4 +25,13 @@ resources:
   kind: NnfStorage
   path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cray.com
+  group: nnf
+  kind: NnfNodeStorage
+  path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
+  version: v1alpha1
 version: "3"

@@ -64,6 +64,32 @@ rules:
 - apiGroups:
   - nnf.cray.com
   resources:
+  - nnfnodestorages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodestorages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfnodestorages/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
   - nnfstorages
   verbs:
   - create

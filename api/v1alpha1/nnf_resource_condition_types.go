@@ -36,7 +36,7 @@ func NewConditions() []metav1.Condition {
 		ConditionCreateStoragePool,
 		ConditionDeleteStoragePool,
 		ConditionCreateStorageGroup,
-		ConditionCreateFileShare,
+		ConditionCreateFileSystem,
 		ConditionCreateFileShare,
 		ConditionGetResource,
 		ConditionInvalidResource,

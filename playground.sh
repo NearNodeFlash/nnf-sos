@@ -44,10 +44,14 @@ if [ $CMD == "nlc-create" ]; then
     kubectl apply -f config/samples/nnf_v1alpha1_node.yaml
 fi
 
+if [ $CMD == "slc-log" ]; then
+    kubectl logs $(kubectl get pods -n nnf-system | grep nnf-controller | awk '{print $1}') -n nnf-system -c manager
+fi
+
 if [ $CMD == "nlc-log" ]; then
     NS="$2"
     if [ -z "$NS" ]; then
-        echo "Node name required. should be one of..."
+        echo "Node name required. Should be one of..."
         kubectl get nodes --selector=cray.nnf.node=true --no-headers | awk '{print $1}'
         exit 1
     fi
