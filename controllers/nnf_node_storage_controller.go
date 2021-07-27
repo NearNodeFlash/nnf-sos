@@ -98,7 +98,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		if status.Status != nnfv1alpha1.ResourceDeleted {
 			if len(status.Id) != 0 {
-				condition := status.Conditions[nnfv1alpha1.ConditionIndexDeleteStoragePool]
+				condition := &status.Conditions[nnfv1alpha1.ConditionIndexDeleteStoragePool]
 
 				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 					status.Status = nnfv1alpha1.ResourceDeleting
@@ -329,7 +329,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// any file system built on top of the block storage.
 		if len(sgid) == 0 {
 
-			condition := status.Conditions[nnfv1alpha1.ConditionIndexCreateStorageGroup]
+			condition := &status.Conditions[nnfv1alpha1.ConditionIndexCreateStorageGroup]
 
 			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 				condition.Status = metav1.ConditionTrue
@@ -396,7 +396,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			if len(shid) == 0 {
 
-				condition := status.Conditions[nnfv1alpha1.ConditionIndexCreateFileShare]
+				condition := &status.Conditions[nnfv1alpha1.ConditionIndexCreateFileShare]
 
 				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 					condition.Status = metav1.ConditionTrue
