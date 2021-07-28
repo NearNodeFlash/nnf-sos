@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/go-logr/logr"
 
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg"
 	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
@@ -49,6 +49,7 @@ type NnfNodeReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update
 
 // Start is called upon starting the component manager and will create the Namespace for controlling the
@@ -120,26 +121,11 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	// Create the Service for contacting DP-API
-	service := &corev1.Service{}
-	serviceName := ServiceName(node.Name)
-	if err := r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: req.Namespace}, service); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("Creating Service...", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
-
-			service = r.createService(node)
-			if err := r.Create(ctx, service); err != nil {
-				log.Error(err, "Create service failed", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
-				return ctrl.Result{}, err
-			}
-
-			// Allow plenty of time for the service to start and resolve the DNS name for DP-API
-			log.Info("Created Service", "Service.NamespacedName", types.NamespacedName{Name: service.ObjectMeta.Name, Namespace: service.ObjectMeta.Namespace})
-			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-		}
-
-		log.Error(err, "Failed to get service", "Service.NamespacedName", types.NamespacedName{Name: serviceName, Namespace: req.Namespace})
-		return ctrl.Result{}, err
+	// Configure a kubernetes service for access to the NNF Element Controller. This
+	// allows developers to query the full state of the NNF EC using the established
+	// Redfish / Swordfish API.
+	if res, err := r.configureElementControllerService(ctx, node); !res.IsZero() || err != nil {
+		return res, err
 	}
 
 	// Prepare to update the node's status
@@ -258,45 +244,78 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 	}
 }
 
-func ServiceName(nodeName string) string {
+// Configure the NNF Element Controller service & endpoint for access to the Redfish / Swordfish API
+// This uses a service without a selector so the NNF EC can be accessed through the NNF namespace.
+//   i.e. curl nnf-ec.THE-NNF-NODE-NAMESPACE.svc.cluster.local/redfish/v1/StorageServices
+// This requires us to manually associate an endpoint to the service for this particular pod.
+func (r *NnfNodeReconciler) configureElementControllerService(ctx context.Context, node *nnfv1alpha1.NnfNode) (ctrl.Result, error) {
+
 	// A DNS-1035 label must consist of lower case alphanumeric characters or
 	// '-', start with an alphabetic character, and end with an alphanumeric
 	// character (e.g. 'my-name',  or 'abc-123', regex used for validation is
 	// '[a-z]([-a-z0-9]*[a-z0-9])?')"
+	name := "nnf-ec"
 
-	return "nnf-ec"
-}
-
-func (r *NnfNodeReconciler) createService(node *nnfv1alpha1.NnfNode) *corev1.Service {
-
-	// TODO: In order for the service to target our particular pod,
-	// the pod must have a unique label of type nnf.node.x-name=X-NAME
+	log := r.Log.WithValues("Service.Name", name, "Service.Namespace", node.Namespace)
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName(node.Name),
-			Namespace: r.Namespace,
+			Name:      name,
+			Namespace: node.Namespace,
 		},
 		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"cray.nnf.node": "true",
-				//"cray.nnf.x-name": node.Name,
-			},
-			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "nnf-ec",
+					Name:       name,
 					Protocol:   corev1.ProtocolTCP,
-					Port:       ec.Port,
+					Port:       80,
 					TargetPort: intstr.FromInt(ec.Port),
 				},
 			},
 		},
 	}
 
-	ctrl.SetControllerReference(node, service, r.Scheme)
+	nodeName := os.Getenv("NNF_NODE_NAME")
+	endpoints := &corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: node.Namespace,
+		},
+		Subsets: []corev1.EndpointSubset{
+			{
+				Addresses: []corev1.EndpointAddress{
+					{
+						IP:       os.Getenv("NNF_POD_IP"),
+						NodeName: &nodeName,
+					},
+				},
+				Ports: []corev1.EndpointPort{
+					{
+						Name: name,
+						Port: ec.Port,
+					},
+				},
+			},
+		},
+	}
 
-	return service
+	for _, object := range []client.Object{service, endpoints} {
+		res, err := ctrl.CreateOrUpdate(ctx, r.Client, object, func() error {
+			return ctrl.SetControllerReference(node, object, r.Scheme)
+		})
+
+		if err != nil {
+			log.Error(err, "Failed to create object", "Object.Kind", object.GetObjectKind())
+			return ctrl.Result{}, err
+		}
+
+		if res != controllerutil.OperationResultNone {
+			log.Info("Operation succeeded", "Result", res, "Object.Kind", object.GetObjectKind())
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -309,6 +328,7 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&nnfv1alpha1.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
 		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
+		Owns(&corev1.Endpoints{}).
 		Complete(r)
 }
 

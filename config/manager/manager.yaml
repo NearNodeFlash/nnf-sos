@@ -44,6 +44,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+          - name: NNF_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
         ports:
           - containerPort: 50057
             name: nnf-ec
