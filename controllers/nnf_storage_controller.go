@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -88,30 +89,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// First time setup adds the finalizer to the storage object and prepares
-	// the status fields with initial data reflecting the present specification
-	// values.
+	// Add a finalizer to ensure all NNF Node Storage resources created by this resource are properly deleted.
 	if !controllerutil.ContainsFinalizer(storage, finalizer) {
-
-		// Initialize the status fields if necessary. Each storage node defined in the specification
-		// should have a corresponding storage node status field.
-		if storage.Status.Status != nnfv1alpha1.ResourceStarting {
-			storage.Status.Status = nnfv1alpha1.ResourceStarting
-			storage.Status.Nodes = make([]nnfv1alpha1.NnfStorageNodeStatus, len(storage.Spec.Nodes))
-
-			for nodeIdx, nodeSpec := range storage.Spec.Nodes {
-				storage.Status.Nodes[nodeIdx].Node = nodeSpec.Node
-			}
-
-			if err := r.Status().Update(ctx, storage); err != nil {
-				log.Error(err, "Failed to update storage status")
-				return ctrl.Result{}, err
-			}
-
-			// Force a requeue after applying changes. Otherwise this results in
-			// future updates to be unfullfilled.
-			return ctrl.Result{Requeue: true}, nil
-		}
 
 		controllerutil.AddFinalizer(storage, finalizer)
 		if err := r.Update(ctx, storage); err != nil {
@@ -119,8 +98,6 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
-		// Now that we've prepared the spec & status fields, force a requeue
-		// to ensure Update() calls are clear of conflicts
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -136,33 +113,71 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	statusUpdater := NewStorageStatusUpdater(storage)
 	defer func() {
 		if err == nil {
-			if err = statusUpdater.Close(r, ctx); err != nil {
-				log.Info(fmt.Sprintf("Failed to update status with error %s", err))
+			res, err = statusUpdater.Close(r, ctx)
+			if err != nil {
+				log.Info(fmt.Sprintf("Failed to update status with error '%s'", err))
 			}
 		}
 	}()
 
-	for nodeIdx := range storage.Status.Nodes {
+	for nodeIdx := range storage.Spec.Nodes {
+
+		nodeSpec := &storage.Spec.Nodes[nodeIdx]
+		var nodeStatus *nnfv1alpha1.NnfStorageNodeStatus = nil
+		for statusIdx := range storage.Status.Nodes {
+			if nodeSpec.Node == storage.Status.Nodes[statusIdx].Node {
+				nodeStatus = &storage.Status.Nodes[statusIdx]
+				break
+			}
+		}
+
+		if nodeStatus == nil {
+			log.Info("Node Status Not Found. Creating...")
+			statusUpdater.Update(func(s *nnfv1alpha1.NnfStorageStatus) {
+				s.Nodes = append(s.Nodes, nnfv1alpha1.NnfStorageNodeStatus{
+					Node: nodeSpec.Node,
+				})
+			})
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
 		nodeStatusUpdater := NewStorageNodeStatusUpdater(statusUpdater, &storage.Status.Nodes[nodeIdx])
 
-		res, err := r.reconcileNodeController(ctx, storage.Spec, &storage.Spec.Nodes[nodeIdx], nodeStatusUpdater)
-		if err != nil || res.Requeue || res.RequeueAfter != 0 {
+		res, err := r.reconcileNodeController(ctx, storage, nodeSpec, nodeStatusUpdater)
+		if err != nil || !res.IsZero() {
 			return res, err
 		}
+	}
+
+	health := nnfv1alpha1.ResourceOkay
+	for nodeIdx := range storage.Status.Nodes {
+		if storage.Status.Nodes[nodeIdx].Health.IsWorseThan(health) {
+			health = storage.Status.Nodes[nodeIdx].Health
+		}
+	}
+
+	if health != storage.Status.Health {
+		statusUpdater.Update(func(s *nnfv1alpha1.NnfStorageStatus) {
+			s.Health = health
+		})
 	}
 
 	return ctrl.Result{}, nil
 }
 
 // Reconcile the lower-level node controller Node Storage resource.
-func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec nnfv1alpha1.NnfStorageSpec, nodeSpec *nnfv1alpha1.NnfStorageNodeSpec, statusUpdater *storageNodeStatusUpdater) (ctrl.Result, error) {
+func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, storage *nnfv1alpha1.NnfStorage, nodeSpec *nnfv1alpha1.NnfStorageNodeSpec, statusUpdater *storageNodeStatusUpdater) (ctrl.Result, error) {
 	log := r.Log.WithValues("node", nodeSpec.Node)
+
+	spec := &storage.Spec
 
 	node := &nnfv1alpha1.NnfNodeStorage{}
 	if err := r.Get(ctx, types.NamespacedName{Name: spec.Uuid, Namespace: nodeSpec.Node}, node); err != nil {
 
 		if errors.IsNotFound(err) {
 
+			log.Info("Creating NNF Node Storage...")
 			node = &nnfv1alpha1.NnfNodeStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      spec.Uuid,
@@ -170,12 +185,25 @@ func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec
 				},
 			}
 
-			// Populate the global storage values into the local per-node specifications,
-			// then copy the local specifications into the new NNF Node Storage.
-			nodeSpec.NnfNodeStorageSpec.Capacity = spec.Capacity
-			nodeSpec.NnfNodeStorageSpec.FileSystem = spec.FileSystem
-			nodeSpec.NnfNodeStorageSpec.State = nnfv1alpha1.ResourceCreate
+			// First perform a deep copy - this will ensure the servers specified in the local node
+			// specification get copied to the NNF Node Storage specification.
 			nodeSpec.NnfNodeStorageSpec.DeepCopyInto(&node.Spec)
+
+			// Next, fill in the global settings from the parent NNF Storage specification
+			node.Spec.Capacity = spec.Capacity
+			node.Spec.FileSystem = spec.FileSystem
+
+			// Configure the owner reference - this does not work via controllerutil because cross-namespace
+			// owner references are disallowed. Instead create a soft reference and make the delete logic
+			// robust enough to handle ownership.
+			//controllerutil.SetOwnerReference(storage, node, r.Scheme)
+			node.Spec.Owner = corev1.ObjectReference{
+				Name:       storage.Name,
+				Namespace:  storage.Namespace,
+				Kind:       storage.Kind,
+				APIVersion: storage.APIVersion,
+				UID:        storage.UID,
+			}
 
 			if err := r.Create(ctx, node); err != nil {
 				log.Error(err, "Failed to create NNF Node Storage")
@@ -192,6 +220,8 @@ func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, spec
 		statusUpdater.Update(func(s *nnfv1alpha1.NnfStorageNodeStatus) {
 			node.Status.DeepCopyInto(&s.NnfNodeStorageStatus)
 		})
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -209,6 +239,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfStorage{}).
+		Owns(&nnfv1alpha1.NnfNodeStorage{}).
 		Complete(r)
 }
 
@@ -228,13 +259,18 @@ func NewStorageStatusUpdater(s *nnfv1alpha1.NnfStorage) *storageStatusUpdater {
 	}
 }
 
-func (u *storageStatusUpdater) Close(r *NnfStorageReconciler, ctx context.Context) error {
+func (u *storageStatusUpdater) Update(update func(s *nnfv1alpha1.NnfStorageStatus)) {
+	update(&u.storage.Status)
+	u.needsUpdate = true
+}
+
+func (u *storageStatusUpdater) Close(r *NnfStorageReconciler, ctx context.Context) (ctrl.Result, error) {
 	defer func() { u.needsUpdate = false }()
 	if u.needsUpdate {
-		return r.Status().Update(ctx, u.storage)
+		return ctrl.Result{Requeue: true}, r.Status().Update(ctx, u.storage)
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 // StorageNodeStatusUpdater defines a mechanism for updating a particular node's status values.

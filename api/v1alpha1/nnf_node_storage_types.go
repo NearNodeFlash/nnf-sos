@@ -5,6 +5,7 @@ Copyright 2021 Hewlett Packard Enterprise Development LP
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,6 +17,9 @@ import (
 // Storage spec are created on bequest of the user and fullfilled by the NNF Node Controller.
 type NnfNodeStorageSpec struct {
 
+	// Owner points to the NNF Storage that owns this NNF Node Storage.
+	Owner corev1.ObjectReference `json:"owner,omitempty"`
+
 	// Capacity defines the capacity, in bytes, of this storage specification. The NNF Node itself
 	// may split the storage among the available drives operating in the NNF Node.
 	Capacity int64 `json:"capacity,omitempty"`
@@ -24,10 +28,6 @@ type NnfNodeStorageSpec struct {
 	// specification. An abscence of a file system means raw block storage will be allocated
 	// and made available to the desired servers.
 	FileSystem string `json:"fileSystem,omitempty"`
-
-	// State reflects the desired state of the storage specification
-	// +kubebuilder:validation:Enum=Create;Destroy
-	State NnfResourceStateType `json:"state,omitempty"`
 
 	// Servers is a list of NNF connected Servers that are to receive this NNF Storage resource. A
 	// valid server will receive the physical storage that has been allocated via raw block or the
@@ -51,10 +51,6 @@ type NnfNodeStorageServerSpec struct {
 	// resource. A valid path must adhear to the system's directory name rules and conventions and
 	// cannot already exist on the system. The path is analogous to the mountpoint of the file system.
 	Path string `json:"path,omitempty"`
-
-	// State reflects the desired state of the server specification.
-	// +kubebuilder:validation:Enum=Enable;Disable
-	State NnfResourceStateType `json:"state,omitempty"`
 }
 
 // NNF Node Storage Status

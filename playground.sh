@@ -30,6 +30,11 @@ EOF
     done
 fi
 
+if [ $CMD == "kind-reset" ]; then
+    ./playground.sh kind-destroy
+    ./playground.sh kind-create
+fi
+
 if [ $CMD == "busybox" ]; then
     kubectl run -it --rm --restart=Never busybox --image=radial/busyboxplus:curl sh
 fi
@@ -39,9 +44,15 @@ fi
 # make deploy
 # make undeploy
 
-if [ $CMD == "nlc-create" ]; then
-    # TODO: Create a sample per storage allocation type, and with various servers attached
-    kubectl apply -f config/samples/nnf_v1alpha1_node.yaml
+if [ $CMD == "slc-create" ]; then
+    kubectl apply -f config/samples/nnf_v1alpha1_storage.yaml
+fi
+
+if [ $CMD == "slc-describe" ]; then
+    STORAGES=$(kubectl get nnfstorages -n nnf-system --no-headers | awk '{print $1}')
+    for STORAGE in $STORAGES; do
+        kubectl describe nnfstorages/$STORAGE -n nnf-system
+    done
 fi
 
 if [ $CMD == "slc-log" ]; then
