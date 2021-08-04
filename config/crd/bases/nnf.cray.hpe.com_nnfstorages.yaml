@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: nnfstorages.nnf.cray.com
+  name: nnfstorages.nnf.cray.hpe.com
 spec:
-  group: nnf.cray.com
+  group: nnf.cray.hpe.com
   names:
     kind: NnfStorage
     listKind: NnfStorageList

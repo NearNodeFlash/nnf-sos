@@ -5,7 +5,7 @@ metadata:
   name: nnfnodestorage-viewer-role
 rules:
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages/status
   verbs:

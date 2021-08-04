@@ -48,7 +48,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodes
   verbs:
@@ -60,13 +60,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodes/finalizers
   verbs:
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodes/status
   verbs:
@@ -74,7 +74,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages
   verbs:
@@ -86,13 +86,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages/finalizers
   verbs:
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages/status
   verbs:
@@ -100,7 +100,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfstorages
   verbs:
@@ -112,13 +112,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfstorages/finalizers
   verbs:
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfstorages/status
   verbs:

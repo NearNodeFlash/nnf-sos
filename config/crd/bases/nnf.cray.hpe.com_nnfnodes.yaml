@@ -6,9 +6,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: nnfnodes.nnf.cray.com
+  name: nnfnodes.nnf.cray.hpe.com
 spec:
-  group: nnf.cray.com
+  group: nnf.cray.hpe.com
   names:
     kind: NnfNode
     listKind: NnfNodeList

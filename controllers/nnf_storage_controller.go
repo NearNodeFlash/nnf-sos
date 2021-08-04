@@ -34,18 +34,18 @@ type NnfStorageReconciler struct {
 // from deleting the custom resource until the reconciler has finished
 // in using the resource.
 const (
-	finalizer = "nnf.cray.com/finalizer"
+	finalizer = "nnf.cray.hpe.com/finalizer"
 )
 
-//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfstorages/finalizers,verbs=update
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/finalizers,verbs=update
 
 // The Storage Controller will list and make modifications to individual NNF Nodes, so include the
 // RBAC policy for nnfnodes. This isn't strictly necessary since the same ClusterRole is shared for
 // both controllers, but we include it here for completeness
 // TODO: UPDATE THIS COMMENT
-//+kubebuilder:rbac:groups=nnf.cray.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

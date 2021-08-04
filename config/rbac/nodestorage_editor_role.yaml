@@ -5,7 +5,7 @@ metadata:
   name: nnfnodestorage-editor-role
 rules:
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - nnfnodestorages/status
   verbs:
