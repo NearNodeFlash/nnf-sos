@@ -48,6 +48,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - dwdirectiverules
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - nnf.cray.hpe.com
   resources:
   - nnfnodes

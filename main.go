@@ -24,6 +24,7 @@ import (
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 	"stash.us.cray.com/RABSW/nnf-sos/controllers"
+	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 
 	//+kubebuilder:scaffold:imports
 
@@ -41,10 +42,15 @@ const (
 	StorageController   = "storage"
 )
 
+// I'm not sure where the best place to put this is. This kubebuilder directive is
+// included in dwsv1alpha1, but because it's in the vendor/ directory it is ignored.
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=dwdirectiverules,verbs=get;list;watch
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -185,6 +191,11 @@ func (*storageController) GetNamespace() string     { return "" }
 func (*storageController) Start(*nnf.Options) error { return nil }
 
 func (c *storageController) SetupReconciler(mgr manager.Manager) error {
+	if err := (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Workflow")
+		return err
+	}
+
 	return (&controllers.NnfStorageReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
