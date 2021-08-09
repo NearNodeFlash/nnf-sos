@@ -34,4 +34,9 @@ resources:
   kind: NnfNodeStorage
   path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
   version: v1alpha1
+- controller: true
+  domain: cray.com
+  group: dws
+  kind: Workflow
+  version: v1alpha1
 version: "3"
