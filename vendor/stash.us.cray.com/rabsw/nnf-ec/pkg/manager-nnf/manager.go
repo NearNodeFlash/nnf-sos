@@ -546,7 +546,7 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 func PortEventHandler(event PortEvent, data interface{}) {
 	s := data.(*StorageService)
 
-	if event.PortType != PORT_TYPE_USP {
+	if event.PortType != USP_PortType {
 		return
 	}
 
@@ -1148,22 +1148,12 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("Storage pool '%s' no file system defined", storagePoolId))
 	}
 
-	modelFs, ok := model.Oem["FileSystem"]
-	if !ok {
-		return ec.ErrBadRequest.WithCause("No file system defined")
-	}
-
-	modelFsOem, ok := modelFs.(map[string]interface{})
-	if !ok {
-		return ec.ErrBadRequest.WithCause("No file system OEM field defined")
-	}
-
 	oem := server.FileSystemOem{}
-	if err := openapi.UnmarshalOem(modelFsOem, &oem); err != nil {
+	if err := openapi.UnmarshalOem(model.Oem, &oem); err != nil {
 		return ec.ErrBadRequest.WithError(err).WithCause("Failed to unmarshal file system OEM fields")
 	}
 
-	fsApi := server.FileSystemController.NewFileSystem(oem.Type, oem.Name)
+	fsApi := server.FileSystemController.NewFileSystem(oem)
 	if fsApi == nil {
 		return ec.ErrNotAcceptable.WithCause(fmt.Sprintf("File system '%s' not found", oem.Type))
 	}

@@ -42,6 +42,12 @@ IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
+# Tell Kustomize to deploy the default config, or an overlay.
+# To use the 'craystack' overlay:
+#   export KUBECONFIG=/my/craystack/kubeconfig.file
+#   make deploy OVERLAY=craystack
+OVERLAY ?= default
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -102,7 +108,9 @@ docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
 kind-push: ## Push docker image to kind
-	kind load docker-image ${IMG}
+	kind load docker-image --nodes `kubectl get nodes -o json | jq -rM '.items[].metadata.name' | grep -v kind-control-plane | paste -d, -s -` ${IMG}
+	docker pull gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+	kind load docker-image --nodes `kubectl get nodes -o json | jq -rM '.items[].metadata.name' | grep -v kind-control-plane | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
 	
 ##@ Deployment
 
@@ -114,10 +122,10 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/${OVERLAY} | kubectl apply -f -
 
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/default | kubectl delete -f -
+	$(KUSTOMIZE) build config/${OVERLAY} | kubectl delete -f -
 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen

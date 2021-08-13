@@ -92,6 +92,9 @@ const (
 	NvmeAdminPassthruStart SubCommand = 1
 	NvmeAdminPassthruData  SubCommand = 2
 	NvmeAdminPassthruEnd   SubCommand = 3
+
+	ClearGfmsEventsSubCommand SubCommand = 0
+	GetGfmsEventsSubCommand   SubCommand = 1
 )
 
 // Maximum length of any command, in bytes

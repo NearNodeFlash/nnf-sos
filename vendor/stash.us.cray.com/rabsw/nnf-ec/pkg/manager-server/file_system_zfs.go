@@ -6,18 +6,17 @@ import (
 )
 
 type FileSystemZfs struct {
+	// Satisfy FileSystemApi interface.
 	FileSystem
-
-	devices    []string
-	mountpoint string
 }
 
-func NewFileSystemZfs(name string) FileSystemApi {
-	return &FileSystemZfs{FileSystem: FileSystem{name: name}}
+func NewFileSystemZfs(oem FileSystemOem) FileSystemApi {
+	return &FileSystemZfs{FileSystem: FileSystem{name: oem.Name}}
 }
 
-func (*FileSystemZfs) Type() string   { return "zfs" }
-func (f *FileSystemZfs) Name() string { return f.name }
+func (*FileSystemZfs) IsType(oem FileSystemOem) bool { return oem.Type == "zfs" }
+func (*FileSystemZfs) Type() string                  { return "zfs" }
+func (f *FileSystemZfs) Name() string                { return f.name }
 
 func (f *FileSystemZfs) Create(devices []string, options FileSystemOptions) error {
 

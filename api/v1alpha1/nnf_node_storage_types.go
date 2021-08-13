@@ -25,9 +25,19 @@ type NnfNodeStorageSpec struct {
 	Capacity int64 `json:"capacity,omitempty"`
 
 	// FileSystem defines the desired file system that is to be established for this Storage
-	// specification. An abscence of a file system means raw block storage will be allocated
-	// and made available to the desired servers.
-	FileSystem string `json:"fileSystem,omitempty"`
+	// specification.
+	// +kubebuilder:validation:MaxLength:=8
+	FileSystemName string `json:"fileSystemName,omitempty"`
+
+	// FileSystemType defines the type of the desired filesystem, or raw
+	// block device.
+	// +kubebuilder:validation:Enum=raw;lvm;zfs;lustre
+	// +kubebuilder:default:=raw
+	FileSystemType string `json:"fileSystemType"`
+
+	// LustreStorageSpec describes the Lustre target created here, if
+	// FileSystemType specifies a Lustre target.
+	LustreStorage LustreStorageSpec `json:"lustreStorage,omitempty"`
 
 	// Servers is a list of NNF connected Servers that are to receive this NNF Storage resource. A
 	// valid server will receive the physical storage that has been allocated via raw block or the
@@ -53,6 +63,22 @@ type NnfNodeStorageServerSpec struct {
 	Path string `json:"path,omitempty"`
 }
 
+// LustreStorageSpec describes the Lustre target to be created here.
+type LustreStorageSpec struct {
+
+	// TargetType is the type of Lustre target to be created.
+	// +kubebuilder:validation:Enum=MGT;MDT;OST
+	TargetType string `json:"targetType"`
+
+	// Index is used to order a series of MDTs or OSTs.  This is used only
+	// when creating MDT and OST targets.
+	Index int `json:"index,omitempty"`
+
+	// MgsNode is the NID of the MGS to use. This is used only when
+	// creating MDT and OST targets.
+	MgsNode string `json:"mgsNode,omitempty"`
+}
+
 // NNF Node Storage Status
 type NnfNodeStorageStatus struct {
 	// Reflects the unique identifier for the storage. When a storage spec is received
@@ -69,6 +95,9 @@ type NnfNodeStorageStatus struct {
 	// Represents the used capacity. This is an aggregation of all the used capacities of
 	// the underlying storage objects.
 	CapacityUsed int64 `json:"capacityUsed,omitempty"`
+
+	// LustreStorageStatus describes the Lustre target created here.
+	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`
 
 	// Represents the time when the storage was created by the controller
 	// It is represented in RFC3339 form and is in UTC.
@@ -105,6 +134,13 @@ type NnfNodeStorageServerStorageGroupStatus struct {
 
 type NnfNodeStorageServerFileShareStatus struct {
 	NnfResourceStatus `json:",inline"`
+}
+
+// LustreStorageStatus describes the Lustre target created here.
+type LustreStorageStatus struct {
+
+	// Nid (LNet Network Identifier) of this node. This is populated on MGS nodes only.
+	Nid string `json:"nid,omitempty"`
 }
 
 //+kubebuilder:object:root=true

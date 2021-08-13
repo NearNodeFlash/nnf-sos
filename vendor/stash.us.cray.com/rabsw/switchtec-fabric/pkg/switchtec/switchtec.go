@@ -31,7 +31,7 @@ const (
 // API functions.
 func Open(path string) (*Device, error) {
 
-	fd, err := syscall.Open(path, os.O_RDWR, uint32(os.ModePerm))
+	fd, err := syscall.Open(path, os.O_RDWR, 0666)
 	if err != nil {
 		return nil, err
 	}

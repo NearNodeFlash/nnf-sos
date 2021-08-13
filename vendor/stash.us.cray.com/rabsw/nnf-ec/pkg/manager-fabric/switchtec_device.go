@@ -69,6 +69,10 @@ func (d *SwitchtecDevice) GetPortStatus() ([]switchtec.PortLinkStat, error) {
 	return d.dev.LinkStat()
 }
 
+func (d *SwitchtecDevice) GetEvents() ([]switchtec.GfmsEvent, error) {
+	return d.dev.GetGfmsEvents()
+}
+
 func (d *SwitchtecDevice) EnumerateEndpoint(id uint8, f func(epPort *switchtec.DumpEpPortDevice) error) error {
 	return d.dev.GfmsEpPortDeviceEnumerate(id, f)
 }

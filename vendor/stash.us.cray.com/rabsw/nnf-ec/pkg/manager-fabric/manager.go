@@ -48,7 +48,6 @@ type Switch struct {
 	ports  []Port
 
 	fabric *Fabric
-	//mgmtPort *Port
 
 	// Information is cached on switch initialization
 	model           string
@@ -298,9 +297,9 @@ func (f *Fabric) getDownstreamEndpointRelativePortIndex(idx int) int {
 // 	return (deviceIdx * (1 /*PF*/ + f.managementEndpointCount + f.upstreamEndpointCount)) + functionIdx
 // }
 
-func (s *Switch) isReady() bool {
-	return s.dev != nil
-}
+func (s *Switch) isReady() bool { return len(s.path) != 0 }
+func (s *Switch) isDown() bool  { return !s.isReady() }
+func (s *Switch) setDown()      { s.path = "" }
 
 func (s *Switch) identify() error {
 	f := s.fabric
@@ -373,13 +372,13 @@ func (s *Switch) identify() error {
 
 func (s *Switch) refreshPortStatus() error {
 
-	status, err := s.dev.GetPortStatus()
+	switchPortStatus, err := s.dev.GetPortStatus()
 	if err != nil {
 		return err
 	}
 
 StatusLoop:
-	for _, st := range status {
+	for _, st := range switchPortStatus {
 		for portIdx := range s.ports {
 			p := &s.ports[portIdx]
 
@@ -402,13 +401,46 @@ StatusLoop:
 					}
 				}
 
-				p.portStatus = portStatus{
+				status := portStatus{
 					cfgLinkWidth:    st.CfgLinkWidth,
 					negLinkWidth:    st.NegLinkWidth,
 					curLinkRateGBps: st.CurLinkRateGBps,
-					maxLinkRateGBps: 0, // TODO: Look at switch and get the Gen Version - then covert to GBps for the width
+					maxLinkRateGBps: switchtec.GetDataRateGBps(uint8(s.config.pciGen)) * float64(p.config.Width),
 					linkStatus:      getStatusFromState(st.LinkState),
 					linkState:       sf.ENABLED_PV130LST,
+				}
+
+				if p.portStatus != status {
+
+					event := events.PortEvent{
+						FabricId:      s.fabric.id,
+						SwitchId:      s.id,
+						PortId:        p.id,
+						PortType:      p.eventType(),
+						EventType:     events.Unknown_PortEventType,
+						Configuration: events.NotReady_PortConfiguration,
+					}
+
+					if (p.portStatus.negLinkWidth != status.negLinkWidth) || (p.portStatus.curLinkRateGBps != status.curLinkRateGBps) {
+						event.EventType = events.AttributeChanged_PortEventType
+						if status.negLinkWidth == status.cfgLinkWidth && status.curLinkRateGBps == status.maxLinkRateGBps {
+							event.LinkState = events.Active_PortLinkState
+						} else {
+							event.LinkState = events.Degraded_PortLinkState
+						}
+					}
+
+					if p.portStatus.linkStatus != status.linkStatus {
+						if status.linkStatus == sf.LINK_UP_PV130LS {
+							event.EventType = events.Up_PortEventType
+						} else {
+							event.EventType = events.Down_PortEventType
+							event.LinkState = events.Inactive_PortLinkState
+						}
+					}
+
+					p.portStatus = status
+					events.PortEventManager.Publish(event)
 				}
 
 				continue StatusLoop
@@ -482,8 +514,14 @@ func (s *Switch) findPortByType(portType sf.PortV130PortType, idx int) *Port {
 	panic(fmt.Sprintf("Switch Port %d Not Found", idx))
 }
 
-func (s *Switch) isDown() bool {
-	return !s.isReady()
+func (s *Switch) findPortByPhysicalPortId(id uint8) *Port {
+	for portIdx, port := range s.ports {
+		if port.config.Port == int(id) {
+			return &s.ports[portIdx]
+		}
+	}
+
+	return nil
 }
 
 func (p *Port) GetBaseEndpointIndex() int { return p.endpoints[0].index }
@@ -499,18 +537,21 @@ func (p *Port) findEndpoint(functionId string) *Endpoint {
 	return p.endpoints[id]
 }
 
+func (p *Port) eventType() events.PortType {
+	switch p.portType {
+	case sf.UPSTREAM_PORT_PV130PT, sf.MANAGEMENT_PORT_PV130PT:
+		return events.USP_PortType
+	case sf.DOWNSTREAM_PORT_PV130PT:
+		return events.DSP_PortType
+	case sf.INTERSWITCH_PORT_PV130PT:
+		return events.Interswitch_PortType
+	}
+
+	return events.Unknown_PortType
+}
+
 func (p *Port) Initialize() error {
 	log.Infof("Initialize Port %s: Name: %s Physical Port: %d", p.id, p.config.Name, p.config.Port)
-
-	if p.swtch.isDown() {
-		log.Warnf("Initialize Port %s: Switch Down", p.id)
-		return nil
-	}
-
-	if p.linkStatus != sf.LINK_UP_PV130LS {
-		log.Warnf("Initilalize Port %s: No Link", p.id)
-		return nil
-	}
 
 	switch p.portType {
 	case sf.DOWNSTREAM_PORT_PV130PT:
@@ -664,6 +705,36 @@ func (p *Port) bind() error {
 	}
 
 	return nil
+}
+
+func (p *Port) notify(isDown bool) {
+
+	if isDown {
+
+		// Check if the port is already down before generating the port event. This can occur when
+		// we refresh the port status because of another port event, and that causes this port
+		// to be recorded as down.
+		if p.portStatus.linkStatus != sf.LINK_DOWN_PV130LS {
+			p.portStatus.linkStatus = sf.LINK_DOWN_PV130LS
+
+			events.PortEventManager.Publish(events.PortEvent{
+				EventType:     events.Down_PortEventType,
+				PortType:      p.eventType(),
+				LinkState:     events.Inactive_PortLinkState,
+				Configuration: events.NotReady_PortConfiguration,
+				FabricId:      p.swtch.fabric.id,
+				SwitchId:      p.swtch.id,
+				PortId:        p.id,
+			})
+		}
+
+	} else {
+
+		// A port up event causes a full refresh of all ports on the switch to ensure
+		// the most recent status is used. Since we don't have the ability to query
+		// the status of a single port, we will read all ports.
+		p.swtch.refreshPortStatus()
+	}
 }
 
 // Getters for common endpoint calls
@@ -917,48 +988,23 @@ func Start() error {
 	for switchIdx := range m.switches {
 		s := &m.switches[switchIdx]
 
-		if s.isDown() {
+		if !s.isReady() {
 			log.Errorf("Failed to start switch %s: Switch is Down", s.id)
 			continue
 		}
 
-		if err := s.refreshPortStatus(); err != nil {
-			log.WithError(err).Errorf("Failed to retrive port status for switch %s", s.id)
-		}
-
 		for portIdx := range s.ports {
 			p := &s.ports[portIdx]
-
-			event := events.PortEvent{
-				FabricId:  m.id,
-				SwitchId:  s.id,
-				PortId:    p.id,
-				PortType:  events.PORT_TYPE_UNKNOWN,
-				EventType: events.PORT_EVENT_UNKNOWN,
-			}
-
-			switch p.portType {
-			case sf.UPSTREAM_PORT_PV130PT, sf.MANAGEMENT_PORT_PV130PT:
-				event.PortType = events.PORT_TYPE_USP
-			case sf.DOWNSTREAM_PORT_PV130PT:
-				event.PortType = events.PORT_TYPE_DSP
-			default: // Ignore unintersting port types
-				continue
-			}
-
-			event.EventType = events.PORT_EVENT_DOWN
 			if err := p.Initialize(); err != nil {
 				log.WithError(err).Errorf("Switch %s Port %s failed to initialize", s.id, p.id)
-			} else if p.linkStatus == sf.LINK_UP_PV130LS {
-				event.EventType = events.PORT_EVENT_UP
 			}
-
-			log.Infof("Publishing port event %+v", event)
-			events.PortEventManager.Publish(event)
 		}
+
+		s.refreshPortStatus()
 	}
 
-	// TODO: Start monitoring LinkUp/Down status within the switch
+	// Run the Fabric Monitor in a background thread.
+	go NewFabricMonitor(&m).Run()
 
 	return nil
 }
@@ -966,26 +1012,22 @@ func Start() error {
 // PortEventHandler -
 func PortEventHandler(event events.PortEvent, data interface{}) {
 
+	log.Debug(fmt.Sprintf("Fabric Manager: Port Event Received: %+v", event))
+
 	_, _, p := findPort(event.FabricId, event.SwitchId, event.PortId)
 	if p == nil {
 		log.Errorf("Could not locate switch port for event %+v", event)
 		return
 	}
 
-	// TODO: Respond to Port Ready event that makes the connection
-	// between a port's endpoints and its USP
-
-	switch event.EventType {
-	case events.PORT_EVENT_READY:
-		if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
-
-			if err := p.bind(); err != nil {
-				log.WithError(err).Errorf("Port %s (switch: %s port: %d) failed to bind", p.id, p.swtch.id, p.config.Port)
+	if event.EventType == events.AttributeChanged_PortEventType {
+		if event.Configuration == events.Ready_PortConfiguration {
+			if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
+				if err := p.bind(); err != nil {
+					log.WithError(err).Errorf("Port %s (switch: %s port: %d) failed to bind", p.id, p.swtch.id, p.config.Port)
+				}
 			}
 		}
-
-	case events.PORT_EVENT_DOWN:
-		// Set the port down & and all its connections
 	}
 }
 
@@ -1368,10 +1410,10 @@ func (f *Fabric) ConvertPortEventToRelativePortIndex(event events.PortEvent) (in
 
 			var correctType = false
 			switch event.PortType {
-			case events.PORT_TYPE_USP:
+			case events.USP_PortType:
 				correctType = (p.portType == sf.MANAGEMENT_PORT_PV130PT ||
 					p.portType == sf.UPSTREAM_PORT_PV130PT)
-			case events.PORT_TYPE_DSP:
+			case events.DSP_PortType:
 				correctType = p.portType == sf.DOWNSTREAM_PORT_PV130PT
 			}
 

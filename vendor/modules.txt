@@ -197,7 +197,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40
+# golang.org/x/sys v0.0.0-20210603125802-9665404d3644
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
@@ -636,7 +636,7 @@ stash.us.cray.com/dpm/dws-operator/utils/dwdparse
 # stash.us.cray.com/rabsw/ec v1.0.10
 ## explicit
 stash.us.cray.com/rabsw/ec
-# stash.us.cray.com/rabsw/nnf-ec v1.0.5
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210813162322-9ff68d008e1b
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api
@@ -652,7 +652,7 @@ stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme
 ## explicit
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/common
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/models
-# stash.us.cray.com/rabsw/switchtec-fabric v1.0.12
+# stash.us.cray.com/rabsw/switchtec-fabric v1.0.14
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec
 # stash.us.cray.com/sp/dp-api v0.1.8

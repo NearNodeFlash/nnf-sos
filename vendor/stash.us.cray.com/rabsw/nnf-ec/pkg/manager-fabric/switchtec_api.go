@@ -26,6 +26,7 @@ type SwitchtecDeviceInterface interface {
 	GetSerialNumber() (string, error)
 
 	GetPortStatus() ([]switchtec.PortLinkStat, error)
+	GetEvents() ([]switchtec.GfmsEvent, error)
 
 	EnumerateEndpoint(uint8, func(epPort *switchtec.DumpEpPortDevice) error) error
 

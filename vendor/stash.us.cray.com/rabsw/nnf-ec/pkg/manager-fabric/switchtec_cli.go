@@ -129,6 +129,56 @@ func (d *SwitchtecCliDevice) GetPortStatus() ([]switchtec.PortLinkStat, error) {
 	return stats, scanner.Err()
 }
 
+func (d *SwitchtecCliDevice) GetEvents() ([]switchtec.GfmsEvent, error) {
+	// TODO
+	// NJR: Unfortunately the switchtec behavior is to clear events on read - so at the moment
+	//      I dont have a system that returns events so I can figure out how to parse them. It'll
+	//      be something like
+	//
+	//          rsp, err := d.run(fmt.Sprintf("fabric gfms-events %s", d.path))
+	//
+
+	// UPDATE: I found a system that has some events. Long term we can look at the switchtec code to get the output format
+	/*
+	   GFMS Events (Remaining: 0)
+	       1) HOST_LINK_UP (PAX ID 0):
+	           Physical Port ID:           	24
+	       2) FABRIC_LINK_UP (PAX ID 0)
+	       3) FABRIC_LINK_UP (PAX ID 1)
+	       4) DEVICE_ADD (PAX ID 1)
+	       5) DEVICE_ADD (PAX ID 1)
+	       6) DEVICE_ADD (PAX ID 1)
+	       7) HOST_LINK_DOWN (PAX ID 0):
+	           Physical Port ID:           	24
+	       8) HOST_LINK_DOWN (PAX ID 1):
+	           Physical Port ID:           	24
+	       9) HOST_LINK_UP (PAX ID 0):
+	           Physical Port ID:           	24
+	       10) HOST_LINK_UP (PAX ID 1):
+	           Physical Port ID:           	24
+	       11) HOST_LINK_DOWN (PAX ID 0):
+	           Physical Port ID:           	24
+	       12) HOST_LINK_DOWN (PAX ID 1):
+	           Physical Port ID:           	24
+	       13) HOST_LINK_UP (PAX ID 0):
+	           Physical Port ID:           	24
+	       14) HOST_LINK_UP (PAX ID 1):
+	           Physical Port ID:           	24
+	       15) AER (PAX ID 1):
+	           Physical Port ID:           	10
+	           DPC Triggered:              	No
+	           CE/UE:                      	UE
+	           CE/UE Error Status:         	0x00010000
+	           Time Stamp (In Clock Ticks):	0x000007d4be784740
+	           AER TLP Header Log:         	0x0100004a
+	                                       	0x04000014
+	                                       	0x1c00000a
+	                                       	0x00000000
+
+	*/
+	return make([]switchtec.GfmsEvent, 0), nil
+}
+
 func (d *SwitchtecCliDevice) EnumerateEndpoint(physPortId uint8, handlerFunc func(epPort *switchtec.DumpEpPortDevice) error) error {
 	rsp, err := d.run(fmt.Sprintf("fabric gfms-dump %s --type=EP_PORT --ep_pid=%d", d.path, physPortId))
 	if err != nil {

@@ -1,8 +1,8 @@
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfNodeStorage
 metadata:
-  name: nnfnodestorage-sample
-  namespace: kind-worker
+  name: foo-mgt
+  namespace: rabbit-01
 spec:
   # Add fields here
   capacity: 100000
@@ -12,6 +12,6 @@ spec:
     targetType: "MGT"
   servers:
     - id: "0"
-      path: "/mnt/foo"
+      path: "/mnt/foo-mgt"
 
 

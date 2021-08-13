@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -279,7 +280,7 @@ func sysFsReadString(path string) (string, error) {
 		return "", err
 	}
 
-	return string(buf[:n]), err
+	return strings.Trim(string(buf[:n]), "\n"), err
 }
 
 func sysFsReadInt(path string, base int) (int64, error) {

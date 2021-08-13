@@ -8,6 +8,7 @@ switches:
   - id: 0
     metadata:
       name: PAX 0
+    pciGen: 4
     ports:
       - name: Interswitch Fabric
         type: InterswitchPort
@@ -60,6 +61,7 @@ switches:
   - id: 1
     metadata:
       name: PAX 1
+    pciGen: 4
     ports:
       - name: Interswitch Fabric
         type: InterswitchPort

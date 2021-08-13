@@ -204,6 +204,10 @@ func (d *MockSwitchtecDevice) GetPortStatus() ([]switchtec.PortLinkStat, error) 
 	return stats, nil
 }
 
+func (d *MockSwitchtecDevice) GetEvents() ([]switchtec.GfmsEvent, error) {
+	return make([]switchtec.GfmsEvent, 0), nil
+}
+
 func (d *MockSwitchtecDevice) EnumerateEndpoint(physPortId uint8, handlerFunc func(epPort *switchtec.DumpEpPortDevice) error) error {
 
 	for _, port := range d.ports {

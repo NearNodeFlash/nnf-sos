@@ -3,28 +3,47 @@ package events
 type PortType string
 
 const (
-	PORT_TYPE_UNKNOWN     PortType = "Unknown"
-	PORT_TYPE_USP                  = "USP"
-	PORT_TYPE_DSP                  = "DSP"
-	PORT_TYPE_INTERSWITCH          = "Interswitch"
+	Unknown_PortType     PortType = "Unknown"
+	USP_PortType                  = "USP"
+	DSP_PortType                  = "DSP"
+	Interswitch_PortType          = "Interswitch"
 )
 
 type PortEventType string
 
 const (
-	PORT_EVENT_UNKNOWN PortEventType = "Unknown"
-	PORT_EVENT_UP                    = "Up"
-	PORT_EVENT_DOWN                  = "Down"
-	PORT_EVENT_READY                 = "Ready"
+	Unknown_PortEventType          PortEventType = "Unknown"
+	Up_PortEventType                             = "Up"
+	Down_PortEventType                           = "Down"
+	AttributeChanged_PortEventType               = "Changed"
+)
+
+type PortLinkState string
+
+const (
+	Active_PortLinkState   PortLinkState = "Active"
+	Degraded_PortLinkState               = "Degraded"
+	Inactive_PortLinkState               = "Inactive"
+)
+
+type PortConfiguration string
+
+const (
+	Ready_PortConfiguration    PortConfiguration = "Ready"
+	NotReady_PortConfiguration                   = "NotReady"
 )
 
 // PortEvent -
 type PortEvent struct {
-	FabricId  string
-	SwitchId  string
-	PortId    string
-	PortType  PortType
 	EventType PortEventType
+	PortType  PortType
+
+	FabricId string
+	SwitchId string
+	PortId   string
+
+	LinkState     PortLinkState
+	Configuration PortConfiguration
 }
 
 // PortEventHandlerFunc

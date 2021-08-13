@@ -8,6 +8,8 @@ spec:
   capacity: 1048576
   nodes:
   - node: kind-worker
+    fileSystemName: "foo"
+    fileSystemType: "lustre_mgt"
     servers:
     - id: "0"
-      name: "Rabbit"
+      path: "/mnt/foo"

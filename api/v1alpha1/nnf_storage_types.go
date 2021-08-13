@@ -28,10 +28,6 @@ type NnfStorageSpec struct {
 	// capacity may round up to a multiple of the stripe size)
 	Capacity int64 `json:"capacity"`
 
-	// File System defines the file system that is constructed from underlying
-	// storage subsystem.
-	FileSystem string `json:"fileSystem,omitempty"`
-
 	// Nodes define the list of NNF Nodes that will be the source of storage provisioning
 	// and the servers that can utilize the storage
 	Nodes []NnfStorageNodeSpec `json:"nodes,omitempty"`

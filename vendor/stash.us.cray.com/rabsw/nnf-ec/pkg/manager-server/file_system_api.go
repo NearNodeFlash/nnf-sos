@@ -2,7 +2,6 @@ package server
 
 import (
 	"os/exec"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -10,7 +9,7 @@ import (
 )
 
 type FileSystemControllerApi interface {
-	NewFileSystem(typ string, name string) FileSystemApi
+	NewFileSystem(oem FileSystemOem) FileSystemApi
 }
 
 func NewFileSystemController(config *ConfigFile) FileSystemControllerApi {
@@ -44,6 +43,7 @@ type FileSystemOptions = map[string]interface{}
 // supported by the NNF element controller.
 type FileSystemApi interface {
 	Type() string
+	IsType(oem FileSystemOem) bool
 	Name() string
 
 	Create(devices []string, opts FileSystemOptions) error
@@ -54,22 +54,26 @@ type FileSystemApi interface {
 }
 
 // NewFileSystem -
-func (c *fileSystemController) NewFileSystem(typ string, name string) FileSystemApi {
+func (c *fileSystemController) NewFileSystem(oem FileSystemOem) FileSystemApi {
 
-	switch strings.ToLower(typ) {
-	case (&FileSystemZfs{}).Type():
-		return NewFileSystemZfs(name)
-	case (&FileSystemLvm{}).Type():
-		return NewFileSystemLvm(name)
+	if (&FileSystemZfs{}).IsType(oem) {
+		return NewFileSystemZfs(oem)
+	} else if (&FileSystemLvm{}).IsType(oem) {
+		return NewFileSystemLvm(oem)
+	} else if (&FileSystemLustre{}).IsType(oem) {
+		log.Info("EEE lustre", "targetType", oem.TargetType)
+		return NewFileSystemLustre(oem)
 	}
 
 	return nil
 }
 
 // FileSystem - Represents an abstract file system, with individual operations
-// defiend by the underlying FileSystemApi implementation
+// defined by the underlying FileSystemApi implementation
 type FileSystem struct {
-	name string
+	name       string
+	devices    []string
+	mountpoint string
 }
 
 func (*FileSystem) run(cmd string) ([]byte, error) {
@@ -83,4 +87,7 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 type FileSystemOem struct {
 	Type string `json:"Type"`
 	Name string `json:"Name"`
+	// The following are used by Lustre, ignored for others.
+	MgsNode    string `json:"MgsNode,omitempty"`
+	TargetType string `json:"TargetType,omitempty"`
 }

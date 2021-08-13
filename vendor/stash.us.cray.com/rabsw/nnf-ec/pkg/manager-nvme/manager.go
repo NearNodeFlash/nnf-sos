@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/api"
-	. "stash.us.cray.com/rabsw/nnf-ec/pkg/events"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/events"
 
 	log "github.com/sirupsen/logrus"
 
@@ -509,7 +509,7 @@ func Initialize(ctrl NvmeController) error {
 		}
 	}
 
-	PortEventManager.Subscribe(PortEventSubscriber{
+	events.PortEventManager.Subscribe(events.PortEventSubscriber{
 		HandlerFunc: PortEventHandler,
 		Data:        &mgr,
 	})
@@ -518,12 +518,12 @@ func Initialize(ctrl NvmeController) error {
 }
 
 // PortEventHandler - Receives port events from the event manager
-func PortEventHandler(event PortEvent, data interface{}) {
+func PortEventHandler(event events.PortEvent, data interface{}) {
 	m := data.(*Manager)
 
-	log.Infof("%s Port Event Received %+v", m.id, event)
+	log.Infof("NVMe Manager: Port Event Received %+v", event)
 
-	if event.PortType != PORT_TYPE_DSP {
+	if event.PortType != events.DSP_PortType {
 		return
 	}
 
@@ -543,7 +543,7 @@ func PortEventHandler(event PortEvent, data interface{}) {
 	s := &m.storage[idx]
 
 	switch event.EventType {
-	case PORT_EVENT_UP:
+	case events.Up_PortEventType:
 
 		// Connect
 		device, err := m.ctrl.NewNvmeDevice(event.FabricId, event.SwitchId, event.PortId)
@@ -662,11 +662,13 @@ func PortEventHandler(event PortEvent, data interface{}) {
 		s.state = sf.ENABLED_RST
 
 		// Port is ready to make connections
-		event.EventType = PORT_EVENT_READY
-		PortEventManager.Publish(event)
+		event.EventType = events.AttributeChanged_PortEventType
+		event.Configuration = events.Ready_PortConfiguration
+		events.PortEventManager.Publish(event)
 
-	case PORT_EVENT_DOWN:
-		// TODO: Set this and all controllers down
+	case events.Down_PortEventType:
+		s.state = sf.UNAVAILABLE_OFFLINE_RST
+		s.controllers = nil
 	}
 }
 

@@ -22,12 +22,19 @@ nodes:
 EOF
     fi
 
-    kind create cluster --config kind-config.yaml
+    kind create cluster --wait 60s --config kind-config.yaml
+
+    # Let our first kind-worker double as a generic worker for the SLC and as a
+    # rabbit for the NLC.
+    kubectl label node kind-worker cray.nnf.manager=true
 
     for NODE in $(kubectl get nodes --no-headers | awk '{print $1;}' | grep --invert-match "control-plane"); do
         kubectl label node $NODE cray.nnf.node=true
         kubectl label node $NODE cray.nnf.x-name=$NODE
     done
+
+    #Required for webhooks
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
 fi
 
 if [ $CMD == "kind-reset" ]; then

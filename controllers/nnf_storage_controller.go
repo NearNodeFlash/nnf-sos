@@ -191,7 +191,6 @@ func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, stor
 
 			// Next, fill in the global settings from the parent NNF Storage specification
 			node.Spec.Capacity = spec.Capacity
-			node.Spec.FileSystem = spec.FileSystem
 
 			// Configure the owner reference - this does not work via controllerutil because cross-namespace
 			// owner references are disallowed. Instead create a soft reference and make the delete logic

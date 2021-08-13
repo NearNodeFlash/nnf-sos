@@ -78,6 +78,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if err = statusUpdater.Close(r, ctx); err != nil {
 				r.Log.Info(fmt.Sprintf("Failed to update status with error %s", err))
 			}
+		} else {
+			r.Log.Info(fmt.Sprintf("err before defer begins, %s", err))
 		}
 	}()
 
@@ -157,10 +159,6 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				}
 			})
 
-			if err := statusUpdater.Close(r, ctx); err != nil {
-				return ctrl.Result{}, err
-			}
-
 			return ctrl.Result{Requeue: true}, nil
 		}
 
@@ -220,9 +218,12 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = nnfv1alpha1.ConditionSuccess
 		})
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	sp := sf.StoragePoolV150StoragePool{}
+
 	if err := ss.StorageServiceIdStoragePoolIdGet(ss.Id(), storage.Status.Id, &sp); err != nil {
 		statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			nnfv1alpha1.SetGetResourceFailureCondition(status.Conditions, err)
@@ -236,13 +237,16 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			status.Status = nnfv1alpha1.ResourceStatus(sp.Status)
 			status.Health = nnfv1alpha1.ResourceHealth(sp.Status)
 		})
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Check for the requested file system defined in the specification. If found,
-	// ensure a file system exisit for the storage pool, either by creating one
+	// ensure a file system exists for the storage pool, either by creating one
 	// or retrieving the existing file system.
 	fs := &sf.FileSystemV122FileSystem{}
-	if len(spec.FileSystem) != 0 {
+
+	if len(spec.FileSystemName) != 0 {
 		if len(sp.Links.FileSystem.OdataId) == 0 {
 
 			condition := &status.Conditions[nnfv1alpha1.ConditionIndexCreateFileSystem]
@@ -252,16 +256,25 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				condition.LastTransitionTime = metav1.Now()
 			})
 
+			oem := nnfserver.FileSystemOem{
+				Name: spec.FileSystemName,
+				Type: spec.FileSystemType,
+				// If not lustre, then these will be appropriate zero values.
+				//Index:      spec.LustreStorage.Index,
+				MgsNode:    spec.LustreStorage.MgsNode,
+				TargetType: spec.LustreStorage.TargetType,
+			}
 			fs = &sf.FileSystemV122FileSystem{
 				Links: sf.FileSystemV122Links{
 					StoragePool: sf.OdataV4IdRef{OdataId: sp.OdataId},
 				},
-				Oem: openapi.MarshalOem(nnfserver.FileSystemOem{
-					Name: spec.FileSystem,
-				}),
+				Oem: openapi.MarshalOem(oem),
 			}
 
+			log.Info("FileSystemsPost", "fs", fs)
+
 			if err := ss.StorageServiceIdFileSystemsPost(ss.Id(), fs); err != nil {
+				log.Info("FileSystemsPost", "err", err.Error())
 				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 					status.Status = nnfv1alpha1.ResourceFailed
 
@@ -276,14 +289,19 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				condition.Status = metav1.ConditionFalse
 				condition.Reason = nnfv1alpha1.ConditionSuccess
 			})
+
+			return ctrl.Result{Requeue: true}, nil
 		} else {
 
 			fsid := sp.Links.FileSystem.OdataId[strings.LastIndex(sp.Links.FileSystem.OdataId, "/")+1:]
+
 			if err := ss.StorageServiceIdFileSystemIdGet(ss.Id(), fsid, fs); err != nil {
 				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 					status.Status = nnfv1alpha1.ResourceFailed
 					nnfv1alpha1.SetGetResourceFailureCondition(status.Conditions, err)
 				})
+
+				return ctrl.Result{}, nil
 			}
 		}
 	} // if len(spec.FileSystem) != 0
@@ -310,6 +328,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Retrieve the server endpoint to ensure it is up and available for storage
 		ep := &sf.EndpointV150Endpoint{}
+
 		if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), serverSpec.Id, ep); err != nil {
 			// TODO: We should differentiate between a bad request (bad server id/name) and a failed
 			// request (could not get status)
@@ -364,11 +383,14 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				condition.Status = metav1.ConditionFalse
 				condition.Reason = nnfv1alpha1.ConditionSuccess
 			})
+
+			return ctrl.Result{Requeue: true}, nil
 		} else { // if len(sgid) == 0
 
 			// For existing storage groups, we refresh the status to ensure everything is
 			// operational.
 			sg := &sf.StorageGroupV150StorageGroup{}
+
 			if err := ss.StorageServiceIdStorageGroupIdGet(ss.Id(), sgid, sg); err != nil {
 				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 					nnfv1alpha1.SetGetResourceFailureCondition(status.Conditions, err)
@@ -382,6 +404,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					serverStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
 					serverStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
 				})
+
+				return ctrl.Result{Requeue: true}, nil
 			}
 		}
 
@@ -412,7 +436,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					},
 				}
 
+				log.Info("ExportedSharesPost", "idx", serverIdx, "sh", sh)
+
 				if err := ss.StorageServiceIdFileSystemIdExportedSharesPost(ss.Id(), fs.Id, sh); err != nil {
+					log.Info("ExportedSharesPost", "idx", serverIdx, "err", err.Error())
 					status.Status = nnfv1alpha1.ResourceFailed
 					serverStatus.Status = nnfv1alpha1.ResourceFailed
 
@@ -430,9 +457,12 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 					condition.Status = metav1.ConditionFalse
 					condition.Reason = nnfv1alpha1.ConditionSuccess
 				})
+
+				return ctrl.Result{Requeue: true}, nil
 			} else { // if len(shid) == 0
 
 				sh := &sf.FileShareV120FileShare{}
+
 				if err := ss.StorageServiceIdFileSystemIdExportedShareIdGet(ss.Id(), fs.Id, shid, sh); err != nil {
 					statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 						serverStatus.Status = nnfv1alpha1.ResourceFailed
@@ -447,6 +477,19 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 						serverStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
 						serverStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
 					})
+
+					return ctrl.Result{Requeue: true}, nil
+				}
+
+				if nidRaw, present := sh.Oem["NID"]; present {
+					nid := nidRaw.(string)
+					if status.LustreStorage.Nid != nid {
+						statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+							status.LustreStorage.Nid = nid
+						})
+
+						return ctrl.Result{Requeue: true}, nil
+					}
 				}
 			}
 		} // if len(serverSpec.Path) != 0
@@ -457,6 +500,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			statusUpdater.Update(func(status *nnfv1alpha1.NnfNodeStorageStatus) {
 				serverStatus.Status = nnfv1alpha1.ResourceReady
 			})
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 	} // for serverIdx := range spec.Servers

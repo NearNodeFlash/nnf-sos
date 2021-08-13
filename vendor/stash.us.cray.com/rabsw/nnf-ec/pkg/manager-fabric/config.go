@@ -40,7 +40,8 @@ type SwitchConfig struct {
 	Metadata struct {
 		Name string
 	}
-	Ports []PortConfig
+	pciGen int
+	Ports  []PortConfig
 
 	ManagementPortCount int
 	UpstreamPortCount   int

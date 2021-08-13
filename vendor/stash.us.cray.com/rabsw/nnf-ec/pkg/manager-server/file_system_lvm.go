@@ -6,24 +6,23 @@ import (
 )
 
 type FileSystemLvm struct {
+	// Satisfy FileSystemApi interface.
 	FileSystem
 
-	leader  bool
-	devices []string
-
-	mountpoint string
+	leader bool
 }
 
-func NewFileSystemLvm(name string) FileSystemApi {
-	return &FileSystemLvm{FileSystem: FileSystem{name: name}, leader: true}
+func NewFileSystemLvm(oem FileSystemOem) FileSystemApi {
+	return &FileSystemLvm{FileSystem: FileSystem{name: oem.Name}, leader: true}
 }
 
 type FileSystemCreateOptionsLvm struct {
 	FileSystemOem `json:",inline"`
 }
 
-func (*FileSystemLvm) Type() string   { return "lvm" }
-func (f *FileSystemLvm) Name() string { return f.name }
+func (*FileSystemLvm) IsType(oem FileSystemOem) bool { return oem.Type == "lvm" }
+func (*FileSystemLvm) Type() string                  { return "lvm" }
+func (f *FileSystemLvm) Name() string                { return f.name }
 
 func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 

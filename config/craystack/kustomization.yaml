@@ -1,0 +1,7 @@
+bases:
+- ../default
+
+patchesStrategicMerge:
+# Let the node-manager daemonset mount host dirs for lustre tools and libs.
+- manager_volumes_patch.yaml
+
