@@ -102,7 +102,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	# Name the base stages so they are not lost during a cache prune.
+	time docker build -t ${IMG}-base --target base .
+	time docker build -t ${IMG}-app-base --target application-base .
+	time docker build -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

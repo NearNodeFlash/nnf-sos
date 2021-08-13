@@ -3,7 +3,7 @@ FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS base
 WORKDIR /
 
 # Install basic dependencies
-RUN yum install -y wget gcc tar https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm && yum -y install git
+RUN yum install -y gzip wget gcc tar https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
 
 # Retrieve lustre-rpms
 RUN mkdir -p /tmp/lustre-rpms
@@ -24,6 +24,34 @@ WORKDIR /
 # Install Golang v1.16
 RUN wget https://golang.org/dl/go1.16.7.linux-amd64.tar.gz && tar -xzf go1.16.7.linux-amd64.tar.gz
 
+
+# Start from scratch to make the base stage for the final application.
+# Build it here so it won't be invalidated when we COPY the controller source
+# code in the next layer.
+FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS application-base
+
+WORKDIR /
+# Retrieve executable from previous layer
+COPY --from=base /tmp/lustre-rpms/*.rpm /root/
+
+# Retrieve built rpms from previous layer and install Lustre dependencies
+WORKDIR /root/
+RUN yum install -y epel-release libyaml net-snmp openmpi sg3_utils && \
+    yum clean all && \
+    rpm -Uivh e2fsprogs-* libcom_err-* libss-* && \
+    rpm -Uivh --nodeps lustre-* kmod-* && \
+    rm /root/*.rpm
+
+ENTRYPOINT ["/bin/sh"]
+
+
+#
+# Note: The COPY commands below have the potential to invalidate any layer
+# that follows.
+#
+
+FROM base as builder
+
 # Set Go environment
 ENV GOROOT="/go"
 ENV PATH="${PATH}:${GOROOT}/bin" GOPRIVATE="stash.us.cray.com"
@@ -40,25 +68,16 @@ COPY controllers/ controllers/
 COPY vendor/ vendor/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 
 ENTRYPOINT ["/bin/sh"]
 
 
-# Start from scratch
-FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS application
+# The final application stage.
+FROM application-base
 
 WORKDIR /
 # Retrieve executable from previous layer
-COPY --from=base /workspace/manager .
-COPY --from=base /tmp/lustre-rpms/*.rpm /root/
-
-# Retrieve built rpms from previous layer and install Lustre dependencies
-WORKDIR /root/
-RUN yum install -y git epel-release libyaml wget net-snmp tar openmpi perl-devel sg3_utils && \
-    yum clean all && \
-    rpm -Uivh e2fsprogs-* libcom_err-* libss-* && \
-    rpm -Uivh --nodeps lustre-* kmod-* && \
-    rm /root/*.rpm
+COPY --from=builder /workspace/manager .
 
 ENTRYPOINT ["/manager"]
