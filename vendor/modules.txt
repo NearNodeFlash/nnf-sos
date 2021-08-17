@@ -636,7 +636,7 @@ stash.us.cray.com/dpm/dws-operator/utils/dwdparse
 # stash.us.cray.com/rabsw/ec v1.0.10
 ## explicit
 stash.us.cray.com/rabsw/ec
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210813162322-9ff68d008e1b
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210817200252-ec13625c114a
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api

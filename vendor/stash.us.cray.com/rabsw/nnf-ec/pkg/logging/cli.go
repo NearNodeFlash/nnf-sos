@@ -14,33 +14,38 @@ type cli struct {
 
 var Cli = cli{
 	Logger: log.New(),
+	File:   nil,
 }
 
-func init() {
+func (l *cli) init() {
 
 	f, err := os.OpenFile("commands.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0755)
 	if err != nil {
 		return
 	}
-	Cli.File = f
+	l.File = f
 
-	Cli.SetOutput(f)
+	l.SetOutput(f)
 
-	Cli.SetNoLock()
+	l.SetNoLock()
 
-	Cli.SetLevel(log.InfoLevel)
+	l.SetLevel(log.InfoLevel)
 
-	Cli.SetFormatter(&log.TextFormatter{
+	l.SetFormatter(&log.TextFormatter{
 		DisableColors: true,
 		FullTimestamp: true,
 	})
 
-	Cli.Info("CLI Log Starting...")
+	l.Info("CLI Log Starting...")
 }
 
-func (log *cli) Trace(cmd string, execFunc func(cmd string) ([]byte, error)) ([]byte, error) {
-	log.WithField("command", cmd).Info()
-	log.File.Sync()
+func (l *cli) Trace(cmd string, execFunc func(cmd string) ([]byte, error)) ([]byte, error) {
+	if l.File == nil {
+		l.init()
+	}
+
+	l.WithField("command", cmd).Info()
+	l.File.Sync()
 
 	rsp, err := execFunc(cmd)
 
@@ -64,13 +69,13 @@ func (log *cli) Trace(cmd string, execFunc func(cmd string) ([]byte, error)) ([]
 		response = strconv.QuoteToASCII(string(rsp))
 	}
 
-	log.
+	l.
 		WithField("command", cmd).
 		WithField("response", response).
 		WithError(err).
 		Info()
 
-	log.File.Sync()
+	l.File.Sync()
 
 	return rsp, err
 }

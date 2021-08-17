@@ -13,6 +13,7 @@ package nnf
 
 import (
 	"flag"
+	"os"
 
 	ec "stash.us.cray.com/rabsw/ec"
 
@@ -71,7 +72,11 @@ func NewController(opts *Options) *ec.Controller {
 	if opts.mock {
 		switchCtrl = fabric.NewMockSwitchtecController()
 		nvmeCtrl = nvme.NewMockNvmeController()
-		nnfCtrl = nnf.NewMockNnfController()
+		if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
+			// Keep the real NnfController.
+		} else {
+			nnfCtrl = nnf.NewMockNnfController()
+		}
 	}
 
 	return &ec.Controller{

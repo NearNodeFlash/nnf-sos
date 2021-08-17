@@ -10,7 +10,7 @@ spec:
   fileSystemType: "lustre"
   lustreStorage:
     targetType: "MDT"
-    mgsNode: "10.103.19.99@tcp"
+    mgsNode: "rabbit-01@tcp"
   servers:
     - id: "0"
       path: "/mnt/foo-mdt"

@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -52,7 +53,7 @@ func (c *LocalServerController) GetStatus(s *Storage) StorageStatus {
 	// We really shouldn't need to refresh on every GetStatus() call if we're correctly
 	// tracking udev add/remove events. There should be a single refresh on launch (or
 	// possibily a udev-info call to pull in the initial hardware?)
-	if err := c.Discover(nil); err != nil {
+	if err := c.Discover(s, nil); err != nil {
 		logrus.WithError(err).Errorf("Local Server Controller: Discovery Error")
 		return StorageStatus_Error
 	}
@@ -93,7 +94,45 @@ func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
 	return s.fileSystem.Delete()
 }
 
-func (c *LocalServerController) Discover(newStorageFunc func(*Storage)) error {
+func (c *LocalServerController) Discover(s *Storage, newStorageFunc func(*Storage)) error {
+	var err error
+	if devices, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
+		err = c.discoverUsingSuppliedDevices(s, devices)
+	} else {
+		err = c.discoverViaNamespaces(newStorageFunc)
+	}
+	return err
+}
+
+func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices string) error {
+
+	// All devices will be placed into the same pool.
+	devList := strings.Split(devices, ",")
+	for idx, devSupplied := range devList {
+		logrus.Info("Supplied device ", " idx ", idx, " dev ", devSupplied)
+		byBytes := []byte(devSupplied)
+		// Use the last 8 bytes as the unique Id.
+		offset := len(byBytes) - 8
+		if len(byBytes) < 8 {
+			offset = 0
+		}
+		var myUuid uuid.UUID
+		copy(myUuid[:], byBytes[offset:])
+		sns := &StorageNamespace{
+			id:        myUuid,
+			path:      devSupplied,
+			nsid:      idx,
+			poolId:    s.Id,
+			poolIdx:   idx,
+			poolTotal: len(devList),
+		}
+
+		s.UpsertStorageNamespace(sns)
+	}
+	return nil
+}
+
+func (c *LocalServerController) discoverViaNamespaces(newStorageFunc func(*Storage)) error {
 	nss, err := c.namespaces()
 	if err != nil {
 		return err

@@ -8,6 +8,10 @@ spec:
     spec:
       containers:
       - name: manager
+        env:
+          - name: NNF_SUPPLIED_DEVICES
+            # A comma-separated list of devices for nnf-ec/ec to use.
+            value: /dev/vdb
         volumeMounts:
           - mountPath: /mnt
             name: mnt-dir

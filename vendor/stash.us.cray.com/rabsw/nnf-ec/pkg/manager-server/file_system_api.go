@@ -54,18 +54,21 @@ type FileSystemApi interface {
 }
 
 // NewFileSystem -
-func (c *fileSystemController) NewFileSystem(oem FileSystemOem) FileSystemApi {
+func (c *fileSystemController) NewFileSystem(oem FileSystemOem) (fsApi FileSystemApi) {
 
 	if (&FileSystemZfs{}).IsType(oem) {
-		return NewFileSystemZfs(oem)
+		fsApi = NewFileSystemZfs(oem)
 	} else if (&FileSystemLvm{}).IsType(oem) {
-		return NewFileSystemLvm(oem)
+		fsApi = NewFileSystemLvm(oem)
+	} else if (&FileSystemXfs{}).IsType(oem) {
+		fsApi = NewFileSystemXfs(oem)
 	} else if (&FileSystemLustre{}).IsType(oem) {
-		log.Info("EEE lustre", "targetType", oem.TargetType)
-		return NewFileSystemLustre(oem)
+		fsApi = NewFileSystemLustre(oem)
 	}
-
-	return nil
+	if fsApi != nil {
+		log.Info("New file system", " type ", fsApi.Type())
+	}
+	return fsApi
 }
 
 // FileSystem - Represents an abstract file system, with individual operations

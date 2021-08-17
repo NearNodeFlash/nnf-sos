@@ -1015,7 +1015,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, stora
 	model.MappedVolumes = []sf.StorageGroupMappedVolume{
 		{
 			AccessCapability: sf.READ_WRITE_SGAC,
-			Volume:           sg.storagePool.OdataIdRef(fmt.Sprintf("/AllocatedVolume/%s", DefaultAllocatedVolumeId)),
+			Volume:           sg.storagePool.OdataIdRef(fmt.Sprintf("/AllocatedVolumes/%s", DefaultAllocatedVolumeId)),
 		},
 	}
 

@@ -33,11 +33,7 @@ func (*MockServerController) GetStatus(s *Storage) StorageStatus {
 }
 
 func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
-	if err := fs.Create(s.Devices(), opts); err != nil {
-		return err
-	}
-
-	return fs.Mount(opts["mountpoint"].(string))
+	return nil
 }
 
 func (*MockServerController) DeleteFileSystem(s *Storage) error {

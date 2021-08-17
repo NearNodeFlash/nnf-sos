@@ -50,24 +50,25 @@ func (f *FileSystemLustre) Name() string { return f.name }
 func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) error {
 
 	var err error
-	f.devices = make([]string, 1)
-	f.devices[0] = "/dev/vdb"
+	f.devices = devices
 	switch f.targetType {
 	case TargetMGT:
-		cmd := fmt.Sprintf("mkfs.lustre --mgs %s", f.devices[0])
-		log.Info("EEE mkfs MGT ", " cmd ", cmd, " devices ", f.devices)
-		out, err := f.run(cmd)
-		if err != nil {
-			log.Error(err, " EEE mkfs MGT")
-		}
-		if out != nil {
-			log.Info("EEE mkfs MGT", "out", out)
-		}
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s", f.devices[0]))
 	case TargetMDT:
-		_, err = f.run(fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
 	case TargetOST:
-		_, err = f.run(fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
 	}
+
+	return err
+}
+
+func runCmd(f *FileSystemLustre, cmd string) error {
+	out, err := f.run(cmd)
+	if err != nil {
+		log.Error(err, cmd)
+	}
+	log.Info(cmd, " output ", string(out))
 
 	return err
 }
@@ -76,25 +77,17 @@ func (f *FileSystemLustre) Delete() error { return nil }
 
 func (f *FileSystemLustre) Mount(mountpoint string) error {
 
-	log.Info("EEE mount mkdir", "dir", mountpoint)
 	if err := os.MkdirAll(mountpoint, 0755); err != nil {
 		// Skip anything other than ErrExist.
 		if os.IsExist(err) == false {
-			log.Error(err, " EEE mount mkdir")
+			log.Error(err, "Unable to create mountpoint", " mountpoint ", mountpoint)
 			return err
 		}
 	}
 
-	cmd := fmt.Sprintf("mount -t lustre %s %s",
-		f.devices[0], mountpoint)
-	log.Info("EEE mount", "cmd", cmd)
-	out, err := f.run(cmd)
+	err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", f.devices[0], mountpoint))
 	if err != nil {
-		log.Error(err, " EEE mount")
 		return err
-	}
-	if out != nil {
-		log.Info("EEE mount", "out", out)
 	}
 	f.mountpoint = mountpoint
 	return nil
@@ -102,7 +95,7 @@ func (f *FileSystemLustre) Mount(mountpoint string) error {
 
 func (f *FileSystemLustre) Unmount() error {
 	if len(f.mountpoint) > 0 {
-		_, err := f.run(fmt.Sprintf("umount %s", f.mountpoint))
+		err := runCmd(f, fmt.Sprintf("umount %s", f.mountpoint))
 		if err != nil {
 			return err
 		}
