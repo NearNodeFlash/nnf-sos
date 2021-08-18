@@ -11,6 +11,7 @@ spec:
   lustreStorage:
     targetType: "OST"
     mgsNode: "rabbit-01@tcp"
+    index: 0
   servers:
     - id: "0"
       path: "/mnt/foo-ost"

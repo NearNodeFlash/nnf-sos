@@ -72,7 +72,11 @@ func UnmarshalOem(mp map[string]interface{}, st interface{}) error {
 		case reflect.Bool:
 			fieldVal.SetBool(mp[fieldName].(bool))
 		case reflect.Int:
-			fieldVal.SetInt(int64(mp[fieldName].(float64)))
+			if _, ok := mp[fieldName].(float64); ok {
+				fieldVal.SetInt(int64(mp[fieldName].(float64)))
+			} else {
+				fieldVal.SetInt(mp[fieldName].(int64))
+			}
 		case reflect.String:
 			fieldVal.SetString(mp[fieldName].(string))
 		case reflect.Struct:

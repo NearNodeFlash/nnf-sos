@@ -260,7 +260,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				Name: spec.FileSystemName,
 				Type: spec.FileSystemType,
 				// If not lustre, then these will be appropriate zero values.
-				//Index:      spec.LustreStorage.Index,
+				Index:      spec.LustreStorage.Index,
 				MgsNode:    spec.LustreStorage.MgsNode,
 				TargetType: spec.LustreStorage.TargetType,
 			}

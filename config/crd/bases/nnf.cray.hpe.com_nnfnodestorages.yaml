@@ -66,6 +66,7 @@ spec:
                   index:
                     description: Index is used to order a series of MDTs or OSTs.  This
                       is used only when creating MDT and OST targets.
+                    minimum: 0
                     type: integer
                   mgsNode:
                     description: MgsNode is the NID of the MGS to use. This is used

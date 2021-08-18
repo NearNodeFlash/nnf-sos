@@ -93,4 +93,5 @@ type FileSystemOem struct {
 	// The following are used by Lustre, ignored for others.
 	MgsNode    string `json:"MgsNode,omitempty"`
 	TargetType string `json:"TargetType,omitempty"`
+	Index      int    `json:"Index,omitempty"`
 }

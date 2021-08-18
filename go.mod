@@ -23,6 +23,6 @@ require (
 	sigs.k8s.io/controller-runtime v0.9.2
 	stash.us.cray.com/dpm/dws-operator v0.0.0-20210804204645-c4948de5f4d7
 	stash.us.cray.com/rabsw/ec v1.0.10
-	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210817200252-ec13625c114a
-	stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210504180337-d48363de461a
+	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210818154432-a10246c96be5
+	stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210818152112-4e072611b060
 )

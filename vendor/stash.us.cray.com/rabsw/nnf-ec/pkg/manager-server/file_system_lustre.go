@@ -33,7 +33,7 @@ func NewFileSystemLustre(oem FileSystemOem) FileSystemApi {
 	fs := &FileSystemLustre{
 		FileSystem: FileSystem{name: oem.Name},
 		mgsNode:    oem.MgsNode,
-		index:      0, //oem.Index,
+		index:      oem.Index,
 		// TargetType is already verified by IsType() below.
 		targetType: targetTypes[oem.TargetType],
 	}

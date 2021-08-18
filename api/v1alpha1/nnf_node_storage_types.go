@@ -72,6 +72,7 @@ type LustreStorageSpec struct {
 
 	// Index is used to order a series of MDTs or OSTs.  This is used only
 	// when creating MDT and OST targets.
+	// +kubebuilder:validation:Minimum:=0
 	Index int `json:"index,omitempty"`
 
 	// MgsNode is the NID of the MGS to use. This is used only when
