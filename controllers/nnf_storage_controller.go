@@ -62,8 +62,11 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	storage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, req.NamespacedName, storage); err != nil {
-		log.Error(err, "Storage not found")
-		return ctrl.Result{}, err
+		// ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		log.Error(err, "Failed to get instance")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Check if the object is being deleted

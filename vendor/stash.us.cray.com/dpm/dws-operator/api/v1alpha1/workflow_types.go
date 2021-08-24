@@ -1,17 +1,5 @@
 /*
-Copyright 2021.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright 2021 Hewlett Packard Enterprise Development LP
 */
 
 package v1alpha1
@@ -19,6 +7,20 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Important: Run "make" to regenerate code after modifying this file
+
+// Define valid state transition values
+const (
+	StateProposal string = "proposal"
+	StateSetup    string = "setup"
+	StatePreRun   string = "pre_run"
+	StatePostRun  string = "post_run"
+	StateDataIn   string = "data_in"
+	StateDataOut  string = "data_out"
+	StateTearDown string = "teardown"
 )
 
 type DWRecord struct {
@@ -30,23 +32,23 @@ type DWRecord struct {
 
 // AllocationSetComponents define the details of the allocation
 type AllocationSetComponents struct {
-	DW DWRecord `json:"dwRecord"`
 	// +kubebuilder:validation:Enum=AllocatePerCompute;DivideAcrossRabbits;SingleRabbit
-	AllocationStrategy string   `json:"allocationStrategy"`
-	MinimumCapacity    uint64   `json:"minimumCapacity"`
-	Labels             []string `json:"labels"`
-	ComputeBindings    []string `json:"computeBindings"`
-}
-
-type StorageResourceDescriptor struct {
-	DW        DWRecord               `json:"dwRecord"`
-	Name      string                 `json:"name"`
-	Reference corev1.ObjectReference `json:"storageResourceRef"`
+	AllocationStrategy string `json:"allocationStrategy"`
+	MinimumCapacity    int64  `json:"minimumCapacity"`
+	Label              string `json:"label"`
+	Constraint         string `json:"constraint"`
 }
 
 // DWDirectiveBreakdowns define the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
-type DWDirectiveBreakdownAllocationSet struct {
-	AllocationSet []AllocationSetComponents `json:"allocationSet"`
+type DWDirectiveBreakdown struct {
+	DW   DWRecord `json:"dwRecord"`
+	Name string   `json:"name"`
+	Type string   `json:"type"`
+	// +kubebuilder:validation:Enum=job;persistent
+	Lifetime string `json:"lifetime"`
+	// Reference to the NNFStorage CR to be filled in by WLM
+	StorageReference corev1.ObjectReference    `json:"storageReference"`
+	AllocationSet    []AllocationSetComponents `json:"allocationSet"`
 }
 
 // WorkflowSpec defines the desired state of Workflow
@@ -87,12 +89,6 @@ type WorkflowStatus struct {
 	Reason  string `json:"reason,omitempty"`
 	Message string `json:"message,omitempty"`
 
-	// #DW directive breakdowns indicating to WLM what to allocate on what Rabbit
-	DWDirectiveBreakdowns []DWDirectiveBreakdownAllocationSet `json:"dwDirectiveBreakdowns,omitempty"`
-
-	// A StorageResource is created for each #DW to express to the NNF Driver how to create storage
-	StorageResource []StorageResourceDescriptor `json:"storageResourceDesc,omitempty"`
-
 	// Set of DW environment variable settings for WLM to apply to the job.
 	//		- DW_JOB_STRIPED
 	//		- DW_JOB_PRIVATE
@@ -103,6 +99,9 @@ type WorkflowStatus struct {
 
 	// List of registered drivers and related status.  Updated by drivers.
 	Drivers []WorkflowDriverStatus `json:"drivers,omitempty"`
+
+	// #DW directive breakdowns indicating to WLM what to allocate on what Rabbit
+	DWDirectiveBreakdowns []DWDirectiveBreakdown `json:"dwDirectiveBreakdowns,omitempty"`
 }
 
 //+kubebuilder:object:root=true

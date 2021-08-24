@@ -117,8 +117,11 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	node := &nnfv1alpha1.NnfNode{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
-		log.Error(err, "Failed to get node", "Request.NamespacedName", req.NamespacedName)
-		return ctrl.Result{}, err
+		// ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		log.Error(err, "Failed to get instance")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Configure a kubernetes service for access to the NNF Element Controller. This

@@ -24,7 +24,7 @@ spec:
         - name: "WORKFLOW_WEBHOOK_WATCH_STATES"
           value: "proposal,setup,pre_run,post_run,data_in,data_out,teardown"
         - name: "WORKFLOW_WEBHOOK_RULESET_LIST"
-          value: "dws-operator-nnf"
+          value: "dws-operator-nnf/dws-operator-system"
       volumes:
       - name: cert
         secret:

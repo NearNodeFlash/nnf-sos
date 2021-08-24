@@ -53,8 +53,11 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	storage := &nnfv1alpha1.NnfNodeStorage{}
 	if err := r.Get(ctx, req.NamespacedName, storage); err != nil {
-		log.Error(err, "Failed to get node storage")
-		return ctrl.Result{}, err
+		// ignore not-found errors, since they can't be fixed by an immediate
+		// requeue (we'll need to wait for a new notification), and we can get them
+		// on deleted requests.
+		log.Error(err, "Failed to get instance")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Connect to the NNF Storage Service. This permits control over NNF resources
@@ -319,7 +322,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 				status.Status = nnfv1alpha1.ResourceInvalid
 				nnfv1alpha1.SetResourceInvalidCondition(
-					status.Conditions, fmt.Errorf("Server Id %s does not match Server Status Id %s", serverSpec.Id, serverStatus.Id),
+					status.Conditions, fmt.Errorf("server Id %s does not match Server Status Id %s", serverSpec.Id, serverStatus.Id),
 				)
 			})
 

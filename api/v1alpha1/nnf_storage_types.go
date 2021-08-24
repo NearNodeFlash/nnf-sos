@@ -5,6 +5,7 @@ Copyright 2021 Hewlett Packard Enterprise Development LP
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,6 +28,9 @@ type NnfStorageSpec struct {
 	// may be larger to meet underlying storage requirements (i.e. allocated
 	// capacity may round up to a multiple of the stripe size)
 	Capacity int64 `json:"capacity"`
+
+	// Workflow reference records the workflow that created this NnfStorage
+	WorkflowReference corev1.ObjectReference `json:"workflowReference,omitempty"`
 
 	// Nodes define the list of NNF Nodes that will be the source of storage provisioning
 	// and the servers that can utilize the storage

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -122,17 +123,24 @@ func validate(workflow *Workflow) error {
 	ruleSetList := strings.Split(os.Getenv("WORKFLOW_WEBHOOK_RULESET_LIST"), ",")
 
 	foundValid := false
-	for _, ruleSetName := range ruleSetList {
-		if ruleSetName == "" {
+	for _, ruleSet := range ruleSetList {
+		if ruleSet == "" {
 			continue
 		}
+
+		// Rules are of the form "Name/Namespace"
+		r := strings.Split(ruleSet, "/")
+		if len(r) != 2 {
+			return fmt.Errorf("Rule set %s has invalid form", ruleSet)
+		}
+
 		// validate syntax #DW syntax
 		const rejectUnsupportedCommands bool = true
 
 		dwdRules := &DWDirectiveRule{}
 		namespacedName := types.NamespacedName{
-			Name:      ruleSetName,
-			Namespace: "dws-operator-system",
+			Name:      r[0],
+			Namespace: r[1],
 		}
 
 		if err := c.Get(context.TODO(), namespacedName, dwdRules); err != nil {

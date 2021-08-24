@@ -19,6 +19,9 @@ github.com/HewlettPackard/structex
 ## explicit
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
+# github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
+## explicit
+github.com/c2h5oh/datasize
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
 # github.com/davecgh/go-spew v1.1.1
@@ -57,6 +60,7 @@ github.com/google/go-cmp/cmp/internal/value
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
 # github.com/google/uuid v1.2.0
+## explicit
 github.com/google/uuid
 # github.com/googleapis/gnostic v0.5.5
 github.com/googleapis/gnostic/compiler
@@ -629,7 +633,7 @@ sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/dpm/dws-operator v0.0.0-20210804204645-c4948de5f4d7
+# stash.us.cray.com/dpm/dws-operator v0.0.0-20210817211737-e564a13c570e
 ## explicit
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
