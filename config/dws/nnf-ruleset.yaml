@@ -1,0 +1,29 @@
+apiVersion: dws.cray.hpe.com/v1alpha1
+kind: DWDirectiveRule
+metadata:
+  name: nnf
+  annotations:
+    helm.sh/hook: post-install
+spec:
+  - command: "jobdw"
+    watchStates: proposal,setup,pre_run,post_run,teardown
+    ruleDefs:
+      - key: "type"
+        type: "string"
+        pattern: "^(raw|xfs|lustre)$"
+        isRequired: true
+        isValueRequired: true
+      - key: "capacity"
+        type: "string"
+        pattern: "^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+        isRequired: true
+        isValueRequired: true
+      - key: "name"
+        type: "string"
+        pattern: "^([A-Za-z0-9\\-_]+)$"
+        isRequired: true
+        isValueRequired: true
+      - key: "modifiers"
+        type: "string"
+        isRequired: false
+        isValueRequired: true

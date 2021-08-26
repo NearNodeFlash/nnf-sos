@@ -21,9 +21,21 @@ type DWDirectiveRuleDef struct {
 }
 
 //+kubebuilder:object:generate=true
-// DWDirectiveRuleSpec defines the desired state of DWDirective
+// DwDirectiveRuleSpec defines the desired state of DWDirective
 type DWDirectiveRuleSpec struct {
-	Command  string               `json:"command"`
+	// Name of the #DW command. jobdw, stage_in, etc.
+	Command string `json:"command"`
+
+	// Override for the Driver ID. If left empty this defaults to the
+	// name of the DWDirectiveRule
+	DriverLabel string `json:"driverLabel,omitempty"`
+
+	// Comma separated list of states that this rule wants to register for.
+	// These watch states will result in an entry in the driver status array
+	// in the Workflow resource
+	WatchStates string `json:"watchStates,omitempty"`
+
+	// List of key/value pairs this #DW command is expected to have
 	RuleDefs []DWDirectiveRuleDef `json:"ruleDefs"`
 }
 
@@ -50,16 +62,11 @@ func IsUnsupportedCommand(err error) bool {
 }
 
 // BuildRulesMap builds a map of the DWDirectives argument parser rules for the specified command
-func BuildRulesMap(rules []DWDirectiveRuleSpec, cmd string) (map[string]DWDirectiveRuleDef, error) {
+func BuildRulesMap(rule DWDirectiveRuleSpec, cmd string) (map[string]DWDirectiveRuleDef, error) {
 	rulesMap := make(map[string]DWDirectiveRuleDef)
 
-	// Search for the command in the supported commands within the ruleset
-	for _, r := range rules {
-		if cmd == r.Command {
-			for _, rd := range r.RuleDefs {
-				rulesMap[rd.Key] = rd
-			}
-		}
+	for _, rd := range rule.RuleDefs {
+		rulesMap[rd.Key] = rd
 	}
 
 	if len(rulesMap) == 0 {
@@ -73,6 +80,11 @@ func BuildRulesMap(rules []DWDirectiveRuleSpec, cmd string) (map[string]DWDirect
 func BuildArgsMap(dwd string) (map[string]string, error) {
 	argsMap := make(map[string]string)
 	dwdArgs := strings.Fields(dwd)
+
+	if len(dwdArgs) == 0 {
+		return nil, fmt.Errorf("Invalid format for directive '%s'", dwd)
+	}
+
 	if dwdArgs[0] == "#DW" {
 		argsMap["command"] = dwdArgs[1]
 		for i := 2; i < len(dwdArgs); i++ {
@@ -102,11 +114,11 @@ func BuildArgsMap(dwd string) (map[string]string, error) {
 // ValidateArgs validates a map of arguments against the rules
 // For cases where an unknown command may be allowed because there may be other handlers for that command
 //   failUnknownCommand = false
-func ValidateArgs(args map[string]string, rules []DWDirectiveRuleSpec, failUnknownCommand bool) error {
+func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownCommand bool) error {
 	command := args["command"]
 
 	// Determine the rules map for command
-	rulesMap, err := BuildRulesMap(rules, command)
+	rulesMap, err := BuildRulesMap(rule, command)
 	if err != nil {
 		// If the command is unsupported and we are supposed to fail in that case return error.
 		// Otherwise just return nil to effectively skip the #DW
@@ -193,19 +205,21 @@ func ValidateArgs(args map[string]string, rules []DWDirectiveRuleSpec, failUnkno
 }
 
 // ValidateDWDirectives validates a set of #DW directives against a specified rule set
-func ValidateDWDirectives(rules []DWDirectiveRuleSpec, directives []string, failUnknownCommand bool) (bool, error) {
+func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, failUnknownCommand bool) (bool, error) {
 
-	for _, dwd := range directives {
-		// Build a map of the #DW commands and arguments
-		argsMap, err := BuildArgsMap(dwd)
-		if err != nil {
-			return false, err
-		}
+	// Build a map of the #DW commands and arguments
+	argsMap, err := BuildArgsMap(dwd)
+	if err != nil {
+		return false, err
+	}
 
-		err = ValidateArgs(argsMap, rules, failUnknownCommand)
-		if err != nil {
-			return false, err
-		}
+	if argsMap["command"] != rule.Command {
+		return false, nil
+	}
+
+	err = ValidateArgs(argsMap, rule, failUnknownCommand)
+	if err != nil {
+		return false, err
 	}
 
 	return true, nil

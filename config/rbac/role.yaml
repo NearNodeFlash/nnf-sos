@@ -50,14 +50,6 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
-  - dwdirectiverules
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - dws.cray.hpe.com
-  resources:
   - workflows
   verbs:
   - get

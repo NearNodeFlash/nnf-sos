@@ -80,10 +80,10 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, nil
 	}
 
-	driverID := os.Getenv("WORKFLOW_WEBHOOK_DRIVER_ID")
+	driverID := os.Getenv("DWS_DRIVER_ID")
 
 	// Ensure we've generated DWDirectiveBreakdowns
-	if (workflow.Status.State == dwsv1alpha1.StateProposal) && needDirectiveBreakdowns(workflow) {
+	if (workflow.Status.State == dwsv1alpha1.StateProposal.String()) && needDirectiveBreakdowns(workflow) {
 		log.Info("Generate dwDirectiveBreakdowns")
 
 		err = r.generateDirectiveBreakdowns(workflow.Spec.DWDirectives, workflow, log)
@@ -101,7 +101,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Create and link an NnfStorage CR's to each DWDirectiveBreakdown
-	if workflow.Status.State == dwsv1alpha1.StateProposal {
+	if workflow.Status.State == dwsv1alpha1.StateProposal.String() {
 
 		for i := range workflow.Status.DWDirectiveBreakdowns {
 			b := &workflow.Status.DWDirectiveBreakdowns[i]

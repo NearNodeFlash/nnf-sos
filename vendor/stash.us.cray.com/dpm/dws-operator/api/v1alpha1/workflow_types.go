@@ -5,23 +5,48 @@ Copyright 2021 Hewlett Packard Enterprise Development LP
 package v1alpha1
 
 import (
+	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-// Important: Run "make" to regenerate code after modifying this file
+type WorkflowState int
 
-// Define valid state transition values
 const (
-	StateProposal string = "proposal"
-	StateSetup    string = "setup"
-	StatePreRun   string = "pre_run"
-	StatePostRun  string = "post_run"
-	StateDataIn   string = "data_in"
-	StateDataOut  string = "data_out"
-	StateTearDown string = "teardown"
+	StateProposal WorkflowState = iota
+	StateSetup
+	StateDataIn
+	StatePreRun
+	StatePostRun
+	StateDataOut
+	StateTeardown
 )
+
+var workflowStrings = [...]string{
+	"proposal",
+	"setup",
+	"pre_run",
+	"data_in",
+	"data_out",
+	"post_run",
+	"teardown",
+}
+
+func (s WorkflowState) String() string {
+	return workflowStrings[s]
+}
+
+// GetWorkflowState returns the WorkflowState constant that matches the
+// string value passed in
+func GetWorkflowState(state string) (WorkflowState, error) {
+	for i := StateProposal; i <= StateTeardown; i++ {
+		if i.String() == state {
+			return i, nil
+		}
+	}
+
+	return StateProposal, fmt.Errorf("Invalid workflow state '%s'\n", state)
+}
 
 type DWRecord struct {
 	// Array index of the #DW directive in original WFR
@@ -53,10 +78,15 @@ type DWDirectiveBreakdown struct {
 
 // WorkflowSpec defines the desired state of Workflow
 type WorkflowSpec struct {
-	DesiredState string   `json:"desiredState"`
-	WLMID        string   `json:"wlmID"`
-	JobID        int      `json:"jobID"`
-	UserID       int      `json:"userID"`
+	// Desired state for the workflow to be in. Unless progressing to the teardown state,
+	// this can only be set to the next state when the current desired state has been achieved.
+	// +kubebuilder:validation:Enum=proposal;setup;data_in;pre_run;post_run;data_out;teardown
+	DesiredState string `json:"desiredState"`
+	WLMID        string `json:"wlmID"`
+	JobID        int    `json:"jobID"`
+	UserID       int    `json:"userID"`
+
+	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`
 }
 
@@ -79,6 +109,7 @@ type WorkflowDriverStatus struct {
 type WorkflowStatus struct {
 	// The state the resource is currently transitioning to.
 	// Updated by the controller once started.
+	// +kubebuilder:default=proposal
 	State string `json:"state"`
 
 	// Ready can be 'True', 'False'

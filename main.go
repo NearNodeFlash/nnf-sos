@@ -42,10 +42,6 @@ const (
 	StorageController   = "storage"
 )
 
-// I'm not sure where the best place to put this is. This kubebuilder directive is
-// included in dwsv1alpha1, but because it's in the vendor/ directory it is ignored.
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=dwdirectiverules,verbs=get;list;watch
-
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
@@ -191,11 +187,6 @@ func (*storageController) GetNamespace() string     { return "" }
 func (*storageController) Start(*nnf.Options) error { return nil }
 
 func (c *storageController) SetupReconciler(mgr manager.Manager) error {
-	if err := (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Workflow")
-		return err
-	}
-
 	if err := (&controllers.WorkflowReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Workflow"),

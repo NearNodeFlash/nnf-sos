@@ -21,10 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,8 +46,6 @@ func (r *Workflow) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-dws-cray-hpe-com-v1alpha1-workflow,mutating=true,failurePolicy=fail,sideEffects=None,groups=dws.cray.hpe.com,resources=workflows,verbs=create;update,versions=v1alpha1,name=mworkflow.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &Workflow{}
@@ -56,24 +54,7 @@ var _ webhook.Defaulter = &Workflow{}
 func (workflow *Workflow) Default() {
 	workflowlog.Info("default", "name", workflow.Name)
 
-	webhookType := os.Getenv("WORKFLOW_WEBHOOK_TYPE")
-	if strings.Contains(webhookType, "mutating") == false {
-		return
-	}
-
-	driverID := os.Getenv("WORKFLOW_WEBHOOK_DRIVER_ID")
-	if len(driverID) == 0 {
-		return
-	}
-
-	// Check if there are any DW directives that we care about
-	err := validate(workflow)
-	if err != nil {
-		return
-	}
-
-	// Apply driver status sections in the WFR
-	applyDriverStatus(driverID, workflow.Spec.DWDirectives, workflow)
+	_ = checkDirectives(workflow, &MutatingRuleParser{})
 
 	return
 }
@@ -87,22 +68,69 @@ var _ webhook.Validator = &Workflow{}
 func (r *Workflow) ValidateCreate() error {
 	workflowlog.Info("validate create", "name", r.Name)
 
-	webhookType := os.Getenv("WORKFLOW_WEBHOOK_TYPE")
-	if strings.Contains(webhookType, "validating") == false {
-		return nil
+	if r.Spec.DesiredState != "proposal" {
+		return fmt.Errorf("Desired state must start in 'proposal'")
 	}
-	return validate(r)
+
+	return checkDirectives(r, &ValidatingRuleParser{})
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Workflow) ValidateUpdate(old runtime.Object) error {
 	workflowlog.Info("validate update", "name", r.Name)
 
-	webhookType := os.Getenv("WORKFLOW_WEBHOOK_TYPE")
-	if strings.Contains(webhookType, "validating") == false {
+	oldWorkflow, ok := old.(*Workflow)
+	if !ok {
+		err := fmt.Errorf("Invalid Workflow resource")
+		workflowlog.Error(err, "Old runtime.Object is not a Workflow resource")
+
+		return err
+	}
+
+	// Check that immutable fields haven't changed.
+	err := validateWorkflowImmutable(r, oldWorkflow)
+	if err != nil {
+		return err
+	}
+
+	// Initial setup of the Workflow by the dws controller requires setting the status
+	// state to proposal
+	if oldWorkflow.Status.State == "" && r.Status.State == "proposal" && r.Spec.DesiredState == "proposal" {
 		return nil
 	}
-	return validate(r)
+
+	// New state is the desired state in the Spec
+	newState, err := GetWorkflowState(r.Spec.DesiredState)
+	if err != nil {
+		return err
+	}
+
+	// Old state is the current state we're on. This is found in the status
+	oldState, err := GetWorkflowState(oldWorkflow.Status.State)
+	if err != nil {
+		return err
+	}
+
+	// Progressing to teardown is allowed at any time, and changes to the
+	// Workflow that don't change the state are fine too (immutable fields were
+	// already checked)
+	if newState == StateTeardown || newState == oldState {
+		return nil
+	}
+
+	if newState < oldState {
+		return fmt.Errorf("State can not progress backwards")
+	}
+
+	if newState > oldState+1 {
+		return fmt.Errorf("States can not be skipped")
+	}
+
+	if oldWorkflow.Status.Ready == false {
+		return fmt.Errorf("Current desired state not yet achieved")
+	}
+
+	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -111,108 +139,113 @@ func (r *Workflow) ValidateDelete() error {
 	return nil
 }
 
-func validate(workflow *Workflow) error {
-
-	// Retrieve the `dwDirectives` values.
-	dwDirectives := workflow.Spec.DWDirectives
-	if len(dwDirectives) == 0 {
-		return errors.New("no #DW directives found")
+func validateWorkflowImmutable(a *Workflow, b *Workflow) error {
+	if a.Spec.WLMID != b.Spec.WLMID {
+		return fmt.Errorf("Can not change immutable field WLMID")
 	}
 
-	// WORKFLOW_WEBHOOK_RULESET_LIST is a comma separated list of rule sets
-	ruleSetList := strings.Split(os.Getenv("WORKFLOW_WEBHOOK_RULESET_LIST"), ",")
-
-	foundValid := false
-	for _, ruleSet := range ruleSetList {
-		if ruleSet == "" {
-			continue
-		}
-
-		// Rules are of the form "Name/Namespace"
-		r := strings.Split(ruleSet, "/")
-		if len(r) != 2 {
-			return fmt.Errorf("Rule set %s has invalid form", ruleSet)
-		}
-
-		// validate syntax #DW syntax
-		const rejectUnsupportedCommands bool = true
-
-		dwdRules := &DWDirectiveRule{}
-		namespacedName := types.NamespacedName{
-			Name:      r[0],
-			Namespace: r[1],
-		}
-
-		if err := c.Get(context.TODO(), namespacedName, dwdRules); err != nil {
-			return err
-		}
-
-		valid, err := dwdparse.ValidateDWDirectives(dwdRules.Spec, dwDirectives, rejectUnsupportedCommands)
-		if err != nil {
-			// #DW parser validation failed
-			workflowlog.Info("dwDirective validation failed", "Error", err)
-			return err
-		}
-
-		if valid == true {
-			foundValid = true
-		}
+	if a.Spec.JobID != b.Spec.JobID {
+		return fmt.Errorf("Can not change immutable field JobID")
 	}
 
-	if foundValid == false {
-		return errors.New("Invalid directive found")
+	if a.Spec.UserID != b.Spec.UserID {
+		return fmt.Errorf("Can not change immutable field UserID")
+	}
+
+	if reflect.DeepEqual(a.Spec.DWDirectives, b.Spec.DWDirectives) == false {
+		return fmt.Errorf("Can not change immutable field DWDirectives")
 	}
 
 	return nil
 }
 
-var stateMap map[string][]string
-
-func setStateMap() {
-	// Check for state/command mapping overrides, otherwise use defaults
-	setupCommands := strings.Split(os.Getenv("SETUP_COMMANDS"), ",")
-	if len(setupCommands[0]) == 0 {
-		setupCommands = []string{"jobdw", "create_persistent"}
-	}
-	teardownCommands := strings.Split(os.Getenv("TEARDOWN_COMMANDS"), ",")
-	if len(teardownCommands[0]) == 0 {
-		teardownCommands = []string{"jobdw", "destroy_persistent"}
-	}
-	datainCommands := strings.Split(os.Getenv("DATA_IN_COMMANDS"), ",")
-	if len(datainCommands[0]) == 0 {
-		datainCommands = []string{"copy_in", "copy-in", "tier_in", "tier-in"}
-	}
-	dataoutCommands := strings.Split(os.Getenv("DATA_OUT_COMMANDS"), ",")
-	if len(dataoutCommands[0]) == 0 {
-		dataoutCommands = []string{"copy_out", "copy-out", "tier_out", "tier-out"}
-	}
-	prerunCommands := strings.Split(os.Getenv("PRERUN_COMMANDS"), ",")
-	if len(prerunCommands[0]) == 0 {
-		prerunCommands = []string{"jobdw", "persistentdw"}
-	}
-	postrunCommands := strings.Split(os.Getenv("POSTRUN_COMMANDS"), ",")
-	if len(postrunCommands[0]) == 0 {
-		postrunCommands = []string{"jobdw", "persistentdw"}
+func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
+	if len(workflow.Spec.DWDirectives) == 0 {
+		return errors.New("no #DW directives found")
 	}
 
-	stateMap = map[string][]string{
-		"setup":    setupCommands,
-		"teardown": teardownCommands,
-		"data_out": dataoutCommands,
-		"data_in":  datainCommands,
-		"pre_run":  prerunCommands,
-		"post_run": postrunCommands,
+	err := ruleParser.ReadRules()
+	if err != nil {
+		return nil
 	}
+
+	for i, directive := range workflow.Spec.DWDirectives {
+		invalidDirective := true
+		for _, rule := range ruleParser.GetRuleList() {
+			// validate syntax #DW syntax
+			const rejectUnsupportedCommands bool = true
+
+			valid, err := dwdparse.ValidateDWDirective(rule, directive, rejectUnsupportedCommands)
+			if err != nil {
+				// #DW parser validation failed
+				workflowlog.Info("dwDirective validation failed", "Error", err)
+				return err
+			}
+
+			if valid == true {
+				invalidDirective = false
+				ruleParser.MatchedDirective(workflow, rule.WatchStates, i, rule.DriverLabel)
+			}
+		}
+
+		if invalidDirective == true {
+			return fmt.Errorf("Invalid directive found: '%s'", directive)
+		}
+	}
+
+	return nil
 }
 
-func applyDriverStatus(driverID string, directives []string, workflow *Workflow) {
+//+kubebuilder:object:generate=false
+type RuleParser interface {
+	ReadRules() error
+	GetRuleList() []dwdparse.DWDirectiveRuleSpec
+	MatchedDirective(*Workflow, string, int, string)
+}
 
-	// Calling this everytime picks up an changes that may have occurred in environment variables.
-	setStateMap()
+//+kubebuilder:object:generate=false
+type RuleList struct {
+	rules []dwdparse.DWDirectiveRuleSpec
+}
 
-	// Update driver status entries to indicate driver availability
-	watchStates := strings.Split(os.Getenv("WORKFLOW_WEBHOOK_WATCH_STATES"), ",")
-	if len(watchStates) == 0 {
+func (r *RuleList) ReadRules() error {
+	ruleSetList := &DWDirectiveRuleList{}
+	listOpts := []client.ListOption{
+		// Use all the DWDirectiveRules in the namespace we're running in
+		client.InNamespace(os.Getenv("POD_NAMESPACE")),
+	}
+
+	if err := c.List(context.TODO(), ruleSetList, listOpts...); err != nil {
+		return err
+	}
+
+	r.rules = []dwdparse.DWDirectiveRuleSpec{}
+	for _, ruleSet := range ruleSetList.Items {
+		for _, rule := range ruleSet.Spec {
+			if rule.DriverLabel == "" {
+				rule.DriverLabel = ruleSet.Name
+			}
+			r.rules = append(r.rules, rule)
+		}
+	}
+
+	return nil
+}
+
+func (r *RuleList) GetRuleList() []dwdparse.DWDirectiveRuleSpec {
+	return r.rules
+}
+
+// MutatingRuleParser implements the RuleParser interface.
+var _ RuleParser = &MutatingRuleParser{}
+
+//+kubebuilder:object:generate=false
+type MutatingRuleParser struct {
+	RuleList
+}
+
+func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
+	if watchStates == "" {
 		// Nothing to do
 		return
 	}
@@ -220,30 +253,43 @@ func applyDriverStatus(driverID string, directives []string, workflow *Workflow)
 	registrationMap := make(map[string]bool)
 	// Build a map of previously registered states for this driver
 	for _, s := range workflow.Status.Drivers {
-		if s.DriverID == driverID {
-			registrationMap[s.WatchState] = true
+		if s.DWDIndex != index {
+			continue
 		}
+
+		if s.DriverID != label {
+			continue
+		}
+
+		registrationMap[s.WatchState] = true
 	}
 
-	for idx, dwd := range directives {
-		dwdArgs := strings.Fields(dwd)
-
-		for _, state := range watchStates {
-			// If this driver is already registered for this directive, skip it
-			if registrationMap[state] {
-				continue
-			}
-			for _, cmd := range stateMap[state] {
-				if cmd == dwdArgs[1] {
-					driverStatus := WorkflowDriverStatus{}
-					driverStatus.DriverID = driverID
-					// Register states for this driver
-					driverStatus.DWDIndex = idx
-					driverStatus.WatchState = state
-					workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
-					workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
-				}
-			}
+	// Update driver status entries to indicate driver availability
+	for _, state := range strings.Split(watchStates, ",") {
+		// If this driver is already registered for this directive, skip it
+		if registrationMap[state] {
+			continue
 		}
+
+		driverStatus := WorkflowDriverStatus{}
+		driverStatus.DriverID = label
+		// Register states for this driver
+		driverStatus.DWDIndex = index
+		driverStatus.WatchState = state
+		workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
+		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
 	}
+	return
+}
+
+// ValidatingRuleParser implements the RuleParser interface.
+var _ RuleParser = &ValidatingRuleParser{}
+
+//+kubebuilder:object:generate=false
+type ValidatingRuleParser struct {
+	RuleList
+}
+
+func (r *ValidatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
+	return
 }

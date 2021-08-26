@@ -46,7 +46,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 # To use the 'craystack' overlay:
 #   export KUBECONFIG=/my/craystack/kubeconfig.file
 #   make deploy OVERLAY=craystack
-OVERLAY ?= default
+OVERLAY ?= top
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))

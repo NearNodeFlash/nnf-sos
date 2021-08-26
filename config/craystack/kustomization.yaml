@@ -1,5 +1,5 @@
 bases:
-- ../default
+- ../top
 
 patchesStrategicMerge:
 # Let the node-manager daemonset mount host dirs for lustre tools and libs.
