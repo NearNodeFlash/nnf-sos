@@ -69,6 +69,23 @@ func (d *SwitchtecDevice) GetPortStatus() ([]switchtec.PortLinkStat, error) {
 	return d.dev.LinkStat()
 }
 
+func (d *SwitchtecDevice) GetPortMetrics() (PortMetrics, error) {
+	portIds, counters, err := d.dev.BandwidthCounterAll(false)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := make(PortMetrics, len(portIds))
+	for idx := range portIds {
+		metrics[idx] = PortMetric{
+			PhysPortId:       portIds[idx].PhysPortId,
+			BandwidthCounter: counters[idx],
+		}
+	}
+
+	return metrics, nil
+}
+
 func (d *SwitchtecDevice) GetEvents() ([]switchtec.GfmsEvent, error) {
 	return d.dev.GetGfmsEvents()
 }

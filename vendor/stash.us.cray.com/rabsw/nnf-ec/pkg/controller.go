@@ -15,11 +15,13 @@ import (
 	"flag"
 	"os"
 
-	ec "stash.us.cray.com/rabsw/ec"
-
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	event "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
 	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
+	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry"
 	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
 	nvme "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme"
+	telemetry "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-telemetry"
 )
 
 const (
@@ -94,6 +96,9 @@ func NewDefaultApiRouters(switchCtrl fabric.SwitchtecControllerInterface, nvmeCt
 		fabric.NewDefaultApiRouter(fabric.NewDefaultApiService(), switchCtrl),
 		nvme.NewDefaultApiRouter(nvme.NewDefaultApiService(), nvmeCtrl),
 		nnf.NewDefaultApiRouter(nnf.NewDefaultApiService(nnf.NewDefaultStorageService()), nnfCtrl),
+		telemetry.NewDefaultApiRouter(telemetry.NewDefaultApiService()),
+		event.NewDefaultApiRouter(event.NewDefaultApiService()),
+		msgreg.NewDefaultApiRouter(msgreg.NewDefaultApiService()),
 	}
 
 	return routers

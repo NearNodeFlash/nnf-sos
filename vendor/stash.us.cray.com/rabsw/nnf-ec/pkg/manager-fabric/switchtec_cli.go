@@ -179,6 +179,12 @@ func (d *SwitchtecCliDevice) GetEvents() ([]switchtec.GfmsEvent, error) {
 	return make([]switchtec.GfmsEvent, 0), nil
 }
 
+func (d *SwitchtecCliDevice) GetPortMetrics() (PortMetrics, error) {
+	// Switchtec CLI does not provide the current counters - it only provides a
+	// measure of bandwidth over a time period.
+	return make(PortMetrics, 0), nil
+}
+
 func (d *SwitchtecCliDevice) EnumerateEndpoint(physPortId uint8, handlerFunc func(epPort *switchtec.DumpEpPortDevice) error) error {
 	rsp, err := d.run(fmt.Sprintf("fabric gfms-dump %s --type=EP_PORT --ep_pid=%d", d.path, physPortId))
 	if err != nil {

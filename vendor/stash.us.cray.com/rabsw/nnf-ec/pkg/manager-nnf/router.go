@@ -1,7 +1,7 @@
 package nnf
 
 import (
-	"stash.us.cray.com/rabsw/ec"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 )
 
 type DefaultApiRouter struct {

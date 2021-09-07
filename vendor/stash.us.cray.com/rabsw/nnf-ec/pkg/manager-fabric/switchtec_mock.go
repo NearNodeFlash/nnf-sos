@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
@@ -16,7 +17,8 @@ type MockSwitchtecController struct {
 }
 
 type MockSwitchtecDevice struct {
-	ctrl *MockSwitchtecController
+	ctrl      *MockSwitchtecController
+	createdAt time.Time
 
 	id     int
 	path   string
@@ -58,12 +60,13 @@ func NewMockSwitchtecController() SwitchtecControllerInterface {
 		}
 
 		ctrl.devices[switchIdx] = MockSwitchtecDevice{
-			ctrl:   ctrl,
-			id:     devId,
-			path:   "", // Path becomes valid when opened
-			config: &config.Switches[switchIdx],
-			open:   false,
-			exists: true,
+			ctrl:      ctrl,
+			id:        devId,
+			path:      "", // Path becomes valid when opened
+			config:    &config.Switches[switchIdx],
+			open:      false,
+			exists:    true,
+			createdAt: time.Now(),
 		}
 
 		dev := &ctrl.devices[switchIdx]
@@ -202,6 +205,31 @@ func (d *MockSwitchtecDevice) GetPortStatus() ([]switchtec.PortLinkStat, error) 
 	}
 
 	return stats, nil
+}
+
+func (d *MockSwitchtecDevice) GetPortMetrics() (PortMetrics, error) {
+
+	counters := make(PortMetrics, len(d.ports))
+
+	for idx, p := range d.ports {
+
+		fakeTxRxBytes := rand.Uint64()
+
+		counters[idx] = PortMetric{
+			PhysPortId: uint8(p.config.Port),
+			BandwidthCounter: switchtec.BandwidthCounter{
+				TimeInMicroseconds: uint64(time.Now().Sub(d.createdAt).Microseconds()),
+				Egress: switchtec.BandwidthCounterDirectional{
+					Posted: fakeTxRxBytes, Completion: 0, NonPosted: 0,
+				},
+				Ingress: switchtec.BandwidthCounterDirectional{
+					Posted: fakeTxRxBytes, Completion: 0, NonPosted: 0,
+				},
+			},
+		}
+	}
+
+	return counters, nil
 }
 
 func (d *MockSwitchtecDevice) GetEvents() ([]switchtec.GfmsEvent, error) {

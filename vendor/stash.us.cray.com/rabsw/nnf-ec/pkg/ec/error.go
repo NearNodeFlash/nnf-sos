@@ -38,29 +38,28 @@ func (e *controllerError) WithCause(cause string) *controllerError {
 	return e
 }
 
-var (
-	// Error Not Found - Returned when the requested URL path contains wildcards
-	// not found or supported by the element controller.
-	ErrNotFound = NewControllerError(http.StatusNotFound)
+// NewErr** Functions will allocate a controller error for the specific type of error.
+// Error details can be added through the use of WithError(err) and WithCause(string) methods
 
-	// Error Bad Request - Used when the request body is illformed. Usually this
-	// is in response to a POST request where the provided json is invalid, or
-	// has values unsupported by the element controller
-	ErrBadRequest = NewControllerError(http.StatusBadRequest)
+func NewErrNotFound() *controllerError {
+	return NewControllerError(http.StatusNotFound)
+}
 
-	// Error Not Acceptable - Used when the request body contains fields that
-	// are invalid to the request. Usually this is in response to a POST request
-	// where the element controller is not in a position to handle the request.
-	ErrNotAcceptable = NewControllerError(http.StatusNotAcceptable)
+func NewErrBadRequest() *controllerError {
+	return NewControllerError(http.StatusBadRequest)
+}
 
-	// Error Internal Server Error - Used when the element controller cannot
-	// service the request for some reason.
-	ErrInternalServerError = NewControllerError(http.StatusInternalServerError)
+func NewErrNotAcceptable() *controllerError {
+	return NewControllerError(http.StatusNotAcceptable)
+}
 
-	// Error Not Implemented - Used for rejecting requests the element controller
-	// does not implement. Usually used for code stubs.
-	ErrNotImplemented = NewControllerError(http.StatusNotImplemented)
-)
+func NewErrInternalServerError() *controllerError {
+	return NewControllerError(http.StatusInternalServerError)
+}
+
+func NewErrNotImplemented() *controllerError {
+	return NewControllerError(http.StatusNotImplemented)
+}
 
 type ErrorResponse struct {
 	Status  int    `json:"status"`
@@ -75,11 +74,16 @@ type ErrorResponse struct {
 // body for all unsuccessful element controller requests.
 func NewErrorResponse(e *controllerError, v interface{}) (s interface{}) {
 
+	var details string
+	if e.Unwrap() != nil {
+		details = e.Unwrap().Error()
+	}
+
 	rsp := ErrorResponse{
 		Status:  e.statusCode,
 		Error:   http.StatusText(e.statusCode),
 		Cause:   e.cause,
-		Details: e.Unwrap().Error(),
+		Details: details,
 	}
 
 	if v != nil {

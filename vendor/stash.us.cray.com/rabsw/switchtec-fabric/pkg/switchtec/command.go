@@ -5,6 +5,8 @@ type Command uint32
 
 // The supported command set for a device.
 const (
+	PerformanceMonitorCommand Command = 7
+
 	// Global Address Space commands
 	LinkStatCommand Command = 28
 	GASReadCommand  Command = 0x29 // 41
@@ -31,8 +33,10 @@ const (
 
 func (cmd Command) String() string {
 	switch cmd {
+	case PerformanceMonitorCommand:
+		return "Performance Monitor"
 	case LinkStatCommand:
-		return "LinkStat"
+		return "Link Stat"
 	case GASReadCommand:
 		return "GAS Read"
 	case PartitionInfo:
@@ -74,6 +78,15 @@ func (cmd Command) String() string {
 type SubCommand uint8
 
 const (
+	SetupEventCounterSubCommand      SubCommand = 0
+	GetBandwidthCounterSubCommand    SubCommand = 1
+	GetEventCounterSubCommand        SubCommand = 2
+	GetEventCounterSetupSubCommand   SubCommand = 3
+	SetupLatencyCounterSubCommand    SubCommand = 4
+	GetLatencyCounterSetupSubCommand SubCommand = 5
+	GetLatencyCounterSubCommand      SubCommand = 6
+	SetBandwidthCounterSubCommand    SubCommand = 12
+
 	PortBindSubCommand   SubCommand = 1
 	PortUnbindSubCommand SubCommand = 2
 

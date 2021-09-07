@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"stash.us.cray.com/rabsw/ec"
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 )
 
 // DefaultApiService -
@@ -224,7 +224,7 @@ func (*DefaultApiService) RedfishV1FabricsFabricIdConnectionsConnectionIdPatch(w
 	model := sf.ConnectionV100Connection{}
 
 	if err := UnmarshalRequest(r, &model); err != nil {
-		EncodeResponse(model, ec.ErrBadRequest, w)
+		EncodeResponse(model, ec.NewErrBadRequest().WithError(err), w)
 		return
 	}
 

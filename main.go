@@ -28,8 +28,8 @@ import (
 
 	//+kubebuilder:scaffold:imports
 
-	"stash.us.cray.com/rabsw/ec"
 	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg"
+	"stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 )
 
 var (

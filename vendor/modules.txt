@@ -15,8 +15,6 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/HewlettPackard/structex v1.0.2
 github.com/HewlettPackard/structex
-# github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6
-## explicit
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
@@ -37,10 +35,7 @@ github.com/fsnotify/fsnotify
 github.com/go-logr/logr
 # github.com/go-logr/zapr v0.4.0
 github.com/go-logr/zapr
-# github.com/go-openapi/validate v0.19.5
-## explicit
 # github.com/gogo/protobuf v1.3.2
-## explicit
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
@@ -77,8 +72,6 @@ github.com/hashicorp/golang-lru/simplelru
 github.com/imdario/mergo
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
-# github.com/kr/text v0.2.0
-## explicit
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
@@ -87,8 +80,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
-## explicit
 # github.com/nxadm/tail v1.4.8
 github.com/nxadm/tail
 github.com/nxadm/tail/ratelimiter
@@ -152,8 +143,10 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rs/cors v1.7.0
+# github.com/rs/cors v1.8.0
 github.com/rs/cors
+# github.com/senseyeio/duration v0.0.0-20180430131211-7c2a214ada46
+github.com/senseyeio/duration
 # github.com/sigurn/crc8 v0.0.0-20160107002456-e55481d6f45c
 github.com/sigurn/crc8
 # github.com/sigurn/utils v0.0.0-20190728110027-e1fefb11a144
@@ -162,18 +155,12 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/ugorji/go v1.1.4
-## explicit
-# github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77
-## explicit
 # go.chromium.org/luci v0.0.0-20210407013038-a7569e2b1401
 go.chromium.org/luci/common/runtime/goroutine
 # go.uber.org/atomic v1.9.0
 go.uber.org/atomic
 # go.uber.org/multierr v1.6.0
 go.uber.org/multierr
-# go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
-## explicit
 # go.uber.org/zap v1.18.1
 go.uber.org/zap
 go.uber.org/zap/buffer
@@ -325,8 +312,6 @@ google.golang.org/protobuf/types/descriptorpb
 google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
-# gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
-## explicit
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -335,8 +320,6 @@ gopkg.in/tomb.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 gopkg.in/yaml.v3
-# gotest.tools v2.2.0+incompatible
-## explicit
 # k8s.io/api v0.21.2
 ## explicit
 k8s.io/api/admission/v1
@@ -641,24 +624,27 @@ stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
 # stash.us.cray.com/rabsw/ec v1.0.10
 ## explicit
-stash.us.cray.com/rabsw/ec
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210818154432-a10246c96be5
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210907162304-2d0676f76e6c
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api
 stash.us.cray.com/rabsw/nnf-ec/pkg/common
+stash.us.cray.com/rabsw/nnf-ec/pkg/ec
 stash.us.cray.com/rabsw/nnf-ec/pkg/events
 stash.us.cray.com/rabsw/nnf-ec/pkg/logging
+stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric
+stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme
-# stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210818152112-4e072611b060
+stash.us.cray.com/rabsw/nnf-ec/pkg/manager-telemetry
+# stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210830201758-8dbd76f01e7d
 ## explicit
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/common
 stash.us.cray.com/rabsw/rfsf-openapi/pkg/models
-# stash.us.cray.com/rabsw/switchtec-fabric v1.0.14
+# stash.us.cray.com/rabsw/switchtec-fabric v1.0.15
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme
 stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec
 # stash.us.cray.com/sp/dp-api v0.1.8

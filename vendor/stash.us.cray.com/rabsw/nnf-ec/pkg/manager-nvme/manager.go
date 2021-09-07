@@ -12,7 +12,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"stash.us.cray.com/rabsw/ec"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
 	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
 )
@@ -166,7 +166,7 @@ func (m *Manager) GetVolumes(controllerId string) ([]string, error) {
 	for _, s := range m.storage {
 		c := s.findController(controllerId)
 		if c == nil {
-			return volumes, ec.ErrNotFound
+			return volumes, ec.NewErrNotFound()
 		}
 
 		nsids, err := s.device.ListNamespaces(c.functionNumber)
@@ -406,7 +406,7 @@ func (s *Storage) deleteVolume(volumeId string) error {
 		}
 	}
 
-	return ec.ErrNotFound
+	return ec.NewErrNotFound()
 }
 
 func (s *Storage) findVolume(volumeId string) *Volume {
@@ -686,7 +686,7 @@ func Get(model *sf.StorageCollectionStorageCollection) error {
 func StorageIdGet(storageId string, model *sf.StorageV190Storage) error {
 	s := findStorage(storageId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	model.Id = s.id
@@ -706,7 +706,7 @@ func StorageIdGet(storageId string, model *sf.StorageV190Storage) error {
 func StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionStoragePoolCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	model.MembersodataCount = 1
@@ -720,11 +720,11 @@ func StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionS
 func StorageIdStoragePoolIdGet(storageId, storagePoolId string, model *sf.StoragePoolV150StoragePool) error {
 	s, sp := findStoragePool(storageId, storagePoolId)
 	if sp == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	if err := s.refreshCapacity(); err != nil {
-		return ec.ErrInternalServerError
+		return ec.NewErrInternalServerError()
 	}
 
 	// TODO: This should reflect the total namespaces allocated over the drive
@@ -746,7 +746,7 @@ func StorageIdStoragePoolIdGet(storageId, storagePoolId string, model *sf.Storag
 func StorageIdControllersGet(storageId string, model *sf.StorageControllerCollectionStorageControllerCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	model.MembersodataCount = int64(len(s.controllers))
@@ -762,7 +762,7 @@ func StorageIdControllersGet(storageId string, model *sf.StorageControllerCollec
 func StorageIdControllerIdGet(storageId, controllerId string, model *sf.StorageControllerV100StorageController) error {
 	_, c := findStorageController(storageId, controllerId)
 	if c == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	// Fill in the relative endpoint for this storage controller
@@ -805,7 +805,7 @@ func StorageIdControllerIdGet(storageId, controllerId string, model *sf.StorageC
 func StorageIdVolumesGet(storageId string, model *sf.VolumeCollectionVolumeCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	// TODO: If s.ctrl is down - fail
@@ -823,7 +823,7 @@ func StorageIdVolumesGet(storageId string, model *sf.VolumeCollectionVolumeColle
 func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume) error {
 	s, v := findStorageVolume(storageId, volumeId)
 	if v == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	// TODO: If s.ctrl is down - fail
@@ -831,7 +831,7 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 	ns, err := s.device.IdentifyNamespace(nvme.NamespaceIdentifier(v.namespaceId))
 	if err != nil {
 		log.WithError(err).Errorf("Identify Namespace Failed: NSID %d", v.namespaceId)
-		return ec.ErrInternalServerError
+		return ec.NewErrInternalServerError()
 	}
 
 	formatGUID := func(guid []byte) string {
@@ -893,7 +893,7 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 func StorageIdVolumePost(storageId string, model *sf.VolumeV161Volume) error {
 	s := findStorage(storageId)
 	if s == nil {
-		return ec.ErrNotFound
+		return ec.NewErrNotFound()
 	}
 
 	volume, err := s.createVolume(uint64(model.CapacityBytes), nil)
@@ -910,7 +910,7 @@ func StorageIdVolumePost(storageId string, model *sf.VolumeV161Volume) error {
 func StorageIdVolumeIdDelete(storageId, volumeId string) error {
 	s, v := findStorageVolume(storageId, volumeId)
 	if v == nil {
-		return ec.ErrBadRequest
+		return ec.NewErrBadRequest().WithCause(fmt.Sprintf("storage volume id %s not found", volumeId))
 	}
 
 	return s.deleteVolume(volumeId)

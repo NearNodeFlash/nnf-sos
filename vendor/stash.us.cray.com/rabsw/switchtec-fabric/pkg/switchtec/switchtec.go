@@ -2,7 +2,9 @@ package switchtec
 
 import (
 	"fmt"
+	"math"
 	"os"
+	"sort"
 	"syscall"
 
 	"github.com/mattn/go-isatty"
@@ -120,7 +122,7 @@ func (dev *Device) RunCommandRawBytes(cmd Command, payload []byte, response []by
 
 	dev.Lock()
 	defer dev.Unlock()
-	
+
 	if err := dev.ops.submitCommand(dev, cmd, payload); err != nil {
 		return err
 	}
@@ -188,9 +190,68 @@ func (dev *Device) Echo(pattern uint32) error {
 	return nil
 }
 
+// Port Identification
+type PortId struct {
+	Partition  uint8
+	Stack      uint8
+	Upstream   uint8
+	StackId    uint8
+	PhysPortId uint8
+	LogPortId  uint8
+}
+
+func (p1 *PortId) Less(p2 *PortId) bool {
+	if p1.Partition != p2.Partition {
+		return p1.Partition < p2.Partition
+	}
+
+	if p1.Upstream != p2.Upstream {
+		return p1.Upstream == 0 || p2.Upstream != 0
+	}
+
+	return p1.LogPortId < p2.LogPortId
+}
+
+type PortIds []PortId
+
+func (p PortIds) Len() int           { return len(p) }
+func (p PortIds) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p PortIds) Less(i, j int) bool { return p[i].Less(&p[j]) }
+
+// Get the status of all the ports on the switchtec device
+func (dev *Device) Status() (PortIds, error) {
+	stats, err := dev.LinkStat()
+	if err != nil {
+		return nil, err
+	}
+
+	portIds := make(PortIds, len(stats))
+
+	for i, stat := range stats {
+		portIds[i] = PortId{
+			Partition:  stat.Partition,
+			Stack:      stat.Stack,
+			StackId:    stat.StackId,
+			Upstream:   stat.Upstream,
+			PhysPortId: stat.PhysPortId,
+			LogPortId:  stat.LogPortId,
+		}
+	}
+
+	sort.Sort(portIds)
+
+	return portIds, nil
+}
+
 // PortLinkStat -
 type PortLinkStat struct {
+	Partition uint8
+	Stack     uint8
+	StackId   uint8
+	Upstream  uint8
+
 	PhysPortId uint8
+	LogPortId  uint8
 
 	CfgLinkWidth uint8
 	NegLinkWidth uint8
@@ -222,8 +283,10 @@ const (
 )
 
 const (
-	maxStacks        = 8
-	maxPortLinkStats = 48
+	maxStacks = 8
+	maxPorts  = 48
+
+	UnboundPort uint8 = math.MaxUint8
 )
 
 const (
@@ -271,7 +334,7 @@ func (dev *Device) LinkStat() ([]PortLinkStat, error) {
 	}
 
 	type LinkStatRsp struct {
-		Stats [maxPortLinkStats]portLinkStat
+		Stats [maxPorts]portLinkStat
 	}
 
 	rsp := LinkStatRsp{}
@@ -280,7 +343,7 @@ func (dev *Device) LinkStat() ([]PortLinkStat, error) {
 		return nil, err
 	}
 
-	stats := make([]PortLinkStat, maxPortLinkStats)
+	stats := make([]PortLinkStat, maxPorts)
 
 	var statIdx = 0
 	for _, s := range rsp.Stats {
@@ -293,7 +356,14 @@ func (dev *Device) LinkStat() ([]PortLinkStat, error) {
 		}
 
 		stats[statIdx] = PortLinkStat{
-			PhysPortId:   s.PhysPortId,
+			Partition: s.PartitionId,
+			Stack:     s.StackId,
+			StackId:   s.PortStackId,
+			Upstream:  s.USPFlag,
+
+			PhysPortId: s.PhysPortId,
+			LogPortId:  s.LogicalPortId,
+
 			CfgLinkWidth: s.CfgLinkWidth,
 			NegLinkWidth: s.NegLinkWidth,
 

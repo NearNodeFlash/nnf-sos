@@ -218,6 +218,12 @@ func (c *LocalServerController) newStorageNamespace(path string) (*StorageNamesp
 
 	data, err := c.run(fmt.Sprintf("nvme get-feature %s --namespace-id=%d --feature-id=0x7F --raw-binary", path, nsid))
 	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) { // Treat drives that do not support NVMe Get-Features as unmanaged Rabbit drives
+			if syscall.Errno(exitErr.ExitCode()) == syscall.EINVAL {
+				err = common.ErrNamespaceMetadata
+			}
+		}
 		return nil, err
 	}
 
