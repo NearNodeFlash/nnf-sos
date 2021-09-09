@@ -13,11 +13,8 @@ RUN wget https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x8
          https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/e2fsprogs-libs-1.45.6.wc1-0.el7.x86_64.rpm \
          https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/libcom_err-1.45.6.wc1-0.el7.x86_64.rpm \
          https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/libss-1.45.6.wc1-0.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.10-release/el7/server/RPMS/x86_64/lustre-osd-ldiskfs-mount-2.10.8-1.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.10-release/el7/server/RPMS/x86_64/kmod-lustre-2.10.8-1.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.10-release/el7/server/RPMS/x86_64/kmod-lustre-osd-ldiskfs-2.10.8-1.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.10-release/el7/server/RPMS/x86_64/lustre-2.10.8-1.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.10-release/el7/server/RPMS/x86_64/lustre-iokit-2.10.8-1.el7.x86_64.rpm
+         https://downloads.whamcloud.com/public/lustre/latest-2.12-release/el7/server/RPMS/x86_64/kmod-lustre-2.12.7-1.el7.x86_64.rpm \
+         https://downloads.whamcloud.com/public/lustre/latest-2.12-release/el7/server/RPMS/x86_64/lustre-2.12.7-1.el7.x86_64.rpm
 
 WORKDIR /
 

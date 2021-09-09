@@ -18,12 +18,18 @@ spec:
             mountPropagation: Bidirectional
           - mountPath: /dev
             name: dev-dir
+            mountPropagation: HostToContainer
           - mountPath: /var/run/dbus
             name: dbus-dir
+          - mountPath: /run/udev
+            name: udev-dir
           - mountPath: /usr/sbin
             name: usbin-dir
           - mountPath: /usr/lib64
             name: lib64-dir
+          - mountPath: /sys
+            name: sys-dir
+            mountPropagation: HostToContainer
       volumes:
         - name: mnt-dir
           hostPath:
@@ -40,4 +46,10 @@ spec:
         - name: lib64-dir
           hostPath:
             path: /usr/lib64
+        - name: sys-dir
+          hostPath:
+            path: /sys
+        - name: udev-dir
+          hostPath:
+            path: /run/udev
 
