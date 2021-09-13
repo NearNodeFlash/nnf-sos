@@ -16,3 +16,6 @@ require (
 	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210907162304-2d0676f76e6c
 	stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210830201758-8dbd76f01e7d
 )
+
+replace stash.us.cray.com/dpm/dws-operator => ./.dws-operator
+

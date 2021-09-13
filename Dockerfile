@@ -3,10 +3,9 @@ FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS base
 WORKDIR /
 
 # Install basic dependencies
-RUN yum install -y gzip wget gcc tar https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+RUN yum install -y make git gzip wget gcc tar https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
 
 # Retrieve lustre-rpms
-RUN mkdir -p /tmp/lustre-rpms
 WORKDIR /tmp/lustre-rpms
 
 RUN wget https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/e2fsprogs-1.45.6.wc1-0.el7.x86_64.rpm \
@@ -54,6 +53,7 @@ ENV GOROOT="/go"
 ENV PATH="${PATH}:${GOROOT}/bin" GOPRIVATE="stash.us.cray.com"
 
 WORKDIR /workspace
+
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -69,6 +69,20 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
 
 ENTRYPOINT ["/bin/sh"]
 
+FROM builder as testing
+WORKDIR /workspace
+
+COPY .dws-operator/ .dws-operator/
+COPY hack/ hack/
+COPY runContainerTest.sh .
+COPY Makefile .
+
+RUN go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest && \
+    make manifests && make generate && make fmt &&  make vet && \
+    mkdir -p /workspace/testbin && /bin/bash -c "test -f /workspace/testbin/setup-envtest.sh || curl -sSLo /workspace/testbin/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh" && \
+    /bin/bash -c "source /workspace/testbin/setup-envtest.sh; fetch_envtest_tools /workspace/testbin; setup_envtest_env /workspace/testbin"
+
+ENTRYPOINT ["sh", "/workspace/runContainerTest.sh"]
 
 # The final application stage.
 FROM application-base

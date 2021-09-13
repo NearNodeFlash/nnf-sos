@@ -621,6 +621,7 @@ sigs.k8s.io/yaml
 # stash.us.cray.com/dpm/dws-operator v0.0.0-20210823191912-f0aa196dd3f8
 ## explicit
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
+stash.us.cray.com/dpm/dws-operator/controllers
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
 # stash.us.cray.com/rabsw/ec v1.0.10
 ## explicit
@@ -654,3 +655,4 @@ stash.us.cray.com/sp/dp-common/api/proto/v2/dp-api_msgs
 stash.us.cray.com/sp/dp-common/api/proto/v2/dp-ec
 # stash.us.cray.com/sp/rfsf-openapi v0.1.13
 stash.us.cray.com/sp/rfsf-openapi/pkg/models
+# stash.us.cray.com/dpm/dws-operator => ./.dws-operator

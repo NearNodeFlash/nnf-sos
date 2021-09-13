@@ -57,6 +57,12 @@ type NnfNodeReconciler struct {
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("Node", r.NamespacedName, "State", "Start")
 
+	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
+	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.
+	if r.NamespacedName.String() == string(types.Separator) {
+		return nil
+	}
+
 	// Create a namespace unique to this node based on the node's x-name.
 	namespace := &corev1.Namespace{}
 	if err := r.Get(ctx, types.NamespacedName{Name: r.Namespace}, namespace); err != nil {
