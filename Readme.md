@@ -5,8 +5,10 @@ The NNF SOS project is a collection of Kubernetes Custom Resource Definitions (C
 ## Setup
 
 This project depends on additional CRDs present in the dws-operator project. It makes use of `git submodules` to make the dependecy in version control. To clone this project, use the additional `--recurse-submodules` option.
-```
+
+```bash
 git clone --recurse-submodules ssh://git@stash.us.cray.com:7999/rabsw/nnf-sos.git
+
 ```
 
 If you've already clone the repo, initialize the submodules with `git submodule init`

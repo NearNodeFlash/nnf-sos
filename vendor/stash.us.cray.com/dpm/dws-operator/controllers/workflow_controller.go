@@ -36,17 +36,6 @@ const (
 	ConditionFalse bool = false
 )
 
-// Define valid state transition values
-const (
-	StateProposal string = "proposal"
-	StateSetup    string = "setup"
-	StatePreRun   string = "pre_run"
-	StatePostRun  string = "post_run"
-	StateDataIn   string = "data_in"
-	StateDataOut  string = "data_out"
-	StateTearDown string = "teardown"
-)
-
 // WorkflowReconciler reconciles a Workflow object
 type WorkflowReconciler struct {
 	client.Client

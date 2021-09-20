@@ -56,7 +56,6 @@ github.com/google/go-cmp/cmp/internal/value
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
 # github.com/google/uuid v1.3.0
-## explicit
 github.com/google/uuid
 # github.com/googleapis/gnostic v0.5.5
 github.com/googleapis/gnostic/compiler
@@ -234,9 +233,9 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210416161957-9910b6c460de
+# google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.39.0
+# google.golang.org/grpc v1.35.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -618,13 +617,11 @@ sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/dpm/dws-operator v0.0.0-20210823191912-f0aa196dd3f8
+# stash.us.cray.com/dpm/dws-operator v0.0.0-20210920142048-8369d6ad16fb
 ## explicit
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/controllers
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
-# stash.us.cray.com/rabsw/ec v1.0.10
-## explicit
 # stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210907162304-2d0676f76e6c
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/pkg
@@ -655,4 +652,3 @@ stash.us.cray.com/sp/dp-common/api/proto/v2/dp-api_msgs
 stash.us.cray.com/sp/dp-common/api/proto/v2/dp-ec
 # stash.us.cray.com/sp/rfsf-openapi v0.1.13
 stash.us.cray.com/sp/rfsf-openapi/pkg/models
-# stash.us.cray.com/dpm/dws-operator => ./.dws-operator

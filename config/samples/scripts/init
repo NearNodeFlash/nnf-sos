@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# kill any running proxy
+pkill kubectl
+
+# Nice article explaining the need for a proxy: <https://stackoverflow.com/questions/54332972/what-is-the-purpose-of-kubectl-proxy#54345488>
+# Also: <https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/>
+# Proxy port 8080 to allow direct REST access
+kubectl proxy --port 8080 &
+
+# give the proxy a chance to get started
+sleep .1

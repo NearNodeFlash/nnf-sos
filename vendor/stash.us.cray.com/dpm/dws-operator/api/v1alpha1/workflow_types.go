@@ -6,6 +6,7 @@ package v1alpha1
 
 import (
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -45,35 +46,7 @@ func GetWorkflowState(state string) (WorkflowState, error) {
 		}
 	}
 
-	return StateProposal, fmt.Errorf("Invalid workflow state '%s'\n", state)
-}
-
-type DWRecord struct {
-	// Array index of the #DW directive in original WFR
-	DWDirectiveIndex int `json:"dwDirectiveIndex"`
-	// Copy of the #DW for this breakdown
-	DWDirective string `json:"dwDirective"`
-}
-
-// AllocationSetComponents define the details of the allocation
-type AllocationSetComponents struct {
-	// +kubebuilder:validation:Enum=AllocatePerCompute;DivideAcrossRabbits;SingleRabbit
-	AllocationStrategy string `json:"allocationStrategy"`
-	MinimumCapacity    int64  `json:"minimumCapacity"`
-	Label              string `json:"label"`
-	Constraint         string `json:"constraint"`
-}
-
-// DWDirectiveBreakdowns define the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
-type DWDirectiveBreakdown struct {
-	DW   DWRecord `json:"dwRecord"`
-	Name string   `json:"name"`
-	Type string   `json:"type"`
-	// +kubebuilder:validation:Enum=job;persistent
-	Lifetime string `json:"lifetime"`
-	// Reference to the NNFStorage CR to be filled in by WLM
-	StorageReference corev1.ObjectReference    `json:"storageReference"`
-	AllocationSet    []AllocationSetComponents `json:"allocationSet"`
+	return StateProposal, fmt.Errorf("invalid workflow state '%s'", state)
 }
 
 // WorkflowSpec defines the desired state of Workflow
@@ -131,8 +104,12 @@ type WorkflowStatus struct {
 	// List of registered drivers and related status.  Updated by drivers.
 	Drivers []WorkflowDriverStatus `json:"drivers,omitempty"`
 
-	// #DW directive breakdowns indicating to WLM what to allocate on what Rabbit
-	DWDirectiveBreakdowns []DWDirectiveBreakdown `json:"dwDirectiveBreakdowns,omitempty"`
+	// List of #DW directive breakdowns indicating to WLM what to allocate on what Server
+	// 1 DirectiveBreakdown per #DW Directive that requires storage
+	DirectiveBreakdowns []corev1.ObjectReference `json:"directiveBreakdowns,omitempty"`
+
+	// Reference to Computes
+	Computes corev1.ObjectReference `json:"computes,omitempty"`
 }
 
 //+kubebuilder:object:root=true

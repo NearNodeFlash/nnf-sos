@@ -49,15 +49,22 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
+		AttachControlPlaneOutput: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", ".dws-operator", "config", "crd", "bases"),
 		},
+		// AttachControlPlaneOutput: true,
 		ErrorIfCRDPathMissing: true,
-		//WebhookInstallOptions: , If we want to test the webhooks, need to figure this out
+		// WebhookInstallOptions: envtest.WebhookInstallOptions{
+		// 	// Paths: []string{filepath.Join("..", ".dws-operator", "config", "webhook")},
+		// 	// LocalServingCertDir: filepath.Join("..", ".dws-operator", "config", "webhook"),
+		// },
 	}
 
-	cfg, err := testEnv.Start()
+	var err error
+
+	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -82,8 +89,15 @@ var _ = BeforeSuite(func() {
 		Start Everything
 	*/
 
-	//err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
-	//Expect(err).ToNot(HaveOccurred())
+	// This code is Nate's original webhook registration.
+	// Need to create and locate certs for k8sManager if you use this.
+	// err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
+	// Expect(err).ToNot(HaveOccurred())
+
+	// Use envtest to register the webhook. It takes care of creating certs to allow
+	// external access to the webhook.
+	// err = testEnv.WebhookInstallOptions.Install(cfg)
+	// Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls.WorkflowReconciler{
 		Client: k8sManager.GetClient(),

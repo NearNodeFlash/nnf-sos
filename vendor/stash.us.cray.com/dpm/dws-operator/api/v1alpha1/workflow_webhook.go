@@ -55,8 +55,6 @@ func (workflow *Workflow) Default() {
 	workflowlog.Info("default", "name", workflow.Name)
 
 	_ = checkDirectives(workflow, &MutatingRuleParser{})
-
-	return
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -69,7 +67,7 @@ func (r *Workflow) ValidateCreate() error {
 	workflowlog.Info("validate create", "name", r.Name)
 
 	if r.Spec.DesiredState != "proposal" {
-		return fmt.Errorf("Desired state must start in 'proposal'")
+		return fmt.Errorf("desired state must start in 'proposal'")
 	}
 
 	return checkDirectives(r, &ValidatingRuleParser{})
@@ -81,8 +79,8 @@ func (r *Workflow) ValidateUpdate(old runtime.Object) error {
 
 	oldWorkflow, ok := old.(*Workflow)
 	if !ok {
-		err := fmt.Errorf("Invalid Workflow resource")
-		workflowlog.Error(err, "Old runtime.Object is not a Workflow resource")
+		err := fmt.Errorf("invalid Workflow resource")
+		workflowlog.Error(err, "old runtime.Object is not a Workflow resource")
 
 		return err
 	}
@@ -119,15 +117,15 @@ func (r *Workflow) ValidateUpdate(old runtime.Object) error {
 	}
 
 	if newState < oldState {
-		return fmt.Errorf("State can not progress backwards")
+		return fmt.Errorf("state cannot progress backwards")
 	}
 
 	if newState > oldState+1 {
-		return fmt.Errorf("States can not be skipped")
+		return fmt.Errorf("states cannot be skipped")
 	}
 
-	if oldWorkflow.Status.Ready == false {
-		return fmt.Errorf("Current desired state not yet achieved")
+	if !oldWorkflow.Status.Ready {
+		return fmt.Errorf("current desired state not yet achieved")
 	}
 
 	return nil
@@ -141,19 +139,19 @@ func (r *Workflow) ValidateDelete() error {
 
 func validateWorkflowImmutable(a *Workflow, b *Workflow) error {
 	if a.Spec.WLMID != b.Spec.WLMID {
-		return fmt.Errorf("Can not change immutable field WLMID")
+		return fmt.Errorf("cannot change immutable field WLMID")
 	}
 
 	if a.Spec.JobID != b.Spec.JobID {
-		return fmt.Errorf("Can not change immutable field JobID")
+		return fmt.Errorf("cannot change immutable field JobID")
 	}
 
 	if a.Spec.UserID != b.Spec.UserID {
-		return fmt.Errorf("Can not change immutable field UserID")
+		return fmt.Errorf("cannot change immutable field UserID")
 	}
 
-	if reflect.DeepEqual(a.Spec.DWDirectives, b.Spec.DWDirectives) == false {
-		return fmt.Errorf("Can not change immutable field DWDirectives")
+	if !reflect.DeepEqual(a.Spec.DWDirectives, b.Spec.DWDirectives) {
+		return fmt.Errorf("cannot change immutable field DWDirectives")
 	}
 
 	return nil
@@ -182,14 +180,14 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 				return err
 			}
 
-			if valid == true {
+			if valid {
 				invalidDirective = false
 				ruleParser.MatchedDirective(workflow, rule.WatchStates, i, rule.DriverLabel)
 			}
 		}
 
-		if invalidDirective == true {
-			return fmt.Errorf("Invalid directive found: '%s'", directive)
+		if invalidDirective {
+			return fmt.Errorf("invalid directive found: '%s'", directive)
 		}
 	}
 
@@ -279,7 +277,6 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 		workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
 		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
 	}
-	return
 }
 
 // ValidatingRuleParser implements the RuleParser interface.
@@ -291,5 +288,4 @@ type ValidatingRuleParser struct {
 }
 
 func (r *ValidatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
-	return
 }

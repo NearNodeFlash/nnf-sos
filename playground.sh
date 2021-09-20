@@ -5,10 +5,10 @@ if [ $CMD == "kind-destroy" ]; then
     kind delete cluster
 fi
 
-# Create a kind-cluster consisting of 
+# Create a kind-cluster consisting of
 if [ $CMD == "kind-create" ]; then
     CONFIG=kind-config.yaml
-    if [ ! -f "$CONFIG" ]; then 
+    if [ ! -f "$CONFIG" ]; then
         cat > $CONFIG << EOF
 # three node (two workers) cluster config
 kind: Cluster

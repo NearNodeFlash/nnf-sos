@@ -1,0 +1,72 @@
+#!/bin/bash
+
+DWSHOST=${DWSHOST:-localhost}
+DWSPORT=${DWSPORT:-8080}
+NAMESPACE=${NAMESPACE:-default}
+
+rname=$1
+[[ -n $rname ]] || rname="dws-workflow-test-$$"
+
+# stage_in is not yet implemented
+dataBadCommand='{'
+dataBadCommand+='  "metadata": {'
+dataBadCommand+='    "name": "##RNAME##",'
+dataBadCommand+='    "namespace": "##NAMESPACE##"'
+dataBadCommand+='  },'
+dataBadCommand+='  "kind": "Workflow",'
+dataBadCommand+='  "apiVersion": "dws.cray.hpe.com/v1alpha1",'
+dataBadCommand+='  "spec": {'
+dataBadCommand+='    "desiredState": "proposal",'
+dataBadCommand+='    "dwDirectives": ['
+dataBadCommand+='      "#DW stage_in type=scratch capacity=10GiB access_mode=striped max_mds=yes"'
+dataBadCommand+='    ],'
+dataBadCommand+='    "jobID": 9000001,'
+dataBadCommand+='    "userID": 1001,'
+dataBadCommand+='    "wlmID": "5f239bd8-30db-450b-8c2c-a1a7c8631a1a"'
+dataBadCommand+='  }'
+dataBadCommand+='}'
+
+# NNF doesn't support the scratch type of filesystem
+dataBadType='{'
+dataBadType+='  "metadata": {'
+dataBadType+='    "name": "##RNAME##",'
+dataBadType+='    "namespace": "##NAMESPACE##"'
+dataBadType+='  },'
+dataBadType+='  "kind": "Workflow",'
+dataBadType+='  "apiVersion": "dws.cray.hpe.com/v1alpha1",'
+dataBadType+='  "spec": {'
+dataBadType+='    "desiredState": "proposal",'
+dataBadType+='    "dwDirectives": ['
+dataBadType+='      "#DW jobdw type=scratch capacity=10GiB name=anthonyMotC"'
+dataBadType+='    ],'
+dataBadType+='    "jobID": 9000001,'
+dataBadType+='    "userID": 1001,'
+dataBadType+='    "wlmID": "5f239bd8-30db-450b-8c2c-a1a7c8631a1a"'
+dataBadType+='  }'
+dataBadType+='}'
+
+badDataArray=("$dataBadCommand" "$dataBadType")
+
+for nextCommand in "${badDataArray[@]}"
+do
+    jsondata=$(echo "$nextCommand" | sed -e s:##RNAME##:$rname:g -e s:##NAMESPACE##:"$NAMESPACE":g)
+
+    admitResponse=$(curl -X POST "http://${DWSHOST}:${DWSPORT}/apis/dws.cray.hpe.com/v1alpha1/namespaces/$NAMESPACE/workflows" -H "Content-Type: application/json" -d "$jsondata")
+    retCode=$?
+
+    # If the curl command failed, then we assume we failed to create the WFR...
+    if [ $retCode -ne 0 ]; then
+        echo Create $rname failed
+        exit $retCode
+    fi
+
+    # curl command successful, look at the returned JSON to see if we were successful
+    echo "$admitResponse" | \
+    jq 'if .kind == "Status"
+        then
+            "Failed to create WFR"
+        else
+            "Created"
+        end , .'
+
+done

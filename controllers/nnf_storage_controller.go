@@ -233,9 +233,9 @@ func (r *NnfStorageReconciler) reconcileNodeController(ctx context.Context, stor
 // all the objects that were created as part of setup. The bulk of this operation is handled
 // by the NNF Element Controller, which supports deletion of the master Storage Pool object
 // which will delete the tree of objects attached to the pool as well as the pool itself.
-func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
-	return nil
-}
+// func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
+// 	return nil
+// }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
