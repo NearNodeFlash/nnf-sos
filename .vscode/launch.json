@@ -5,16 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Test Package",
+            "name": "Code",
             "type": "go",
             "request": "launch",
-            "mode": "test",
-            "program": "${workspaceFolder}",
-            "args": ["./..."],
+            "mode": "debug",
+            "program": "${workspaceRoot}",
+            "args": [
+                "./..."
+            ],
             "env": {
                 "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin"
             },
-            
-        }
+            "showLog": true
+        },
+        {
+            "name": "Test Current File",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${relativeFileDirname}",
+            "args": [],
+            "env": {
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin"
+            },
+            "showLog": true
+        },
     ]
 }

@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/types"
+	//	"k8s.io/apimachinery/pkg/types"
 
 	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 )
@@ -39,7 +39,7 @@ var _ = Describe("Integration Test", func() {
 			isSupported bool
 		}
 		var filesystems = []fsToTest{
-			// {"raw", true},
+			{"raw", true},
 			// {"lvm", false},
 			// {"xfs", false},
 			// {"gfs2", false},
@@ -88,18 +88,18 @@ var _ = Describe("Integration Test", func() {
 					// //       we need to find a way to enable the webhooks. dws-operator's work there is non-trivial
 					// //       because it also sets up the drivers array which is an important component to test.
 
-					It("Should be in proposal state", func() {
-						for i := 0; i < 10; i++ {
-							Eventually(func() error {
-								err := k8sClient.Get(context.Background(), types.NamespacedName{Name: WorkflowName, Namespace: WorkflowNamespace}, workflow)
-								return err
-							}, timeout, interval).Should(Succeed())
-							fmt.Printf("workflow %v", workflow)
-							time.Sleep(time.Second * 1)
-						}
+					// It("Should be in proposal state", func() {
+					// 	for i := 0; i < 10; i++ {
+					// 		Eventually(func() error {
+					// 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: WorkflowName, Namespace: WorkflowNamespace}, workflow)
+					// 			return err
+					// 		}, timeout, interval).Should(Succeed())
+					// 		fmt.Printf("workflow %v", workflow)
+					// 		time.Sleep(time.Second * 1)
+					// 	}
 
-						// Expect(workflow.Status.State).To(Equal("proposal"))
-					})
+					// 	// Expect(workflow.Status.State).To(Equal("proposal"))
+					// })
 
 					// It("Should eventually have a single directiveBreakdown", func() {
 					// 	var directiveBreakdown *dwsv1alpha1.DirectiveBreakdown

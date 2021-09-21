@@ -11,7 +11,7 @@ git clone --recurse-submodules ssh://git@stash.us.cray.com:7999/rabsw/nnf-sos.gi
 
 ```
 
-If you've already clone the repo, initialize the submodules with `git submodule init`
+If you've already clone the repo, initialize the submodules with `git submodule update --init --recursive --remote`
 
 ## Building
 

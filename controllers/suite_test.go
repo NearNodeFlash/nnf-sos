@@ -56,10 +56,10 @@ var _ = BeforeSuite(func() {
 		},
 		// AttachControlPlaneOutput: true,
 		ErrorIfCRDPathMissing: true,
-		// WebhookInstallOptions: envtest.WebhookInstallOptions{
-		// 	// Paths: []string{filepath.Join("..", ".dws-operator", "config", "webhook")},
-		// 	// LocalServingCertDir: filepath.Join("..", ".dws-operator", "config", "webhook"),
-		// },
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			// Paths: []string{filepath.Join("..", ".dws-operator", "config", "webhook")},
+			LocalServingCertDir: filepath.Join("..", ".dws-operator", "config", "webhook"),
+		},
 	}
 
 	var err error
@@ -96,8 +96,8 @@ var _ = BeforeSuite(func() {
 
 	// Use envtest to register the webhook. It takes care of creating certs to allow
 	// external access to the webhook.
-	// err = testEnv.WebhookInstallOptions.Install(cfg)
-	// Expect(err).ToNot(HaveOccurred())
+	err = testEnv.WebhookInstallOptions.Install(cfg)
+	Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls.WorkflowReconciler{
 		Client: k8sManager.GetClient(),
