@@ -94,4 +94,5 @@ type FileSystemOem struct {
 	MgsNode    string `json:"MgsNode,omitempty"`
 	TargetType string `json:"TargetType,omitempty"`
 	Index      int    `json:"Index,omitempty"`
+	BackFs     string `json:"BackFs,omitempty"`
 }

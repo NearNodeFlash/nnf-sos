@@ -633,7 +633,7 @@ sigs.k8s.io/yaml
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/controllers
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210922152020-d482a2b21caf
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210923201811-e997a7f62fb2
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme
 stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec

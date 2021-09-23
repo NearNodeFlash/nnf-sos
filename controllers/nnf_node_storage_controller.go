@@ -266,6 +266,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				Index:      spec.LustreStorage.Index,
 				MgsNode:    spec.LustreStorage.MgsNode,
 				TargetType: spec.LustreStorage.TargetType,
+				BackFs:     spec.LustreStorage.BackFs,
 			}
 			fs = &sf.FileSystemV122FileSystem{
 				Links: sf.FileSystemV122Links{

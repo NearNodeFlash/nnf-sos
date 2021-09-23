@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"strings"
 )
 
 type LustreTargetType string
@@ -20,6 +21,18 @@ var targetTypes = map[string]LustreTargetType{
 	"OST": TargetOST,
 }
 
+type LustreBackFsType string
+
+const (
+	BackFsLdiskfs LustreBackFsType = "ldiskfs"
+	BackFsZfs     LustreBackFsType = "zfs"
+)
+
+var backFsTypes = map[string]LustreBackFsType{
+	"ldiskfs": BackFsLdiskfs,
+	"zfs":     BackFsZfs,
+}
+
 type FileSystemLustre struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
@@ -27,6 +40,7 @@ type FileSystemLustre struct {
 	targetType LustreTargetType
 	mgsNode    string
 	index      int
+	backFs     LustreBackFsType
 }
 
 func NewFileSystemLustre(oem FileSystemOem) FileSystemApi {
@@ -34,14 +48,19 @@ func NewFileSystemLustre(oem FileSystemOem) FileSystemApi {
 		FileSystem: FileSystem{name: oem.Name},
 		mgsNode:    oem.MgsNode,
 		index:      oem.Index,
-		// TargetType is already verified by IsType() below.
+		// TargetType and BackFs are already verified by IsType()
+		// below.
 		targetType: targetTypes[oem.TargetType],
+		backFs:     backFsTypes[oem.BackFs],
 	}
 	return fs
 }
 
 func (*FileSystemLustre) IsType(oem FileSystemOem) bool {
 	_, ok := targetTypes[oem.TargetType]
+	if ok {
+		_, ok = backFsTypes[oem.BackFs]
+	}
 	return ok
 }
 func (*FileSystemLustre) Type() string   { return "lustre" }
@@ -50,14 +69,18 @@ func (f *FileSystemLustre) Name() string { return f.name }
 func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) error {
 
 	var err error
+	var backFs string
 	f.devices = devices
+	if f.backFs == BackFsZfs {
+		backFs = fmt.Sprintf("--backfstype=%s %s", f.backFs, f.zfsVolName())
+	}
 	switch f.targetType {
 	case TargetMGT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s", f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s %s", backFs, f.devices[0]))
 	case TargetMDT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
 	case TargetOST:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s", f.name, f.mgsNode, f.index, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
 	}
 
 	return err
@@ -85,7 +108,11 @@ func (f *FileSystemLustre) Mount(mountpoint string) error {
 		}
 	}
 
-	err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", f.devices[0], mountpoint))
+	var devName string = f.devices[0]
+	if f.backFs == BackFsZfs {
+		devName = f.zfsVolName()
+	}
+	err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", devName, mountpoint))
 	if err != nil {
 		return err
 	}
@@ -108,4 +135,9 @@ func (f *FileSystemLustre) Unmount() error {
 		}
 	}
 	return nil
+}
+
+func (f *FileSystemLustre) zfsVolName() string {
+	targType := strings.ToLower(string(f.targetType))
+	return fmt.Sprintf("%s-%spool/%s%d", f.name, targType, targType, f.index)
 }

@@ -78,6 +78,11 @@ type LustreStorageSpec struct {
 	// MgsNode is the NID of the MGS to use. This is used only when
 	// creating MDT and OST targets.
 	MgsNode string `json:"mgsNode,omitempty"`
+
+	// Type of backing filesystem to use.
+	// +kubebuilder:validation:Enum=ldiskfs;zfs
+	// +kubebuilder:default:=ldiskfs
+	BackFs string `json:"backFs,omitempty"`
 }
 
 // NNF Node Storage Status

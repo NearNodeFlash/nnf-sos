@@ -63,6 +63,13 @@ spec:
                 description: LustreStorageSpec describes the Lustre target created
                   here, if FileSystemType specifies a Lustre target.
                 properties:
+                  backFs:
+                    default: ldiskfs
+                    description: Type of backing filesystem to use.
+                    enum:
+                    - ldiskfs
+                    - zfs
+                    type: string
                   index:
                     description: Index is used to order a series of MDTs or OSTs.  This
                       is used only when creating MDT and OST targets.

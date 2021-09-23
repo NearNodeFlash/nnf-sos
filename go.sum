@@ -1194,5 +1194,5 @@ sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 stash.us.cray.com/dpm/dws-operator v0.0.0-20210920142048-8369d6ad16fb h1:BMTA1h/Ul3J0MVsOdl2E9XRqanxyEJb0f58QPFXvWXE=
 stash.us.cray.com/dpm/dws-operator v0.0.0-20210920142048-8369d6ad16fb/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210922152020-d482a2b21caf h1:O3ykhpWZRKL6mi1WPmPrsnbrEC1K4b57/Rg7Cng7bCU=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210922152020-d482a2b21caf/go.mod h1:PkX0JoOAthhgFhf+8Pm8kPppB87qAtljTa8XxOiW1hg=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210923201811-e997a7f62fb2 h1:HEXIr8iT+pU9uPeSJJEgFVa7DJR/a9jBZgLHVCmypzI=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210923201811-e997a7f62fb2/go.mod h1:PkX0JoOAthhgFhf+8Pm8kPppB87qAtljTa8XxOiW1hg=
