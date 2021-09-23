@@ -2,32 +2,20 @@ package ec
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/golang/protobuf/ptypes"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
 	log "github.com/sirupsen/logrus"
-
-	client "stash.us.cray.com/sp/dp-api/api/grpc/v2/grpc-client"
-	msgs "stash.us.cray.com/sp/dp-common/api/proto/v2/dp-api_msgs"
-	pb "stash.us.cray.com/sp/dp-common/api/proto/v2/dp-ec"
 )
 
 var (
@@ -81,7 +69,7 @@ type Options struct {
 }
 
 func NewDefaultOptions() *Options {
-	return &Options{Http: false, Port: 0, Log: false, Verbose: false}
+	return &Options{Http: true, Port: 8080, Log: false, Verbose: false}
 }
 
 func BindFlags(fs *flag.FlagSet) *Options {
@@ -121,14 +109,6 @@ func (r *ResponseWriter) WriteHeader(code int) {
 	r.StatusCode = code
 }
 
-// checkAPI -
-func (c *Controller) checkApiVersion(api string) error {
-	if c.Version != api {
-		return status.Errorf(codes.Unimplemented, "%s: Unsupported API Version", c.Name)
-	}
-	return nil
-}
-
 // initialize - Initialize the controller with a new mux.Router and ensure all
 // the controller routers are succesfully initialized.
 func (c *Controller) initialize(opts *Options) error {
@@ -158,11 +138,7 @@ type ControllerProcessor interface {
 }
 
 func NewControllerProcessor(http bool) ControllerProcessor {
-	if http {
-		return &HttpControllerProcessor{}
-	}
-
-	return &GrpcControllerProcessor{}
+	return &HttpControllerProcessor{}
 }
 
 type HttpControllerProcessor struct {
@@ -225,89 +201,6 @@ func (p *HttpControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *
 	io.Copy(w, rsp.Body)
 
 	rsp.Body.Close()
-}
-
-type GrpcControllerProcessor struct{}
-
-func (*GrpcControllerProcessor) Run(c *Controller, options Options) error {
-	address := fmt.Sprintf(":%d", c.Port)
-
-	listen, err := net.Listen("tcp", address)
-	if err != nil {
-		log.WithError(err).Fatalf("Failed to listen on address %s", address)
-	}
-
-	server := grpc.NewServer()
-
-	pb.RegisterControllerServiceServer(server, c)
-
-	log.Infof("Starting GRPC Server at %s", address)
-	return server.Serve(listen)
-}
-
-// Send - Send will send the parameters in the http request to the element controller
-// using the GRPC and then handle the response from GRPC back out the http response
-func (*GrpcControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *http.Request) {
-
-	// Initialize ClientRequest object
-	grpcReq := client.ClientRequest{
-		ElmntCntrlName: c.Name,
-		ElmntCntrlPort: fmt.Sprintf(":%d", c.Port),
-		HTTPwriter:     w,
-	}
-
-	// Record timestamp of request and reminder
-	t := time.Now().In(time.UTC)
-	reminder, _ := ptypes.TimestampProto(t)
-	pfx := t.Format(time.RFC3339Nano)
-
-	// Construct and send element controller request
-	data := []byte{}
-	if r.Body != nil {
-		data, _ = ioutil.ReadAll(r.Body)
-	}
-
-	request := pb.ECTaskRequest{
-		Api:       c.Version,
-		Sender:    msgs.DPAPIname,
-		Uri:       r.URL.String(),
-		Method:    r.Method,
-		JsonMsg:   string(data),
-		Reminder:  reminder,
-		Timestamp: pfx,
-	}
-
-	grpcReq.ProcessRequest(&request)
-}
-
-// ProcessTaskRequest -
-func (c *Controller) ProcessTaskRequest(_ context.Context, in *pb.ECTaskRequest) (*pb.ECTaskResponse, error) {
-	log.Infof("Received Task request from [%s] for method [%s] [%s]", in.Sender, in.Method, in.Uri)
-
-	if err := c.checkApiVersion(in.Api); err != nil {
-		log.WithError(err).Warnf("API Version incorrect %s", in.Api)
-		return nil, err
-	}
-
-	// Rebuild the HTTP Request
-	req, err := http.NewRequest(in.Method, in.Uri, strings.NewReader(in.JsonMsg))
-	if err != nil {
-		log.WithError(err).Errorf("Could not build http request")
-		return nil, status.Error(codes.Internal, "Could not build http request")
-	}
-
-	res := NewResponseWriter()
-	c.router.ServeHTTP(res, req)
-
-	if res.StatusCode != http.StatusOK {
-		log.Warnf("Request faild with status %d", res.StatusCode)
-		err = http.ErrNotSupported // TODO: Should have a encoding map from StatusCode to Err
-	}
-
-	return &pb.ECTaskResponse{
-		Api:      c.Version,
-		JsonData: string(res.Buffer.Bytes()),
-	}, err
 }
 
 // HandlerFunc defines an http handler for a controller's routes. By default
@@ -387,7 +280,7 @@ func EncodeResponse(s interface{}, err error, w http.ResponseWriter) {
 	if err != nil {
 		// If the supplied error is of an Element Controller Controller Error type,
 		// encode the response to a new error response packet.
-		var e *controllerError
+		var e *ControllerError
 		if errors.As(err, &e) {
 			w.WriteHeader(e.statusCode)
 			s = NewErrorResponse(e, s)

@@ -2,78 +2,70 @@ package messageregistry
 
 import (
 	_ "embed"
-	"encoding/json"
 	"fmt"
 
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
-
-//go:embed registry-files/Base.1.10.0.json
-var BaseMessageFile []byte
-
-//go:embed registry-files/ResourceEvent.1.0.3.json
-var ResourceEventMessageFile []byte
 
 var MessageRegistryManager = manager{}
 
 type manager struct {
-	files []file
+	registries []Registry
 }
 
-type file struct {
-	id   string
-	data *[]byte
-}
+func (m *manager) findRegistry(id string) *Registry {
+	for idx, reg := range m.registries {
+		if reg.Id() == id {
+			return &m.registries[idx]
+		}
+	}
 
-func (f *file) OdataId() string { return fmt.Sprintf("/redfish/v1/Registries/%s", f.id) }
+	return nil
+}
 
 func (m *manager) Initialize() error {
-	files := []*[]byte{
-		&BaseMessageFile,
-		&ResourceEventMessageFile,
-	}
+	m.registries = RegistryFiles
 
-	m.files = make([]file, len(files))
-	for idx, data := range files {
-		model := sf.MessageRegistryFileV113MessageRegistryFile{}
-
-		if err := json.Unmarshal(*data, &model); err != nil {
+	for idx := range m.registries {
+		if err := m.registries[idx].initialize(); err != nil {
 			return err
 		}
-
-		m.files[idx] = file{
-			id:   model.Id,
-			data: data,
-		}
 	}
 
 	return nil
 }
 
+// Get - Provides the collection of registry files maintained by the Message Registry Manager
 func (m *manager) Get(model *sf.MessageRegistryFileCollectionMessageRegistryFileCollection) error {
 
-	model.MembersodataCount = int64(len(m.files))
+	model.MembersodataCount = int64(len(m.registries))
 	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
-	for idx, f := range m.files {
-		model.Members[idx] = sf.OdataV4IdRef{OdataId: f.OdataId()}
+	for idx, reg := range m.registries {
+		model.Members[idx] = sf.OdataV4IdRef{OdataId: reg.OdataId()}
 	}
 
 	return nil
 }
 
+// RegistryIdGet - Provides the registry file identified by the id maintained by the Message Registry Manager
 func (m *manager) RegistryIdGet(id string, model *sf.MessageRegistryFileV113MessageRegistryFile) error {
-	for _, file := range m.files {
-		if file.id == id {
-			if err := json.Unmarshal(*file.data, &model); err != nil {
-				return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("Failed to unmarshal registry file %s", id))
-			}
-
-			model.OdataId = file.OdataId()
-
-			return nil
-		}
+	r := m.findRegistry(id)
+	if r == nil {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("registry id %s not found", id))
 	}
 
-	return ec.NewErrNotFound().WithCause(fmt.Sprintf("Registry file %s not found", id))
+	model.Id = r.Id()
+	model.Description = r.Model.Description
+	model.Registry = r.Model.RegistryPrefix + r.Model.RegistryVersion
+
+	model.Location = []sf.MessageRegistryFileV113Location{
+		{
+			Language:       r.Model.Language,
+			PublicationUri: r.PublicationUri,
+			Uri:            fmt.Sprintf("%s/Registry", r.OdataId()),
+		},
+	}
+
+	return nil
 }

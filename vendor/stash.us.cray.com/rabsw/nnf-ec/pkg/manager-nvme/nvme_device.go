@@ -7,7 +7,7 @@ import (
 
 	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
 
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
 )
 
 type SwitchtecNvmeController struct{}
@@ -34,17 +34,17 @@ type nvmeDevice struct {
 func newNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	sdev := fabric.GetSwitchDevice(fabricId, switchId)
 	if sdev == nil {
-		return nil, fmt.Errorf("Device not found")
+		return nil, fmt.Errorf("NVMe Device: Switchtec device not found: Fabric: %s Switch: %s", fabricId, switchId)
 	}
 
 	pdfid, err := fabric.GetPortPDFID(fabricId, switchId, portId, 0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NVMe Device: Failed to retrieve PDFID: Fabric: %s Switch: %s Port %s Error: %w", fabricId, switchId, portId, err)
 	}
 
 	dev, err := nvme.Connect(sdev, pdfid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NVMe Device: Failed to connect NVMe device: PDFID: %d Error: %w", pdfid, err)
 	}
 
 	return &nvmeDevice{dev: dev, pdfid: pdfid}, nil

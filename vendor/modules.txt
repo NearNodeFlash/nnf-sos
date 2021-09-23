@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.72.0
+# cloud.google.com/go v0.94.1
 cloud.google.com/go/compute/metadata
 # github.com/Azure/go-autorest v14.2.0+incompatible
 github.com/Azure/go-autorest
@@ -20,7 +20,7 @@ github.com/beorn7/perks/quantile
 # github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 ## explicit
 github.com/c2h5oh/datasize
-# github.com/cespare/xxhash/v2 v2.1.1
+# github.com/cespare/xxhash/v2 v2.1.2
 github.com/cespare/xxhash/v2
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
@@ -38,7 +38,7 @@ github.com/go-logr/zapr
 # github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+# github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/proto
@@ -57,6 +57,10 @@ github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
 # github.com/google/uuid v1.3.0
 github.com/google/uuid
+# github.com/googleapis/gax-go/v2 v2.1.0
+github.com/googleapis/gax-go/v2
+github.com/googleapis/gax-go/v2/apierror
+github.com/googleapis/gax-go/v2/apierror/internal/proto
 # github.com/googleapis/gnostic v0.5.5
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
@@ -71,7 +75,7 @@ github.com/hashicorp/golang-lru/simplelru
 github.com/imdario/mergo
 # github.com/json-iterator/go v1.1.11
 github.com/json-iterator/go
-# github.com/mattn/go-isatty v0.0.12
+# github.com/mattn/go-isatty v0.0.14
 github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369
 github.com/matttproud/golang_protobuf_extensions/pbutil
@@ -124,7 +128,7 @@ github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
-# github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03
+# github.com/pkg/term v1.1.0
 github.com/pkg/term
 github.com/pkg/term/termios
 # github.com/prometheus/client_golang v1.11.0
@@ -154,7 +158,7 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# go.chromium.org/luci v0.0.0-20210407013038-a7569e2b1401
+# go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29
 go.chromium.org/luci/common/runtime/goroutine
 # go.uber.org/atomic v1.9.0
 go.uber.org/atomic
@@ -167,7 +171,7 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+# golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 golang.org/x/crypto/pkcs12
 golang.org/x/crypto/pkcs12/internal/rc2
 # golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
@@ -182,7 +186,7 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
+# golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/google
@@ -190,14 +194,14 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20210603125802-9665404d3644
+# golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
+# golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b
 golang.org/x/term
-# golang.org/x/text v0.3.6
+# golang.org/x/text v0.3.7
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
@@ -218,10 +222,13 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
+# golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 golang.org/x/time/rate
 # gomodules.xyz/jsonpatch/v2 v2.2.0
 gomodules.xyz/jsonpatch/v2
+# google.golang.org/api v0.56.0
+google.golang.org/api/googleapi
+google.golang.org/api/internal/third_party/uritemplates
 # google.golang.org/appengine v1.6.7
 google.golang.org/appengine
 google.golang.org/appengine/internal
@@ -233,9 +240,11 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
+# google.golang.org/genproto v0.0.0-20210909211513-a8c4777a87af
+google.golang.org/genproto/googleapis/rpc/code
+google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.35.0
+# google.golang.org/grpc v1.40.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -281,12 +290,14 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.27.1
+google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
 google.golang.org/protobuf/internal/descopts
 google.golang.org/protobuf/internal/detrand
 google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/json
 google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
@@ -622,33 +633,23 @@ sigs.k8s.io/yaml
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/controllers
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210907162304-2d0676f76e6c
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210922152020-d482a2b21caf
 ## explicit
+stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme
+stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec
 stash.us.cray.com/rabsw/nnf-ec/pkg
 stash.us.cray.com/rabsw/nnf-ec/pkg/api
 stash.us.cray.com/rabsw/nnf-ec/pkg/common
 stash.us.cray.com/rabsw/nnf-ec/pkg/ec
-stash.us.cray.com/rabsw/nnf-ec/pkg/events
 stash.us.cray.com/rabsw/nnf-ec/pkg/logging
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry
+stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-telemetry
-# stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210830201758-8dbd76f01e7d
-## explicit
-stash.us.cray.com/rabsw/rfsf-openapi/pkg/common
-stash.us.cray.com/rabsw/rfsf-openapi/pkg/models
-# stash.us.cray.com/rabsw/switchtec-fabric v1.0.15
-stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme
-stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec
-# stash.us.cray.com/sp/dp-api v0.1.8
-stash.us.cray.com/sp/dp-api/api/grpc/v2/grpc-client
-# stash.us.cray.com/sp/dp-common v0.1.5
-stash.us.cray.com/sp/dp-common/api/proto/v2/dp-api_msgs
-stash.us.cray.com/sp/dp-common/api/proto/v2/dp-ec
-# stash.us.cray.com/sp/rfsf-openapi v0.1.13
-stash.us.cray.com/sp/rfsf-openapi/pkg/models
+stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common
+stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models

@@ -1,7 +1,7 @@
 package messageregistry
 
 import (
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 )
 
 type DefaultApiRouter struct {
@@ -25,18 +25,25 @@ func (*DefaultApiRouter) Start() error {
 }
 
 func (r *DefaultApiRouter) Routes() ec.Routes {
+	s := r.servicer
 	return ec.Routes{
 		{
 			Name:        "RedfishV1RegistriesGet",
 			Method:      ec.GET_METHOD,
 			Path:        "/redfish/v1/Registries",
-			HandlerFunc: r.servicer.RedfishV1RegistriesGet,
+			HandlerFunc: s.RedfishV1RegistriesGet,
 		},
 		{
 			Name:        "RedfishV1RegistriesRegistryIdGet",
 			Method:      ec.GET_METHOD,
 			Path:        "/redfish/v1/Registries/{RegistryId}",
 			HandlerFunc: r.servicer.RedfishV1RegistriesRegistryIdGet,
+		},
+		{
+			Name:        "RedfishV1RegistriesRegistryIdGetRegistryGet",
+			Method:      ec.GET_METHOD,
+			Path:        "/redfish/v1/Registries/{RegistryId}/Registry",
+			HandlerFunc: s.RedfishV1RegistriesRegistryIdRegistryGet,
 		},
 	}
 }

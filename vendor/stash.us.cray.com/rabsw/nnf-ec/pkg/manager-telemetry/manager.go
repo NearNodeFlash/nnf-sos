@@ -7,7 +7,7 @@ import (
 	"github.com/senseyeio/duration"
 
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 var TelemetryManager = manager{}
@@ -198,7 +198,7 @@ func (metric *metric) computeNextReportTime(current time.Time) time.Time {
 			return d.Shift(current)
 		}
 	case sf.ON_REQUEST_MRDV133MRDT:
-		return time.Unix(0, 0)
+		return time.Time{} // WARNING: time.Unix(0, 0) does not resolve to IsZero()
 	}
 
 	return current.Add(DefaultReportDuration)

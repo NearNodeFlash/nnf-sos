@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/HewlettPackard/structex"
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
 
 	"stash.us.cray.com/rabsw/nnf-ec/pkg/logging"
 	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"

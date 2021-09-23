@@ -8,12 +8,14 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"stash.us.cray.com/rabsw/nnf-ec/pkg/api"
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/events"
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	event "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
+	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries"
 
-	openapi "stash.us.cray.com/rabsw/rfsf-openapi/pkg/common"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec"
+
+	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 const (
@@ -412,35 +414,31 @@ StatusLoop:
 
 				if p.portStatus != status {
 
-					event := events.PortEvent{
-						FabricId:      s.fabric.id,
-						SwitchId:      s.id,
-						PortId:        p.id,
-						PortType:      p.eventType(),
-						EventType:     events.Unknown_PortEventType,
-						Configuration: events.NotReady_PortConfiguration,
-					}
+					eventMap := make(map[sf.PortV130PortType]func(string, string) event.Event)
 
-					if (p.portStatus.negLinkWidth != status.negLinkWidth) || (p.portStatus.curLinkRateGBps != status.curLinkRateGBps) {
-						event.EventType = events.AttributeChanged_PortEventType
+					if status.linkStatus == sf.LINK_UP_PV130LS {
 						if status.negLinkWidth == status.cfgLinkWidth && status.curLinkRateGBps == status.maxLinkRateGBps {
-							event.LinkState = events.Active_PortLinkState
+							eventMap[sf.UPSTREAM_PORT_PV130PT] = msgreg.UpstreamLinkEstablishedFabric
+							eventMap[sf.MANAGEMENT_PORT_PV130PT] = msgreg.UpstreamLinkEstablishedFabric
+							eventMap[sf.DOWNSTREAM_PORT_PV130PT] = msgreg.DownstreamLinkEstablishedFabric
+							eventMap[sf.INTERSWITCH_PORT_PV130PT] = msgreg.InterswitchLinkEstablishedFabric
 						} else {
-							event.LinkState = events.Degraded_PortLinkState
+							eventMap[sf.UPSTREAM_PORT_PV130PT] = msgreg.DegradedUpstreamLinkEstablishedFabric
+							eventMap[sf.MANAGEMENT_PORT_PV130PT] = msgreg.DegradedUpstreamLinkEstablishedFabric
+							eventMap[sf.DOWNSTREAM_PORT_PV130PT] = msgreg.DegradedDownstreamLinkEstablishedFabric
+							eventMap[sf.INTERSWITCH_PORT_PV130PT] = msgreg.DegradedInterswitchLinkEstablishedFabric
 						}
-					}
-
-					if p.portStatus.linkStatus != status.linkStatus {
-						if status.linkStatus == sf.LINK_UP_PV130LS {
-							event.EventType = events.Up_PortEventType
-						} else {
-							event.EventType = events.Down_PortEventType
-							event.LinkState = events.Inactive_PortLinkState
-						}
+					} else {
+						eventMap[sf.UPSTREAM_PORT_PV130PT] = msgreg.UpstreamLinkDroppedFabric
+						eventMap[sf.MANAGEMENT_PORT_PV130PT] = msgreg.UpstreamLinkDroppedFabric
+						eventMap[sf.DOWNSTREAM_PORT_PV130PT] = msgreg.DownstreamLinkDroppedFabric
+						eventMap[sf.INTERSWITCH_PORT_PV130PT] = msgreg.InterswitchLinkDroppedFabric
 					}
 
 					p.portStatus = status
-					events.PortEventManager.Publish(event)
+					if eventFunc, ok := eventMap[p.portType]; ok {
+						event.EventManager.Publish(eventFunc(s.id, p.id))
+					}
 				}
 
 				continue StatusLoop
@@ -537,19 +535,6 @@ func (p *Port) findEndpoint(functionId string) *Endpoint {
 	return p.endpoints[id]
 }
 
-func (p *Port) eventType() events.PortType {
-	switch p.portType {
-	case sf.UPSTREAM_PORT_PV130PT, sf.MANAGEMENT_PORT_PV130PT:
-		return events.USP_PortType
-	case sf.DOWNSTREAM_PORT_PV130PT:
-		return events.DSP_PortType
-	case sf.INTERSWITCH_PORT_PV130PT:
-		return events.Interswitch_PortType
-	}
-
-	return events.Unknown_PortType
-}
-
 func (p *Port) Initialize() error {
 	log.Infof("Initialize Port %s: Name: %s Physical Port: %d", p.id, p.config.Name, p.config.Port)
 
@@ -560,7 +545,7 @@ func (p *Port) Initialize() error {
 			return func(epPort *switchtec.DumpEpPortDevice) error {
 
 				if switchtec.EpPortType(epPort.Hdr.Typ) != switchtec.DeviceEpPortType {
-					return fmt.Errorf("Port non-device type (%#02x)", epPort.Hdr.Typ)
+					return fmt.Errorf("Port %s: Non-device type (%#02x)", port.id, epPort.Hdr.Typ)
 				}
 
 				if epPort.Ep.Functions == nil {
@@ -722,15 +707,14 @@ func (p *Port) notify(isDown bool) {
 		if p.portStatus.linkStatus != sf.LINK_DOWN_PV130LS {
 			p.portStatus.linkStatus = sf.LINK_DOWN_PV130LS
 
-			events.PortEventManager.Publish(events.PortEvent{
-				EventType:     events.Down_PortEventType,
-				PortType:      p.eventType(),
-				LinkState:     events.Inactive_PortLinkState,
-				Configuration: events.NotReady_PortConfiguration,
-				FabricId:      p.swtch.fabric.id,
-				SwitchId:      p.swtch.id,
-				PortId:        p.id,
-			})
+			switch p.portType {
+			case sf.DOWNSTREAM_PORT_PV130PT:
+				event.EventManager.Publish(msgreg.DownstreamLinkDroppedFabric(p.swtch.id, p.id))
+			case sf.UPSTREAM_PORT_PV130PT, sf.MANAGEMENT_PORT_PV130PT:
+				event.EventManager.Publish(msgreg.UpstreamLinkDroppedFabric(p.swtch.id, p.id))
+			case sf.INTERSWITCH_PORT_PV130PT:
+				event.EventManager.Publish(msgreg.InterswitchLinkDroppedFabric(p.swtch.id, p.id))
+			}
 		}
 
 	} else {
@@ -978,10 +962,11 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 		return err
 	}
 
-	events.PortEventManager.Subscribe(events.PortEventSubscriber{
-		HandlerFunc: PortEventHandler,
-		Data:        m,
-	})
+	// Fabric Manager must wait for NVMe drives to be enabled prior to running the bind
+	// operation that will route drives to upstream ports. By subscribing to the event
+	// manager, we can receive the desired "PortAutomaticallyEnabledFabric" event and
+	// act accordingly.
+	event.EventManager.Subscribe(m)
 
 	log.Infof("Fabric Manager %s Initialization Finished", m.id)
 	return nil
@@ -1018,41 +1003,33 @@ func Start() error {
 	return nil
 }
 
-// PortEventHandler -
-func PortEventHandler(event events.PortEvent, data interface{}) {
+func (m *Fabric) EventHandler(e event.Event) error {
+	if e.Is(msgreg.PortAutomaticallyEnabledFabric("", "")) {
+		var switchId, portId string
+		e.Args(&switchId, &portId)
 
-	log.Debug(fmt.Sprintf("Fabric Manager: Port Event Received: %+v", event))
+		_, _, p := findPort(m.id, switchId, portId)
+		if p == nil {
+			return ec.NewErrInternalServerError().WithCause("Internal event illformed")
+		}
 
-	_, _, p := findPort(event.FabricId, event.SwitchId, event.PortId)
-	if p == nil {
-		log.Errorf("Could not locate switch port for event %+v", event)
-		return
-	}
-
-	if event.EventType == events.AttributeChanged_PortEventType {
-		if event.Configuration == events.Ready_PortConfiguration {
-			if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
-				if err := p.bind(); err != nil {
-					log.WithError(err).Errorf("Port %s (switch: %s port: %d) failed to bind", p.id, p.swtch.id, p.config.Port)
-				}
+		if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
+			if err := p.bind(); err != nil {
+				log.WithError(err).Errorf("Port %s (switch: %s port: %d) failed to bind", p.id, p.swtch.id, p.config.Port)
 			}
 		}
 	}
+
+	return nil
 }
 
-// GetEndpointIdFromPortEvent - Returns the first endpoint Id for the given
-// port event. For USP, there will only ever be one ID. For DSP there will
+// GetEndpoint - Returns the first endpoint for the given switch port. For USP, there will only ever be one ID. For DSP there will
 // be an endpoint for each Physical and Virtual Functions on the DSP, but the
 // first ID (corresponding to the PF) is what is returned.
-func GetEndpointFromPortEvent(event events.PortEvent) (*Endpoint, error) {
-	f := findFabric(event.FabricId)
-	if f == nil {
-		return nil, fmt.Errorf("no Fabric Manager %s", event.FabricId)
-	}
-
-	for _, s := range f.switches {
+func GetEndpoint(switchId, portId string) (*Endpoint, error) {
+	for _, s := range manager.switches {
 		for _, p := range s.ports {
-			if s.id == event.SwitchId && p.id == event.PortId {
+			if s.id == switchId && p.id == portId {
 				return p.endpoints[0], nil
 			}
 		}
@@ -1407,40 +1384,28 @@ func GetPortPDFID(fabricId, switchId, portId string, controllerId uint16) (uint1
 	return p.endpoints[int(controllerId)].pdfid, nil
 }
 
-// ConvertPortEventToRelativePortIndex
-func (f *Fabric) ConvertPortEventToRelativePortIndex(event events.PortEvent) (int, error) {
-	if event.FabricId != f.id {
-		return -1, fmt.Errorf("Fabric %s not found for event %+v", event.FabricId, event)
+func (f *Fabric) GetDownstreamPortRelativePortIndex(switchId, portId string) (int, error) {
+	s := f.findSwitch(switchId)
+	if s == nil {
+		return -1, fmt.Errorf("Switch not found: Switch: %s", switchId)
 	}
 
-	var idx = 0
+	relativePortIndex := 0
 	for _, s := range f.switches {
 		for _, p := range s.ports {
+			if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
 
-			var correctType = false
-			switch event.PortType {
-			case events.USP_PortType:
-				correctType = (p.portType == sf.MANAGEMENT_PORT_PV130PT ||
-					p.portType == sf.UPSTREAM_PORT_PV130PT)
-			case events.DSP_PortType:
-				correctType = p.portType == sf.DOWNSTREAM_PORT_PV130PT
-			}
-
-			if correctType {
-				if s.id == event.SwitchId && p.id == event.PortId {
-					return idx, nil
+				if s.id == switchId && p.id == portId {
+					return relativePortIndex, nil
 				}
 
-				if p.portType == sf.MANAGEMENT_PORT_PV130PT {
-					return 0, nil
-				}
-
-				idx++
+				relativePortIndex++
 			}
 		}
 	}
 
-	return -1, fmt.Errorf("relative Port Index not found for event %+v", event)
+	return -1, fmt.Errorf("Switch Port not found: Switch: %s Port: %s", switchId, portId)
+
 }
 
 // FindDownstreamEndpoint -

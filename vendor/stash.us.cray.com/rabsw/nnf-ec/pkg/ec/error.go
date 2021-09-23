@@ -6,17 +6,18 @@ import (
 	"net/http"
 )
 
-type controllerError struct {
+type ControllerError struct {
 	statusCode int
 	cause      string
 	err        error
+	Event      interface{}
 }
 
-func NewControllerError(sc int) *controllerError {
-	return &controllerError{statusCode: sc}
+func NewControllerError(sc int) *ControllerError {
+	return &ControllerError{statusCode: sc}
 }
 
-func (e *controllerError) Error() string {
+func (e *ControllerError) Error() string {
 	errorString := fmt.Sprintf("Error %d: %s", e.statusCode, http.StatusText(e.statusCode))
 	if len(e.cause) != 0 {
 		return fmt.Sprintf("%s, %s", errorString, e.cause)
@@ -24,40 +25,45 @@ func (e *controllerError) Error() string {
 	return errorString
 }
 
-func (e *controllerError) Unwrap() error {
+func (e *ControllerError) Unwrap() error {
 	return e.err
 }
 
-func (e *controllerError) WithError(err error) *controllerError {
+func (e *ControllerError) WithError(err error) *ControllerError {
 	e.err = err
 	return e
 }
 
-func (e *controllerError) WithCause(cause string) *controllerError {
+func (e *ControllerError) WithCause(cause string) *ControllerError {
 	e.cause = cause
+	return e
+}
+
+func (e *ControllerError) WithEvent(event interface{}) *ControllerError {
+	e.Event = &event
 	return e
 }
 
 // NewErr** Functions will allocate a controller error for the specific type of error.
 // Error details can be added through the use of WithError(err) and WithCause(string) methods
 
-func NewErrNotFound() *controllerError {
+func NewErrNotFound() *ControllerError {
 	return NewControllerError(http.StatusNotFound)
 }
 
-func NewErrBadRequest() *controllerError {
+func NewErrBadRequest() *ControllerError {
 	return NewControllerError(http.StatusBadRequest)
 }
 
-func NewErrNotAcceptable() *controllerError {
+func NewErrNotAcceptable() *ControllerError {
 	return NewControllerError(http.StatusNotAcceptable)
 }
 
-func NewErrInternalServerError() *controllerError {
+func NewErrInternalServerError() *ControllerError {
 	return NewControllerError(http.StatusInternalServerError)
 }
 
-func NewErrNotImplemented() *controllerError {
+func NewErrNotImplemented() *ControllerError {
 	return NewControllerError(http.StatusNotImplemented)
 }
 
@@ -72,7 +78,7 @@ type ErrorResponse struct {
 // New Error Response - Returns encoded byte stream for responding to
 // an http request with an error. This provides a well defined response
 // body for all unsuccessful element controller requests.
-func NewErrorResponse(e *controllerError, v interface{}) (s interface{}) {
+func NewErrorResponse(e *ControllerError, v interface{}) (s interface{}) {
 
 	var details string
 	if e.Unwrap() != nil {

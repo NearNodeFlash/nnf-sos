@@ -63,7 +63,7 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 		{
 			Name:        "RedfishV1StorageStorageIdStoragePoolsStoragePoolIdGet",
 			Method:      ec.GET_METHOD,
-			Path:        "/redfish/v1/Storage/{StorageId}/StoragePool/{StoragePoolId}",
+			Path:        "/redfish/v1/Storage/{StorageId}/StoragePools/{StoragePoolId}",
 			HandlerFunc: s.RedfishV1StorageStorageIdStoragePoolsStoragePoolIdGet,
 		},
 		{

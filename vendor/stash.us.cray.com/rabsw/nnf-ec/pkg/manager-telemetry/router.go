@@ -1,7 +1,7 @@
 package telemetry
 
 import (
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 )
 
 // Router contains all the Redfish / Swordfish API calls for the Telemetry Service

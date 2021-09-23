@@ -8,13 +8,16 @@ import (
 	"strings"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/api"
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/events"
+	event "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
+	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
+	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries"
 
 	log "github.com/sirupsen/logrus"
 
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
+
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 const (
@@ -75,6 +78,8 @@ type Storage struct {
 	fabricId string
 	switchId string
 	portId   string
+
+	manager *Manager
 
 	controllers []StorageController // List of Storage Controllers on the Storage device
 	volumes     []Volume            // List of Volumes on the Storage device
@@ -249,7 +254,7 @@ func (s *Storage) initialize() error {
 
 	ctrl, err := s.device.IdentifyController(0)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to indentify controller: Error: %w", err)
 	}
 
 	s.pfid = ctrl.ControllerId
@@ -506,170 +511,177 @@ func Initialize(ctrl NvmeController) error {
 			config:  &conf.Storage.Controller,
 			address: storageDevice,
 			state:   sf.ABSENT_RST,
+			manager: &mgr,
 		}
 	}
 
-	events.PortEventManager.Subscribe(events.PortEventSubscriber{
-		HandlerFunc: PortEventHandler,
-		Data:        &mgr,
-	})
+	event.EventManager.Subscribe(&mgr)
 
 	return nil
 }
 
-// PortEventHandler - Receives port events from the event manager
-func PortEventHandler(event events.PortEvent, data interface{}) {
-	m := data.(*Manager)
+func (m *Manager) EventHandler(e event.Event) error {
 
-	log.Infof("NVMe Manager: Port Event Received %+v", event)
+	linkEstablished := e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
+	linkDropped := e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
 
-	if event.PortType != events.DSP_PortType {
-		return
-	}
+	if linkEstablished || linkDropped {
+		log.Infof("NVMe Manager: Event Received %+v", e)
 
-	// Storage ID is related to the fabric controller that is running. Convert the
-	// PortEvent to our storage index.
-	idx, err := FabricController.ConvertPortEventToRelativePortIndex(event)
-	if err != nil {
-		log.WithError(err).Errorf("Unable to find port index for event %+v", event)
-		return
-	}
+		var switchId, portId string
+		if err := e.Args(&switchId, &portId); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause("internal event format illformed")
+		}
 
-	if !(idx < len(m.storage)) {
-		log.Errorf("No storage device exists for index %d", idx)
-		return
-	}
-
-	s := &m.storage[idx]
-
-	switch event.EventType {
-	case events.Up_PortEventType:
-
-		// Connect
-		device, err := m.ctrl.NewNvmeDevice(event.FabricId, event.SwitchId, event.PortId)
+		idx, err := FabricController.GetDownstreamPortRelativePortIndex(switchId, portId)
 		if err != nil {
-			log.WithError(err).Errorf("Storage %s - Could not allocate storage controller", s.id)
-			return
+			return ec.NewErrInternalServerError().WithError(err).WithCause("downstream relative port index not found")
 		}
 
-		s.device = device
-
-		if err := s.initialize(); err != nil {
-			log.WithError(err).Errorf("Storage %s - Failed to initialize device controller", s.id)
-			return
+		if !(idx < len(m.storage)) {
+			return fmt.Errorf("No storage device exists for index %d", idx)
 		}
 
-		if m.purge {
-			log.Warnf("Storage %s - Starting purge of existing volumes", s.id)
-			if err := s.purge(); err != nil {
-				log.WithError(err).Errorf("Storage %s - Failed to purge storage device", s.id)
+		storage := &m.storage[idx]
+
+		if linkEstablished {
+			return storage.LinkEstablishedEventHandler(switchId, portId)
+		}
+
+		if linkDropped {
+			return storage.LinkDroppedEventHandler()
+		}
+	}
+
+	return nil
+}
+
+func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
+	// Connect
+	device, err := s.manager.ctrl.NewNvmeDevice(fabric.FabricId, switchId, portId)
+	if err != nil {
+		log.WithError(err).Errorf("Storage %s - Could not allocate storage controller", s.id)
+		return err
+	}
+
+	s.device = device
+
+	if err := s.initialize(); err != nil {
+		log.WithError(err).Errorf("Storage %s - Failed to initialize device controller", s.id)
+		return err
+	}
+
+	if s.manager.purge {
+		log.Warnf("Storage %s - Starting purge of existing volumes", s.id)
+		if err := s.purge(); err != nil {
+			log.WithError(err).Errorf("Storage %s - Failed to purge storage device", s.id)
+		}
+	}
+
+	if !s.virtManagementEnabled {
+		s.controllers = make([]StorageController, 1 /* PF */ +s.config.Functions)
+		for idx := range s.controllers {
+			s.controllers[idx] = StorageController{
+				id:             strconv.Itoa(idx),
+				controllerId:   uint16(idx),
+				functionNumber: uint16(idx),
 			}
 		}
 
-		if !s.virtManagementEnabled {
-			s.controllers = make([]StorageController, 1 /* PF */ +s.config.Functions)
-			for idx := range s.controllers {
-				s.controllers[idx] = StorageController{
-					id:             strconv.Itoa(idx),
-					controllerId:   uint16(idx),
-					functionNumber: uint16(idx),
-				}
+	} else {
+
+		ls, err := device.ListSecondary()
+		if err != nil {
+			log.WithError(err).Errorf("List Secondary command failed")
+			return err
+		}
+
+		count := ls.Count
+		if count > uint8(s.config.Functions) {
+			count = uint8(s.config.Functions)
+		}
+
+		s.controllers = make([]StorageController, 1 /*PF*/ +count)
+
+		// Initialize the PF
+		s.controllers[0] = StorageController{
+			id:             "0",
+			controllerId:   0,
+			functionNumber: 0,
+		}
+
+		for idx, sc := range ls.Entries[:count] {
+			if sc.SecondaryControllerID == 0 {
+				log.Errorf("Secondary Controller ID overlaps with PF Controller ID")
+				break
 			}
 
-		} else {
+			s.controllers[idx+1] = StorageController{
+				id:             strconv.Itoa(int(sc.SecondaryControllerID)),
+				controllerId:   sc.SecondaryControllerID,
+				functionNumber: sc.VirtualFunctionNumber,
 
-			ls, err := device.ListSecondary()
-			if err != nil {
-				log.WithError(err).Errorf("List Secondary command failed")
-				return
+				vqResources: sc.VQFlexibleResourcesAssigned,
+				viResources: sc.VIFlexibleResourcesAssigned,
+				online:      sc.SecondaryControllerState&0x01 == 1,
 			}
 
-			count := ls.Count
-			if count > uint8(s.config.Functions) {
-				count = uint8(s.config.Functions)
-			}
+			ctrl := &s.controllers[idx+1]
 
-			s.controllers = make([]StorageController, 1 /*PF*/ +count)
-
-			// Initialize the PF
-			s.controllers[0] = StorageController{
-				id:             "0",
-				controllerId:   0,
-				functionNumber: 0,
-			}
-
-			for idx, sc := range ls.Entries[:count] {
-				if sc.SecondaryControllerID == 0 {
-					log.Errorf("Secondary Controller ID overlaps with PF Controller ID")
+			log.Debugf("Storage %s Initialize Secondary Controller %s", s.id, ctrl.id)
+			if sc.VQFlexibleResourcesAssigned != uint16(s.config.Resources) {
+				if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VQResourceType, s.config.Resources-uint32(sc.VQFlexibleResourcesAssigned)); err != nil {
+					log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VQ Resources", sc.SecondaryControllerID)
 					break
 				}
 
-				s.controllers[idx+1] = StorageController{
-					id:             strconv.Itoa(int(sc.SecondaryControllerID)),
-					controllerId:   sc.SecondaryControllerID,
-					functionNumber: sc.VirtualFunctionNumber,
-
-					vqResources: sc.VQFlexibleResourcesAssigned,
-					viResources: sc.VIFlexibleResourcesAssigned,
-					online:      sc.SecondaryControllerState&0x01 == 1,
-				}
-
-				ctrl := &s.controllers[idx+1]
-
-				log.Debugf("Storage %s Initialize Secondary Controller %s", s.id, ctrl.id)
-				if sc.VQFlexibleResourcesAssigned != uint16(s.config.Resources) {
-					if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VQResourceType, s.config.Resources-uint32(sc.VQFlexibleResourcesAssigned)); err != nil {
-						log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VQ Resources", sc.SecondaryControllerID)
-						break
-					}
-
-					ctrl.vqResources = uint16(s.config.Resources)
-				}
-
-				if sc.VIFlexibleResourcesAssigned != uint16(s.config.Resources) {
-					if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VIResourceType, s.config.Resources-uint32(sc.VIFlexibleResourcesAssigned)); err != nil {
-						log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VI Resources", sc.SecondaryControllerID)
-						break
-					}
-
-					ctrl.viResources = uint16(s.config.Resources)
-				}
-
-				if sc.SecondaryControllerState&0x01 == 0 {
-					if err := s.device.OnlineController(sc.SecondaryControllerID); err != nil {
-						log.WithError(err).Errorf("Secondary Controller %d: Failed to online controller", sc.SecondaryControllerID)
-						break
-					}
-
-					ctrl.online = true
-				}
-
-				log.Infof("Storage %s Secondary Controller %s Initialized", s.id, ctrl.id)
-
-			} // for := secondary controllers
-
-			for _, ctrl := range s.controllers[1:] {
-				if !ctrl.online {
-					log.Errorf("Secondary Controller %s Offline - Storage %s Not Ready.", ctrl.id, s.id)
-					s.state = sf.DISABLED_RST
-					return
-				}
+				ctrl.vqResources = uint16(s.config.Resources)
 			}
 
+			if sc.VIFlexibleResourcesAssigned != uint16(s.config.Resources) {
+				if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VIResourceType, s.config.Resources-uint32(sc.VIFlexibleResourcesAssigned)); err != nil {
+					log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VI Resources", sc.SecondaryControllerID)
+					break
+				}
+
+				ctrl.viResources = uint16(s.config.Resources)
+			}
+
+			if sc.SecondaryControllerState&0x01 == 0 {
+				if err := s.device.OnlineController(sc.SecondaryControllerID); err != nil {
+					log.WithError(err).Errorf("Secondary Controller %d: Failed to online controller", sc.SecondaryControllerID)
+					break
+				}
+
+				ctrl.online = true
+			}
+
+			log.Infof("Storage %s Secondary Controller %s Initialized", s.id, ctrl.id)
+
+		} // for := secondary controllers
+
+		for _, ctrl := range s.controllers[1:] {
+			if !ctrl.online {
+				s.state = sf.DISABLED_RST
+				log.Errorf("Secondary Controller %s Offline - Storage %s Not Ready.", ctrl.id, s.id)
+				return nil
+			}
 		}
-
-		log.Infof("Storage %s - Ready", s.id)
-		s.state = sf.ENABLED_RST
-
-		// Port is ready to make connections
-		event.EventType = events.AttributeChanged_PortEventType
-		event.Configuration = events.Ready_PortConfiguration
-		events.PortEventManager.Publish(event)
-
-	case events.Down_PortEventType:
-		s.state = sf.UNAVAILABLE_OFFLINE_RST
-		s.controllers = nil
 	}
+
+	log.Infof("Storage %s - Ready", s.id)
+	s.state = sf.ENABLED_RST
+
+	event.EventManager.Publish(msgreg.PortAutomaticallyEnabledFabric(switchId, portId))
+
+	return nil
+}
+
+func (s *Storage) LinkDroppedEventHandler() error {
+	s.state = sf.UNAVAILABLE_OFFLINE_RST
+	s.controllers = nil
+
+	return nil
 }
 
 // Get -
@@ -718,13 +730,17 @@ func StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionS
 
 // StorageIdStoragePoolIdGet -
 func StorageIdStoragePoolIdGet(storageId, storagePoolId string, model *sf.StoragePoolV150StoragePool) error {
-	s, sp := findStoragePool(storageId, storagePoolId)
-	if sp == nil {
-		return ec.NewErrNotFound()
+	if storagePoolId != defaultStoragePoolId {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("storage pool %s not found", storagePoolId))
+	}
+
+	s := findStorage(storageId)
+	if s == nil {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("storage %s not found", storageId))
 	}
 
 	if err := s.refreshCapacity(); err != nil {
-		return ec.NewErrInternalServerError()
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("storage %s read capacity failed", storageId))
 	}
 
 	// TODO: This should reflect the total namespaces allocated over the drive
@@ -762,14 +778,16 @@ func StorageIdControllersGet(storageId string, model *sf.StorageControllerCollec
 func StorageIdControllerIdGet(storageId, controllerId string, model *sf.StorageControllerV100StorageController) error {
 	_, c := findStorageController(storageId, controllerId)
 	if c == nil {
-		return ec.NewErrNotFound()
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("Storage Controller not found: Storage: %s Controller: %s", storageId, controllerId))
 	}
 
 	// Fill in the relative endpoint for this storage controller
 	endpointId, err := FabricController.FindDownstreamEndpoint(storageId, controllerId)
 	if err != nil {
-		return err
+		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller fabric endpoint not found: Storage: %s Controller: %s", storageId, controllerId))
 	}
+
+	model.Id = c.id
 
 	model.Links.EndpointsodataCount = 1
 	model.Links.Endpoints = make([]sf.OdataV4IdRef, model.Links.EndpointsodataCount)

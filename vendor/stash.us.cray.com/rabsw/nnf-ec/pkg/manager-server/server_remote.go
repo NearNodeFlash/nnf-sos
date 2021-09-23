@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 const (

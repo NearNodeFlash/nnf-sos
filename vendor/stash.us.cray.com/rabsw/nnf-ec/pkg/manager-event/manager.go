@@ -2,8 +2,12 @@ package event
 
 import (
 	"fmt"
+	"strconv"
 
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry"
+
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // Event Manager:
@@ -89,41 +93,112 @@ import (
 // The client then populates the message for the end user by taking the message property and
 // substituting in the arguments contained within the event.
 
-var EventManager *manager
+var EventManager = manager{}
+
+const (
+	DefaultDeliveryRetryAttempts        = 5
+	DefaultDeliveryRetryIntervalSeconds = 60
+)
 
 type manager struct {
-	subscriptions []eventSubscription
+	subscriptions []subscription
+	events        Events
+
+	// The maximum number of events the Event Manager maintains in the event log. The event log
+	// will wrap and overwrite prior events if the number of events exceeds this value.
+	maxEvents int
+
+	// The total number of events recorded by the Event Manager since initialization.
+	numEvents int
+
+	deliveryRetryAttempts int
+
+	deliveryRetryInvervalSeconds int
 }
 
-type eventSubscription struct {
-	id          string
-	destination string
-	types       []sf.EventEventType
-	context     string
+type subscription struct {
+	id       string
+	prefixes []string
+	s        Subscription
 }
 
-func (e *eventSubscription) OdataId() string { return fmt.Sprintf("/redfish/v1/EventService/%s", e.id) }
-func (e *eventSubscription) Name() string    { return fmt.Sprintf("EventSubscription %s", e.id) }
+func (e *subscription) OdataId() string { return fmt.Sprintf("/redfish/v1/EventService/%s", e.id) }
+func (e *subscription) Name() string    { return fmt.Sprintf("EventSubscription %s", e.id) }
 
 func (m *manager) Initialize() error {
-	EventManager = m
+
+	m.events = make([]Event, 0, MaxNumEvents)
+	m.maxEvents = MaxNumEvents
+	m.numEvents = 0
+
+	m.deliveryRetryAttempts = DefaultDeliveryRetryAttempts
+	m.deliveryRetryInvervalSeconds = DefaultDeliveryRetryIntervalSeconds
+
 	return nil
 }
 
-func (*manager) Subscribe() error {
+// Subscribe will add the subscription to the Event Manager. When an event is published to the Event Manager
+// (through the Publish() method), the Event Manager will broadcast the event to all registered subscriptions.
+func (m *manager) Subscribe(s Subscription) {
+	m.addSubscription(s)
+}
+
+// Publish will publish the provided event to all interested subscriptions. It will also add the event
+// to the Event Managers list of historic events. The Event must contain a valid MessageId - that is
+// to say the event's MessageId must be backed by an entry in the Message Registry.
+func (m *manager) Publish(e Event) {
+	for _, s := range m.subscriptions {
+		s.s.EventHandler(e)
+	}
+}
+
+func (m *manager) addSubscription(s Subscription) {
+	var sid = -1
+	for _, s := range m.subscriptions {
+		id, _ := strconv.Atoi(s.id)
+		if sid <= id {
+			sid = id
+		}
+	}
+
+	sid = sid + 1
+
+	m.subscriptions = append(m.subscriptions, subscription{
+		id: fmt.Sprintf("%d", sid),
+		s:  s,
+	})
+}
+
+func (m *manager) deleteSubscription(s *subscription) {
+	for subIdx, sub := range m.subscriptions {
+		if sub.id == s.id {
+			m.subscriptions = append(m.subscriptions[:subIdx], m.subscriptions[subIdx+1:]...)
+			break
+		}
+	}
+}
+
+func (m *manager) findSubscription(id string) *subscription {
+	for idx := range m.subscriptions {
+		if m.subscriptions[idx].id == id {
+			return &m.subscriptions[idx]
+		}
+	}
+
 	return nil
 }
 
-func (*manager) Get(model *sf.EventServiceV170EventService) error {
+// Get
+func (m *manager) Get(model *sf.EventServiceV170EventService) error {
 	model.Id = "EventService"
 	model.Name = "Event Service"
 	model.ServiceEnabled = true
-	model.EventTypesForSubscription = []sf.EventEventType{
-		sf.RESOURCE_ADDED_EET,
-		sf.RESOURCE_REMOVED_EET,
-		sf.RESOURCE_UPDATED_EET,
-		sf.STATUS_CHANGE_EET,
-		sf.ALERT_EET,
+	model.DeliveryRetryAttempts = int64(m.deliveryRetryAttempts)
+	model.DeliveryRetryIntervalSeconds = int64(m.deliveryRetryInvervalSeconds)
+
+	model.RegistryPrefixes = make([]string, len(msgreg.RegistryFiles))
+	for idx, reg := range msgreg.RegistryFiles {
+		model.RegistryPrefixes[idx] = reg.Model.RegistryPrefix
 	}
 
 	model.Subscriptions = sf.OdataV4IdRef{OdataId: "/redfish/v1/EventService/Subscriptions"}
@@ -131,6 +206,7 @@ func (*manager) Get(model *sf.EventServiceV170EventService) error {
 	return nil
 }
 
+// EventSubscriptionsGet
 func (m *manager) EventSubscriptionsGet(model *sf.EventDestinationCollectionEventDestinationCollection) error {
 
 	model.MembersodataCount = int64(len(m.subscriptions))
@@ -142,22 +218,76 @@ func (m *manager) EventSubscriptionsGet(model *sf.EventDestinationCollectionEven
 	return nil
 }
 
+// EventSubscriptionsPost
 func (m *manager) EventSubscriptionsPost(model *sf.EventDestinationV190EventDestination) error {
-	return nil
+
+	if (model.DeliveryRetryPolicy != sf.RETRY_FOREVER_EDV190DRP) && (model.DeliveryRetryPolicy != sf.TERMINATE_AFTER_RETRIES_EDV190DRP) {
+		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("retry policy %s is not supported by the event service", string(model.DeliveryRetryPolicy)))
+	}
+
+	m.Subscribe(RedfishSubscription{
+		Context:             model.Context,
+		Destination:         model.Destination,
+		DeliveryRetryPolicy: model.DeliveryRetryPolicy,
+	})
+
+	return m.EventSubscriptionsSubscriptionIdGet(m.subscriptions[len(m.subscriptions)-1].id, model)
 }
 
+// EventSubscriptionsSubscriptionIdGet
 func (m *manager) EventSubscriptionsSubscriptionIdGet(id string, model *sf.EventDestinationV190EventDestination) error {
+	s := m.findSubscription(id)
+	if s == nil {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("subscription %s not found", id))
+	}
+
+	// TODO: The subscription should populate the model
+
 	return nil
 }
 
+// EventSubscriptionsSubscriptionIdDelete
 func (m *manager) EventSubscriptionsSubscriptionIdDelete(id string) error {
+	s := m.findSubscription(id)
+	if s == nil {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("subscription %s not found", id))
+	}
+
+	m.deleteSubscription(s)
+
 	return nil
 }
 
+// EventsGet
 func (m *manager) EventsGet(model *sf.EventCollectionEventCollection) error {
+
+	model.MembersodataCount = int64(len(m.events))
+	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
+
+	start := (m.numEvents % m.maxEvents)
+	if start < m.maxEvents {
+		start = 0
+	}
+
+	for idx := range m.events {
+		model.Members[idx] = sf.OdataV4IdRef{OdataId: m.events[(start+idx)%m.maxEvents].OdataId()}
+	}
+
 	return nil
 }
 
+// EventsEventIdGet
 func (m *manager) EventsEventIdGet(id string, model *sf.EventV161Event) error {
+	idx, err := strconv.Atoi(id)
+	if err != nil {
+		return ec.NewErrBadRequest().WithError(err).WithCause(fmt.Sprintf("event id %s is non-integer type", id))
+	}
+
+	if idx < m.numEvents {
+		return ec.NewErrNotFound().WithCause(fmt.Sprintf("event id %s not found", id))
+	}
+
+	m.events[idx%m.maxEvents].CopyInto(model)
+
 	return nil
 }

@@ -1,7 +1,12 @@
 package nnf
 
 import (
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	"errors"
+
+	events "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
+
+	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // Automatic Error Reporting Service Wraps the provided Storage Service API with automatic
@@ -16,7 +21,19 @@ func NewAerService(s StorageServiceApi) StorageServiceApi {
 
 // The main capture routine for tracking errors to the storage service
 func (aer *AerService) c(err error) error {
-	// TODO: If err != nil { Capture error and record it in the event manager }
+
+	if err != nil {
+		// If the supplied error is of an Element Controller Error type, inspect
+		// the error for an event pointer value and, if found, publish the event to
+		// the event manager.
+		var e *ec.ControllerError
+		if errors.As(err, &e) {
+			if event, ok := e.Event.(*events.Event); event != nil && ok {
+				events.EventManager.Publish(*event)
+			}
+		}
+	}
+
 	return err
 }
 

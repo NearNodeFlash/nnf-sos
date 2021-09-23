@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 type DefaultApiService struct{}
@@ -40,4 +40,8 @@ func (*DefaultApiService) RedfishV1RegistriesRegistryIdGet(w http.ResponseWriter
 	err := MessageRegistryManager.RegistryIdGet(registryId, &model)
 
 	EncodeResponse(model, err, w)
+}
+
+func (*DefaultApiService) RedfishV1RegistriesRegistryIdRegistryGet(w http.ResponseWriter, r *http.Request) {
+	EncodeResponse(nil, nil, w)
 }

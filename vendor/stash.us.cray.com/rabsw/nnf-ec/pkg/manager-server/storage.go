@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/google/uuid"
 
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // Storage represents a unique collection of Server Storage Volumes
@@ -98,6 +98,7 @@ const (
 	StorageStatus_Starting StorageStatus = "starting"
 	StorageStatus_Ready                  = "ready"
 	StorageStatus_Error                  = "error"
+	StorageStatus_Disabled               = "disabled"
 )
 
 func (s StorageStatus) State() sf.ResourceState {

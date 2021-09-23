@@ -5,7 +5,7 @@ Copyright 2021 Hewlett Packard Enterprise Development LP
 package v1alpha1
 
 import (
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 type NnfResourceStatusType string

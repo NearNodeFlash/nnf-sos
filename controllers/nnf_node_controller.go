@@ -24,8 +24,7 @@ import (
 
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg"
 	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
-
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 )

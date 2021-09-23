@@ -21,8 +21,8 @@ import (
 	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
 	nnfserver "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
 
-	openapi "stash.us.cray.com/rabsw/rfsf-openapi/pkg/common"
-	sf "stash.us.cray.com/rabsw/rfsf-openapi/pkg/models"
+	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 )

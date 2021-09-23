@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec"
 
 	"stash.us.cray.com/rabsw/nnf-ec/pkg/logging"
 )

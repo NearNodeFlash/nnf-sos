@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/switchtec"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec"
 )
 
 type SwitchtecController struct{}

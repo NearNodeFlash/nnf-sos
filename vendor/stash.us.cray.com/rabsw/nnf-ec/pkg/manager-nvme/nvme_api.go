@@ -1,7 +1,7 @@
 package nvme
 
 import (
-	"stash.us.cray.com/rabsw/switchtec-fabric/pkg/nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
 )
 
 type NvmeController interface {
