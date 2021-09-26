@@ -143,14 +143,6 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
-  - nnfnodestorages/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfstorages
   verbs:
   - create

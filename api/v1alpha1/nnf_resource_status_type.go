@@ -62,6 +62,20 @@ const (
 	ResourceInvalid = "Invalid"
 )
 
+func (this NnfResourceStatusType) UpdateIfWorseThan(status *NnfResourceStatusType) {
+	switch this {
+	case ResourceStarting:
+		if *status == ResourceReady {
+			*status = ResourceStarting
+		}
+	case ResourceFailed:
+		if *status != ResourceFailed {
+			*status = ResourceFailed
+		}
+	default:
+	}
+}
+
 // StaticResourceStatus will convert a Swordfish ResourceStatus to the NNF Resource Status.
 func StaticResourceStatus(s sf.ResourceStatus) NnfResourceStatusType {
 	switch s.State {

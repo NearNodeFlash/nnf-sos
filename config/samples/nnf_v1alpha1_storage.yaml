@@ -4,12 +4,31 @@ metadata:
   name: storage-sample
   namespace: nnf-system
 spec:
-  uuid: "af7dfc28-2e74-4d60-803c-4a11a72e5b49"
-  capacity: 1048576
-  nodes:
-  - node: kind-worker
-    fileSystemName: "foo"
-    fileSystemType: "lustre_mgt"
-    servers:
-    - id: "0"
-      path: "/mnt/foo"
+  allocationSets:
+  - name: mgt
+    capacity: 1048576
+    fileSystemType: lustre
+    fileSystemName: mattr
+    targetType: MGT
+    backFs: ldiskfs
+    nodes:
+    - name: rabbit-01
+      count: 1
+  - name: mdt
+    capacity: 1048576
+    fileSystemType: lustre
+    fileSystemName: mattr
+    targetType: MDT
+    backFs: ldiskfs
+    nodes:
+    - name: rabbit-02
+      count: 1
+  - name: ost
+    capacity: 1048576
+    fileSystemType: lustre
+    fileSystemName: mattr
+    targetType: OST
+    backFs: ldiskfs
+    nodes:
+    - name: rabbit-03
+      count: 1

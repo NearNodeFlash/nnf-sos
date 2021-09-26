@@ -57,7 +57,6 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
-		log.Error(err, "Failed to get instance")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -231,13 +230,6 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&dwsv1alpha1.Workflow{}).
-		Complete(r)
 }
 
 func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, wf *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
@@ -435,4 +427,11 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 	log.Info("done", "workflow", wf, "name", computes.Name)
 
 	return computes, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&dwsv1alpha1.Workflow{}).
+		Complete(r)
 }

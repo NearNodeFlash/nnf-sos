@@ -6,12 +6,10 @@ metadata:
 spec:
   # Add fields here
   capacity: 100000
-  fileSystemName: "foo"
   fileSystemType: "lustre"
   lustreStorage:
+    fileSystemName: "foo"
     targetType: "MGT"
-  servers:
-    - id: "0"
-      path: "/mnt/foo-mgt"
+  count: 1
 
 

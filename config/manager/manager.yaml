@@ -32,6 +32,10 @@ spec:
         image: controller:latest
         name: manager
         env:
+          # This is the SF resource ID for the Rabbit node endpoint. We'll
+          # use this node to create storage during setup phase
+          - name: RABBIT_NODE
+            value: "0"
           - name: NNF_NODE_NAME
             valueFrom:
               fieldRef:

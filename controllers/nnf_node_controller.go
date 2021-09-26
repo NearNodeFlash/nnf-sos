@@ -125,7 +125,6 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
-		log.Error(err, "Failed to get instance")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -326,20 +325,6 @@ func (r *NnfNodeReconciler) configureElementControllerService(ctx context.Contex
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.Add(r); err != nil {
-		return err
-	}
-
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&nnfv1alpha1.NnfNode{}).
-		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
-		Owns(&corev1.Endpoints{}).
-		Complete(r)
-}
-
 type statusUpdater struct {
 	node        *nnfv1alpha1.NnfNode
 	needsUpdate bool
@@ -363,4 +348,18 @@ func (s *statusUpdater) Close(r *NnfNodeReconciler, ctx context.Context) error {
 		return r.Status().Update(ctx, s.node)
 	}
 	return nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.Add(r); err != nil {
+		return err
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&nnfv1alpha1.NnfNode{}).
+		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
+		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
+		Owns(&corev1.Endpoints{}).
+		Complete(r)
 }

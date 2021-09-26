@@ -32,13 +32,16 @@ func ResourceHealth(s sf.ResourceStatus) NnfResourceHealthType {
 	panic("Unknown Resource Health " + string(s.Health))
 }
 
-func (this NnfResourceHealthType) IsWorseThan(health NnfResourceHealthType) bool {
-	if this == ResourceOkay {
-		return health != ResourceOkay
+func (this NnfResourceHealthType) UpdateIfWorseThan(health *NnfResourceHealthType) {
+	switch this {
+	case ResourceWarning:
+		if *health == ResourceOkay {
+			*health = ResourceWarning
+		}
+	case ResourceCritical:
+		if *health != ResourceCritical {
+			*health = ResourceCritical
+		}
+	default:
 	}
-	if this == ResourceWarning {
-		return health == ResourceCritical
-	}
-
-	return false
 }
