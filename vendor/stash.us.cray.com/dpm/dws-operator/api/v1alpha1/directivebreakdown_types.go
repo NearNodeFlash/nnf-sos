@@ -10,35 +10,57 @@ import (
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// The DWRecord contains the index of the Datawarp directive (#DW) within the workflow
+// along with a copy of the actual #DW
 type DWRecord struct {
-	// Array index of the #DW directive in original WFR
+	// DWDirectiveIndex is the index of the #DW directive in the workflow
 	DWDirectiveIndex int `json:"dwDirectiveIndex"`
-	// Copy of the #DW for this breakdown
+
+	// DWDirective is a copy of the #DW for this breakdown
 	DWDirective string `json:"dwDirective"`
 }
 
 // AllocationSetComponents define the details of the allocation
 type AllocationSetComponents struct {
+	// AllocationStrategy specifies the way to determine the number of allocations of the MinimumCapacity required for this AllocationSet.
 	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocateAcrossServers;AllocateSingleServer;AssignPerCompute;AssignAcrossServers;
 	AllocationStrategy string `json:"allocationStrategy"`
-	MinimumCapacity    int64  `json:"minimumCapacity"`
-	Label              string `json:"label"`
-	Constraint         string `json:"constraint"`
+
+	// MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
+	// will use the storage.
+	// +kubebuilder:validation:Minimum:=1
+	MinimumCapacity int64 `json:"minimumCapacity"`
+
+	// Label is an identifier used to communicate from the DWS interface to internal interfaces
+	// the filesystem use of this AllocationSet.
+	// +kubebuilder:validation:Enum=raw;xfs;gfs2;mgt;mdt;ost;
+	Label string `json:"label"`
+
+	// Constraint is an additional requirement pertaining to the suitability of Servers that may be used for this AllocationSet
+	// +kubebuilder:validation:Enum=MayNotBeShared;
+	Constraint string `json:"constraint,omitempty"`
 }
 
 // DirectiveBreakdownSpec defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
 type DirectiveBreakdownSpec struct {
-	DW   DWRecord `json:"dwRecord"`
-	Name string   `json:"name"`
-	Type string   `json:"type"`
+	DW DWRecord `json:"dwRecord"`
 
+	// Name is the identifier for this directive breakdown
+	Name string `json:"name"`
+
+	// Type is the type specified in the #DW directive
+	// +kubebuilder:validation:Enum=raw;xfs;lustre
+	Type string `json:"type"`
+
+	// Lifetime is the duration of the allocation
 	// +kubebuilder:validation:Enum=job;persistent
 	Lifetime string `json:"lifetime"`
 
-	// Reference to the Server CR to be filled in by WLM
+	// Servers is a reference to the Server CR
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
-	// Allocation sets required to fulfill the #DW Directive
+	// AllocationSets lists the allocations required to fulfill the #DW Directive
 	AllocationSet []AllocationSetComponents `json:"allocationSet"`
 }
 

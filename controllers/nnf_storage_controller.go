@@ -274,7 +274,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
 	log := r.Log.WithValues("storage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
-	var firstErr error = nil
+	var firstErr error
 
 	for allocationSetIndex, allocationSet := range storage.Spec.AllocationSets {
 		for i, node := range allocationSet.Nodes {

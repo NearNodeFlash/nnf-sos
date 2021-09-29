@@ -11,8 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// WorkflowState is the enumeration of The state of the workflow
 type WorkflowState int
 
+// State enumerations
 const (
 	StateProposal WorkflowState = iota
 	StateSetup

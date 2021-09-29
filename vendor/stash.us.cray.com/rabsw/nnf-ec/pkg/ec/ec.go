@@ -2,6 +2,7 @@ package ec
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -135,6 +136,7 @@ func (c *Controller) initialize(opts *Options) error {
 type ControllerProcessor interface {
 	Run(c *Controller, options Options) error
 	Send(c *Controller, w http.ResponseWriter, r *http.Request)
+	Close()
 }
 
 func NewControllerProcessor(http bool) ControllerProcessor {
@@ -143,9 +145,10 @@ func NewControllerProcessor(http bool) ControllerProcessor {
 
 type HttpControllerProcessor struct {
 	client http.Client
+	server *http.Server
 }
 
-func (*HttpControllerProcessor) Run(c *Controller, options Options) error {
+func (p *HttpControllerProcessor) Run(c *Controller, options Options) error {
 	if options.Log {
 		c.router.Use(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -188,9 +191,18 @@ func (*HttpControllerProcessor) Run(c *Controller, options Options) error {
 	// web hosting platforms.
 	crs := cors.AllowAll()
 
-	address := fmt.Sprintf(":%d", c.Port)
-	log.Infof("Starting HTTP Server at %s", address)
-	return http.ListenAndServe(address, crs.Handler(c.router))
+	p.server = &http.Server{
+		Addr:    fmt.Sprintf(":%d", c.Port),
+		Handler: crs.Handler(c.router),
+	}
+
+	log.Infof("Starting HTTP Server at %s", p.server.Addr)
+	if err := p.server.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatalf("ListenAndServer Failed: Error: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 func (p *HttpControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *http.Request) {
@@ -201,6 +213,14 @@ func (p *HttpControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *
 	io.Copy(w, rsp.Body)
 
 	rsp.Body.Close()
+}
+
+func (p *HttpControllerProcessor) Close() {
+	if p.server != nil {
+		if err := p.server.Shutdown(context.TODO()); err != nil {
+			panic(err)
+		}
+	}
 }
 
 // HandlerFunc defines an http handler for a controller's routes. By default
@@ -272,6 +292,10 @@ func (c *Controller) Attach(router *mux.Router, handlerFunc HandlerFunc) {
 			}
 		}
 	}
+}
+
+func (c *Controller) Close() {
+	c.processor.Close()
 }
 
 // EncodeResponse -

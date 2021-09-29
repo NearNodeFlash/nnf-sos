@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	// The name of the NNF Node Local Controller resource.
+	// NnfNlcResourceName is the name of the NNF Node Local Controller resource.
 	NnfNlcResourceName = "nnf-nlc"
 )
 
@@ -136,14 +136,14 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}
 
 	// Prepare to update the node's status
-	statusUpdater := NewStatusUpdater(node)
+	statusUpdater := newStatusUpdater(node)
 
 	// Use the defer logic to submit a final update to the node's status, if required.
 	// This modifies the return err on failure, such that it is automatically retried
 	// by the controller if non-nil error is returned.
 	defer func() {
 		if err == nil {
-			if err = statusUpdater.Close(r, ctx); err != nil { // NOTE: err here is the named returned value
+			if err = statusUpdater.Close(ctx, r); err != nil { // NOTE: err here is the named returned value
 				r.Log.Info(fmt.Sprintf("Failed to update status with error %s", err))
 			}
 		}
@@ -330,7 +330,7 @@ type statusUpdater struct {
 	needsUpdate bool
 }
 
-func NewStatusUpdater(node *nnfv1alpha1.NnfNode) *statusUpdater {
+func newStatusUpdater(node *nnfv1alpha1.NnfNode) *statusUpdater {
 	return &statusUpdater{
 		node:        node,
 		needsUpdate: false,
@@ -342,7 +342,7 @@ func (s *statusUpdater) Update(update func(status *nnfv1alpha1.NnfNodeStatus)) {
 	s.needsUpdate = true
 }
 
-func (s *statusUpdater) Close(r *NnfNodeReconciler, ctx context.Context) error {
+func (s *statusUpdater) Close(ctx context.Context, r *NnfNodeReconciler) error {
 	defer func() { s.needsUpdate = false }()
 	if s.needsUpdate {
 		return r.Status().Update(ctx, s.node)

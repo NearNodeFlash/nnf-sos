@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	NnfNodeStorageResourceName = "nnf-node-storage"
+	nnfNodeStorageResourceName = "nnf-node-storage"
 )
 
+// NnfNodeStorageReconciler contains the elements needed during reconcilation for NnfNodeStorage
 type NnfNodeStorageReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -495,13 +496,13 @@ func (r *NnfNodeStorageReconciler) getEndpoint(ss nnf.StorageServiceApi, id stri
 	return ep, nil
 }
 
-func (r *NnfNodeStorageReconciler) createStorageGroup(ss nnf.StorageServiceApi, spId string, epId string) (*sf.StorageGroupV150StorageGroup, error) {
-	sp, err := r.getStoragePool(ss, spId)
+func (r *NnfNodeStorageReconciler) createStorageGroup(ss nnf.StorageServiceApi, spID string, epID string) (*sf.StorageGroupV150StorageGroup, error) {
+	sp, err := r.getStoragePool(ss, spID)
 	if err != nil {
 		return nil, err
 	}
 
-	ep, err := r.getEndpoint(ss, epId)
+	ep, err := r.getEndpoint(ss, epID)
 	if err != nil {
 		return nil, err
 	}
@@ -530,13 +531,13 @@ func (r *NnfNodeStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi, id 
 	return sg, nil
 }
 
-func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, fsId string, epId string, mountPath string) (*sf.FileShareV120FileShare, error) {
-	fs, err := r.getFileSystem(ss, fsId)
+func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, fsID string, epID string, mountPath string) (*sf.FileShareV120FileShare, error) {
+	fs, err := r.getFileSystem(ss, fsID)
 	if err != nil {
 		return nil, err
 	}
 
-	ep, err := r.getEndpoint(ss, epId)
+	ep, err := r.getEndpoint(ss, epID)
 	if err != nil {
 		return nil, err
 	}
@@ -556,8 +557,8 @@ func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, fsI
 	return sh, nil
 }
 
-func (r *NnfNodeStorageReconciler) getFileShare(ss nnf.StorageServiceApi, fsId string, id string) (*sf.FileShareV120FileShare, error) {
-	fs, err := r.getFileSystem(ss, fsId)
+func (r *NnfNodeStorageReconciler) getFileShare(ss nnf.StorageServiceApi, fsID string, id string) (*sf.FileShareV120FileShare, error) {
+	fs, err := r.getFileSystem(ss, fsID)
 	if err != nil {
 		return nil, err
 	}
@@ -571,8 +572,8 @@ func (r *NnfNodeStorageReconciler) getFileShare(ss nnf.StorageServiceApi, fsId s
 	return sh, nil
 }
 
-func (r *NnfNodeStorageReconciler) createFileSystem(ss nnf.StorageServiceApi, spId string, oem nnfserver.FileSystemOem) (*sf.FileSystemV122FileSystem, error) {
-	sp, err := r.getStoragePool(ss, spId)
+func (r *NnfNodeStorageReconciler) createFileSystem(ss nnf.StorageServiceApi, spID string, oem nnfserver.FileSystemOem) (*sf.FileSystemV122FileSystem, error) {
+	sp, err := r.getStoragePool(ss, spID)
 	if err != nil {
 		return nil, err
 	}

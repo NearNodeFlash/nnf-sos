@@ -39,10 +39,11 @@ var workflowlog = logf.Log.WithName("workflow-resource")
 
 var c client.Client
 
-func (r *Workflow) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// SetupWebhookWithManager connects the webhook with the manager
+func (w *Workflow) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	c = mgr.GetClient()
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(w).
 		Complete()
 }
 
@@ -51,10 +52,10 @@ func (r *Workflow) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &Workflow{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (workflow *Workflow) Default() {
-	workflowlog.Info("default", "name", workflow.Name)
+func (w *Workflow) Default() {
+	workflowlog.Info("default", "name", w.Name)
 
-	_ = checkDirectives(workflow, &MutatingRuleParser{})
+	_ = checkDirectives(w, &MutatingRuleParser{})
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -63,19 +64,19 @@ func (workflow *Workflow) Default() {
 var _ webhook.Validator = &Workflow{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *Workflow) ValidateCreate() error {
-	workflowlog.Info("validate create", "name", r.Name)
+func (w *Workflow) ValidateCreate() error {
+	workflowlog.Info("validate create", "name", w.Name)
 
-	if r.Spec.DesiredState != "proposal" {
+	if w.Spec.DesiredState != "proposal" {
 		return fmt.Errorf("desired state must start in 'proposal'")
 	}
 
-	return checkDirectives(r, &ValidatingRuleParser{})
+	return checkDirectives(w, &ValidatingRuleParser{})
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *Workflow) ValidateUpdate(old runtime.Object) error {
-	workflowlog.Info("validate update", "name", r.Name)
+func (w *Workflow) ValidateUpdate(old runtime.Object) error {
+	workflowlog.Info("validate update", "name", w.Name)
 
 	oldWorkflow, ok := old.(*Workflow)
 	if !ok {
@@ -86,19 +87,19 @@ func (r *Workflow) ValidateUpdate(old runtime.Object) error {
 	}
 
 	// Check that immutable fields haven't changed.
-	err := validateWorkflowImmutable(r, oldWorkflow)
+	err := validateWorkflowImmutable(w, oldWorkflow)
 	if err != nil {
 		return err
 	}
 
 	// Initial setup of the Workflow by the dws controller requires setting the status
 	// state to proposal
-	if oldWorkflow.Status.State == "" && r.Status.State == "proposal" && r.Spec.DesiredState == "proposal" {
+	if oldWorkflow.Status.State == "" && w.Status.State == "proposal" && w.Spec.DesiredState == "proposal" {
 		return nil
 	}
 
 	// New state is the desired state in the Spec
-	newState, err := GetWorkflowState(r.Spec.DesiredState)
+	newState, err := GetWorkflowState(w.Spec.DesiredState)
 	if err != nil {
 		return err
 	}
@@ -132,8 +133,8 @@ func (r *Workflow) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *Workflow) ValidateDelete() error {
-	workflowlog.Info("validate delete", "name", r.Name)
+func (w *Workflow) ValidateDelete() error {
+	workflowlog.Info("validate delete", "name", w.Name)
 	return nil
 }
 
@@ -194,6 +195,7 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 	return nil
 }
 
+// RuleParser defines the interface a rule parser must provide
 //+kubebuilder:object:generate=false
 type RuleParser interface {
 	ReadRules() error
@@ -201,11 +203,13 @@ type RuleParser interface {
 	MatchedDirective(*Workflow, string, int, string)
 }
 
+// RuleList contains the rules to be applied for a particular driver
 //+kubebuilder:object:generate=false
 type RuleList struct {
 	rules []dwdparse.DWDirectiveRuleSpec
 }
 
+// ReadRules imports the RulesList into usable go structures.
 func (r *RuleList) ReadRules() error {
 	ruleSetList := &DWDirectiveRuleList{}
 	listOpts := []client.ListOption{
@@ -230,6 +234,7 @@ func (r *RuleList) ReadRules() error {
 	return nil
 }
 
+// GetRuleList returns the current rules
 func (r *RuleList) GetRuleList() []dwdparse.DWDirectiveRuleSpec {
 	return r.rules
 }
@@ -237,11 +242,13 @@ func (r *RuleList) GetRuleList() []dwdparse.DWDirectiveRuleSpec {
 // MutatingRuleParser implements the RuleParser interface.
 var _ RuleParser = &MutatingRuleParser{}
 
+// MutatingRuleParser provides the rulelist
 //+kubebuilder:object:generate=false
 type MutatingRuleParser struct {
 	RuleList
 }
 
+// MatchedDirective updates the driver status entries to indicate driver availability
 func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
 	if watchStates == "" {
 		// Nothing to do
@@ -282,10 +289,12 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 // ValidatingRuleParser implements the RuleParser interface.
 var _ RuleParser = &ValidatingRuleParser{}
 
+// ValidatingRuleParser provides the rulelist
 //+kubebuilder:object:generate=false
 type ValidatingRuleParser struct {
 	RuleList
 }
 
+// MatchedDirective provides the interface function for the validating webhook
 func (r *ValidatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
 }

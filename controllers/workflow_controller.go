@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -20,11 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	// nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
+	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
 	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 )
 
-// WorkflowReconciler reconciles a Workflow object
+// WorkflowReconciler contains the pieces used by the reconciler
 type WorkflowReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -73,163 +74,167 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if err := r.teardownWorkflow(ctx, workflow); err != nil {
 				return ctrl.Result{}, err
 			}
-		*/
 
-		controllerutil.RemoveFinalizer(workflow, finalizer)
-		if err := r.Update(ctx, workflow); err != nil {
-			return ctrl.Result{}, err
-		}
+			controllerutil.RemoveFinalizer(workflow, finalizer)
+			if err := r.Update(ctx, workflow); err != nil {
+				return ctrl.Result{}, err
+			}
+		*/
 
 		return ctrl.Result{}, nil
 	}
 
 	driverID := os.Getenv("DWS_DRIVER_ID")
 
-	// Proposal State work
-	if workflow.Status.State == dwsv1alpha1.StateProposal.String() {
-		log.Info("Generate DirectiveBreakdowns")
+	// Handle the state work required to achieve the desired State.
+	// The model right now is that we continue to call the state handler until it completes the state
+	// in which case the reconciler will no longer be called.
+	// TODO: Look into have each handler return a "ImNotFinished" to cause a ctrl.Result{Request: repeat}
+	//       until the state is finished.
+	//       Once the state is finished, we can update the drivers in 1 spot. Right now, the drivers are updated
+	//       at the end of each state handler.
+	switch workflow.Spec.DesiredState {
 
-		for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
-			var result controllerutil.OperationResult
-			var dbd *dwsv1alpha1.DirectiveBreakdown
-
-			result, dbd, err = r.generateDirectiveBreakdown(ctx, dwDirective, dwIndex, workflow, log)
-			if err != nil {
-				log.Error(err, "Failed to create or update DirectiveBreakdown")
-				return ctrl.Result{}, err
-			}
-
-			// If nothing happened the breakdown is set, continue looking for breakdowns to create
-			if result == controllerutil.OperationResultNone {
-				continue
-			}
-
-			// Do we need to add object reference of dbd to the workflow's directiveBreakdown array?
-			if needDirectiveBreakdownReference(dbd, workflow) {
-				// Add reference to directiveBreakdown to the workflow
-				workflow.Status.DirectiveBreakdowns = append(workflow.Status.DirectiveBreakdowns, v1.ObjectReference{Name: dbd.Name, Namespace: dbd.Namespace})
-
-				// Need to update the workflow because a DirectiveBreakdown was added or updated
-				err := r.Update(ctx, workflow)
-				if err != nil {
-					log.Error(err, "Failed to update Workflow DirectiveBreakdowns")
-				}
-
-				// Until all DirectiveBreakdowns have been created, requeue and continue creating
-				return ctrl.Result{}, err
-			}
-		}
-
-		log.Info("Generate Computes")
-		name := workflow.Name
-		computes, err := r.createComputes(ctx, workflow, name, log)
-		if err != nil {
-			log.Error(err, "Failed to create or update Computes", "name", name)
-			return ctrl.Result{}, err
-		}
-
-		// Ensure the computes reference is set
-		cref := v1.ObjectReference{Name: computes.Name, Namespace: computes.Namespace}
-		if workflow.Status.Computes != cref {
-			workflow.Status.Computes = cref
-
-			err = r.Update(ctx, workflow)
-			if err != nil {
-				log.Error(err, "Failed to add computes reference")
-			}
-		}
-
-		log.Info("Generate Servers")
-		for _, bdRef := range workflow.Status.DirectiveBreakdowns {
-			directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
-
-			err := r.Get(ctx, types.NamespacedName{Namespace: bdRef.Namespace, Name: bdRef.Name}, directiveBreakdown)
-			if err != nil {
-				// We expect the DirectiveBreakdown to be there since we checked in the loop above
-				log.Error(err, "Failed to get DirectiveBreakdown", "name", bdRef.Name)
-				return ctrl.Result{Requeue: true}, nil
-			}
-
-			name := directiveBreakdown.Name
-			servers, err := r.createServers(ctx, workflow, directiveBreakdown, name, log)
-			if err != nil {
-				log.Error(err, "Failed to create or update Servers", "name", name)
-				return ctrl.Result{}, err
-			}
-
-			sref := v1.ObjectReference{Name: servers.Name, Namespace: servers.Namespace}
-			if directiveBreakdown.Spec.Servers != sref {
-				directiveBreakdown.Spec.Servers = sref
-				err = r.Update(ctx, directiveBreakdown)
-				if err != nil {
-					log.Error(err, "Failed to add servers reference", "dbd", directiveBreakdown.Name)
-				}
-
-				// Continue to reconcile until all DWDirectiveBreakdowns have a Servers CR associated with them.
-				// Since we didn't update the workflow here, we need to request a requeue.
-				return ctrl.Result{Requeue: true}, err
-			}
-		}
-
-		// Check to see if we've completed the desiredState's work
-		log.Info("Completing proposal state")
-		for i := range workflow.Status.Drivers {
-			driverStatus := &workflow.Status.Drivers[i]
-
-			if driverStatus.DriverID != driverID {
-				continue
-			}
-
-			if workflow.Status.State != driverStatus.WatchState {
-				continue
-			}
-
-			if driverStatus.Completed {
-				continue
-			}
-
-			log.Info("Updating driver", "id", driverStatus.DriverID, "dwd", driverStatus.DWDIndex)
-			driverStatus.Completed = true
-			err = r.Update(ctx, workflow)
-			if err != nil {
-				log.Error(err, "Failed to update Workflow state")
-				return ctrl.Result{}, nil
-			}
-			return ctrl.Result{Requeue: true}, nil
-		}
-
-		return ctrl.Result{}, nil
+	case dwsv1alpha1.StateProposal.String():
+		return r.handleProposalState(ctx, workflow, driverID, log)
+	case dwsv1alpha1.StateSetup.String():
+		return r.handleSetupState(ctx, workflow, driverID, log)
+	default:
+		err = fmt.Errorf("desiredState %s not yet supported", workflow.Spec.DesiredState)
+		log.Error(err, "Unsupported desiredState")
+		return ctrl.Result{}, err
 	}
+}
 
-	// Check to see if we've completed the desiredState's work
+func (r *WorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) bool {
+
+	s := fmt.Sprintf("Marking drivers complete for %s state", workflow.Status.State)
+	log.Info(s)
+
+	updateWorkflow := false
 	for i := range workflow.Status.Drivers {
 		driverStatus := &workflow.Status.Drivers[i]
 
 		if driverStatus.DriverID != driverID {
 			continue
 		}
-
 		if workflow.Status.State != driverStatus.WatchState {
 			continue
 		}
-
 		if workflow.Status.Ready {
 			continue
 		}
-
 		if driverStatus.Completed {
 			continue
 		}
 
 		driverStatus.Completed = true
-		err = r.Update(ctx, workflow)
+		updateWorkflow = true
+	}
+
+	return updateWorkflow
+}
+
+func (r *WorkflowReconciler) completeDriverState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+
+	driverUpdate := r.updateDriversStatusForStatusState(workflow, driverID, log)
+	if driverUpdate {
+		err := r.Update(ctx, workflow)
 		if err != nil {
 			log.Error(err, "Failed to update Workflow state")
-			return ctrl.Result{}, nil
 		}
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *WorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+
+	log.Info("Proposal")
+
+	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
+		log.Info("DirectiveBreakdown", "dwDirective", dwDirective)
+
+		var directiveBreakdown *dwsv1alpha1.DirectiveBreakdown
+		var err error
+
+		_, directiveBreakdown, err = r.generateDirectiveBreakdown(ctx, dwDirective, dwIndex, workflow, log)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Do we need to add object reference of dbd to the workflow's directiveBreakdown array?
+		if needDirectiveBreakdownReference(directiveBreakdown, workflow) {
+			// Add reference to directiveBreakdown to the workflow
+			workflow.Status.DirectiveBreakdowns = append(workflow.Status.DirectiveBreakdowns, v1.ObjectReference{Name: directiveBreakdown.Name, Namespace: directiveBreakdown.Namespace})
+
+			// Need to update the workflow because a DirectiveBreakdown was added or updated
+			err := r.Update(ctx, workflow)
+			if err != nil {
+				log.Error(err, "Failed to update Workflow DirectiveBreakdowns")
+			}
+
+			// Until all DirectiveBreakdowns have been created, requeue and continue creating
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	// Ensure Computes has been created
+	name := workflow.Name
+	computes, err := r.createComputes(ctx, workflow, name, log)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Ensure the computes reference is set
+	cref := v1.ObjectReference{Name: computes.Name, Namespace: computes.Namespace}
+	if workflow.Status.Computes != cref {
+		log.Info("Updating workflow with Computes")
+		workflow.Status.Computes = cref
+
+		err = r.Update(ctx, workflow)
+		if err != nil {
+			log.Error(err, "Failed to add computes reference")
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	for _, bdRef := range workflow.Status.DirectiveBreakdowns {
+		log.Info("Generate Server", "breakdown", bdRef)
+
+		directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
+
+		err := r.Get(ctx, types.NamespacedName{Namespace: bdRef.Namespace, Name: bdRef.Name}, directiveBreakdown)
+		if err != nil {
+			// We expect the DirectiveBreakdown to be there since we checked in the loop above
+			log.Error(err, "Failed to get DirectiveBreakdown", "name", bdRef.Name)
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		name := directiveBreakdown.Name
+		servers, err := r.createServers(ctx, workflow, directiveBreakdown, name, log)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		sref := v1.ObjectReference{Name: servers.Name, Namespace: servers.Namespace}
+		if directiveBreakdown.Spec.Servers != sref {
+			directiveBreakdown.Spec.Servers = sref
+			err = r.Update(ctx, directiveBreakdown)
+			if err != nil {
+				log.Error(err, "Failed to add servers reference", "dbd", directiveBreakdown.Name)
+			}
+
+			// Continue to reconcile until all DWDirectiveBreakdowns have a Servers CR associated with them.
+			// Since we didn't update the workflow here, we need to request a requeue.
+			return ctrl.Result{Requeue: true}, err
+		}
+	}
+
+	// Complete state in the drivers
+	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
 func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, wf *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
@@ -256,11 +261,10 @@ func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dir
 		if breakThisDown == cmdElements[1] {
 
 			lifetime := "job"
-			dwdName := wf.Name + strconv.Itoa(dwIndex)
+			dwdName := wf.Name + "-" + strconv.Itoa(dwIndex)
 			switch cmdElements[1] {
 			case "create_persistent":
 				lifetime = "persistent"
-				dwdName = wf.Name
 			}
 
 			directiveBreakdown = &dwsv1alpha1.DirectiveBreakdown{
@@ -275,7 +279,6 @@ func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dir
 				// Mutate function to fill in a directiveBreakdown
 				func() error {
 
-					log.Info("mutating", "dbd", directiveBreakdown)
 					// Construct a map of the arguments within the directive
 					m := make(map[string]string)
 					for _, pair := range cmdElements[2:] {
@@ -289,6 +292,7 @@ func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dir
 
 					directiveBreakdown.Spec.DW.DWDirectiveIndex = dwIndex
 					directiveBreakdown.Spec.DW.DWDirective = directive
+					directiveBreakdown.Spec.Name = m["name"]
 					directiveBreakdown.Spec.Type = filesystem
 					directiveBreakdown.Spec.Lifetime = lifetime
 					breakdownCapacity, _ := getCapacityInBytes(capacity)
@@ -320,8 +324,8 @@ func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dir
 							constraintStr string
 						}{
 							{"AllocateAcrossServers", breakdownCapacity, "ost", ""},
-							{"AllocateSingleServer", mdtCapacity, "mdt", ""},                      // NOTE: hardcoded size
-							{"AllocateSingleServer", mgtCapacity, "mgt", "OnePerRabbitPerSystem"}, // NOTE: hardcoded size
+							{"AllocateSingleServer", mdtCapacity, "mdt", ""},               // NOTE: hardcoded size
+							{"AllocateSingleServer", mgtCapacity, "mgt", "MayNotBeShared"}, // NOTE: hardcoded size
 						}
 
 						for _, i := range lustreComponents {
@@ -359,7 +363,7 @@ func needDirectiveBreakdownReference(dbdNeeded *dwsv1alpha1.DirectiveBreakdown, 
 		}
 	}
 
-	// Did not find it.
+	// Did not find it, so we need to create
 	return true
 }
 
@@ -375,6 +379,32 @@ func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, str
 	a.Label = labelStr
 	a.Constraint = labelConstraintStr
 	a.MinimumCapacity = cap
+}
+
+func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1.Workflow, name string, log logr.Logger) (computes *dwsv1alpha1.Computes, err error) {
+
+	computes = &dwsv1alpha1.Computes{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: wf.Namespace,
+		},
+	}
+	log.Info("Trying to create Computes", "name", computes.Name)
+
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, computes,
+		func() error {
+			// Link the Computes to the workflow
+			return ctrl.SetControllerReference(wf, computes, r.Scheme)
+		})
+
+	if err != nil {
+		log.Error(err, "Failed to create or update Computes", "name", computes.Name)
+		return nil, err
+	}
+
+	log.Info("done", "workflow", wf, "name", computes.Name)
+
+	return computes, nil
 }
 
 func (r *WorkflowReconciler) createServers(ctx context.Context, wf *dwsv1alpha1.Workflow, dbd *dwsv1alpha1.DirectiveBreakdown, serverName string, log logr.Logger) (server *dwsv1alpha1.Servers, err error) {
@@ -400,38 +430,126 @@ func (r *WorkflowReconciler) createServers(ctx context.Context, wf *dwsv1alpha1.
 
 	log.Info("done", "workflow", wf, "name", server.Name)
 
-	return server, nil
+	return server, err
 }
 
-func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1.Workflow, name string, log logr.Logger) (computes *dwsv1alpha1.Computes, err error) {
+func (r *WorkflowReconciler) handleSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 
-	computes = &dwsv1alpha1.Computes{
+	log.Info("Setup: Find each DirectiveBreakdown to locate its Servers object")
+
+	// We don't start looking for NnfStorage to be "Ready" until we've created all of them.
+	// In the following loop if we create anything, we requeue before we look at any
+	// NnfStorage readiness.
+	var nnfStorages []nnfv1alpha1.NnfStorage
+	existingNnfStorage := true
+
+	// Iterate through the directive breakdowns...
+	for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+		log.Info("DirectiveBreakdown", "name", dbdRef.Name)
+
+		// Chain through the DirectiveBreakdown to the Servers object
+
+		dbd := &dwsv1alpha1.DirectiveBreakdown{}
+		err := r.Get(ctx, types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)
+		if err != nil {
+			// TODO: Report error in workflow for missing DirectiveBreakdown
+			return ctrl.Result{}, err
+		}
+
+		s := &dwsv1alpha1.Servers{}
+		err = r.Get(ctx, types.NamespacedName{Name: dbd.Spec.Servers.Name, Namespace: dbd.Spec.Servers.Namespace}, s)
+		if err != nil {
+			// TODO: Report error in workflow for missing Server for the DirectiveBreakdown
+			return ctrl.Result{}, err
+		}
+
+		nnfStorage, result, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if result == controllerutil.OperationResultCreated {
+			existingNnfStorage = false
+		}
+
+		// If we've created all of the NnfStorages, accumulate them for examination in the next step.
+		if existingNnfStorage {
+			nnfStorages = append(nnfStorages, nnfStorage)
+		}
+	}
+
+	// If we created any NnfStorage objects in the last loop, return and requeue before we check for completion.
+	if !existingNnfStorage {
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Walk the nnfStorages looking for them to be Ready. We exit the reconciler if
+	// we encounter a non-ready AllocationSet indicating we haven't finished creating the storage.
+	for i := range nnfStorages {
+		for _, set := range nnfStorages[i].Status.AllocationSets {
+			if set.Status != "Ready" {
+				return ctrl.Result{}, nil
+			}
+		}
+	}
+
+	// Complete state in the drivers
+	return r.completeDriverState(ctx, workflow, driverID, log)
+}
+
+func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (nnfv1alpha1.NnfStorage, controllerutil.OperationResult, error) {
+
+	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: wf.Namespace,
+			Name:      s.Name,
+			Namespace: s.Namespace,
 		},
 	}
-	log.Info("Trying to create Servers", "name", computes.Name)
 
-	_, err = ctrl.CreateOrUpdate(ctx, r.Client, computes,
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfStorage,
 		func() error {
-			// Link the Computes to the workflow
-			return ctrl.SetControllerReference(wf, computes, r.Scheme)
+
+			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
+			nnfStorage.Spec.AllocationSets = nil
+
+			// Iterate the Servers data elements to pull out the allocation sets for the server
+			for i := range s.Data {
+				nnfAllocSet := nnfv1alpha1.NnfStorageAllocationSetSpec{}
+
+				nnfAllocSet.Name = d.Spec.Name + "-" + s.Data[i].Label // Note: DirectiveBreakdown contains the name of the allocation
+				nnfAllocSet.Capacity = s.Data[i].AllocationSize
+				nnfAllocSet.FileSystemType = d.Spec.Type // DirectiveBreakdown contains the filesystem type (lustre, xfs, etc)
+				if nnfAllocSet.FileSystemType == "lustre" {
+					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Data[i].Label)
+					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[0:8]
+				}
+
+				// Create Nodes for this allocation set.
+				for _, host := range s.Data[i].Hosts {
+					node := nnfv1alpha1.NnfStorageAllocationNodes{Name: host.Name, Count: host.AllocationCount}
+					nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
+				}
+
+				nnfStorage.Spec.AllocationSets = append(nnfStorage.Spec.AllocationSets, nnfAllocSet)
+			}
+
+			// The Workflow object owns the NnfStorage object, so updates to the nnfStorage trigger a watch
+			// in the workflow's reconciler
+			return ctrl.SetControllerReference(wf, nnfStorage, r.Scheme)
 		})
 
 	if err != nil {
-		log.Error(err, "Failed to create or update Servers", "name", computes.Name)
-		return nil, err
+		log.Error(err, "Failed to create or update NnfStorage", "name", nnfStorage.Name)
+		return *nnfStorage, result, err
 	}
 
-	log.Info("done", "workflow", wf, "name", computes.Name)
-
-	return computes, nil
+	return *nnfStorage, result, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha1.Workflow{}).
+		Owns(&nnfv1alpha1.NnfStorage{}).
 		Complete(r)
 }

@@ -41,24 +41,24 @@ type UserIoCmd struct {
 // PassthruCmd is used for NVMe Passthrough from user space to the NVMe Device Driver
 // This is a copy of the C definition in 'include/linux/nvme_ioctl.h' struct nvme_passthru_cmd{}
 type PassthruCmd struct {
-	Opcode      uint8
-	Flags       uint8
-	Reserved1   uint16
-	NSID        uint32
-	Cdw2        uint32
-	Cdw3        uint32
-	Metadata    uint64
-	Addr        uint64
-	MetadataLen uint32
-	DataLen     uint32
-	Cdw10       uint32
-	Cdw11       uint32
-	Cdw12       uint32
-	Cdw13       uint32
-	Cdw14       uint32
-	Cdw15       uint32
-	TimeoutMs   uint32
-	Result      uint32
+	Opcode      uint8  // Byte 0
+	Flags       uint8  // Byte 1
+	Reserved1   uint16 // Bytes 2-3
+	NSID        uint32 // Bytes 4-7
+	Cdw2        uint32 // Bytes 8-11
+	Cdw3        uint32 // Bytes 12-15
+	Metadata    uint64 // Bytes 16-23
+	Addr        uint64 // Bytes 24-31
+	MetadataLen uint32 // Bytes 32-35
+	DataLen     uint32 // Bytes 36-39
+	Cdw10       uint32 // Bytes 40-43
+	Cdw11       uint32 // Bytes 44-47
+	Cdw12       uint32 // Bytes 48-51
+	Cdw13       uint32 // Bytes 52-55
+	Cdw14       uint32 // Bytes 56-60
+	Cdw15       uint32 // Bytes 60-63
+	TimeoutMs   uint32 // Bytes 64-67
+	Result      uint32 // Bytes 68-71
 }
 
 type AdminCmd = PassthruCmd

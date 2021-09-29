@@ -8,27 +8,41 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Important: Run "make" to regenerate code after modifying this file
 
-// ServersSpec defines the desired state of Servers
-type ServersSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+// Host specifies info required to identify the host (name) on which to
+// create storage, and the number of storage allocations on each Host.
+// ServersData.AllocationSize specifies the size of each allocation.
+type Host struct {
+	// The name of the host
+	Name string `json:"name"`
 
-	// Foo is an example field of Servers. Edit servers_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// The number of allocations to create of the size in bytes specified in ServerData
+	// +kubebuilder:validation:Minimum=1
+	AllocationCount int `json:"allocationCount"`
+}
+
+// ServersData defines the desired state of Servers
+type ServersData struct {
+	// Label as specified in the DirectiveBreakdown
+	Label string `json:"label"`
+
+	// Allocation size in bytes
+	// +kubebuilder:validation:Minimum=1
+	AllocationSize int64 `json:"allocationSize"`
+
+	// List of hosts where allocations are created
+	Hosts []Host `json:"hosts"`
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
 
 // Servers is the Schema for the servers API
 type Servers struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ServersSpec `json:"spec,omitempty"`
+	Data []ServersData `json:"data,omitempty"`
 }
 
 //+kubebuilder:object:root=true
