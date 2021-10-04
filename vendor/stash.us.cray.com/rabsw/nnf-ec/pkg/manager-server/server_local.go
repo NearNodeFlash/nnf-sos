@@ -32,6 +32,23 @@ type LocalServerController struct {
 
 func (c *LocalServerController) Connected() bool { return true }
 
+func (c *LocalServerController) GetServerInfo() ServerInfo {
+	serverInfo := ServerInfo{}
+
+	output, err := c.run("lctl list_nids")
+	if err != nil {
+		return serverInfo
+	}
+
+	for _, nid := range strings.Split(string(output), "\n") {
+		if strings.Contains(nid, "@") {
+			serverInfo.LNetNids = append(serverInfo.LNetNids, nid)
+		}
+	}
+
+	return serverInfo
+}
+
 func (c *LocalServerController) NewStorage(pid uuid.UUID) *Storage {
 	c.storage = append(c.storage, Storage{Id: pid, ctrl: c})
 	return &c.storage[len(c.storage)-1]
@@ -83,7 +100,12 @@ func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, o
 		return err
 	}
 
-	return fs.Mount(opts["mountpoint"].(string))
+	mountPoint := opts["mountpoint"].(string)
+	if mountPoint == "" {
+		return nil
+	}
+
+	return fs.Mount(mountPoint)
 }
 
 func (c *LocalServerController) DeleteFileSystem(s *Storage) error {

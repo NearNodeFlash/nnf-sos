@@ -1104,6 +1104,9 @@ func (*StorageService) StorageServiceIdEndpointIdGet(storageServiceId, endpointI
 		model.Status.State = ep.state
 	}
 
+	serverInfo := ep.serverCtrl.GetServerInfo()
+	model.Oem["LNetNids"] = serverInfo.LNetNids
+
 	return nil
 }
 
@@ -1239,10 +1242,6 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 	ep := s.findEndpoint(endpointId)
 	if ep == nil {
 		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("Endpoint '%s' not found", endpointId))
-	}
-
-	if len(model.FileSharePath) == 0 {
-		return ec.NewErrNotAcceptable().WithCause("File share path not defined")
 	}
 
 	// Find the Storage Group Endpoint - There should be a Storage Group

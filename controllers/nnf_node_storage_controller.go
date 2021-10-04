@@ -371,16 +371,23 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		return &ctrl.Result{}, nil
 	}
 
-	nid := ""
-	if nidRaw, present := sh.Oem["NID"]; present {
-		nid = nidRaw.(string)
+	endpoint, err := r.getEndpoint(ss, os.Getenv("RABBIT_NODE"))
+	if err != nil {
+		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+			nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
+		})
+
+		return &ctrl.Result{}, nil
 	}
 
-	// LNid information isn't passed up from SF right now. See bug RABSW-521.
-	// Fake out an MGT LNid for now so we can pass it to the MDTs and OSTs.
-	// TODO: Get the real LNid
-	if nodeStorage.Spec.LustreStorage.TargetType == "MGT" {
-		nid = "rabbit-01@tcp0"
+	nid := ""
+	if nidRaw, present := endpoint.Oem["LNetNids"]; present {
+		nidList := nidRaw.([]string)
+		if len(nidList) > 0 {
+			// TODO: If there are multiple LNet Nids, have a way to pick
+			// which network we want to use.
+			nid = nidList[0]
+		}
 	}
 
 	equal := statusUpdater.updateWithEqual(func(*nnfv1alpha1.NnfNodeStorageStatus) {

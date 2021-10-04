@@ -25,7 +25,7 @@ type NnfNodeStorageSpec struct {
 
 	// FileSystemType defines the type of the desired filesystem, or raw
 	// block device.
-	// +kubebuilder:validation:Enum=raw;lvm;zfs;lustre
+	// +kubebuilder:validation:Enum=raw;lvm;zfs;lustre;xfs
 	// +kubebuilder:default:=raw
 	FileSystemType string `json:"fileSystemType"`
 
@@ -42,7 +42,7 @@ type LustreStorageSpec struct {
 
 	// TargetType is the type of Lustre target to be created.
 	// +kubebuilder:validation:Enum=MGT;MDT;OST
-	TargetType string `json:"targetType"`
+	TargetType string `json:"targetType,omitempty"`
 
 	// StartIndex is used to order a series of MDTs or OSTs.  This is used only
 	// when creating MDT and OST targets. If count in the NnfNodeStorageSpec is more

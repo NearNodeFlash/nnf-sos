@@ -19,6 +19,10 @@ func (*DisabledServerController) Connected() bool {
 	return false
 }
 
+func (*DisabledServerController) GetServerInfo() ServerInfo {
+	return ServerInfo{}
+}
+
 func (*DisabledServerController) NewStorage(uuid.UUID) *Storage {
 	return nil
 }

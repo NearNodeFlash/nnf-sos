@@ -58,6 +58,7 @@ spec:
                 - lvm
                 - zfs
                 - lustre
+                - xfs
                 type: string
               lustreStorage:
                 description: LustreStorageSpec describes the Lustre target created
@@ -95,8 +96,6 @@ spec:
                     - MDT
                     - OST
                     type: string
-                required:
-                - targetType
                 type: object
             required:
             - count

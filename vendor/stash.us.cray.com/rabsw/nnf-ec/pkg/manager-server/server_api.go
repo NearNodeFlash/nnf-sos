@@ -35,11 +35,17 @@ type ServerControllerOptions struct {
 	Address string // IP Address of the Server
 }
 
+type ServerInfo struct {
+	LNetNids []string
+}
+
 // Server Controller API defines the interface for interacting with and controlling
 // a Server in the Rabbit NNF topology. That is - A remote initiator endpoint or
 // the local NNF server.
 type ServerControllerApi interface {
 	Connected() bool
+
+	GetServerInfo() ServerInfo
 
 	// Allocate a new Storage object to be managed by this controller
 	NewStorage(uuid.UUID) *Storage

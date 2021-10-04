@@ -17,6 +17,12 @@ type MockServerController struct {
 
 func (c *MockServerController) Connected() bool { return true }
 
+func (m *MockServerController) GetServerInfo() ServerInfo {
+	return ServerInfo{
+		LNetNids: []string{"1.2.3.4@tcp0"},
+	}
+}
+
 func (c *MockServerController) NewStorage(pid uuid.UUID) *Storage {
 	return &Storage{
 		Id:   pid,

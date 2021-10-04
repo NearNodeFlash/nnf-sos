@@ -1200,3 +1200,5 @@ stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210923201811-e997a7f62fb2 h1:HEXIr8iT+
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210923201811-e997a7f62fb2/go.mod h1:PkX0JoOAthhgFhf+8Pm8kPppB87qAtljTa8XxOiW1hg=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210927180424-33fba484eb6e h1:GKgpZ3IBF6UM5EPB69uCBhIfSmS5Gd3kZaFpT3Ah0Ho=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210927180424-33fba484eb6e/go.mod h1:PkX0JoOAthhgFhf+8Pm8kPppB87qAtljTa8XxOiW1hg=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211004155012-7dd27384c90c h1:mOyKuTYxk76+gzOf30o3UMb7lx2aQ0OukmhfVk1L7iE=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211004155012-7dd27384c90c/go.mod h1:PkX0JoOAthhgFhf+8Pm8kPppB87qAtljTa8XxOiW1hg=

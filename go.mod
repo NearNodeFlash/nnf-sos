@@ -12,5 +12,5 @@ require (
 	k8s.io/client-go v0.21.2
 	sigs.k8s.io/controller-runtime v0.9.2
 	stash.us.cray.com/dpm/dws-operator v0.0.0-20210927200351-d68ada4089b0
-	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20210927180424-33fba484eb6e
+	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211004155012-7dd27384c90c
 )

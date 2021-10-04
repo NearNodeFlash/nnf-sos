@@ -74,6 +74,7 @@ spec:
                       - lvm
                       - zfs
                       - lustre
+                      - xfs
                       type: string
                     name:
                       description: Name is a human readable label for this set of
@@ -107,7 +108,6 @@ spec:
                   - fileSystemType
                   - name
                   - nodes
-                  - targetType
                   type: object
                 type: array
             required:

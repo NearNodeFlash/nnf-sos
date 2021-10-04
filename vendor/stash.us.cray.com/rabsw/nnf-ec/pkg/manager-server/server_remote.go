@@ -34,6 +34,10 @@ func (c *RemoteServerController) Connected() bool {
 	return err == nil
 }
 
+func (c *RemoteServerController) GetServerInfo() ServerInfo {
+	return ServerInfo{}
+}
+
 func (c *RemoteServerController) NewStorage(pid uuid.UUID) *Storage {
 
 	model := sf.StoragePoolV150StoragePool{
