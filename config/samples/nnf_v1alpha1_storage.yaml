@@ -1,34 +1,34 @@
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfStorage
 metadata:
-  name: storage-sample
+  name: sample
   namespace: nnf-system
 spec:
   allocationSets:
   - name: mgt
     capacity: 1048576
     fileSystemType: lustre
-    fileSystemName: mattr
+    fileSystemName: sample
     targetType: MGT
-    backFs: ldiskfs
+    backFs: zfs
     nodes:
     - name: rabbit-01
       count: 1
   - name: mdt
     capacity: 1048576
     fileSystemType: lustre
-    fileSystemName: mattr
+    fileSystemName: sample
     targetType: MDT
-    backFs: ldiskfs
+    backFs: zfs
     nodes:
     - name: rabbit-02
       count: 1
   - name: ost
     capacity: 1048576
     fileSystemType: lustre
-    fileSystemName: mattr
+    fileSystemName: sample
     targetType: OST
-    backFs: ldiskfs
+    backFs: zfs
     nodes:
     - name: rabbit-03
       count: 1

@@ -1,19 +1,16 @@
-FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS base
+FROM arti.dev.cray.com/baseos-docker-master-local/centos8:centos8 AS base
 
 WORKDIR /
 
 # Install basic dependencies
-RUN yum install -y make git gzip wget gcc tar https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+RUN dnf install -y make git gzip wget gcc tar
 
 # Retrieve lustre-rpms
 WORKDIR /tmp/lustre-rpms
 
-RUN wget https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/e2fsprogs-1.45.6.wc1-0.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/e2fsprogs-libs-1.45.6.wc1-0.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/libcom_err-1.45.6.wc1-0.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/e2fsprogs/1.45.6.wc1/el7/RPMS/x86_64/libss-1.45.6.wc1-0.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.12-release/el7/server/RPMS/x86_64/kmod-lustre-2.12.7-1.el7.x86_64.rpm \
-         https://downloads.whamcloud.com/public/lustre/latest-2.12-release/el7/server/RPMS/x86_64/lustre-2.12.7-1.el7.x86_64.rpm
+RUN wget \
+  http://arti.dev.cray.com/artifactory/kj-rpm-unstable-local/predev/centos8.4.2105-lustre-zfs/storage-mirrors/x86_64/kmod-lustre-2.14.0-1.el8.x86_64.rpm \
+  http://arti.dev.cray.com/artifactory/kj-rpm-unstable-local/predev/centos8.4.2105-lustre-zfs/storage-mirrors/x86_64/lustre-2.14.0-1.el8.x86_64.rpm
 
 WORKDIR /
 
@@ -24,7 +21,7 @@ RUN wget https://golang.org/dl/go1.16.7.linux-amd64.tar.gz && tar -xzf go1.16.7.
 # Start from scratch to make the base stage for the final application.
 # Build it here so it won't be invalidated when we COPY the controller source
 # code in the next layer.
-FROM arti.dev.cray.com/baseos-docker-master-local/centos:centos7 AS application-base
+FROM arti.dev.cray.com/baseos-docker-master-local/centos8:centos8 AS application-base
 
 WORKDIR /
 # Retrieve executable from previous layer
@@ -32,9 +29,8 @@ COPY --from=base /tmp/lustre-rpms/*.rpm /root/
 
 # Retrieve built rpms from previous layer and install Lustre dependencies
 WORKDIR /root/
-RUN yum install -y epel-release libyaml net-snmp openmpi sg3_utils && \
-    yum clean all && \
-    rpm -Uivh e2fsprogs-* libcom_err-* libss-* && \
+RUN dnf install -y epel-release libyaml net-snmp openmpi sg3_utils && \
+    dnf clean all && \
     rpm -Uivh --nodeps lustre-* kmod-* && \
     rm /root/*.rpm
 

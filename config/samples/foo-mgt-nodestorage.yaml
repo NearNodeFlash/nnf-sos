@@ -10,6 +10,7 @@ spec:
   lustreStorage:
     fileSystemName: "foo"
     targetType: "MGT"
+    backFs: "zfs"
   count: 1
 
 

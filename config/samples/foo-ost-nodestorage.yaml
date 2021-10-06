@@ -12,6 +12,7 @@ spec:
     targetType: "OST"
     mgsNode: "rabbit-01@tcp"
     startIndex: 0
+    backFs: "zfs"
   count: 1
 
 
