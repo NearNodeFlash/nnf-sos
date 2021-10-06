@@ -3,15 +3,41 @@
 MGT_SIZE_IN_BYTES=1073741824
 MDT_SIZE_IN_BYTES=1099511627776
 
-query_workflow()
+PROG=$(basename "$0")
+
+printhelp()
 {
-  echo "Querying workflows..."
-  WORKFLOW=$(kubectl get workflows.dws.cray.hpe.com --no-headers | awk '{print $1;}')
-  if [ "$WORKFLOW" = "" ]; then
-    echo "Can't find a workflow"
-    exit 1
-  fi
+  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS]"
+  echo
+  echo "  -w WORKFLOW  Resource name of the workflow."
+  echo "  -c COUNT     Number of rabbit nodes to use."
+  echo "  -x XRABBITS  Comma-separated list of rabbit nodes to exclude."
+  echo
+  exit 2
 }
+
+OPTIND=1
+while getopts ":hw:c:x:" opt
+do
+  case $opt in
+  w) WORKFLOW=$OPTARG ;;
+  c) COUNT=$OPTARG ;;
+  x) XRABBITS=$OPTARG ;;
+  *) printhelp ;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [[ -z $WORKFLOW ]]
+then
+  echo "$PROG: Must specify -w"
+  exit 2
+fi
+if [[ -n $XRABBITS ]]
+then
+  # Flip commas to pipes, to turn it into a regex.
+  XRABBITS=$(echo "$XRABBITS" | tr ',' '|')
+fi
 
 patch_workflow()
 {
@@ -29,21 +55,33 @@ EOF
   }
 
   # Patch the Workflow object
-  kubectl patch workflows.dws.cray.hpe.com "$WORKFLOW" --type='merge' --patch-file $WORKFLOW_PATCH
-
-  # show the resulting Servers object
-  kubectl get workflows.dws.cray.hpe.com "$WORKFLOW" -o yaml
+  echo "Setting desired state to $desiredState"
+  time kubectl patch workflows.dws.cray.hpe.com "$WORKFLOW" --type='merge' --patch-file $WORKFLOW_PATCH
+  rm "$WORKFLOW_PATCH"
 }
 
 query_rabbits()
 {
   echo "Querying rabbits..."
-  RABBITS=$(kubectl get nodes --no-headers | awk '{print $1;}' | grep --invert-match "control-plane")
+  RABBITS=$(kubectl get nodes --no-headers | grep --invert-match "control-plane" | awk '{print $1}')
+  if [[ -n $XRABBITS ]]
+  then
+    RABBITS=$(echo "$RABBITS" | grep -Ev "$XRABBITS")
+  fi
+  if [[ -n $COUNT ]]
+  then
+    RABBITS=$(echo "$RABBITS" | sed "$COUNT"q)
+  fi
 
   RABBIT_ARRAY=($RABBITS)
   RABBIT_COUNT="${#RABBIT_ARRAY[@]}"
   if [ "$RABBIT_COUNT" = 0 ]; then
     echo "Can't find rabbits"
+    exit 1
+  fi
+  if [[ -n $COUNT ]] && (( RABBIT_COUNT < COUNT ))
+  then
+    echo "Found $RABBIT_COUNT nodes, wanted $COUNT"
     exit 1
   fi
 
@@ -53,12 +91,26 @@ query_rabbits()
 query_servers()
 {
   echo "Querying Servers..."
-  SERVERS=$(kubectl get servers.dws.cray.hpe.com --no-headers | awk '{print $1;}')
-
-  if [ "$SERVERS" = "" ]; then
+  # Hard-code to take the first server from the workflow for now.
+  WANTED_SERVERS=$(kubectl get -n default workflow "$WORKFLOW" -o json | jq -Mr '.status.directiveBreakdowns[].name' | sed 1q)
+  if [[ -z $WANTED_SERVERS ]]
+  then
+    echo "Cannot find wanted server name"
+    exit 1
+  fi
+  KNOWN_SERVERS=$(kubectl get servers.dws.cray.hpe.com -o json | jq -Mr '.items[].metadata.name')
+  if [[ -z $KNOWN_SERVERS ]]
+  then
+    echo "Cannot find existing servers"
+    exit 1
+  fi
+  SERVERS=$(echo "$KNOWN_SERVERS" | grep "$WANTED_SERVERS")
+  if [[ -z $SERVERS ]]
+  then
     echo "Can't find Servers"
     exit 1
   fi
+  echo "Picked servers: $SERVERS"
 }
 
 build_ost_hosts()
@@ -175,24 +227,16 @@ EOF
 
   # Patch the Servers object with the nodes
   kubectl patch servers.dws.cray.hpe.com "$SERVERS" --type='merge' --patch-file $SERVERS_PATCH
-
-  # show the resulting Servers object
-  kubectl get servers.dws.cray.hpe.com "$SERVERS" -o yaml
+  rm "$SERVERS_PATCH"
 }
-
-query_workflow
-echo "$WORKFLOW"
 
 query_rabbits
 
 query_servers
-echo "$SERVERS"
 
 patch_servers
-rm "$SERVERS_PATCH"
 
 # Starting timing here
 patch_workflow
-rm "$WORKFLOW_PATCH"
 
 exit $?

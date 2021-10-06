@@ -5,19 +5,19 @@ DWSPORT=${DWSPORT:-8080}
 NAMESPACE=${NAMESPACE:-default}
 
 rname=$1
-[[ -n $rname ]] || rname="dws-workflow-test-$$"
+[[ -n $rname ]] || rname="dws$$"
 
 data='{'
 data+='  "metadata": {'
-data+='    "name": "##RNAME##",'
-data+='    "namespace": "##NAMESPACE##"'
+data+='    "name": "'$rname'",'
+data+='    "namespace": "'$NAMESPACE'"'
 data+='  },'
 data+='  "kind": "Workflow",'
 data+='  "apiVersion": "dws.cray.hpe.com/v1alpha1",'
 data+='  "spec": {'
 data+='    "desiredState": "proposal",'
 data+='    "dwDirectives": ['
-data+='      "#DW jobdw type=lustre capacity=10TB name=ajf3456789"'
+data+='      "#DW jobdw type=lustre capacity=10TB name='$rname'"'
 data+='    ],'
 data+='    "jobID": 9000001,'
 data+='    "userID": 1001,'
@@ -26,7 +26,7 @@ data+='  }'
 data+='}'
 
 echo Attempting to create $rname ...
-jsondata=$(echo $data | sed -e s:##RNAME##:$rname:g -e s:##NAMESPACE##:"$NAMESPACE":g)
+jsondata="$data"
 
 admitResponse=$(curl -X POST "http://${DWSHOST}:${DWSPORT}/apis/dws.cray.hpe.com/v1alpha1/namespaces/$NAMESPACE/workflows" -H "Content-Type: application/json" -d "$jsondata")
 retCode=$?
