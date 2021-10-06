@@ -521,7 +521,11 @@ func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alph
 				nnfAllocSet.FileSystemType = d.Spec.Type // DirectiveBreakdown contains the filesystem type (lustre, xfs, etc)
 				if nnfAllocSet.FileSystemType == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Data[i].Label)
-					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[0:8]
+					charsWanted := 8
+					if len(d.Spec.Name) < charsWanted {
+						charsWanted = len(d.Spec.Name)
+					}
+					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[:charsWanted]
 				}
 
 				// Create Nodes for this allocation set.
