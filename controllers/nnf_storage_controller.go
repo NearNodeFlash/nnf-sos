@@ -35,11 +35,11 @@ type NnfStorageReconciler struct {
 }
 
 const (
-	// finalizer defines the key used in identifying the storage object as
-	// being owned by this NNF Storage Reconciler. This prevents the system
-	// from deleting the custom resource until the reconciler has finished
-	// in using the resource.
-	finalizer = "nnf.cray.hpe.com/finalizer"
+	// finalizerNnfStorage defines the key used in identifying the storage
+	// object as being owned by this NNF Storage Reconciler. This prevents
+	// the system from deleting the custom resource until the reconciler
+	// has finished in using the resource.
+	finalizerNnfStorage = "nnf.cray.hpe.com/nnf_storage"
 
 	// ownerAnnotation is a name/namespace pair used on the NnfNodeStorage resources
 	// for owner information. See nnfNodeStorageMapFunc() below.
@@ -69,7 +69,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
-		if !controllerutil.ContainsFinalizer(storage, finalizer) {
+		if !controllerutil.ContainsFinalizer(storage, finalizerNnfStorage) {
 			return ctrl.Result{}, nil
 		}
 
@@ -77,7 +77,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
-		controllerutil.RemoveFinalizer(storage, finalizer)
+		controllerutil.RemoveFinalizer(storage, finalizerNnfStorage)
 		if err := r.Update(ctx, storage); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -86,9 +86,9 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Add a finalizer to ensure all NNF Node Storage resources created by this resource are properly deleted.
-	if !controllerutil.ContainsFinalizer(storage, finalizer) {
+	if !controllerutil.ContainsFinalizer(storage, finalizerNnfStorage) {
 
-		controllerutil.AddFinalizer(storage, finalizer)
+		controllerutil.AddFinalizer(storage, finalizerNnfStorage)
 		if err := r.Update(ctx, storage); err != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}

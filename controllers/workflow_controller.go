@@ -25,6 +25,14 @@ import (
 	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 )
 
+const (
+	// finalizerWorkflow defines the key used in identifying the
+	// storage object as being owned by this NNF Storage Reconciler. This
+	// prevents the system from deleting the custom resource until the
+	// reconciler has finished in using the resource.
+	finalizerWorkflow = "nnf.cray.hpe.com/workflow"
+)
+
 // WorkflowReconciler contains the pieces used by the reconciler
 type WorkflowReconciler struct {
 	client.Client
@@ -65,7 +73,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !workflow.GetDeletionTimestamp().IsZero() {
 		log.Info("Deleting workflow...")
 
-		if !controllerutil.ContainsFinalizer(workflow, finalizer) {
+		if !controllerutil.ContainsFinalizer(workflow, finalizerWorkflow) {
 			return ctrl.Result{}, nil
 		}
 
@@ -75,7 +83,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			}
 
-			controllerutil.RemoveFinalizer(workflow, finalizer)
+			controllerutil.RemoveFinalizer(workflow, finalizerWorkflow)
 			if err := r.Update(ctx, workflow); err != nil {
 				return ctrl.Result{}, err
 			}

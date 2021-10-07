@@ -28,6 +28,12 @@ import (
 )
 
 const (
+	// finalizerNnfNodeStorage defines the key used in identifying the
+	// storage object as being owned by this NNF Storage Reconciler. This
+	// prevents the system from deleting the custom resource until the
+	// reconciler has finished in using the resource.
+	finalizerNnfNodeStorage = "nnf.cray.hpe.com/nnf_node_storage"
+
 	nnfNodeStorageResourceName = "nnf-node-storage"
 )
 
@@ -80,7 +86,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// is present until the underlying NNF resources are deleted through the
 	// storage service.
 	if !nodeStorage.GetDeletionTimestamp().IsZero() {
-		if !controllerutil.ContainsFinalizer(nodeStorage, finalizer) {
+		if !controllerutil.ContainsFinalizer(nodeStorage, finalizerNnfNodeStorage) {
 			return ctrl.Result{}, nil
 		}
 
@@ -95,7 +101,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
-		controllerutil.RemoveFinalizer(nodeStorage, finalizer)
+		controllerutil.RemoveFinalizer(nodeStorage, finalizerNnfNodeStorage)
 		if err := r.Update(ctx, nodeStorage); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -106,8 +112,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// First time setup requires programming of the storage status such that the resource
 	// is labeled as "Starting" and all Conditions are initializaed. After this is done,
 	// the resource obtains a finalizer to manage the resource lifetime.
-	if !controllerutil.ContainsFinalizer(nodeStorage, finalizer) {
-		controllerutil.AddFinalizer(nodeStorage, finalizer)
+	if !controllerutil.ContainsFinalizer(nodeStorage, finalizerNnfNodeStorage) {
+		controllerutil.AddFinalizer(nodeStorage, finalizerNnfNodeStorage)
 		if err := r.Update(ctx, nodeStorage); err != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
