@@ -997,6 +997,9 @@ func Start() error {
 		s.refreshPortStatus()
 	}
 
+	// Notify the event manager the fabric manager is ready
+	event.EventManager.Publish(msgreg.FabricReadyNnf(m.id))
+
 	// Run the Fabric Monitor in a background thread.
 	go NewFabricMonitor(&m).Run()
 

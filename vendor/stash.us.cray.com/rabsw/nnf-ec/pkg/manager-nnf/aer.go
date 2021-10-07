@@ -41,6 +41,10 @@ func (aer *AerService) Initialize(ctrl NnfControllerInterface) error {
 	return aer.c(aer.s.Initialize(ctrl))
 }
 
+func (aer *AerService) Close() error {
+	return aer.c(aer.s.Close())
+}
+
 func (aer *AerService) Id() string {
 	return aer.s.Id()
 }

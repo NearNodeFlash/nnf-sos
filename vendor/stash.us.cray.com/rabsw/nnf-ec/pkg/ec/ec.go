@@ -44,6 +44,7 @@ type Router interface {
 	Name() string
 	Init() error
 	Start() error
+	Close() error
 }
 
 // Routers -
@@ -220,7 +221,7 @@ func (p *HttpControllerProcessor) Close() {
 		if err := p.server.Shutdown(context.TODO()); err != nil {
 			panic(err)
 		}
-	}
+	}	
 }
 
 // HandlerFunc defines an http handler for a controller's routes. By default
@@ -296,6 +297,10 @@ func (c *Controller) Attach(router *mux.Router, handlerFunc HandlerFunc) {
 
 func (c *Controller) Close() {
 	c.processor.Close()
+
+	for _, api := range c.Routers {
+		api.Close()
+	}
 }
 
 // EncodeResponse -

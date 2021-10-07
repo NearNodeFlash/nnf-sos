@@ -41,7 +41,8 @@ type Manager struct {
 	ctrl    NvmeDeviceController
 
 	// Command-Line Options
-	purge bool // Purge existing namespaces on storage controllers
+	purge       bool // Purge existing namespaces on storage controllers
+	purgeMockDb bool // Purge the persistent mock databse
 }
 
 // Storage - Storage defines a generic storage device in the Redfish / Swordfish specification.
@@ -49,6 +50,10 @@ type Manager struct {
 type Storage struct {
 	id      string
 	address string
+
+	serialNumber     string
+	modelNumber      string
+	firmwareRevision string
 
 	// Physical Function Controller ID
 	pfid uint16
@@ -194,6 +199,7 @@ func (m *Manager) GetVolumes(controllerId string) ([]string, error) {
 
 func BindFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&mgr.purge, "purge", false, "Purge existing volumes on start")
+	fs.BoolVar(&mgr.purgeMockDb, "purge-mock-db", false, "Purge the persistent mock-device database")
 }
 
 func ConvertRelativePortIndexToControllerIndex(index uint32) (uint16, error) {
@@ -242,8 +248,23 @@ func DetachControllers(v *Volume, controllers []uint16) error {
 	return v.detach(controllers)
 }
 
+func ReattachControllers(v *Volume) error {
+	return v.recoverAttachedControllers()
+}
+
 func (s *Storage) UnallocatedBytes() uint64 { return s.unallocatedBytes }
 func (s *Storage) IsEnabled() bool          { return s.state == sf.ENABLED_RST }
+func (s *Storage) SerialNumber() string     { return s.serialNumber }
+
+func (s *Storage) FindVolume(namespaceId nvme.NamespaceIdentifier) (*Volume, error) {
+	for idx, volume := range s.volumes {
+		if volume.namespaceId == namespaceId {
+			return &s.volumes[idx], nil
+		}
+	}
+
+	return nil, ec.NewErrNotFound()
+}
 
 func (s *Storage) fmt(format string, a ...interface{}) string {
 	return fmt.Sprintf("/redfish/v1/Storage/%s", s.id) + fmt.Sprintf(format, a...)
@@ -258,6 +279,10 @@ func (s *Storage) initialize() error {
 	}
 
 	s.pfid = ctrl.ControllerId
+
+	s.serialNumber = string(ctrl.SerialNumber[:])
+	s.modelNumber = string(ctrl.ModelNumber[:])
+	s.firmwareRevision = string(ctrl.FirmwareRevision[:])
 
 	capacityToUint64s := func(c [16]byte) (lo uint64, hi uint64) {
 		lo, hi = 0, 0
@@ -414,6 +439,33 @@ func (s *Storage) deleteVolume(volumeId string) error {
 	return ec.NewErrNotFound()
 }
 
+func (s *Storage) recoverVolumes() error {
+	namespaces, err := s.device.ListNamespaces(0)
+	if err != nil {
+		log.WithError(err).Errorf("Storage %s Failed to list device namespaces", s.id)
+	}
+	s.volumes = make([]Volume, 0)
+	for _, nsid := range namespaces {
+		ns, err := s.device.IdentifyNamespace(nsid)
+		if err != nil {
+			log.WithError(err).Errorf("Storage %s Failed to identify namespaces %d", s.id, nsid)
+		}
+
+		s.volumes = append(s.volumes, Volume{
+			id:            strconv.Itoa(int(nsid)),
+			namespaceId:   nsid,
+			capacityBytes: ns.Capacity,
+			storage:       s,
+		})
+
+		if err := s.volumes[len(s.volumes)-1].recoverAttachedControllers(); err != nil {
+			log.WithError(err).Errorf("Storage %s Failed to recover controllers", s.id)
+		}
+	}
+
+	return nil
+}
+
 func (s *Storage) findVolume(volumeId string) *Volume {
 	for idx, v := range s.volumes {
 		if v.id == volumeId {
@@ -432,6 +484,10 @@ func (v *Volume) GetCapaityBytes() uint64 {
 	return uint64(v.capacityBytes)
 }
 
+func (v *Volume) GetNamespaceId() nvme.NamespaceIdentifier {
+	return v.namespaceId
+}
+
 func (v *Volume) SetFeature(data []byte) error {
 
 	ctrls := []uint16{v.storage.pfid}
@@ -444,6 +500,23 @@ func (v *Volume) SetFeature(data []byte) error {
 	}
 
 	return v.detach(ctrls)
+}
+
+func (v *Volume) DetachController(controllerId uint16) error {
+	controllerIds, err := v.storage.device.ListAttachedControllers(v.namespaceId)
+	if err != nil {
+		return err
+	}
+
+	for _, ctrlId := range controllerIds {
+		if ctrlId == controllerId {
+			if err := v.detach([]uint16{controllerId}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (v *Volume) attach(controllerIds []uint16) error {
@@ -481,13 +554,38 @@ func (v *Volume) detach(controllerIds []uint16) error {
 	return nil
 }
 
+func (v *Volume) recoverAttachedControllers() error {
+	if len(v.attachedControllers) != 0 {
+		panic(fmt.Sprintf("Volume %s has controllers already attached", v.id))
+	}
+
+	controllerIds, err := v.storage.device.ListAttachedControllers(v.namespaceId)
+	if err != nil {
+		return err
+	}
+
+	for _, controllerId := range controllerIds {
+		found := false
+		for ctrlIdx, ctrl := range v.storage.controllers {
+			if ctrl.controllerId == controllerId {
+				v.attachedControllers = append(v.attachedControllers, &v.storage.controllers[ctrlIdx])
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return fmt.Errorf("Storage Controller ID %d not found", controllerId)
+		}
+	}
+
+	return nil
+}
+
 // Initialize
 func Initialize(ctrl NvmeController) error {
 
-	mgr.ctrl = ctrl.NewNvmeDeviceController()
-
 	log.SetLevel(log.DebugLevel) // TODO: Config file or command-line option
-
 	log.Infof("Initialize %s NVMe Namespace Manager", mgr.id)
 
 	conf, err := loadConfig()
@@ -515,9 +613,19 @@ func Initialize(ctrl NvmeController) error {
 		}
 	}
 
+	mgr.ctrl = ctrl.NewNvmeDeviceController()
+	if err := mgr.ctrl.Initialize(); err != nil {
+		log.WithError(err).Errorf("Failed to initialize device controller")
+		return err
+	}
+
 	event.EventManager.Subscribe(&mgr)
 
 	return nil
+}
+
+func Close() error {
+	return mgr.ctrl.Close()
 }
 
 func (m *Manager) EventHandler(e event.Event) error {
@@ -543,6 +651,9 @@ func (m *Manager) EventHandler(e event.Event) error {
 		}
 
 		storage := &m.storage[idx]
+		storage.fabricId = fabric.FabricId
+		storage.switchId = switchId
+		storage.portId = portId
 
 		if linkEstablished {
 			return storage.LinkEstablishedEventHandler(switchId, portId)
@@ -668,6 +779,9 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 			}
 		}
 	}
+
+	// Recover existing volumes
+	s.recoverVolumes()
 
 	log.Infof("Storage %s - Ready", s.id)
 	s.state = sf.ENABLED_RST

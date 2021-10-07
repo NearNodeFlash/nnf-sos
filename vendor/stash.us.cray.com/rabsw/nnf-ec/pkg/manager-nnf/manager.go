@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
+
+	"stash.us.cray.com/rabsw/nnf-ec/internal/kvstore"
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 	event "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
 	fabric "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric"
 	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries"
 	nvme "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme"
 	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
-
-	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
-
 	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
@@ -27,9 +27,11 @@ func NewDefaultStorageService() StorageServiceApi {
 }
 
 type StorageService struct {
-	id string
+	id    string
+	state sf.ResourceState
 
 	config                   *ConfigFile
+	store                    *kvstore.Store
 	serverControllerProvider server.ServerControllerProvider
 
 	pools       []StoragePool
@@ -43,158 +45,16 @@ type StorageService struct {
 	resourceIndex int
 }
 
-type StoragePool struct {
-	id          string
-	name        string
-	description string
-
-	uid    uuid.UUID
-	policy AllocationPolicy
-
-	allocatedVolume  AllocatedVolume
-	providingVolumes []ProvidingVolume
-
-	storageGroups []*StorageGroup
-	fileSystem    *FileSystem
-
-	storageService *StorageService
-}
-
-type AllocatedVolume struct {
-	id            string
-	capacityBytes int64
-}
-
-type ProvidingVolume struct {
-	volume *nvme.Volume
-}
-
-type Endpoint struct {
-	id           string
-	name         string
-	controllerId uint16
-	state        sf.ResourceState
-
-	fabricId string
-
-	// This is the Server Controller used for managing the endpoint
-	serverCtrl server.ServerControllerApi
-
-	config         *ServerConfig
-	storageService *StorageService
-}
-
-type StorageGroup struct {
-	id string
-
-	volume *AllocatedVolume
-
-	//
-	// Endpoint represents the initiator server which has the Storage Group
-	// accessible as a local storage system. Only a single Endpoint can be
-	// associated with a Storage Group.
-	endpoint *Endpoint
-
-	// Server Storage represents a connection to the physical server endpoint that manages the
-	// storage devices. This can be locally managed on the NNF contorller itself, or
-	// remotely managed through some magical being not yet determined.
-	serverStorage *server.Storage
-
-	// If a file system is present on the parent Storage Pool, this object
-	// represents the Exported File Share for this Storage Group, or null
-	// if no file-system is present.
-	fileShare *ExportedFileShare
-
-	storagePool    *StoragePool
-	storageService *StorageService
-}
-
-type FileSystem struct {
-	id          string
-	accessModes []string
-
-	fsApi  server.FileSystemApi
-	shares []ExportedFileShare
-
-	storagePool    *StoragePool
-	storageService *StorageService
-}
-
-type ExportedFileShare struct {
-	id        string
-	mountRoot string
-
-	storageGroup *StorageGroup
-	fileSystem   *FileSystem
-}
-
-const (
-	DefaultCapacitySourceId            = "0"
-	DefaultStorageServiceId            = "unassigned" // This is loaded from config
-	DefaultStoragePoolCapacitySourceId = "0"
-	DefaultAllocatedVolumeId           = "0"
-)
-
-func isStorageService(storageServiceId string) bool { return storageServiceId == storageService.id }
-func findStorageService(storageServiceId string) *StorageService {
-	if !isStorageService(storageServiceId) {
-		return nil
-	}
-
-	return &storageService
-}
-
-func findStoragePool(storageServiceId, storagePoolId string) (*StorageService, *StoragePool) {
-	s := findStorageService(storageServiceId)
-	if s == nil {
-		return nil, nil
-	}
-
-	return s, s.findStoragePool(storagePoolId)
-}
-
-func findStorageGroup(storageServiceId, storageGroupId string) (*StorageService, *StorageGroup) {
-	s := findStorageService(storageServiceId)
-	if s == nil {
-		return nil, nil
-	}
-
-	return s, s.findStorageGroup(storageGroupId)
-}
-
-func findEndpoint(storageServiecId, endpointId string) (*StorageService, *Endpoint) {
-	s := findStorageService(storageServiecId)
-	if s == nil {
-		return nil, nil
-	}
-
-	return s, s.findEndpoint(endpointId)
-}
-
-func findFileSystem(storageServiceId, fileSystemId string) (*StorageService, *FileSystem) {
-	s := findStorageService(storageServiceId)
-	if s == nil {
-		return nil, nil
-	}
-
-	return s, s.findFileSystem(fileSystemId)
-}
-
-func findExportedFileShare(storageServiceId, fileSystemId, fileShareId string) (*StorageService, *FileSystem, *ExportedFileShare) {
-	s, fs := findFileSystem(storageServiceId, fileSystemId)
-	if fs == nil {
-		return nil, nil, nil
-	}
-
-	return s, fs, fs.findExportedFileShare(fileShareId)
-}
-
 func (s *StorageService) OdataId() string {
 	return fmt.Sprintf("/redfish/v1/StorageServices/%s", s.id)
 }
 
 func (s *StorageService) OdataIdRef(ref string) sf.OdataV4IdRef {
 	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", s.OdataId(), ref)}
+}
+
+func (s *StorageService) GetStore() *kvstore.Store {
+	return s.store
 }
 
 func (s *StorageService) findStoragePool(storagePoolId string) *StoragePool {
@@ -237,6 +97,31 @@ func (s *StorageService) findFileSystem(fileSystemId string) *FileSystem {
 	return nil
 }
 
+func (s *StorageService) newStoragePool(name string, description string, policy AllocationPolicy) *StoragePool {
+	// Find a free Storage Pool Id
+	var poolId = -1
+	for _, p := range s.pools {
+		id, _ := strconv.Atoi(p.id)
+
+		if poolId <= id {
+			poolId = id
+		}
+	}
+
+	poolId = poolId + 1
+
+	s.pools = append(s.pools, StoragePool{
+		id:             strconv.Itoa(poolId),
+		name:           name,
+		description:    description,
+		uid:            s.allocateStoragePoolUid(),
+		policy:         policy,
+		storageService: s,
+	})
+
+	return &s.pools[len(s.pools)-1]
+}
+
 func (s *StorageService) createStoragePool(uid uuid.UUID, name string, description string, policy AllocationPolicy, providingVolumes []ProvidingVolume) *StoragePool {
 
 	// Find a free Storage Pool Id
@@ -251,9 +136,9 @@ func (s *StorageService) createStoragePool(uid uuid.UUID, name string, descripti
 
 	poolId = poolId + 1
 
-	capacityBytes := int64(0)
+	capacityBytes := uint64(0)
 	for _, v := range providingVolumes {
-		capacityBytes += int64(v.volume.GetCapaityBytes())
+		capacityBytes += v.volume.GetCapaityBytes()
 	}
 
 	p := &StoragePool{
@@ -278,6 +163,16 @@ func (s *StorageService) createStoragePool(uid uuid.UUID, name string, descripti
 	return p
 }
 
+func (s *StorageService) findStorage(sn string) *nvme.Storage {
+	for _, storage := range nvme.GetStorage() {
+		if storage.SerialNumber() == sn {
+			return storage
+		}
+	}
+
+	return nil
+}
+
 func (s *StorageService) createStorageGroup(sp *StoragePool, endpoint *Endpoint) *StorageGroup {
 
 	// Find a free Storage Group Id
@@ -299,6 +194,11 @@ func (s *StorageService) createStorageGroup(sp *StoragePool, endpoint *Endpoint)
 		storagePool:    sp,
 		storageService: s,
 	}
+}
+
+func (s *StorageService) addStorageGroup(sg StorageGroup) {
+	s.groups = append(s.groups, sg)
+	sg.storagePool.storageGroups = append(sg.storagePool.storageGroups, &s.groups[len(s.groups)-1])
 }
 
 func (s *StorageService) deleteStorageGroup(sg *StorageGroup) {
@@ -355,129 +255,65 @@ func (s *StorageService) createFileSystem(sp *StoragePool, fsApi server.FileSyst
 	}
 }
 
-func (p *StoragePool) OdataId() string {
-	return fmt.Sprintf("%s/StoragePools/%s", p.storageService.OdataId(), p.id)
-}
+const (
+	DefaultCapacitySourceId            = "0"
+	DefaultStorageServiceId            = "unassigned" // This is loaded from config
+	DefaultStoragePoolCapacitySourceId = "0"
+	DefaultAllocatedVolumeId           = "0"
+)
 
-func (p *StoragePool) OdataIdRef(ref string) sf.OdataV4IdRef {
-	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", p.OdataId(), ref)}
-}
-
-func (p *StoragePool) isCapacitySource(capacitySourceId string) bool {
-	return capacitySourceId == DefaultStoragePoolCapacitySourceId
-}
-
-func (p *StoragePool) isAllocatedVolume(volumeId string) bool {
-	return volumeId == DefaultAllocatedVolumeId
-}
-
-func (p *StoragePool) capacitySourcesGet() []sf.CapacityCapacitySource {
-	return []sf.CapacityCapacitySource{
-		{
-			OdataId:   p.OdataId() + "/CapacitySources",
-			OdataType: "#CapacitySource.v1_0_0.CapacitySource",
-			Name:      "Capacity Source",
-			Id:        DefaultStoragePoolCapacitySourceId,
-
-			ProvidedCapacity: sf.CapacityV120Capacity{
-				// TODO
-			},
-
-			ProvidingVolumes: p.OdataIdRef(fmt.Sprintf("/CapacitySources/%s/ProvidingVolumes", DefaultStoragePoolCapacitySourceId)),
-		},
-	}
-}
-
-func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGroup {
-	for _, sg := range p.storageGroups {
-		if sg.endpoint.id == endpoint.id {
-			return sg
-		}
+func isStorageService(storageServiceId string) bool { return storageServiceId == storageService.id }
+func findStorageService(storageServiceId string) *StorageService {
+	if !isStorageService(storageServiceId) {
+		return nil
 	}
 
-	return nil
+	return &storageService
 }
 
-func (ep *Endpoint) OdataId() string {
-	return fmt.Sprintf("%s/Endpoints/%s", ep.storageService.OdataId(), ep.id)
-}
-
-func (sg *StorageGroup) OdataId() string {
-	return fmt.Sprintf("%s/StorageGroups/%s", sg.storageService.OdataId(), sg.id)
-}
-
-func (sg *StorageGroup) OdataIdRef(ref string) sf.OdataV4IdRef {
-	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", sg.OdataId(), ref)}
-}
-
-func (sg *StorageGroup) status() *sf.ResourceStatus {
-	state := sg.serverStorage.GetStatus().State()
-
-	health := sf.OK_RH
-	if state != sf.ENABLED_RST {
-		health = sf.WARNING_RH
+func findStoragePool(storageServiceId, storagePoolId string) (*StorageService, *StoragePool) {
+	s := findStorageService(storageServiceId)
+	if s == nil {
+		return nil, nil
 	}
 
-	return &sf.ResourceStatus{Health: health, State: state}
+	return s, s.findStoragePool(storagePoolId)
 }
 
-func (fs *FileSystem) OdataId() string {
-	return fmt.Sprintf("%s/FileSystems/%s", fs.storageService.OdataId(), fs.id)
-}
-
-func (fs *FileSystem) OdataIdRef(ref string) sf.OdataV4IdRef {
-	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", fs.OdataId(), ref)}
-}
-
-func (fs *FileSystem) findExportedFileShare(id string) *ExportedFileShare {
-	for fileShareIdx, fileShare := range fs.shares {
-		if fileShare.id == id {
-			return &fs.shares[fileShareIdx]
-		}
+func findStorageGroup(storageServiceId, storageGroupId string) (*StorageService, *StorageGroup) {
+	s := findStorageService(storageServiceId)
+	if s == nil {
+		return nil, nil
 	}
 
-	return nil
+	return s, s.findStorageGroup(storageGroupId)
 }
 
-func (fs *FileSystem) createFileShare(sg *StorageGroup, mountRoot string) *ExportedFileShare {
-	var fileShareId = -1
-	for _, fileShare := range fs.shares {
-		id, _ := strconv.Atoi(fileShare.id)
-
-		if fileShareId <= id {
-			fileShareId = id
-		}
+func findEndpoint(storageServiecId, endpointId string) (*StorageService, *Endpoint) {
+	s := findStorageService(storageServiecId)
+	if s == nil {
+		return nil, nil
 	}
 
-	fileShareId = fileShareId + 1
-
-	return &ExportedFileShare{
-		id:           strconv.Itoa(fileShareId),
-		storageGroup: sg,
-		mountRoot:    mountRoot,
-		fileSystem:   fs,
-	}
+	return s, s.findEndpoint(endpointId)
 }
 
-func (sh *ExportedFileShare) initialize(mountpoint string) error {
-
-	opts := server.FileSystemOptions{
-		"mountpoint": mountpoint,
+func findFileSystem(storageServiceId, fileSystemId string) (*StorageService, *FileSystem) {
+	s := findStorageService(storageServiceId)
+	if s == nil {
+		return nil, nil
 	}
 
-	return sh.storageGroup.serverStorage.CreateFileSystem(sh.fileSystem.fsApi, opts)
+	return s, s.findFileSystem(fileSystemId)
 }
 
-func (sh *ExportedFileShare) getStatus() *sf.ResourceStatus {
-
-	return &sf.ResourceStatus{
-		Health: sf.OK_RH,
-		State:  sh.storageGroup.serverStorage.GetStatus().State(),
+func findFileShare(storageServiceId, fileSystemId, fileShareId string) (*StorageService, *FileSystem, *FileShare) {
+	s, fs := findFileSystem(storageServiceId, fileSystemId)
+	if fs == nil {
+		return nil, nil, nil
 	}
-}
 
-func (sh *ExportedFileShare) OdataId() string {
-	return fmt.Sprintf("%s/ExportedFileShares/%s", sh.fileSystem.OdataId(), sh.id)
+	return s, fs, fs.findFileShare(fileShareId)
 }
 
 func (s *StorageService) Id() string {
@@ -494,6 +330,7 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 
 	storageService = StorageService{
 		id:                       DefaultStorageServiceId,
+		state:                    sf.STARTING_RST,
 		serverControllerProvider: ctrl.ServerControllerProvider(),
 	}
 
@@ -527,8 +364,19 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 	// by the NNF Storage Service.
 	s.resourceIndex = strings.Count(s.OdataIdRef("/StoragePool/0").OdataId, "/")
 
-	// Subscribe ourselves to events
-	event.EventManager.Subscribe(s)
+	// Create the key-value storage database
+	{
+		s.store, err = kvstore.Open("nnf.db", false)
+		if err != nil {
+			return err
+		}
+
+		s.store.Register([]kvstore.Registry{
+			NewStoragePoolRecoveryRegistry(s),
+			NewStorageGroupRecoveryRegistry(s),
+			NewFileSystemRecoveryRegistry(s),
+		})
+	}
 
 	// Initialize the Server Manager - considered internal to
 	// the NNF Manager
@@ -537,13 +385,21 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 		return err
 	}
 
+	// Subscribe ourselves to events
+	event.EventManager.Subscribe(s)
+
 	return nil
+}
+
+func (s *StorageService) Close() error {
+	return s.store.Close()
 }
 
 func (s *StorageService) EventHandler(e event.Event) error {
 
 	log.Infof("Storage Service: Event Received %+v", e)
 
+	// Upstream link events
 	linkEstablished := e.Is(msgreg.UpstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedUpstreamLinkEstablishedFabric("", ""))
 	linkDropped := e.Is(msgreg.UpstreamLinkDroppedFabric("", ""))
 
@@ -584,6 +440,18 @@ func (s *StorageService) EventHandler(e event.Event) error {
 
 			endpoint.serverCtrl = server.NewDisabledServerController()
 			endpoint.state = sf.UNAVAILABLE_OFFLINE_RST
+		}
+
+		return nil
+	}
+
+	// Check if the fabric is ready; that is all devices are enumerated and discovery
+	// is complete. We
+	if e.Is(msgreg.FabricReadyNnf("")) {
+		s.state = sf.ENABLED_RST
+		if err := s.store.Replay(); err != nil {
+			log.WithError(err).Errorf("Failed to replay storage database")
+			return err
 		}
 	}
 
@@ -719,22 +587,25 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		return ec.NewErrNotAcceptable().WithError(err).WithCause("Insufficient capacity available")
 	}
 
-	// All checks have completed; we're ready to create the storage pool
-	uid := s.allocateStoragePoolUid()
+	p := s.newStoragePool(model.Name, model.Description, policy)
 
-	log.Infof("Allocating storage for PID %s", uid.String())
-	volumes, err := policy.Allocate(uid)
-	if err != nil {
+	updateFunc := func() (err error) {
+		p.providingVolumes, err = policy.Allocate(p.uid)
+		if err != nil {
+			return err
+		}
 
-		// TOOD: there may be partial volumes for this pool - we need to mark
-		// them for delete in the ledger and attempt to release them.
+		p.allocatedVolume = AllocatedVolume{
+			id:            DefaultAllocatedVolumeId,
+			capacityBytes: p.GetCapacityBytes(),
+		}
 
-		log.WithError(err).Errorf("Storage Policy allocation failed.")
-		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to allocate storage volumes")
+		return nil
 	}
 
-	p := s.createStoragePool(uid, model.Name, model.Description, policy, volumes)
-	s.pools = append(s.pools, *p)
+	if err := NewPersistentObject(p, updateFunc, storagePoolStorageCreateStartLogEntryType, storagePoolStorageCreateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to allocate storage volumes")
+	}
 
 	return s.StorageServiceIdStoragePoolIdGet(storageServiceId, p.id, model)
 }
@@ -753,13 +624,13 @@ func (*StorageService) StorageServiceIdStoragePoolIdGet(storageServiceId, storag
 	model.BlockSizeBytes = 4096 // TODO
 	model.Capacity = sf.CapacityV100Capacity{
 		Data: sf.CapacityV100CapacityInfo{
-			AllocatedBytes:   p.allocatedVolume.capacityBytes,
-			ProvisionedBytes: p.allocatedVolume.capacityBytes,
+			AllocatedBytes:   int64(p.allocatedVolume.capacityBytes),
+			ProvisionedBytes: int64(p.allocatedVolume.capacityBytes),
 			ConsumedBytes:    0, // TODO
 		},
 	}
 
-	model.CapacityBytes = p.allocatedVolume.capacityBytes
+	model.CapacityBytes = int64(p.allocatedVolume.capacityBytes)
 	model.CapacitySources = p.capacitySourcesGet()
 	model.CapacitySourcesodataCount = int64(len(model.CapacitySources))
 
@@ -803,15 +674,17 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 		}
 	}
 
-	for _, pv := range p.providingVolumes {
-		if err := nvme.DeleteVolume(pv.volume); err != nil {
-			log.WithError(err).Errorf("Failed to delete volume from storage pool %s", p.id)
-			return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("Failed to delete volume"))
-		}
+	deleteFunc := func() error {
+		return p.deallocateVolumes()
 
 		// TODO: If any delete fails, we're left with dangling volumes preventing
 		// further deletion. Need to fix or recover from this. Maybe a transaction
 		// log.
+	}
+
+	if err := DeletePersistentObject(p, deleteFunc, storagePoolStorageDeleteStartLogEntryType, storagePoolStorageDeleteCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to delete volume from storage pool %s", p.id)
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("Failed to delete volume"))
 	}
 
 	for idx, pool := range s.pools {
@@ -974,21 +847,21 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 
 	// Everything validated OK - create the Storage Group
 
-	sg := s.createStorageGroup(sp, ep)
-	sp.storageGroups = append(sp.storageGroups, sg)
-	s.groups = append(s.groups, *sg)
+	sg := s.createStorageGroup(sp, ep) // TODO: Rename to newStorageGroup
+	s.addStorageGroup(*sg)             // TODO: Move to createStorageGroup
 
-	model.Id = sg.id
-	model.OdataId = sg.OdataId()
-
-	// And now we attempt to bring-up the storage group. Any error here
-	// is logged, but does not cause the request to fail; instead the
-	// resource status reflects the outcome.
-
-	for _, volume := range sp.providingVolumes {
-		if err := nvme.AttachControllers(volume.volume, []uint16{sg.endpoint.controllerId}); err != nil {
-			log.WithError(err).Errorf("Failed to attach controllers")
+	updateFunc := func() error {
+		for _, v := range sp.providingVolumes {
+			if err := nvme.AttachControllers(v.volume, []uint16{sg.endpoint.controllerId}); err != nil {
+				return err
+			}
 		}
+
+		return nil
+	}
+
+	if err := NewPersistentObject(sg, updateFunc, storageGroupCreateStartLogEntryType, storageGroupCreateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause("failed to create storage group")
 	}
 
 	return s.StorageServiceIdStorageGroupIdGet(storageServiceId, sg.id, model)
@@ -1164,6 +1037,10 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 	sp.fileSystem = fs
 	s.fileSystems = append(s.fileSystems, *fs)
 
+	if err := UpdatePersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to update", fs.id))
+	}
+
 	return s.StorageServiceIdFileSystemIdGet(storageServiceId, fs.id, model)
 }
 
@@ -1177,7 +1054,7 @@ func (*StorageService) StorageServiceIdFileSystemIdGet(storageServiceId, fileSys
 	model.Id = fs.id
 	model.OdataId = fs.OdataId()
 
-	model.CapacityBytes = fs.storagePool.allocatedVolume.capacityBytes
+	model.CapacityBytes = int64(fs.storagePool.allocatedVolume.capacityBytes)
 	model.StoragePool = sf.OdataV4IdRef{OdataId: fs.storagePool.OdataId()}
 	model.ExportedShares = fs.OdataIdRef("/ExportedFileShares")
 
@@ -1282,7 +1159,7 @@ refreshState:
 
 // StorageServiceIdFileSystemIdExportedShareIdGet -
 func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, exportedShareId string, model *sf.FileShareV120FileShare) error {
-	_, fs, sh := findExportedFileShare(storageServiceId, fileSystemId, exportedShareId)
+	_, fs, sh := findFileShare(storageServiceId, fileSystemId, exportedShareId)
 	if sh == nil {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("File share '%s' not found", exportedShareId))
 	}
@@ -1300,7 +1177,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdGet(storageSer
 
 // StorageServiceIdFileSystemIdExportedShareIdDelete -
 func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storageServiceId, fileSystemId, exportedShareId string) error {
-	_, fs, sh := findExportedFileShare(storageServiceId, fileSystemId, exportedShareId)
+	_, fs, sh := findFileShare(storageServiceId, fileSystemId, exportedShareId)
 	if sh == nil {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("File share '%s' not found", exportedShareId))
 	}

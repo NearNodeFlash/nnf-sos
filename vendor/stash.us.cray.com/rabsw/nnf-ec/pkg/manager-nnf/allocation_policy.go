@@ -180,7 +180,7 @@ func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]ProvidingVolume, erro
 		}
 
 		remainingCapacityBytes = remainingCapacityBytes - volume.GetCapaityBytes()
-		volumes = append(volumes, ProvidingVolume{volume: volume})
+		volumes = append(volumes, ProvidingVolume{storage: storage, volume: volume})
 	}
 
 	return volumes, nil

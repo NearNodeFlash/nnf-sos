@@ -27,6 +27,9 @@ func (cliNvmeController) NewNvmeDeviceController() NvmeDeviceController {
 
 type cliNvmeDeviceController struct{}
 
+func (ctrl cliNvmeDeviceController) Initialize() error { return nil }
+func (ctrl cliNvmeDeviceController) Close() error      { return nil }
+
 func (cliNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	spath := fabric.GetSwitchPath(fabricId, switchId)
 	if spath == nil {
@@ -157,6 +160,39 @@ func (d *cliDevice) ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdentif
 	}
 
 	return nsids, scanner.Err()
+}
+
+func (d *cliDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier) ([]uint16, error) {
+	// Example Output:
+	// 	  # nvme list-ctrl --namespace-id=1 /dev/nvme1
+	//    num of ctrls present: 1
+	//    [   0]:0x1
+
+	// NOTE: Binary format would be create here as it returns an nvme.CtrlList; but this format is missing
+	//       from the latest nvme-cli
+
+	rsp, err := d.command(fmt.Sprintf("list-ctrl %s --namespace-id=%d", d.dev(), namespaceId))
+	if err != nil {
+		return nil, err
+	}
+
+	controllerIds := make([]uint16, 0)
+	scanner := bufio.NewScanner(strings.NewReader(rsp))
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if !strings.HasPrefix(line, "num of ctrls prsent: ") {
+
+			controllerId, err := strconv.ParseUint(line[strings.Index(line, ":0x")+len(":0x"):len(line)-1], 16, 16)
+			if err != nil {
+				return nil, err
+			}
+
+			controllerIds = append(controllerIds, uint16(controllerId))
+		}
+	}
+
+	return controllerIds, nil
 }
 
 func (d *cliDevice) CreateNamespace(capacityBytes uint64, metadata []byte) (nvme.NamespaceIdentifier, error) {

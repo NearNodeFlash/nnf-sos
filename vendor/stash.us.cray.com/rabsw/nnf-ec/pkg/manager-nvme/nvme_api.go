@@ -9,6 +9,9 @@ type NvmeController interface {
 }
 
 type NvmeDeviceController interface {
+	Initialize() error
+	Close() error
+	
 	NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error)
 }
 
@@ -27,6 +30,7 @@ type NvmeDeviceApi interface {
 	OnlineController(controllerId uint16) error
 
 	ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdentifier, error)
+	ListAttachedControllers(namespaceId nvme.NamespaceIdentifier) ([]uint16, error)
 
 	CreateNamespace(capacityBytes uint64, metadata []byte) (nvme.NamespaceIdentifier, error)
 	DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error

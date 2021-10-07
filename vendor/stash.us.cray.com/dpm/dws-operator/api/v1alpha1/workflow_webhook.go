@@ -165,7 +165,7 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 
 	err := ruleParser.ReadRules()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for i, directive := range workflow.Spec.DWDirectives {
@@ -212,13 +212,18 @@ type RuleList struct {
 // ReadRules imports the RulesList into usable go structures.
 func (r *RuleList) ReadRules() error {
 	ruleSetList := &DWDirectiveRuleList{}
+	ns := client.InNamespace(os.Getenv("POD_NAMESPACE"))
 	listOpts := []client.ListOption{
 		// Use all the DWDirectiveRules in the namespace we're running in
-		client.InNamespace(os.Getenv("POD_NAMESPACE")),
+		ns,
 	}
 
 	if err := c.List(context.TODO(), ruleSetList, listOpts...); err != nil {
 		return err
+	}
+
+	if len(ruleSetList.Items) == 0 {
+		return fmt.Errorf("Unable to find ruleset in namespace: %s", ns)
 	}
 
 	r.rules = []dwdparse.DWDirectiveRuleSpec{}

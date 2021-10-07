@@ -27,6 +27,10 @@ func (s *DefaultApiService) Initialize(ctrl NnfControllerInterface) error {
 	return s.ss.Initialize(ctrl)
 }
 
+func (s *DefaultApiService) Close() error {
+	return s.ss.Close()
+}
+
 // RedfishV1StorageServicesGet -
 func (s *DefaultApiService) RedfishV1StorageServicesGet(w http.ResponseWriter, r *http.Request) {
 

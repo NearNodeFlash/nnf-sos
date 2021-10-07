@@ -25,6 +25,10 @@ func (r *DefaultApiRouter) Start() error {
 	return nil
 }
 
+func (r *DefaultApiRouter) Close() error {
+	return r.servicer.Close()
+}
+
 func (r *DefaultApiRouter) Routes() ec.Routes {
 	s := r.servicer
 	return ec.Routes{

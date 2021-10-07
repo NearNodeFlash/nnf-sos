@@ -1,0 +1,31 @@
+{
+    "@Redfish.Copyright": "Copyright 2021 HOE. All rights reserved.",
+    "@odata.type": "#MessageRegistry.v1_4_0.MessageRegistry",
+    "Id": "Nnf.1.0.0",
+    "Name": "NNF Message Registry",
+    "Language": "en",
+    "Description": "This registry defines the base messages for Near Node Flash (NNF)",
+    "RegistryPrefix": "Nnf",
+    "RegistryVersion": "1.0.0",
+    "OwningEntity": "HPE",
+    "Messages": {
+        "FabricReady": {
+            "Description": "Indicates that the fabric and all child resources are ready",
+            "LogDescription": "This message shall be used to indicate the fabric resource has completed its startup sequence and is ready for operation",
+            "Message": "The fabric %1 is ready",
+            "Severity": "OK", 
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "ArgDescriptions": [
+                "The fabric identifier."
+            ],
+            "ArgLongDescriptions": [
+                "This argument shall contain the fabric resource identifier."
+            ],
+            "Resolution": "None"
+        }
+    }
+}

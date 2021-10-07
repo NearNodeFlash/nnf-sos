@@ -22,6 +22,9 @@ func (SwitchtecNvmeController) NewNvmeDeviceController() NvmeDeviceController {
 
 type SwitchtecNvmeDeviceController struct{}
 
+func (SwitchtecNvmeDeviceController) Initialize() error { return nil }
+func (SwitchtecNvmeDeviceController) Close() error      { return nil }
+
 func (SwitchtecNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	return newNvmeDevice(fabricId, switchId, portId)
 }
@@ -113,6 +116,16 @@ func (d *nvmeDevice) ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdenti
 	}
 
 	return ret[:count], nil
+}
+
+// ListAttachedControllers -
+func (d *nvmeDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier) ([]uint16, error) {
+	list, err := d.dev.IdentifyNamespaceControllerList(uint32(namespaceId))
+	if err != nil {
+		return nil, err
+	}
+
+	return list.Identifiers[:list.Num], nil
 }
 
 // GetNamespace -

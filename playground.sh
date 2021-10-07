@@ -27,6 +27,7 @@ EOF
     # Let our first kind-worker double as a generic worker for the SLC and as a
     # rabbit for the NLC.
     kubectl label node kind-worker cray.nnf.manager=true
+    kubectl label node kind-worker cray.wlm.manager=true
 
     for NODE in $(kubectl get nodes --no-headers | awk '{print $1;}' | grep --invert-match "control-plane"); do
         kubectl label node $NODE cray.nnf.node=true
