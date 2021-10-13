@@ -7,22 +7,31 @@ PROG=$(basename "$0")
 
 printhelp()
 {
-  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS]"
+  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS | -i RABBITS] [-a ALLOCATION_COUNT] [-Y] [-X]"
   echo
   echo "  -w WORKFLOW  Resource name of the workflow."
   echo "  -c COUNT     Number of rabbit nodes to use."
+  echo "  -i RABBITS   Comma-separated list of rabbit nodes to use."
   echo "  -x XRABBITS  Comma-separated list of rabbit nodes to exclude."
+  echo "  -a ALLOCATION_COUNT Number of allocations per OST rabbit node (default 1)."
+  echo "  -Y           Treat the OSTs as asymmetric."
+  echo "  -X           Exclude rabbit nodes that have an existing nnfnodestorage."
   echo
   exit 2
 }
 
+ALLOCATION_COUNT=1
 OPTIND=1
-while getopts ":hw:c:x:" opt
+while getopts ":hw:c:x:i:a:YX" opt
 do
   case $opt in
   w) WORKFLOW=$OPTARG ;;
   c) COUNT=$OPTARG ;;
+  i) IRABBITS=$OPTARG ;;
   x) XRABBITS=$OPTARG ;;
+  a) ALLOCATION_COUNT=$OPTARG ;;
+  Y) ASYMMETRIC_OSTS=yes ;;
+  X) XNNFNODESTORAGES=yes ;;
   *) printhelp ;;
   esac
 done
@@ -33,10 +42,30 @@ then
   echo "$PROG: Must specify -w"
   exit 2
 fi
+if [[ -n $XRABBITS && -n $XNNFNODESTORAGES ]]
+then
+  echo "$PROG: Do not use -x and -X together"
+  exit 2
+fi
 if [[ -n $XRABBITS ]]
 then
   # Flip commas to pipes, to turn it into a regex.
   XRABBITS=$(echo "$XRABBITS" | tr ',' '|')
+elif [[ -n $XNNFNODESTORAGES ]]
+then
+  # Get a list of rabbits that have an existing nnfnodestorage.  Make a
+  # regex for them.
+  XRABBITS=$(kubectl get nnfnodestorages -A -o json | jq -Mr '.items[].metadata|.namespace' | paste -s -d'|' -)
+fi
+if [[ -n $XRABBITS && -n $IRABBITS ]]
+then
+  echo "$PROG: Do not use -i and -x/-X together"
+  exit 2
+fi
+if [[ -n $IRABBITS ]]
+then
+  # Flip commas to pipes, to turn it into a regex.
+  IRABBITS=$(echo "$IRABBITS" | tr ',' '|')
 fi
 
 patch_workflow()
@@ -67,6 +96,14 @@ query_rabbits()
   if [[ -n $XRABBITS ]]
   then
     RABBITS=$(echo "$RABBITS" | grep -Ev "$XRABBITS")
+  elif [[ -n $IRABBITS ]]
+  then
+    RABBITS=$(echo "$RABBITS" | grep -E "$IRABBITS")
+  fi
+  if which shuf 1> /dev/null 2>&1
+  then
+    # Shuffle with the shuf(1) command when we can find it.
+    RABBITS=$(echo "$RABBITS" | shuf)
   fi
   if [[ -n $COUNT ]]
   then
@@ -115,30 +152,33 @@ query_servers()
 
 build_ost_hosts()
 {
-  echo Building ost hosts...
   # Rabbit 0 and 1 in the list are used for 'mgt' and 'mdt'.
   # 'ost' rabbits start at 2.
-  for ((i = 2; i < RABBIT_COUNT; i++)); do
-accumulator=$(cat << EOF
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[i]}
-EOF
-)
-
-    if [ "$hostString" == "" ]; then
-hostString=$(cat << EOF
-$accumulator
-EOF
-)
-    else
-hostString=$(cat << EOF
-$hostString
-$accumulator
-EOF
-)
-    fi
-
-  done
+  accumulator=""
+  if [[ -n $ASYMMETRIC_OSTS ]]
+  then
+    # List each OST rabbit node with its own "ost" label in its own
+    # "hosts" array.
+    # This would allow asymmetric OSTs.
+    for ((i = 2; i < RABBIT_COUNT; i++)); do
+      accumulator+="- allocationSize: 10995116277760\n"
+      accumulator+="  label: ost\n"
+      accumulator+="  hosts:\n"
+      accumulator+="  - allocationCount: $ALLOCATION_COUNT\n"
+      accumulator+="    name: ${RABBIT_ARRAY[i]}\n"
+    done
+  else
+    # List all OST rabbit nodes in the same "hosts" array.  This implies that
+    # the OSTs are symmetric.
+    accumulator+="- allocationSize: 10995116277760\n"
+    accumulator+="  label: ost\n"
+    accumulator+="  hosts:\n"
+    for ((i = 2; i < RABBIT_COUNT; i++)); do
+      accumulator+="  - allocationCount: $ALLOCATION_COUNT\n"
+      accumulator+="    name: ${RABBIT_ARRAY[i]}\n"
+    done
+  fi
+  echo -e "$accumulator"
 }
 
 patch_servers()
@@ -166,7 +206,7 @@ data:
 - allocationSize: 10995116277760
   label: ost
   hosts:
-  - allocationCount: 1
+  - allocationCount: $ALLOCATION_COUNT
     name: ${RABBIT_ARRAY[0]}
 EOF
     }
@@ -191,7 +231,7 @@ data:
 - allocationSize: 10995116277760
   label: ost
   hosts:
-  - allocationCount: 1
+  - allocationCount: $ALLOCATION_COUNT
     name: ${RABBIT_ARRAY[1]}
 EOF
     }
@@ -199,7 +239,8 @@ EOF
   *)
     {
 
-    build_ost_hosts
+    echo Building ost hosts...
+    ost_section=$(build_ost_hosts)
 
 cat > $SERVERS_PATCH << EOF
 kind: Servers
@@ -216,10 +257,7 @@ data:
   hosts:
   - allocationCount: 1
     name: ${RABBIT_ARRAY[1]}
-- allocationSize: 10995116277760
-  label: ost
-  hosts:
-$hostString
+$ost_section
 EOF
     }
     ;;
