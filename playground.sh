@@ -48,6 +48,21 @@ if [ $CMD == "kind-reset" ]; then
     ./playground.sh kind-create
 fi
 
+if [[ $CMD = restart-pods ]]; then
+    ./playground.sh pause all
+    while :
+    do
+        cnt=$(kubectl get pods -A | grep -E 'dws|nnf' | wc -l)
+        (( cnt == 0 )) && break
+    done
+    ./playground.sh resume all
+    while :
+    do
+        waitfor=$(kubectl get pods -A | grep -E 'dws|nnf' | grep " 0/")
+        [[ -z $waitfor ]] && break
+    done
+fi
+
 if [ $CMD == "busybox" ]; then
     kubectl run -it --rm --restart=Never busybox --image=radial/busyboxplus:curl sh
 fi
