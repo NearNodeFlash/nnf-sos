@@ -23,7 +23,7 @@ func (*DisabledServerController) GetServerInfo() ServerInfo {
 	return ServerInfo{}
 }
 
-func (*DisabledServerController) NewStorage(uuid.UUID) *Storage {
+func (*DisabledServerController) NewStorage(uuid.UUID, []StorageNamespace) *Storage {
 	return nil
 }
 
@@ -31,8 +31,8 @@ func (*DisabledServerController) Delete(*Storage) error {
 	return ErrServerControllerDisabled
 }
 
-func (*DisabledServerController) GetStatus(*Storage) StorageStatus {
-	return StorageStatus_Disabled
+func (*DisabledServerController) GetStatus(*Storage) (StorageStatus, error) {
+	return StorageStatus_Disabled, nil
 }
 
 func (*DisabledServerController) CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error {

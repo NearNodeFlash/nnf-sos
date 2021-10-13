@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/formatter"
 )
 
@@ -21,8 +22,16 @@ var Deprecations = deprecations{}
 
 func (d deprecations) CustomReporter() Deprecation {
 	return Deprecation{
-		Message: "Support for custom reporters has been removed in V2.  Please read the documentation linked to below for Ginkgo's new behavior and for a migration path:",
+		Message: "You are using a custom reporter.  Support for custom reporters will likely be removed in V2.  Most users were using them to generate junit or teamcity reports and this functionality will be merged into the core reporter.  In addition, Ginkgo 2.0 will support emitting a JSON-formatted report that users can then manipulate to generate custom reports.\n\n{{red}}{{bold}}If this change will be impactful to you please leave a comment on {{cyan}}{{underline}}https://github.com/onsi/ginkgo/issues/711{{/}}",
 		DocLink: "removed-custom-reporters",
+		Version: "1.16.0",
+	}
+}
+
+func (d deprecations) V1Reporter() Deprecation {
+	return Deprecation{
+		Message: "You are using a V1 Ginkgo Reporter.  Please update your custom reporter to the new V2 Reporter interface.",
+		DocLink: "changed-reporter-interface",
 		Version: "1.16.0",
 	}
 }
@@ -43,11 +52,11 @@ func (d deprecations) Measure() Deprecation {
 	}
 }
 
-func (d deprecations) CurrentGinkgoTestDescription() Deprecation {
+func (d deprecations) ParallelNode() Deprecation {
 	return Deprecation{
-		Message: "CurrentGinkgoTestDescription() is deprecated in Ginkgo V2.  Use CurrentSpecReport() instead.",
-		DocLink: "changed-currentginkgotestdescription",
-		Version: "1.16.0",
+		Message: "GinkgoParallelNode is deprecated and will be removed in Ginkgo V2.  Please use GinkgoParallelProcess instead.",
+		DocLink: "renamed-ginkgoparallelnode",
+		Version: "1.16.5",
 	}
 }
 
@@ -62,14 +71,6 @@ func (d deprecations) Convert() Deprecation {
 func (d deprecations) Blur() Deprecation {
 	return Deprecation{
 		Message: "The blur command is deprecated in Ginkgo V2.  Use 'ginkgo unfocus' instead.",
-		Version: "1.16.0",
-	}
-}
-
-func (d deprecations) Nodot() Deprecation {
-	return Deprecation{
-		Message: "The nodot command is deprecated in Ginkgo V2.  Please either dot-import Ginkgo or use the package identifier in your code to references objects and types provided by Ginkgo and Gomega.",
-		DocLink: "removed-ginkgo-nodot",
 		Version: "1.16.0",
 	}
 }
@@ -106,8 +107,14 @@ func (d *DeprecationTracker) DidTrackDeprecations() bool {
 }
 
 func (d *DeprecationTracker) DeprecationsReport() string {
-	out := formatter.F("{{light-yellow}}You're using deprecated Ginkgo functionality:{{/}}\n")
+	out := formatter.F("\n{{light-yellow}}You're using deprecated Ginkgo functionality:{{/}}\n")
 	out += formatter.F("{{light-yellow}}============================================={{/}}\n")
+	out += formatter.F("{{bold}}{{green}}Ginkgo 2.0{{/}} is under active development and will introduce several new features, improvements, and a small handful of breaking changes.\n")
+	out += formatter.F("A release candidate for 2.0 is now available and 2.0 should GA in Fall 2021.  {{bold}}Please give the RC a try and send us feedback!{{/}}\n")
+	out += formatter.F("  - To learn more, view the migration guide at {{cyan}}{{underline}}https://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md{{/}}\n")
+	out += formatter.F("  - For instructions on using the Release Candidate visit {{cyan}}{{underline}}https://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md#using-the-beta{{/}}\n")
+	out += formatter.F("  - To comment, chime in at {{cyan}}{{underline}}https://github.com/onsi/ginkgo/issues/711{{/}}\n\n")
+
 	for deprecation, locations := range d.deprecations {
 		out += formatter.Fi(1, "{{yellow}}"+deprecation.Message+"{{/}}\n")
 		if deprecation.DocLink != "" {
@@ -118,7 +125,7 @@ func (d *DeprecationTracker) DeprecationsReport() string {
 		}
 	}
 	out += formatter.F("\n{{gray}}To silence deprecations that can be silenced set the following environment variable:{{/}}\n")
-	out += formatter.Fi(1, "{{gray}}ACK_GINKGO_DEPRECATIONS=%s{{/}}\n", VERSION)
+	out += formatter.Fi(1, "{{gray}}ACK_GINKGO_DEPRECATIONS=%s{{/}}\n", config.VERSION)
 	return out
 }
 

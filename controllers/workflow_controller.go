@@ -7,11 +7,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/c2h5oh/datasize"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -376,10 +377,34 @@ func needDirectiveBreakdownReference(dbdNeeded *dwsv1alpha1.DirectiveBreakdown, 
 }
 
 func getCapacityInBytes(capacity string) (int64, error) {
-	var v datasize.ByteSize
-	err := v.UnmarshalText([]byte(capacity))
 
-	return int64(v.Bytes()), err
+	multMatcher := regexp.MustCompile(`(\d+(\.\d*)?|\.\d+)([kKMGTP]i?)?B?$`)
+
+	matches := multMatcher.FindStringSubmatch(capacity)
+	if matches == nil {
+		return 0, fmt.Errorf("invalid capacity string, %s", capacity)
+	}
+
+	var powers = map[string]float64{
+		"":   1, // No units -> bytes, nothing to multiply
+		"K":  math.Pow10(3),
+		"M":  math.Pow10(6),
+		"G":  math.Pow10(9),
+		"T":  math.Pow10(12),
+		"P":  math.Pow10(15),
+		"Ki": math.Pow(2, 10),
+		"Mi": math.Pow(2, 20),
+		"Gi": math.Pow(2, 30),
+		"Ti": math.Pow(2, 40),
+		"Pi": math.Pow(2, 50)}
+
+	// matches[0] is the entire string, we want the parts.
+	val, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid capacity string, %s", capacity)
+	}
+
+	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
 func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, strategy string, cap int64, labelStr string, labelConstraintStr string) {

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
+	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -16,6 +17,10 @@ const (
 	RemoteStorageServiceId   = "NNFServer"
 	RemoteStorageServicePort = 60050
 )
+
+type StoragePoolOem struct {
+	Namespaces []StorageNamespace `json:"Namespaces"`
+}
 
 type RemoteServerController struct {
 	client  http.Client
@@ -38,10 +43,11 @@ func (c *RemoteServerController) GetServerInfo() ServerInfo {
 	return ServerInfo{}
 }
 
-func (c *RemoteServerController) NewStorage(pid uuid.UUID) *Storage {
+func (c *RemoteServerController) NewStorage(pid uuid.UUID, expectedNamespaces []StorageNamespace) *Storage {
 
 	model := sf.StoragePoolV150StoragePool{
-		Id: pid.String(),
+		Id:  pid.String(),
+		Oem: openapi.MarshalOem(&StoragePoolOem{Namespaces: expectedNamespaces}),
 	}
 
 	req, _ := json.Marshal(model)
@@ -90,7 +96,7 @@ func (c *RemoteServerController) Delete(s *Storage) error {
 	return nil
 }
 
-func (c *RemoteServerController) GetStatus(s *Storage) StorageStatus {
+func (c *RemoteServerController) GetStatus(s *Storage) (StorageStatus, error) {
 
 	rsp, err := c.client.Get(
 		c.Url(fmt.Sprintf("/StoragePools/%s", s.Id.String())),
@@ -101,22 +107,22 @@ func (c *RemoteServerController) GetStatus(s *Storage) StorageStatus {
 
 	if err != nil {
 		log.WithError(err).Errorf("Get Status: Http Error")
-		return StorageStatus_Error
+		return StorageStatus_Error, err
 	}
 
 	model := sf.StoragePoolV150StoragePool{}
 	if err := json.NewDecoder(rsp.Body).Decode(&model); err != nil {
 		log.WithError(err).Errorf("Get Status: Failed to decode JSON response")
-		return StorageStatus_Error
+		return StorageStatus_Error, err
 	}
 
 	switch model.Status.State {
 	case sf.STARTING_RST:
-		return StorageStatus_Starting
+		return StorageStatus_Starting, nil
 	case sf.ENABLED_RST:
-		return StorageStatus_Ready
+		return StorageStatus_Ready, nil
 	default:
-		return StorageStatus_Error
+		return StorageStatus_Error, nil
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/api"
 	event "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
@@ -111,6 +110,7 @@ type StorageController struct {
 type Volume struct {
 	id            string
 	namespaceId   nvme.NamespaceIdentifier
+	guid          nvme.NamespaceGloballyUniqueIdentifier
 	capacityBytes uint64
 
 	storage             *Storage
@@ -232,8 +232,8 @@ func EnumerateStorage(storageHandlerFunc func(odataId string, capacityBytes uint
 	return nil
 }
 
-func CreateVolume(s *Storage, capacityBytes uint64, data []byte) (*Volume, error) {
-	return s.createVolume(capacityBytes, data)
+func CreateVolume(s *Storage, capacityBytes uint64) (*Volume, error) {
+	return s.createVolume(capacityBytes)
 }
 
 func DeleteVolume(v *Volume) error {
@@ -275,7 +275,7 @@ func (s *Storage) initialize() error {
 
 	ctrl, err := s.device.IdentifyController(0)
 	if err != nil {
-		return fmt.Errorf("Failed to indentify controller: Error: %w", err)
+		return fmt.Errorf("Initialize Storage %s: Failed to indentify common controller: Error: %w", s.id, err)
 	}
 
 	s.pfid = ctrl.ControllerId
@@ -299,21 +299,31 @@ func (s *Storage) initialize() error {
 
 	s.capacityBytes = totalCapBytesLo
 	if totalCapBytesHi != 0 {
-		return fmt.Errorf("Unsupported capacity 0x%x_%x: will overflow uint64 definition", totalCapBytesHi, totalCapBytesLo)
+		return fmt.Errorf("Initialize Storage %s: Unsupported capacity 0x%x_%x: will overflow uint64 definition", s.id, totalCapBytesHi, totalCapBytesLo)
 	}
 
 	unallocatedCapBytesLo, unallocatedCapBytesHi := capacityToUint64s(ctrl.UnallocatedNVMCapacity)
 
 	s.unallocatedBytes = unallocatedCapBytesLo
 	if unallocatedCapBytesHi != 0 {
-		return fmt.Errorf("Unsupported unallocated 0x%x_%x, will overflow uint64 definition", unallocatedCapBytesHi, unallocatedCapBytesLo)
+		return fmt.Errorf("Initialize Storage %s: Unsupported unallocated 0x%x_%x, will overflow uint64 definition", s.id, unallocatedCapBytesHi, unallocatedCapBytesLo)
 	}
 
 	s.virtManagementEnabled = ctrl.GetCapability(nvme.VirtualiztionManagementSupport)
 
 	ns, err := s.device.IdentifyNamespace(CommonNamespaceIdentifier)
 	if err != nil {
-		return err
+		return fmt.Errorf("Initialize Storage %s: Failed to identify common namespace: Error: %w", s.id, err)
+	}
+
+	// Workaround for SSST drives that improperly report only one NumberOfLBAFormats, but actually
+	// support two - with the second being the most performant 4096 sector size.
+	if ns.NumberOfLBAFormats == 1 {
+
+		if ((1 << ns.LBAFormats[1].LBADataSize) == 4096) && (ns.LBAFormats[1].RelativePerformance == 0) {
+			log.Warnf("Initialize Storage %s: Detected Device %s; Incorrect number of LBA Formats. Expected: 2 Actual: %d", s.id, s.serialNumber, ns.NumberOfLBAFormats)
+			ns.NumberOfLBAFormats = 2
+		}
 	}
 
 	bestIndex := 0
@@ -401,8 +411,8 @@ func (s *Storage) refreshCapacity() error {
 	return nil
 }
 
-func (s *Storage) createVolume(capacityBytes uint64, metadata []byte) (*Volume, error) {
-	namespaceId, err := s.device.CreateNamespace(capacityBytes, metadata)
+func (s *Storage) createVolume(capacityBytes uint64) (*Volume, error) {
+	namespaceId, guid, err := s.device.CreateNamespace(capacityBytes, uint64(s.blockSizeBytes), s.lbaFormatIndex)
 	// TODO: CreateNamespace can round up the requested capacity
 	// Need to pass in a pointer here and then get the updated capacity
 	// bytes programmed into the volume.
@@ -414,6 +424,7 @@ func (s *Storage) createVolume(capacityBytes uint64, metadata []byte) (*Volume, 
 	s.volumes = append(s.volumes, Volume{
 		id:            id,
 		namespaceId:   namespaceId,
+		guid:          guid,
 		capacityBytes: capacityBytes,
 		storage:       s,
 	})
@@ -454,6 +465,7 @@ func (s *Storage) recoverVolumes() error {
 		s.volumes = append(s.volumes, Volume{
 			id:            strconv.Itoa(int(nsid)),
 			namespaceId:   nsid,
+			guid:          ns.GloballyUniqueIdentifier,
 			capacityBytes: ns.Capacity,
 			storage:       s,
 		})
@@ -486,6 +498,10 @@ func (v *Volume) GetCapaityBytes() uint64 {
 
 func (v *Volume) GetNamespaceId() nvme.NamespaceIdentifier {
 	return v.namespaceId
+}
+
+func (v *Volume) GetGloballyUniqueIdentifier() nvme.NamespaceGloballyUniqueIdentifier {
+	return v.guid
 }
 
 func (v *Volume) SetFeature(data []byte) error {
@@ -615,7 +631,7 @@ func Initialize(ctrl NvmeController) error {
 
 	mgr.ctrl = ctrl.NewNvmeDeviceController()
 	if err := mgr.ctrl.Initialize(); err != nil {
-		log.WithError(err).Errorf("Failed to initialize device controller")
+		log.WithError(err).Errorf("Failed to initialize NVMe Device Controller")
 		return err
 	}
 
@@ -966,14 +982,6 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 		return ec.NewErrInternalServerError()
 	}
 
-	formatGUID := func(guid []byte) string {
-		var b strings.Builder
-		for _, byt := range guid {
-			b.WriteString(fmt.Sprintf("%02x", byt))
-		}
-		return b.String()
-	}
-
 	lbaFormat := ns.LBAFormats[ns.FormattedLBASize.Format]
 	blockSizeInBytes := int64(math.Pow(2, float64(lbaFormat.LBADataSize)))
 
@@ -988,7 +996,7 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 		},
 		{
 			DurableNameFormat: sf.NGUID_RV1100DNF,
-			DurableName:       formatGUID(ns.GloballyUniqueIdentifier[:]),
+			DurableName:       ns.GloballyUniqueIdentifier.String(),
 		},
 	}
 
@@ -1028,7 +1036,7 @@ func StorageIdVolumePost(storageId string, model *sf.VolumeV161Volume) error {
 		return ec.NewErrNotFound()
 	}
 
-	volume, err := s.createVolume(uint64(model.CapacityBytes), nil)
+	volume, err := s.createVolume(uint64(model.CapacityBytes))
 
 	// TODO: We should parse the error and make it more obvious (404, 405, etc)
 	if err != nil {

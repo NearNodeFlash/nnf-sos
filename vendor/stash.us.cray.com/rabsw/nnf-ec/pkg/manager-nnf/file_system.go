@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
+	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 
 	"stash.us.cray.com/rabsw/nnf-ec/internal/kvstore"
 )

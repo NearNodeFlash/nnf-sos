@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-//+kubebuilder:object:generate=true
 // DWDirectiveRuleDef defines the DWDirective parser rules
+//+kubebuilder:object:generate=true
 type DWDirectiveRuleDef struct {
 	Key             string `json:"key"`
 	Type            string `json:"type"`
@@ -20,8 +20,8 @@ type DWDirectiveRuleDef struct {
 	IsValueRequired bool   `json:"isValueRequired,omitempty"`
 }
 
+// DWDirectiveRuleSpec defines the desired state of DWDirective
 //+kubebuilder:object:generate=true
-// DwDirectiveRuleSpec defines the desired state of DWDirective
 type DWDirectiveRuleSpec struct {
 	// Name of the #DW command. jobdw, stage_in, etc.
 	Command string `json:"command"`
@@ -43,6 +43,7 @@ type dwUnsupportedCommandErr struct {
 	command string
 }
 
+// NewUnsupportedCommandErr returns a reference to the unsupported command type
 func NewUnsupportedCommandErr(command string) error {
 	return &dwUnsupportedCommandErr{command}
 }
@@ -127,9 +128,8 @@ func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownC
 		var unsupportedCommand *dwUnsupportedCommandErr
 		if failUnknownCommand && errors.As(err, &unsupportedCommand) {
 			return err
-		} else {
-			return nil
 		}
+		return nil
 	}
 
 	// Compile this regex outside the loop for better performance.
@@ -204,7 +204,7 @@ func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownC
 	return nil
 }
 
-// ValidateDWDirectives validates a set of #DW directives against a specified rule set
+// ValidateDWDirective validates a set of #DW directives against a specified rule set
 func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, failUnknownCommand bool) (bool, error) {
 
 	// Build a map of the #DW commands and arguments
@@ -213,8 +213,16 @@ func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, failUnknownComman
 		return false, err
 	}
 
+	// If the command doesn't match...
 	if argsMap["command"] != rule.Command {
-		return false, nil
+		// If we need to fail unknown commands, return invalid command
+		if failUnknownCommand {
+			return false, nil
+		}
+
+		// Otherwise, we may have a new command that our code doesn't yet know
+		// Don't bother checking the rest
+		return true, nil
 	}
 
 	err = ValidateArgs(argsMap, rule, failUnknownCommand)

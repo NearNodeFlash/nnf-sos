@@ -56,9 +56,10 @@ func (sh *FileShare) initialize(mountpoint string) error {
 
 func (sh *FileShare) getStatus() *sf.ResourceStatus {
 
+	status, _ := sh.storageGroup.serverStorage.GetStatus()
 	return &sf.ResourceStatus{
 		Health: sf.OK_RH,
-		State:  sh.storageGroup.serverStorage.GetStatus().State(),
+		State:  status.State(),
 	}
 }
 

@@ -48,12 +48,12 @@ type ServerControllerApi interface {
 	GetServerInfo() ServerInfo
 
 	// Allocate a new Storage object to be managed by this controller
-	NewStorage(uuid.UUID) *Storage
+	NewStorage(uuid.UUID, []StorageNamespace) *Storage
 
 	Delete(*Storage) error
 
 	// Retrieve the status of the provided Storage object from the controller
-	GetStatus(*Storage) StorageStatus
+	GetStatus(*Storage) (StorageStatus, error)
 
 	CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
 	DeleteFileSystem(*Storage) error

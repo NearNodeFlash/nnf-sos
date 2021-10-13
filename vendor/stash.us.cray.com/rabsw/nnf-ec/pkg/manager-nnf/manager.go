@@ -187,10 +187,18 @@ func (s *StorageService) createStorageGroup(sp *StoragePool, endpoint *Endpoint)
 
 	groupId = groupId + 1
 
+	expectedNamespaces := make([]server.StorageNamespace, len(sp.providingVolumes))
+	for idx := range sp.providingVolumes {
+		expectedNamespaces[idx] = server.StorageNamespace{
+			Id:   sp.providingVolumes[idx].volume.GetNamespaceId(),
+			Guid: sp.providingVolumes[idx].volume.GetGloballyUniqueIdentifier(),
+		}
+	}
+
 	return &StorageGroup{
 		id:             strconv.Itoa(groupId),
 		endpoint:       endpoint,
-		serverStorage:  endpoint.serverCtrl.NewStorage(sp.uid),
+		serverStorage:  endpoint.serverCtrl.NewStorage(sp.uid, expectedNamespaces),
 		storagePool:    sp,
 		storageService: s,
 	}
@@ -894,7 +902,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, stora
 	model.Links.ServerEndpoint = sf.OdataV4IdRef{OdataId: sg.endpoint.OdataId()}
 	model.Links.StoragePool = sf.OdataV4IdRef{OdataId: sg.storagePool.OdataId()}
 
-	model.Status = *sg.status()
+	model.Status = sg.status()
 
 	return nil
 }

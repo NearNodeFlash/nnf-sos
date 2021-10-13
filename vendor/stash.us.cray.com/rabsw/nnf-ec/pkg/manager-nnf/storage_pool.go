@@ -125,6 +125,7 @@ func (p *StoragePool) deallocateVolumes() error {
 	return nil
 }
 
+
 // Persistent Object API
 
 const storagePoolRegistryPrefix = "SP"

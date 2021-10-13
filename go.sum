@@ -129,8 +129,6 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJmJgSg28kpZDP6UIiPt0e0Oz0kqKNGyRaWEPv84=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2 h1:t8KYCwSKsOEZBFELI4Pn/phbp38iJ1RRAkDFNin1aak=
-github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2/go.mod h1:S/7n9copUssQ56c7aAgHqftWO4LTf4xY6CGWt8Bc+3M=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.3.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/certifi/gocertifi v0.0.0-20191021191039-0944d244cd40/go.mod h1:sGbDF6GwGcLpkNXPUTkMRoywsNa/ol15pxFe6ERfguA=
@@ -515,6 +513,7 @@ github.com/neelance/sourcemap v0.0.0-20200213170602-2833bce08e4c/go.mod h1:Qr6/a
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
+github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
@@ -528,6 +527,8 @@ github.com/onsi/ginkgo v1.16.2/go.mod h1:CObGmKUOKaSC0RjmoAK7tKyn4Azo5P2IWuoMnvw
 github.com/onsi/ginkgo v1.16.4/go.mod h1:dX+/inL/fNMqNlz0e9LfyB9TswhZpCVdJM/Z6Vvnwo0=
 github.com/onsi/ginkgo v1.16.5-0.20211001031228-98001bf0ed33 h1:K0B2SBeVhvyDA/I+9mTY3b80oTzhY4UW1qgGvPYfRSQ=
 github.com/onsi/ginkgo v1.16.5-0.20211001031228-98001bf0ed33/go.mod h1:FGGTNz05swxobKgpWKhnxbEiUUxN+CeHRdF9ViWWPDw=
+github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
+github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
 github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.7.1/go.mod h1:XdKZgCCFLUoM/7CFJVPcG8C1xQ1AJ0vpAezJrB7JYyY=
@@ -1204,6 +1205,7 @@ gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24
 gopkg.in/resty.v1 v1.12.0/go.mod h1:mDo4pnntr5jdWRML875a/NmxYqAlA73dVijT2AXvQQo=
 gopkg.in/square/go-jose.v2 v2.2.2/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
 gopkg.in/square/go-jose.v2 v2.3.1/go.mod h1:M9dMgbHiYLoDGQrXy7OpJDJWiKiU//h+vD76mk0e1AI=
+gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
 gopkg.in/yaml.v2 v2.0.0-20170812160011-eb3733d160e7/go.mod h1:JAlM8MvJe8wmxCU4Bli9HhUf9+ttbYbLASfIpnQbh74=
 gopkg.in/yaml.v2 v2.2.1/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
@@ -1278,5 +1280,13 @@ sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 stash.us.cray.com/dpm/dws-operator v0.0.0-20211005001625-f5700ce01882 h1:E+ByrnmSSlTjxC1Ds/czwATuKmUreCb4l/frOCnsezk=
 stash.us.cray.com/dpm/dws-operator v0.0.0-20211005001625-f5700ce01882/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
+stash.us.cray.com/dpm/dws-operator v0.0.0-20211008165619-0893a6eb3e47 h1:U2j6ACZ2XFQrgqinm7skqAAx0YIR5GzZQvmx28xzzYg=
+stash.us.cray.com/dpm/dws-operator v0.0.0-20211008165619-0893a6eb3e47/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
+stash.us.cray.com/dpm/dws-operator v0.0.0-20211011203128-064f470d810c h1:nM9hpruf+U+GG7rDnjrCtn6qbTG9t1sK5UBt9eKk1d0=
+stash.us.cray.com/dpm/dws-operator v0.0.0-20211011203128-064f470d810c/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211006164458-79e8c24c1cbb h1:5CxBgjicqIfaqf7NnZSvQwYLYKGv2rYCF7G6hm17wjI=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211006164458-79e8c24c1cbb/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211008132022-96f5bad6e1a3 h1:U8l1RLYslio2r7KwhNqVOANxVl7ilhjCM0nyrFOd/SI=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211008132022-96f5bad6e1a3/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211012164614-2a2a47645259 h1:mJc4f9aiCHD6W6j1fJ36qQ68pAceTiRJsPEEnBNJYJ4=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211012164614-2a2a47645259/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=

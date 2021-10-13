@@ -17,9 +17,6 @@ github.com/Azure/go-autorest/tracing
 github.com/HewlettPackard/structex
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
-# github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
-## explicit
-github.com/c2h5oh/datasize
 # github.com/cespare/xxhash v1.1.0
 github.com/cespare/xxhash
 # github.com/cespare/xxhash/v2 v2.1.2
@@ -113,17 +110,33 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/onsi/ginkgo v1.16.5-0.20211001031228-98001bf0ed33
+# github.com/nxadm/tail v1.4.8
+github.com/nxadm/tail
+github.com/nxadm/tail/ratelimiter
+github.com/nxadm/tail/util
+github.com/nxadm/tail/watch
+github.com/nxadm/tail/winfile
+# github.com/onsi/ginkgo v1.16.5
 ## explicit
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/formatter
-github.com/onsi/ginkgo/internal
+github.com/onsi/ginkgo/internal/codelocation
+github.com/onsi/ginkgo/internal/containernode
+github.com/onsi/ginkgo/internal/failer
 github.com/onsi/ginkgo/internal/global
-github.com/onsi/ginkgo/internal/interrupt_handler
-github.com/onsi/ginkgo/internal/parallel_support
+github.com/onsi/ginkgo/internal/leafnodes
+github.com/onsi/ginkgo/internal/remote
+github.com/onsi/ginkgo/internal/spec
+github.com/onsi/ginkgo/internal/spec_iterator
+github.com/onsi/ginkgo/internal/specrunner
+github.com/onsi/ginkgo/internal/suite
 github.com/onsi/ginkgo/internal/testingtproxy
+github.com/onsi/ginkgo/internal/writer
 github.com/onsi/ginkgo/reporters
+github.com/onsi/ginkgo/reporters/stenographer
+github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
+github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
 # github.com/onsi/gomega v1.16.0
 ## explicit
@@ -342,6 +355,8 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
+gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
@@ -607,7 +622,6 @@ sigs.k8s.io/controller-runtime/pkg/controller
 sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
 sigs.k8s.io/controller-runtime/pkg/conversion
 sigs.k8s.io/controller-runtime/pkg/envtest
-sigs.k8s.io/controller-runtime/pkg/envtest/printer
 sigs.k8s.io/controller-runtime/pkg/event
 sigs.k8s.io/controller-runtime/pkg/handler
 sigs.k8s.io/controller-runtime/pkg/healthz
@@ -646,14 +660,12 @@ sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/dpm/dws-operator v0.0.0-20211005001625-f5700ce01882
+# stash.us.cray.com/dpm/dws-operator v0.0.0-20211011203128-064f470d810c
 ## explicit
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/controllers
 stash.us.cray.com/dpm/dws-operator/utils/dwdparse
-# stash.us.cray.com/rabsw/ec v1.0.10
-## explicit
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211006164458-79e8c24c1cbb
+# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211012164614-2a2a47645259
 ## explicit
 stash.us.cray.com/rabsw/nnf-ec/internal/kvstore
 stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme
@@ -670,11 +682,6 @@ stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme
 stash.us.cray.com/rabsw/nnf-ec/pkg/manager-telemetry
 stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common
 stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models
-# stash.us.cray.com/rabsw/rfsf-openapi v0.1.14-0.20210504180337-d48363de461a
-## explicit
-# stash.us.cray.com/rabsw/switchtec-fabric v1.0.12
-## explicit

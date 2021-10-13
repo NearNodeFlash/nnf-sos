@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 	nvme "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme"
 
 	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
@@ -187,15 +186,5 @@ func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]ProvidingVolume, erro
 }
 
 func createVolume(storage *nvme.Storage, capacityBytes uint64, pid uuid.UUID, idx, count int) (*nvme.Volume, error) {
-	volume, err := nvme.CreateVolume(storage, capacityBytes, make([]byte, 0))
-	if err != nil {
-		return volume, err
-	}
-
-	metadata, err := common.EncodeNamespaceMetadata(pid, uint16(idx), uint16(count))
-	if err != nil {
-		return volume, err
-	}
-
-	return volume, volume.SetFeature(metadata)
+	return nvme.CreateVolume(storage, capacityBytes)
 }

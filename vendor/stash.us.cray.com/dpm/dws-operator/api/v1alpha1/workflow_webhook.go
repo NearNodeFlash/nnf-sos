@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -159,8 +158,9 @@ func validateWorkflowImmutable(a *Workflow, b *Workflow) error {
 }
 
 func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
+	// Ok if we don't have any DW directives, stop parsing.
 	if len(workflow.Spec.DWDirectives) == 0 {
-		return errors.New("no #DW directives found")
+		return nil
 	}
 
 	err := ruleParser.ReadRules()
@@ -169,9 +169,9 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 	}
 
 	for i, directive := range workflow.Spec.DWDirectives {
-		invalidDirective := true
+		validDirective := false
 		for _, rule := range ruleParser.GetRuleList() {
-			// validate syntax #DW syntax
+			// validate #DW syntax
 			const rejectUnsupportedCommands bool = true
 
 			valid, err := dwdparse.ValidateDWDirective(rule, directive, rejectUnsupportedCommands)
@@ -182,12 +182,12 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 			}
 
 			if valid {
-				invalidDirective = false
+				validDirective = true
 				ruleParser.MatchedDirective(workflow, rule.WatchStates, i, rule.DriverLabel)
 			}
 		}
 
-		if invalidDirective {
+		if !validDirective {
 			return fmt.Errorf("invalid directive found: '%s'", directive)
 		}
 	}

@@ -48,7 +48,6 @@ func (s *Store) Register(registries []Registry) {
 		}
 
 		s.registries = append(s.registries, registry)
-		return
 	}
 }
 

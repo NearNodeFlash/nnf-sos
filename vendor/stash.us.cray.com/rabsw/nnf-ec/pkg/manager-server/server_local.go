@@ -1,20 +1,19 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 	"stash.us.cray.com/rabsw/nnf-ec/pkg/logging"
 
-	"stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server/nvme"
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
 )
 
 type DefaultServerControllerProvider struct{}
@@ -49,8 +48,13 @@ func (c *LocalServerController) GetServerInfo() ServerInfo {
 	return serverInfo
 }
 
-func (c *LocalServerController) NewStorage(pid uuid.UUID) *Storage {
-	c.storage = append(c.storage, Storage{Id: pid, ctrl: c})
+func (c *LocalServerController) NewStorage(pid uuid.UUID, expectedNamespaces []StorageNamespace) *Storage {
+	c.storage = append(c.storage, Storage{
+		Id:                   pid,
+		expectedNamespaces:   expectedNamespaces,
+		discoveredNamespaces: make([]StorageNamespace, 0),
+		ctrl:                 c,
+	})
 	return &c.storage[len(c.storage)-1]
 }
 
@@ -65,32 +69,18 @@ func (c *LocalServerController) Delete(s *Storage) error {
 	return nil
 }
 
-func (c *LocalServerController) GetStatus(s *Storage) StorageStatus {
-
-	// We really shouldn't need to refresh on every GetStatus() call if we're correctly
-	// tracking udev add/remove events. There should be a single refresh on launch (or
-	// possibily a udev-info call to pull in the initial hardware?)
-	if err := c.Discover(s, nil); err != nil {
-		logrus.WithError(err).Errorf("Local Server Controller: Discovery Error")
-		return StorageStatus_Error
+func (c *LocalServerController) GetStatus(s *Storage) (StorageStatus, error) {
+	if len(s.discoveredNamespaces) < len(s.expectedNamespaces) {
+		if err := c.Discover(s); err != nil {
+			return StorageStatus_Error, err
+		}
 	}
 
-	// There should always be 1 or more namespces, so zero namespaces mean we are still starting.
-	// Once we've recovered the expected number of namespaces (nsExpected > 0) we continue to
-	// return a starting status until all namespaces are available.
-
-	// TODO: We should check for an error status somewhere... as this stands we are not
-	// ever going to return an error if refresh() fails.
-	if (len(s.ns) == 0) ||
-		((s.nsExpected > 0) && (len(s.ns) < s.nsExpected)) {
-		return StorageStatus_Starting
+	if len(s.discoveredNamespaces) < len(s.expectedNamespaces) {
+		return StorageStatus_Starting, nil
 	}
 
-	if s.nsExpected == len(s.ns) {
-		return StorageStatus_Ready
-	}
-
-	return StorageStatus_Error
+	return StorageStatus_Ready, nil
 }
 
 func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
@@ -116,12 +106,12 @@ func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
 	return s.fileSystem.Delete()
 }
 
-func (c *LocalServerController) Discover(s *Storage, newStorageFunc func(*Storage)) error {
+func (c *LocalServerController) Discover(s *Storage) error {
 	var err error
 	if devices, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 		err = c.discoverUsingSuppliedDevices(s, devices)
 	} else {
-		err = c.discoverViaNamespaces(newStorageFunc)
+		err = c.discoverViaNamespaces(s)
 	}
 	return err
 }
@@ -131,7 +121,7 @@ func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices
 	// All devices will be placed into the same pool.
 	devList := strings.Split(devices, ",")
 	for idx, devSupplied := range devList {
-		logrus.Info("Supplied device ", " idx ", idx, " dev ", devSupplied)
+		log.Info("Supplied device ", " idx ", idx, " dev ", devSupplied)
 		byBytes := []byte(devSupplied)
 		// Use the last 8 bytes as the unique Id.
 		offset := len(byBytes) - 8
@@ -140,55 +130,59 @@ func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices
 		}
 		var myUuid uuid.UUID
 		copy(myUuid[:], byBytes[offset:])
-		sns := &StorageNamespace{
-			id:        myUuid,
-			path:      devSupplied,
-			nsid:      idx,
-			poolId:    s.Id,
-			poolIdx:   idx,
-			poolTotal: len(devList),
-		}
+		guid := nvme.NamespaceGloballyUniqueIdentifier{}
+		guid.Parse(myUuid.String())
 
-		s.UpsertStorageNamespace(sns)
+		s.discoveredNamespaces = append(s.discoveredNamespaces, StorageNamespace{
+			Id:    nvme.NamespaceIdentifier(idx),
+			Guid:  guid,
+			path:  devSupplied,
+			debug: false,
+		})
 	}
+
+	s.expectedNamespaces = s.discoveredNamespaces
+
 	return nil
 }
 
-func (c *LocalServerController) discoverViaNamespaces(newStorageFunc func(*Storage)) error {
-	nss, err := c.namespaces()
+func (c *LocalServerController) discoverViaNamespaces(s *Storage) error {
+	paths, err := c.namespaces()
 	if err != nil {
 		return err
 	}
 
-	for _, ns := range nss {
-		sns, err := c.newStorageNamespace(ns)
+	for _, path := range paths {
 
-		if errors.Is(err, common.ErrNamespaceMetadata) {
-			continue
-		} else if err != nil {
+		sns, err := c.newStorageNamespace(path)
+		if err != nil {
 			return err
 		}
 
-		s := c.findStorage(sns.poolId)
-		if s == nil {
-			s = c.NewStorage(sns.poolId)
-
-			s.nsExpected = sns.poolTotal
-
-			s.ns = append(s.ns, *sns)
-
-			if newStorageFunc != nil {
-				newStorageFunc(s)
+		discovered := false
+		for _, ns := range s.discoveredNamespaces {
+			if ns.Equals(sns) {
+				discovered = true
+				break
 			}
-
-		} else {
-
-			// We've identified a pool for this particular namespace
-			// Add the namespace to the pool if it's not present.
-			s.UpsertStorageNamespace(sns)
-
 		}
 
+		if discovered {
+			continue
+		}
+
+		expected := false
+		for _, ns := range s.expectedNamespaces {
+			if ns.Equals(sns) {
+				expected = true
+				break
+			}
+		}
+
+		if expected {
+			log.Infof("Discovered namespace %s", sns.String())
+			s.discoveredNamespaces = append(s.discoveredNamespaces, *sns)
+		}
 	}
 
 	return nil
@@ -222,10 +216,12 @@ func (c *LocalServerController) namespaces() ([]string, error) {
 func (c *LocalServerController) newStorageNamespace(path string) (*StorageNamespace, error) {
 
 	// First we need to identify the NSID for the provided path.
-	nsid, err := nvme.GetNamespaceId(path)
+	nsidStr, err := c.run(fmt.Sprintf("nvme id-ns %s | awk '/NVME Identify Namespace/{printf $3}'", path))
 	if err != nil {
 		return nil, err
 	}
+
+	nsid, _ := strconv.Atoi(string(nsidStr[:len(nsidStr)-1]))
 
 	// Retrieve the namespace GUID
 	guidStr, err := c.run(fmt.Sprintf("nvme id-ns %s --namespace-id=%d | awk '/nguid/{printf $3}'", path, nsid))
@@ -233,34 +229,13 @@ func (c *LocalServerController) newStorageNamespace(path string) (*StorageNamesp
 		return nil, err
 	}
 
-	id, err := uuid.ParseBytes(guidStr)
-	if err != nil {
-		return nil, err
-	}
-
-	data, err := c.run(fmt.Sprintf("nvme get-feature %s --namespace-id=%d --feature-id=0x7F --raw-binary", path, nsid))
-	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) { // Treat drives that do not support NVMe Get-Features as unmanaged Rabbit drives
-			if syscall.Errno(exitErr.ExitCode()) == syscall.EINVAL {
-				err = common.ErrNamespaceMetadata
-			}
-		}
-		return nil, err
-	}
-
-	meta, err := common.DecodeNamespaceMetadata(data[6:])
-	if err != nil {
-		return nil, err
-	}
+	guid := nvme.NamespaceGloballyUniqueIdentifier{}
+	guid.Parse(string(guidStr))
 
 	return &StorageNamespace{
-		id:        id,
-		path:      path,
-		nsid:      nsid,
-		poolId:    meta.Id,
-		poolIdx:   int(meta.Index),
-		poolTotal: int(meta.Count),
+		Id:   nvme.NamespaceIdentifier(nsid),
+		Guid: guid,
+		path: path,
 	}, nil
 }
 

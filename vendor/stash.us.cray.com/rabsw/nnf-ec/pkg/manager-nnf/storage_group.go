@@ -46,15 +46,15 @@ func (sg *StorageGroup) OdataIdRef(ref string) sf.OdataV4IdRef {
 	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", sg.OdataId(), ref)}
 }
 
-func (sg *StorageGroup) status() *sf.ResourceStatus {
-	state := sg.serverStorage.GetStatus().State()
+func (sg *StorageGroup) status() sf.ResourceStatus {
+	status, _ := sg.serverStorage.GetStatus()
 
 	health := sf.OK_RH
-	if state != sf.ENABLED_RST {
+	if status.State() != sf.ENABLED_RST {
 		health = sf.WARNING_RH
 	}
 
-	return &sf.ResourceStatus{Health: health, State: state}
+	return sf.ResourceStatus{Health: health, State: status.State()}
 }
 
 /*
@@ -145,9 +145,9 @@ func (rh *storageGroupRecoveryReplyHandler) Metadata(data []byte) error {
 
 	rh.storageService.groups = append(rh.storageService.groups,
 		StorageGroup{
-			id:             rh.storageGroup.id,
+			id:             rh.id,
 			endpoint:       endpoint,
-			serverStorage:  endpoint.serverCtrl.NewStorage(storagePool.uid),
+			serverStorage:  endpoint.serverCtrl.NewStorage(storagePool.uid, nil /*TODO*/),
 			storagePool:    storagePool,
 			storageService: rh.storageService,
 		})

@@ -265,15 +265,15 @@ func (d *mockDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifie
 }
 
 // CreateNamespace -
-func (d *mockDevice) CreateNamespace(capacityBytes uint64, metadata []byte) (nvme.NamespaceIdentifier, error) {
+func (d *mockDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
 
 	if capacityBytes > (d.capacity - d.allocatedCapacity) {
-		return 0, fmt.Errorf("Insufficient Capacity")
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("Insufficient Capacity")
 	}
 
 	ns := d.findNamespace(invalidNamespaceId) // find a free namespace
 	if ns == nil {
-		return 0, fmt.Errorf("Could not find free namespace")
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("Could not find free namespace")
 	}
 
 	ns.id = nvme.NamespaceIdentifier(ns.idx)
@@ -298,7 +298,7 @@ func (d *mockDevice) CreateNamespace(capacityBytes uint64, metadata []byte) (nvm
 		d.persistenceMgr.recordCreateNamespace(d, ns)
 	}
 
-	return ns.id, nil
+	return ns.id, nvme.NamespaceGloballyUniqueIdentifier{}, nil
 }
 
 // DeleteNamespace -
