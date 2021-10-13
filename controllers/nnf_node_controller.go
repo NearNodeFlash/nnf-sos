@@ -54,7 +54,7 @@ type NnfNodeReconciler struct {
 // Start is called upon starting the component manager and will create the Namespace for controlling the
 // NNF Node CRD that is representiative of this particular NNF Node.
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
-	log := r.Log.WithValues("Node", r.NamespacedName, "State", "Start")
+	log := r.Log.WithValues("NnfNode", r.NamespacedName, "State", "Start")
 
 	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
 	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.
@@ -118,7 +118,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	log := r.Log.WithValues("Node", req.NamespacedName)
+	log := r.Log.WithValues("NnfNode", req.NamespacedName)
 
 	node := &nnfv1alpha1.NnfNode{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {

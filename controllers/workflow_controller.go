@@ -57,7 +57,7 @@ type WorkflowReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("storage", req.NamespacedName)
+	log := r.Log.WithValues("Workflow", req.NamespacedName)
 
 	// Fetch the Workflow instance
 	workflow := &dwsv1alpha1.Workflow{}

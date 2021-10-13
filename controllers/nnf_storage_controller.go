@@ -156,7 +156,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // Rabbit node gets an NnfNodeStorage, and there may be multiple allocations requested in it.
 // This limits the number of resources that have to be broadcast to the Rabbits.
 func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
-	log := r.Log.WithValues("storage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
+	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 	allocationSet := storage.Spec.AllocationSets[allocationSetIndex]
 
 	startIndex := 0
@@ -273,7 +273,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
-	log := r.Log.WithValues("storage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
+	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 	var firstErr error
 
 	for allocationSetIndex, allocationSet := range storage.Spec.AllocationSets {
