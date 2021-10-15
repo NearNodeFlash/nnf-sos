@@ -158,6 +158,14 @@ func (m *manager) Publish(e Event) {
 	}
 }
 
+// Publish Resource Event will publish the provided event with the resource details included in the
+// event as the Origin of Condition. This is useful for any Redfish/Swordfish model that includes
+// an Id or OdataId
+func (m *manager) PublishResourceEvent(e Event, r Resource) {
+	e.OriginOfCondition = r.OdataId()
+	m.Publish(e)
+}
+
 func (m *manager) addSubscription(s Subscription, t sf.EventDestinationV190SubscriptionType) {
 	var sid = -1
 	for _, s := range m.subscriptions {

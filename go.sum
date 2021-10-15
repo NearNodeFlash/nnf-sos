@@ -525,7 +525,6 @@ github.com/onsi/ginkgo v1.12.1/go.mod h1:zj2OWP4+oCPe1qIXoGWkgMRwljMUYCdkwsT2108
 github.com/onsi/ginkgo v1.14.0/go.mod h1:iSB4RoI2tjJc9BBv4NKIKWKya62Rps+oPG/Lv9klQyY=
 github.com/onsi/ginkgo v1.16.2/go.mod h1:CObGmKUOKaSC0RjmoAK7tKyn4Azo5P2IWuoMnvwxz1E=
 github.com/onsi/ginkgo v1.16.4/go.mod h1:dX+/inL/fNMqNlz0e9LfyB9TswhZpCVdJM/Z6Vvnwo0=
-github.com/onsi/ginkgo v1.16.5-0.20211001031228-98001bf0ed33 h1:K0B2SBeVhvyDA/I+9mTY3b80oTzhY4UW1qgGvPYfRSQ=
 github.com/onsi/ginkgo v1.16.5-0.20211001031228-98001bf0ed33/go.mod h1:FGGTNz05swxobKgpWKhnxbEiUUxN+CeHRdF9ViWWPDw=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
@@ -770,7 +769,6 @@ golang.org/x/mod v0.3.1-0.20200828183125-ce943fd02449/go.mod h1:s0Qsj1ACt9ePp/hM
 golang.org/x/mod v0.4.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/mod v0.4.1/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/mod v0.4.2/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
-golang.org/x/mod v0.5.0 h1:UG21uOlmZabA4fW5i7ZX6bjw1xELEGg/ZLgZq9auk/Q=
 golang.org/x/mod v0.5.0/go.mod h1:5OXOZSfqPIIbmVBIIKWRFfZjPR0E5r58TLhUjH0a2Ro=
 golang.org/x/net v0.0.0-20180724234803-3673e40ba225/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180826012351-8a410e7b638d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -1278,15 +1276,5 @@ sigs.k8s.io/structured-merge-diff/v4 v4.1.2/go.mod h1:j/nl6xW8vLS49O8YvXW1ocPhZa
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211005001625-f5700ce01882 h1:E+ByrnmSSlTjxC1Ds/czwATuKmUreCb4l/frOCnsezk=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211005001625-f5700ce01882/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211008165619-0893a6eb3e47 h1:U2j6ACZ2XFQrgqinm7skqAAx0YIR5GzZQvmx28xzzYg=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211008165619-0893a6eb3e47/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211011203128-064f470d810c h1:nM9hpruf+U+GG7rDnjrCtn6qbTG9t1sK5UBt9eKk1d0=
-stash.us.cray.com/dpm/dws-operator v0.0.0-20211011203128-064f470d810c/go.mod h1:wUHRsO7BZ8L+ydQPMBOTEWMmiexePZh3JjOCREMq3/8=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211006164458-79e8c24c1cbb h1:5CxBgjicqIfaqf7NnZSvQwYLYKGv2rYCF7G6hm17wjI=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211006164458-79e8c24c1cbb/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211008132022-96f5bad6e1a3 h1:U8l1RLYslio2r7KwhNqVOANxVl7ilhjCM0nyrFOd/SI=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211008132022-96f5bad6e1a3/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211012164614-2a2a47645259 h1:mJc4f9aiCHD6W6j1fJ36qQ68pAceTiRJsPEEnBNJYJ4=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211012164614-2a2a47645259/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211014210158-52639a41184e h1:LzZ4/KTuUSHIRoGdY4gb9U2/O/LSD3XoXrpTzqtf1II=
+stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211014210158-52639a41184e/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=

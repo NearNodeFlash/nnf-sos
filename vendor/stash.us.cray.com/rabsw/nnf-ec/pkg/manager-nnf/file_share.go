@@ -3,11 +3,9 @@ package nnf
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"stash.us.cray.com/rabsw/nnf-ec/internal/kvstore"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
-	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
 )
 
 type FileShare struct {
@@ -24,34 +22,6 @@ func (sh *FileShare) OdataId() string {
 
 func (sh *FileShare) OdataIdRef(ref string) sf.OdataV4IdRef {
 	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", sh.OdataId(), ref)}
-}
-func (fs *FileSystem) createFileShare(sg *StorageGroup, mountRoot string) *FileShare {
-	var fileShareId = -1
-	for _, fileShare := range fs.shares {
-		id, _ := strconv.Atoi(fileShare.id)
-
-		if fileShareId <= id {
-			fileShareId = id
-		}
-	}
-
-	fileShareId = fileShareId + 1
-
-	return &FileShare{
-		id:           strconv.Itoa(fileShareId),
-		storageGroup: sg,
-		mountRoot:    mountRoot,
-		fileSystem:   fs,
-	}
-}
-
-func (sh *FileShare) initialize(mountpoint string) error {
-
-	opts := server.FileSystemOptions{
-		"mountpoint": mountpoint,
-	}
-
-	return sh.storageGroup.serverStorage.CreateFileSystem(sh.fileSystem.fsApi, opts)
 }
 
 func (sh *FileShare) getStatus() *sf.ResourceStatus {
@@ -70,6 +40,7 @@ const fileShareRegistryPrefix = "SH"
 const (
 	fileShareCreateStartLogEntryType = iota
 	fileShareCreateCompleteLogEntryType
+	fileShareDeleteStartLogEntryType
 	fileShareDeleteCompleteLogEntryType
 )
 
@@ -79,7 +50,11 @@ type fileSharePersistentMetadata struct {
 	MountRoot      *string `json:"MountRoot,omitempty"`
 }
 
-func (sh *FileShare) GetKey() string                       { return fileShareRegistryPrefix }
+type fileSharePersistentCreateCompleteLogEntry struct {
+	FileSharePath string `json:"FileSharePath"`
+}
+
+func (sh *FileShare) GetKey() string                       { return fileShareRegistryPrefix + sh.id }
 func (sh *FileShare) GetProvider() PersistentStoreProvider { return sh.fileSystem.storageService }
 
 func (sh *FileShare) GenerateMetadata() ([]byte, error) {
@@ -88,6 +63,27 @@ func (sh *FileShare) GenerateMetadata() ([]byte, error) {
 		StorageGroupId: &sh.storageGroup.id,
 		MountRoot:      &sh.mountRoot,
 	})
+}
+
+func (sh *FileShare) GenerateStateData(state uint32) ([]byte, error) {
+	switch state {
+	case fileShareCreateCompleteLogEntryType:
+		entry := fileSharePersistentCreateCompleteLogEntry{
+			FileSharePath: sh.mountRoot,
+		}
+
+		return json.Marshal(entry)
+	}
+	return nil, nil
+}
+
+func (sh *FileShare) Rollback(state uint32) error {
+	switch state {
+	case fileShareCreateStartLogEntryType:
+		sh.fileSystem.deleteFileShare(sh)
+	}
+
+	return nil
 }
 
 // Persistent Object Recovery API
@@ -125,7 +121,7 @@ func (rh *fileShareRecoveryReplayHandler) Metadata(data []byte) error {
 	fileSystem := rh.storageService.findFileSystem(metadata.FileSystemId)
 	storageGroup := rh.storageService.findStorageGroup(*metadata.StorageGroupId)
 
-	fileSystem.shares = append(rh.fileSystem.shares, FileShare{
+	fileSystem.shares = append(fileSystem.shares, FileShare{
 		id:           rh.fileShareId,
 		fileSystem:   fileSystem,
 		storageGroup: storageGroup,

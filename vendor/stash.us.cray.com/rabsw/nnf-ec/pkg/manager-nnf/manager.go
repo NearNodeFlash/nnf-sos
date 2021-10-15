@@ -255,11 +255,27 @@ func (s *StorageService) createFileSystem(sp *StoragePool, fsApi server.FileSyst
 
 	fileSystemId = fileSystemId + 1
 
-	return &FileSystem{
+	s.fileSystems = append(s.fileSystems, FileSystem{
 		id:             strconv.Itoa(fileSystemId),
 		fsApi:          fsApi,
 		storagePool:    sp,
 		storageService: s,
+	})
+
+	sp.fileSystem = &s.fileSystems[len(s.fileSystems)-1]
+
+	return sp.fileSystem
+}
+
+func (s *StorageService) deleteFileSystem(fs *FileSystem) {
+
+	fs.storagePool.fileSystem = nil
+
+	for fileSystemIdx, fileSystem := range s.fileSystems {
+		if fileSystem.id == fs.id {
+			s.fileSystems = append(s.fileSystems[:fileSystemIdx], s.fileSystems[fileSystemIdx+1:]...)
+			break
+		}
 	}
 }
 
@@ -383,6 +399,7 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 			NewStoragePoolRecoveryRegistry(s),
 			NewStorageGroupRecoveryRegistry(s),
 			NewFileSystemRecoveryRegistry(s),
+			NewFileShareRecoveryRegistry(s),
 		})
 	}
 
@@ -615,6 +632,8 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to allocate storage volumes")
 	}
 
+	event.EventManager.PublishResourceEvent(msgreg.ResourceCreatedResourceEvent(), p)
+
 	return s.StorageServiceIdStoragePoolIdGet(storageServiceId, p.id, model)
 }
 
@@ -701,6 +720,8 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 			s.pools = s.pools[:len(s.pools)-1]
 		}
 	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), p)
 
 	return nil
 }
@@ -872,6 +893,8 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 		return ec.NewErrInternalServerError().WithError(err).WithCause("failed to create storage group")
 	}
 
+	event.EventManager.PublishResourceEvent(msgreg.ResourceCreatedResourceEvent(), sg)
+
 	return s.StorageServiceIdStorageGroupIdGet(storageServiceId, sg.id, model)
 }
 
@@ -936,6 +959,8 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 	}
 
 	s.deleteStorageGroup(sg)
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), sg)
 
 	return nil
 }
@@ -1038,16 +1063,16 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 
 	fsApi := server.FileSystemController.NewFileSystem(oem)
 	if fsApi == nil {
-		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("File system '%s' not found", oem.Type))
+		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("File system type '%s' not found", oem.Type))
 	}
 
 	fs := s.createFileSystem(sp, fsApi)
-	sp.fileSystem = fs
-	s.fileSystems = append(s.fileSystems, *fs)
 
-	if err := UpdatePersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to update", fs.id))
+	if err := NewPersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to create", fs.id))
 	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceCreatedResourceEvent(), fs)
 
 	return s.StorageServiceIdFileSystemIdGet(storageServiceId, fs.id, model)
 }
@@ -1082,16 +1107,21 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 		}
 	}
 
-	if err := fs.fsApi.Delete(); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File system '%s' failed delete", fileSystemId))
+	deleteFunc := func() error {
+		if err := fs.fsApi.Delete(); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to delete file system", fileSystemId))
+		}
+
+		s.deleteFileSystem(fs)
+
+		return nil
 	}
 
-	for fileSystemIdx, fileSystem := range s.fileSystems {
-		if fileSystem.id == fileSystemId {
-			s.fileSystems = append(s.fileSystems[:fileSystemIdx], s.fileSystems[fileSystemIdx+1:]...)
-			break
-		}
+	if err := DeletePersistentObject(fs, deleteFunc, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to delete file system")
 	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), fs)
 
 	return nil
 }
@@ -1120,7 +1150,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 
 	fields := strings.Split(model.Links.Endpoint.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
-		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("Storage pool @odata.id '%s' malformed", model.Links.Endpoint.OdataId))
+		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("Endpoint @odata.id '%s' malformed", model.Links.Endpoint.OdataId))
 	}
 
 	endpointId := fields[s.resourceIndex]
@@ -1151,16 +1181,25 @@ refreshState:
 	}
 
 	sh := fs.createFileShare(sg, model.FileSharePath)
-	sg.fileShare = sh
-	fs.shares = append(fs.shares, *sh)
 
-	if err := sh.initialize(model.FileSharePath); err != nil {
-		log.WithError(err).Errorf("Failed to initialize file share for path %s", model.FileSharePath)
-		// No error is returned, status is reflected in model
+	updateFunc := func() error {
+		opts := server.FileSystemOptions{
+			"mountpoint": sh.mountRoot,
+		}
+
+		if err := sh.storageGroup.serverStorage.CreateFileSystem(sh.fileSystem.fsApi, opts); err != nil {
+			log.WithError(err).Errorf("Failed to initialize file share for path %s", model.FileSharePath)
+			return err
+		}
+
+		return nil
 	}
 
-	model.Id = sh.id
-	model.OdataId = sh.OdataId()
+	if err := NewPersistentObject(sh, updateFunc, fileShareCreateStartLogEntryType, fileShareCreateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to create", sh.id))
+	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceCreatedResourceEvent(), sh)
 
 	return s.StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, sh.id, model)
 }
@@ -1190,16 +1229,21 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("File share '%s' not found", exportedShareId))
 	}
 
-	if err := sh.storageGroup.serverStorage.Delete(); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
+	deleteFunc := func() error {
+		if err := sh.storageGroup.serverStorage.Delete(); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
+		}
+
+		fs.deleteFileShare(sh)
+
+		return nil
 	}
 
-	for shareIdx, share := range fs.shares {
-		if share.id == exportedShareId {
-			fs.shares = append(fs.shares[:shareIdx], fs.shares[shareIdx+1:]...)
-			break
-		}
+	if err := DeletePersistentObject(sh, deleteFunc, fileShareDeleteStartLogEntryType, fileShareDeleteCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to delete file share")
 	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), sh)
 
 	return nil
 }

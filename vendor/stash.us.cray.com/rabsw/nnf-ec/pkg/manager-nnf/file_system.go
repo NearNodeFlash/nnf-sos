@@ -3,6 +3,7 @@ package nnf
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	server "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
@@ -39,9 +40,37 @@ func (fs *FileSystem) findFileShare(id string) *FileShare {
 	return nil
 }
 
-func (fs *FileSystem) deleteFileShare(id string) {
+
+func (fs *FileSystem) createFileShare(sg *StorageGroup, mountRoot string) *FileShare {
+	var fileShareId = -1
+	for _, fileShare := range fs.shares {
+		id, _ := strconv.Atoi(fileShare.id)
+
+		if fileShareId <= id {
+			fileShareId = id
+		}
+	}
+
+	fileShareId = fileShareId + 1
+
+	fs.shares = append(fs.shares, FileShare{
+		id:           strconv.Itoa(fileShareId),
+		storageGroup: sg,
+		mountRoot:    mountRoot,
+		fileSystem:   fs,
+	})
+
+	sh := &fs.shares[len(fs.shares)-1]
+	sg.fileShare = sh
+
+	return sh
+}
+
+func (fs *FileSystem) deleteFileShare(sh *FileShare) {
+	sh.storageGroup.fileShare = nil
+
 	for shareIdx, share := range fs.shares {
-		if share.id == id {
+		if share.id == sh.id {
 			fs.shares = append(fs.shares[:shareIdx], fs.shares[shareIdx+1:]...)
 			break
 		}
@@ -74,6 +103,10 @@ func (fs *FileSystem) GenerateStateData(state uint32) ([]byte, error) {
 }
 
 func (fs *FileSystem) Rollback(state uint32) error {
+	switch state {
+	case fileSystemCreateStartLogEntryType:
+		fs.storageService.deleteFileSystem(fs)
+	}
 	return nil
 }
 
@@ -82,6 +115,7 @@ func (fs *FileSystem) Rollback(state uint32) error {
 const (
 	fileSystemCreateStartLogEntryType = iota
 	fileSystemCreateCompleteLogEntryType
+	fileSystemDeleteStartLogEntryType
 	fileSystemDeleteCompleteLogEntryType
 )
 

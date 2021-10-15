@@ -73,11 +73,15 @@ type WorkflowDriverStatus struct {
 	WatchState string `json:"watchState"`
 	LastHB     int64  `json:"lastHB"`
 	Completed  bool   `json:"completed"`
+
 	// User readable reason.
 	// For the CDS driver, this could be the state of the underlying
 	// data movement request:  Pending, Queued, Running, Completed or Error
 	Reason  string `json:"reason,omitempty"`
 	Message string `json:"message,omitempty"`
+
+	// CompleteTime reflects the time that the workflow reconciler marks the driver complete
+	CompleteTime metav1.Time `json:"completeTime,omitempty"`
 }
 
 // WorkflowStatus defines the observed state of the Workflow
@@ -112,6 +116,12 @@ type WorkflowStatus struct {
 
 	// Reference to Computes
 	Computes corev1.ObjectReference `json:"computes,omitempty"`
+
+	// Time of the most recent desiredState change
+	DesiredStateChange metav1.Time `json:"desiredStateChange,omitempty"`
+
+	// Time of the most recent desiredState's achieving Ready status
+	ReadyChange metav1.Time `json:"readyChange,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -127,7 +137,7 @@ type Workflow struct {
 
 //+kubebuilder:object:root=true
 
-// WorkflowList contains a list of Workflow
+// WorkflowList contains a list of Workflows
 type WorkflowList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

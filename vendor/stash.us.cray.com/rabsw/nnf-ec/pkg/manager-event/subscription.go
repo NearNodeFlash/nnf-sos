@@ -28,10 +28,10 @@ func (s RedfishSubscription) EventHandler(e Event) error {
 
 	event := RedfishEvent{
 		Context: s.Context,
-		Events: []Event{
-			e,
-		},
+		Events:  make([]sf.EventV161Event, 1),
 	}
+
+	e.CopyInto(&event.Events[0])
 
 	attempts := 0
 
@@ -49,7 +49,7 @@ func (s RedfishSubscription) EventHandler(e Event) error {
 	go func() {
 
 		for {
-			rsp, err := http.Post(s.Destination, "application/json", bytes.NewBuffer(body))
+			rsp, err := http.Post("http://"+s.Destination, "application/json", bytes.NewBuffer(body))
 			if err == nil {
 				switch rsp.StatusCode {
 				case http.StatusOK, http.StatusAccepted:
@@ -81,5 +81,5 @@ func (s RedfishSubscription) EventHandler(e Event) error {
 type RedfishEvent struct {
 	Context string `json:"Context,omitempty"`
 
-	Events []Event `json:"Events,omitempty"`
+	Events []sf.EventV161Event `json:"Events,omitempty"`
 }
