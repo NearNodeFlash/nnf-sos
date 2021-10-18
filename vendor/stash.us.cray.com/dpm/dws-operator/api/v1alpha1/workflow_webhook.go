@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"strings"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,10 +42,6 @@ var _ webhook.Defaulter = &Workflow{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (w *Workflow) Default() {
 	workflowlog.Info("default", "name", w.Name)
-
-	// TODO: Find a better way to initialize these. open-api doesn't like NULL for an initial value
-	w.Status.DesiredStateChange = metav1.Now()
-	w.Status.ReadyChange = metav1.Now()
 
 	_ = checkDirectives(w, &MutatingRuleParser{})
 }
@@ -280,7 +275,6 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 		// Register states for this driver
 		driverStatus.DWDIndex = index
 		driverStatus.WatchState = state
-		driverStatus.CompleteTime = metav1.Now()
 		workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
 		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
 	}

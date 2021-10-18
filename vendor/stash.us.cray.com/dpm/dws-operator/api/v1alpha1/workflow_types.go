@@ -81,7 +81,7 @@ type WorkflowDriverStatus struct {
 	Message string `json:"message,omitempty"`
 
 	// CompleteTime reflects the time that the workflow reconciler marks the driver complete
-	CompleteTime metav1.Time `json:"completeTime,omitempty"`
+	CompleteTime *metav1.Time `json:"completeTime,omitempty"`
 }
 
 // WorkflowStatus defines the observed state of the Workflow
@@ -118,10 +118,10 @@ type WorkflowStatus struct {
 	Computes corev1.ObjectReference `json:"computes,omitempty"`
 
 	// Time of the most recent desiredState change
-	DesiredStateChange metav1.Time `json:"desiredStateChange,omitempty"`
+	DesiredStateChange *metav1.Time `json:"desiredStateChange,omitempty"`
 
 	// Time of the most recent desiredState's achieving Ready status
-	ReadyChange metav1.Time `json:"readyChange,omitempty"`
+	ReadyChange *metav1.Time `json:"readyChange,omitempty"`
 }
 
 //+kubebuilder:object:root=true

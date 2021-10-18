@@ -92,7 +92,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if instance.Status.State != instance.Spec.DesiredState {
 			log.Info("Workflow state transitioning to " + instance.Spec.DesiredState)
 			instance.Status.State = instance.Spec.DesiredState
-			instance.Status.DesiredStateChange = metav1.Now()
+			ts := metav1.Now()
+			instance.Status.DesiredStateChange = &ts
 			updateNeeded = true
 		}
 		// Set Ready/Reason based on driverDone condition
@@ -100,7 +101,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if driverDone == ConditionTrue {
 			if instance.Status.Ready != ConditionTrue {
 				instance.Status.Ready = ConditionTrue
-				instance.Status.ReadyChange = metav1.Now()
+				ts := metav1.Now()
+				instance.Status.ReadyChange = &ts
 				instance.Status.Reason = "Completed"
 				instance.Status.Message = "Workflow " + instance.Status.State + " completed successfully"
 				log.Info("Workflow transitioning to ready state " + instance.Status.State)

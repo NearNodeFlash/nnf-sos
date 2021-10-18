@@ -27,6 +27,16 @@ func Open(path string, readOnly bool) (*Store, error) {
 	//opts.ReadOnly = readOnly // Causes ErrLogTruncate
 	opts.BypassLockGuard = readOnly
 
+	// Shrink the in-memory and on-disk size to a more manageable 8 MiB and 16 MiB, respectively;
+	// We use very little data and the 64 MiB and 256 MiB defaults will cause OOM issues in kubernetes.
+	// 8MiB seems to be the lower limit within badger, anything smaller and badger will complain with
+	//   """
+	//   Valuethreshold 1048576 greater than max batch size of 629145. Either reduce opt.ValueThreshold
+	//   or increase opt.MaxTableSize.
+	//   """
+	opts.MemTableSize = 8 << 20
+	opts.BlockCacheSize = 16 << 20
+
 	db, err := badger.Open(opts)
 
 	if err != nil {
