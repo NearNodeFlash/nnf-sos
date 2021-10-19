@@ -80,6 +80,9 @@ var _ = Describe("Integration Test", func() {
 					return err
 				}).Should(Succeed())
 
+				// Save a copy of the workflow for use during deletion
+				savedWorkflow = wf
+
 				Eventually(func() (string, error) {
 					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
 					if err != nil {
@@ -87,9 +90,6 @@ var _ = Describe("Integration Test", func() {
 					}
 					return wf.Status.State, nil
 				}).Should(Equal("proposal"))
-
-				// Save a copy of the workflow for use during deletion
-				savedWorkflow = wf
 			})
 
 			It("Should have a single Computes that is owned by the workflow", func() {

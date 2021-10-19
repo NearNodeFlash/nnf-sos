@@ -191,27 +191,6 @@ func (r *WorkflowReconciler) handleProposalState(ctx context.Context, workflow *
 		}
 	}
 
-	// Ensure Computes has been created
-	name := workflow.Name
-	computes, err := r.createComputes(ctx, workflow, name, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Ensure the computes reference is set
-	cref := v1.ObjectReference{Name: computes.Name, Namespace: computes.Namespace}
-	if workflow.Status.Computes != cref {
-		log.Info("Updating workflow with Computes")
-		workflow.Status.Computes = cref
-
-		err = r.Update(ctx, workflow)
-		if err != nil {
-			log.Error(err, "Failed to add computes reference")
-		}
-
-		return ctrl.Result{}, err
-	}
-
 	for _, bdRef := range workflow.Status.DirectiveBreakdowns {
 		log.Info("Generate Server", "breakdown", bdRef)
 
@@ -414,32 +393,6 @@ func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, str
 	a.Label = labelStr
 	a.Constraint = labelConstraintStr
 	a.MinimumCapacity = cap
-}
-
-func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1.Workflow, name string, log logr.Logger) (computes *dwsv1alpha1.Computes, err error) {
-
-	computes = &dwsv1alpha1.Computes{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: wf.Namespace,
-		},
-	}
-	log.Info("Trying to create Computes", "name", computes.Name)
-
-	_, err = ctrl.CreateOrUpdate(ctx, r.Client, computes,
-		func() error {
-			// Link the Computes to the workflow
-			return ctrl.SetControllerReference(wf, computes, r.Scheme)
-		})
-
-	if err != nil {
-		log.Error(err, "Failed to create or update Computes", "name", computes.Name)
-		return nil, err
-	}
-
-	log.Info("done", "workflow", wf, "name", computes.Name)
-
-	return computes, nil
 }
 
 func (r *WorkflowReconciler) createServers(ctx context.Context, wf *dwsv1alpha1.Workflow, dbd *dwsv1alpha1.DirectiveBreakdown, serverName string, log logr.Logger) (server *dwsv1alpha1.Servers, err error) {

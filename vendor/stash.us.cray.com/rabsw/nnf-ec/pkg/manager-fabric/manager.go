@@ -544,6 +544,10 @@ func (p *Port) Initialize() error {
 		processPort := func(port *Port) func(*switchtec.DumpEpPortDevice) error {
 			return func(epPort *switchtec.DumpEpPortDevice) error {
 
+				if switchtec.EpPortType(epPort.Hdr.Typ) == switchtec.NoneEpPortType {
+					return fmt.Errorf("Port %s: Device not present", port.id)
+				}
+
 				if switchtec.EpPortType(epPort.Hdr.Typ) != switchtec.DeviceEpPortType {
 					return fmt.Errorf("Port %s: Non-device type (%#02x)", port.id, epPort.Hdr.Typ)
 				}
@@ -605,7 +609,7 @@ func (p *Port) bind() error {
 		panic(fmt.Sprintf("Port %s: Insufficient endpoints defined for DSP", p.id))
 	}
 
-	if p.endpoints[0].pdfid&0x00FF != 0 {
+	if (p.endpoints[0].pdfid & 0x00FF) != 0 {
 		panic(fmt.Sprintf("Port %s: Endpoint index zero expected to be physical function: %#04x", p.id, p.endpoints[0].pdfid))
 	}
 
@@ -669,7 +673,7 @@ func (p *Port) bind() error {
 						}
 
 						if endpoint.bound {
-							logFunc := log.Warnf
+							logFunc := log.Debugf
 							if endpoint.boundPaxId != uint8(s.paxId) ||
 								endpoint.boundHvdPhyId != uint8(initiatorPort.config.Port) ||
 								endpoint.boundHvdLogId != uint8(logicalPortId) {
@@ -767,36 +771,45 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 	m := &manager
 
 	log.SetLevel(log.DebugLevel)
-
 	log.Infof("Fabric Manager %s Initializing", m.id)
 
-	c, err := loadConfig()
+	conf, err := loadConfig()
 	if err != nil {
 		log.WithError(err).Errorf("Fabric Manager %s failed to load configuration", m.id)
 		return err
 	}
-	m.config = c
+	m.config = conf
 
-	log.Debugf("Fabric Configuration '%s' Loaded...", c.Metadata.Name)
-	log.Debugf("  Management Ports: %d", c.ManagementPortCount)
-	log.Debugf("  Upstream Ports:   %d", c.UpstreamPortCount)
-	log.Debugf("  Downstream Ports: %d", c.DownstreamPortCount)
-	for _, switchConf := range c.Switches {
+	log.Debugf("Fabric Configuration '%s' Loaded...", conf.Metadata.Name)
+	log.Debugf("  Debug Level: %s", conf.DebugLevel)
+	log.Debugf("  Management Ports: %d", conf.ManagementPortCount)
+	log.Debugf("  Upstream Ports:   %d", conf.UpstreamPortCount)
+	log.Debugf("  Downstream Ports: %d", conf.DownstreamPortCount)
+	for _, switchConf := range conf.Switches {
 		log.Debugf("  Switch %s Configuration: %s", switchConf.Id, switchConf.Metadata.Name)
 		log.Debugf("    Management Ports: %d", switchConf.ManagementPortCount)
 		log.Debugf("    Upstream Ports:   %d", switchConf.UpstreamPortCount)
 		log.Debugf("    Downstream Ports: %d", switchConf.DownstreamPortCount)
 	}
 
-	m.switches = make([]Switch, len(c.Switches))
+	level, err := log.ParseLevel(conf.DebugLevel)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to parse debug level: %s", conf.DebugLevel)
+		return err
+	}
+
+	log.SetLevel(level)
+
+	m.switches = make([]Switch, len(conf.Switches))
 	var fabricPortId = 0
-	for switchIdx, switchConf := range c.Switches {
+	for switchIdx := range conf.Switches {
+		switchConf := &conf.Switches[switchIdx]
 		log.Infof("Initialize switch %s", switchConf.Id)
 		m.switches[switchIdx] = Switch{
 			id:     switchConf.Id,
 			idx:    switchIdx,
 			fabric: m,
-			config: &c.Switches[switchIdx],
+			config: switchConf,
 			ports:  make([]Port, len(switchConf.Ports)),
 		}
 

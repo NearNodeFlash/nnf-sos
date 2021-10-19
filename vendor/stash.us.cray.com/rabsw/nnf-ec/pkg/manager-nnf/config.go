@@ -17,6 +17,8 @@ type ConfigFile struct {
 
 	Id string
 
+	DebugLevel string `yaml:"debugLevel"`
+
 	AllocationConfig AllocationConfig `yaml:"allocationConfig"`
 	RemoteConfig     RemoteConfig     `yaml:"remoteConfig"`
 }

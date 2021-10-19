@@ -268,7 +268,7 @@ func (dev *Device) IdentifyNamespaceControllerList(namespaceId uint32) (*CtrlLis
 	ctrlList := new(CtrlList)
 	buf := structex.NewBuffer(ctrlList)
 
-	if err := dev.Identify(0, ControllerNamespaceList_CNS, buf.Bytes()); err != nil {
+	if err := dev.Identify(namespaceId, ControllerNamespaceList_CNS, buf.Bytes()); err != nil {
 		return nil, err
 	}
 

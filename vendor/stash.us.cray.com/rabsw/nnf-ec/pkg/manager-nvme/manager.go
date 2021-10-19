@@ -572,12 +572,12 @@ func (v *Volume) detach(controllerIds []uint16) error {
 
 func (v *Volume) recoverAttachedControllers() error {
 	if len(v.attachedControllers) != 0 {
-		panic(fmt.Sprintf("Volume %s has controllers already attached", v.id))
+		panic(fmt.Sprintf("Recover Attached Controllers - Volume %s has controllers already attached", v.id))
 	}
 
 	controllerIds, err := v.storage.device.ListAttachedControllers(v.namespaceId)
 	if err != nil {
-		return err
+		return fmt.Errorf("Recover Attached Controllers - Failed to list attached controllers: Namespace: %d Error: %w", v.namespaceId, err)
 	}
 
 	for _, controllerId := range controllerIds {
@@ -591,7 +591,7 @@ func (v *Volume) recoverAttachedControllers() error {
 		}
 
 		if !found {
-			return fmt.Errorf("Storage Controller ID %d not found", controllerId)
+			return fmt.Errorf("Recover Attached Controllers - Storage controller not found: Controller: %d", controllerId)
 		}
 	}
 
@@ -613,10 +613,19 @@ func Initialize(ctrl NvmeController) error {
 	mgr.config = conf
 
 	log.Debugf("NVMe Configuration '%s' Loaded...", conf.Metadata.Name)
+	log.Debugf("  Debug Level: %s", conf.DebugLevel)
 	log.Debugf("  Controller Config:")
 	log.Debugf("    Virtual Functions: %d", conf.Storage.Controller.Functions)
 	log.Debugf("    Num Resources: %d", conf.Storage.Controller.Resources)
 	log.Debugf("  Device List: %+v", conf.Storage.Devices)
+
+	level, err := log.ParseLevel(conf.DebugLevel)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to parse debug level: %s", conf.DebugLevel)
+		return err
+	}
+
+	log.SetLevel(level)
 
 	mgr.storage = make([]Storage, len(conf.Storage.Devices))
 	for storageIdx, storageDevice := range conf.Storage.Devices {

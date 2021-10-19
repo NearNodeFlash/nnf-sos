@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	events "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
+	msgreg "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries"
 
 	ec "stash.us.cray.com/rabsw/nnf-ec/pkg/ec"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
@@ -19,19 +20,25 @@ func NewAerService(s StorageServiceApi) StorageServiceApi {
 	return &AerService{s: s}
 }
 
+func (aer *AerService) publish(err error) {
+
+	// If the supplied error is of an Element Controller Error type, inspect
+	// the error for an event pointer value and, if found, publish the event to
+	// the event manager.
+	var e *ec.ControllerError
+	if errors.As(err, &e) {
+		if event, ok := e.Event.(*events.Event); event != nil && ok {
+			events.EventManager.Publish(*event)
+		} else {
+			events.EventManager.Publish(msgreg.ResourceOperationFailedNnf(e.ResourceType(), e.Error()))
+		}
+	}
+}
+
 // The main capture routine for tracking errors to the storage service
 func (aer *AerService) c(err error) error {
-
 	if err != nil {
-		// If the supplied error is of an Element Controller Error type, inspect
-		// the error for an event pointer value and, if found, publish the event to
-		// the event manager.
-		var e *ec.ControllerError
-		if errors.As(err, &e) {
-			if event, ok := e.Event.(*events.Event); event != nil && ok {
-				events.EventManager.Publish(*event)
-			}
-		}
+		aer.publish(err)
 	}
 
 	return err

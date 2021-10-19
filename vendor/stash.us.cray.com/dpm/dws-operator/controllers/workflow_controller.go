@@ -10,10 +10,12 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 )
@@ -65,70 +67,126 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
 	log.Info("Reconciling Workflow")
 
-	// Fetch the Workflow instance
-	instance := &dwsv1alpha1.Workflow{}
+	// Fetch the Workflow workflow
+	workflow := &dwsv1alpha1.Workflow{}
 
-	err := r.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, workflow)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Need to set Status.State first because the webhook validates this.
+	if workflow.Status.State != workflow.Spec.DesiredState {
+		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
+		workflow.Status.State = workflow.Spec.DesiredState
+		ts := metav1.Now()
+		workflow.Status.DesiredStateChange = &ts
+
+		err = r.Update(ctx, workflow)
+		if err != nil {
+			log.Error(err, "Failed to update Workflow state")
+			return ctrl.Result{}, err
+		}
+		log.Info("Status was updated", "State", workflow.Status.State)
+
+		return ctrl.Result{}, nil
+	}
+
+	// We must create Computes during proposal state
+	if workflow.Spec.DesiredState == dwsv1alpha1.StateProposal.String() {
+		computes, err := r.createComputes(ctx, workflow, workflow.Name, log)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Ensure the computes reference is set
+		cref := v1.ObjectReference{Name: computes.Name, Namespace: computes.Namespace}
+		if workflow.Status.Computes != cref {
+			log.Info("Updating workflow with Computes")
+			workflow.Status.Computes = cref
+
+			err = r.Update(ctx, workflow)
+			if err != nil {
+				log.Error(err, "Failed to add computes reference")
+			}
+			return ctrl.Result{}, err
+		}
+	}
+
 	updateNeeded := false
-	driverDone, err := checkDriverStatus(instance)
+	driverDone, err := checkDriverStatus(workflow)
 	if err != nil {
 		// Update Status only if not already in an ERROR state
-		if instance.Status.State != instance.Spec.DesiredState ||
-			instance.Status.Ready != ConditionFalse ||
-			instance.Status.Reason != "ERROR" {
+		if workflow.Status.State != workflow.Spec.DesiredState ||
+			workflow.Status.Ready != ConditionFalse ||
+			workflow.Status.Reason != "ERROR" {
 			log.Info("Workflow state transitioning to " + "ERROR")
-			instance.Status.State = instance.Spec.DesiredState
-			instance.Status.Ready = ConditionFalse
-			instance.Status.Reason = "ERROR"
-			instance.Status.Message = err.Error()
+			workflow.Status.State = workflow.Spec.DesiredState
+			workflow.Status.Ready = ConditionFalse
+			workflow.Status.Reason = "ERROR"
+			workflow.Status.Message = err.Error()
 			updateNeeded = true
 		}
 	} else {
-		// Update Status.State if needed
-		if instance.Status.State != instance.Spec.DesiredState {
-			log.Info("Workflow state transitioning to " + instance.Spec.DesiredState)
-			instance.Status.State = instance.Spec.DesiredState
-			ts := metav1.Now()
-			instance.Status.DesiredStateChange = &ts
-			updateNeeded = true
-		}
 		// Set Ready/Reason based on driverDone condition
 		// All drivers achieving the current desiredStatus means we've achieved the desired state
 		if driverDone == ConditionTrue {
-			if instance.Status.Ready != ConditionTrue {
-				instance.Status.Ready = ConditionTrue
+			if workflow.Status.Ready != ConditionTrue {
+				workflow.Status.Ready = ConditionTrue
 				ts := metav1.Now()
-				instance.Status.ReadyChange = &ts
-				instance.Status.Reason = "Completed"
-				instance.Status.Message = "Workflow " + instance.Status.State + " completed successfully"
-				log.Info("Workflow transitioning to ready state " + instance.Status.State)
+				workflow.Status.ReadyChange = &ts
+				workflow.Status.Reason = "Completed"
+				workflow.Status.Message = "Workflow " + workflow.Status.State + " completed successfully"
+				log.Info("Workflow transitioning to ready state " + workflow.Status.State)
 				updateNeeded = true
 			}
 		} else {
 			// Driver not ready, update Status if not already in DriverWait
-			if instance.Status.Reason != "DriverWait" {
-				instance.Status.Ready = ConditionFalse
-				instance.Status.Reason = "DriverWait"
-				instance.Status.Message = "Workflow " + instance.Status.State + " waiting for driver completion"
-				log.Info("Workflow state=" + instance.Status.State + " waiting for driver completion")
+			if workflow.Status.Reason != "DriverWait" {
+				workflow.Status.Ready = ConditionFalse
+				workflow.Status.Reason = "DriverWait"
+				workflow.Status.Message = "Workflow " + workflow.Status.State + " waiting for driver completion"
+				log.Info("Workflow state=" + workflow.Status.State + " waiting for driver completion")
 				updateNeeded = true
 			}
 		}
 	}
 	if updateNeeded {
-		err = r.Update(context.TODO(), instance)
+		err = r.Update(ctx, workflow)
 		if err != nil {
 			log.Error(err, "Failed to update Workflow state")
 			return ctrl.Result{}, nil
 		}
-		log.Info("Status was updated", "State", instance.Status.State)
+		log.Info("Status was updated", "State", workflow.Status.State)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1.Workflow, name string, log logr.Logger) (*dwsv1alpha1.Computes, error) {
+
+	computes := &dwsv1alpha1.Computes{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: wf.Namespace,
+		},
+	}
+
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, computes,
+		func() error {
+			// Link the Computes to the workflow
+			return ctrl.SetControllerReference(wf, computes, r.Scheme)
+		})
+
+	if err != nil {
+		log.Error(err, "Failed to create or update Computes", "name", computes.Name)
+		return nil, err
+	}
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created Computes", "name", computes.Name)
+	}
+
+	return computes, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

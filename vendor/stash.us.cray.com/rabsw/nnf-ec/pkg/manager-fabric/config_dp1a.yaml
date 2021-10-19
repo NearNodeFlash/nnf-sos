@@ -1,6 +1,7 @@
 version: v1
 metadata:
   name: DP1a
+debugLevel: info
 managementConfig:
   primaryDevice: 0
   secondaryDevice: 1
