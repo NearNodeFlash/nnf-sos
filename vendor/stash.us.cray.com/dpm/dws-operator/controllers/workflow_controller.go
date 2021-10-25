@@ -80,7 +80,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if workflow.Status.State != workflow.Spec.DesiredState {
 		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
-		ts := metav1.Now()
+		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
 
 		err = r.Update(ctx, workflow)
@@ -133,7 +133,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if driverDone == ConditionTrue {
 			if workflow.Status.Ready != ConditionTrue {
 				workflow.Status.Ready = ConditionTrue
-				ts := metav1.Now()
+				ts := metav1.NowMicro()
 				workflow.Status.ReadyChange = &ts
 				workflow.Status.Reason = "Completed"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " completed successfully"

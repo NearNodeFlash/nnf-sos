@@ -118,10 +118,10 @@ type WorkflowStatus struct {
 	Computes corev1.ObjectReference `json:"computes,omitempty"`
 
 	// Time of the most recent desiredState change
-	DesiredStateChange *metav1.Time `json:"desiredStateChange,omitempty"`
+	DesiredStateChange *metav1.MicroTime `json:"desiredStateChange,omitempty"`
 
 	// Time of the most recent desiredState's achieving Ready status
-	ReadyChange *metav1.Time `json:"readyChange,omitempty"`
+	ReadyChange *metav1.MicroTime `json:"readyChange,omitempty"`
 }
 
 //+kubebuilder:object:root=true
