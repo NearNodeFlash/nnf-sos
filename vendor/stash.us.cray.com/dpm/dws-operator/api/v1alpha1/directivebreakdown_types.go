@@ -44,6 +44,7 @@ type AllocationSetComponents struct {
 
 // DirectiveBreakdownSpec defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
 type DirectiveBreakdownSpec struct {
+	// DW is the Datawarp Directive Record
 	DW DWRecord `json:"dwRecord"`
 
 	// Name is the identifier for this directive breakdown
@@ -57,11 +58,26 @@ type DirectiveBreakdownSpec struct {
 	// +kubebuilder:validation:Enum=job;persistent
 	Lifetime string `json:"lifetime"`
 
+	// TODO: Remove everything below because they are in the Status Section.
+	//       Once nnf-sos has the directivebreakdown controller that understands status
+	// 	     these can be removed.
+	// Servers is a reference to the Server CR
+	Servers corev1.ObjectReference `json:"servers,omitempty"`
+
+	// AllocationSets lists the allocations required to fulfill the #DW Directive
+	AllocationSet []AllocationSetComponents `json:"allocationSet,omitempty"`
+}
+
+// DirectiveBreakdownStatus defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
+type DirectiveBreakdownStatus struct {
 	// Servers is a reference to the Server CR
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// AllocationSets lists the allocations required to fulfill the #DW Directive
 	AllocationSet []AllocationSetComponents `json:"allocationSet"`
+
+	// Ready indicates whether AllocationSets have been generated (true) or not (false)
+	Ready bool `json:"ready"`
 }
 
 //+kubebuilder:object:root=true
@@ -72,7 +88,8 @@ type DirectiveBreakdown struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec DirectiveBreakdownSpec `json:"spec,omitempty"`
+	Spec   DirectiveBreakdownSpec   `json:"spec,omitempty"`
+	Status DirectiveBreakdownStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
