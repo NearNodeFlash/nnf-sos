@@ -660,7 +660,7 @@ sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/dpm/dws-operator v0.0.0-20211019151303-b92de16c7858 => ./.dws-operator
+# stash.us.cray.com/dpm/dws-operator v0.0.0-20211026211009-55745cc72e43 => ./.dws-operator
 ## explicit
 stash.us.cray.com/dpm/dws-operator/api/v1alpha1
 stash.us.cray.com/dpm/dws-operator/controllers

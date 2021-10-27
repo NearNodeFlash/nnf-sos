@@ -137,7 +137,7 @@ func (r *WorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1al
 			continue
 		}
 
-		ts := metav1.Now()
+		ts := metav1.NowMicro()
 		driverStatus.CompleteTime = &ts
 		driverStatus.Completed = true
 		updateWorkflow = true

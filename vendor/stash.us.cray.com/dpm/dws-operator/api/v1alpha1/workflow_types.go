@@ -81,7 +81,7 @@ type WorkflowDriverStatus struct {
 	Message string `json:"message,omitempty"`
 
 	// CompleteTime reflects the time that the workflow reconciler marks the driver complete
-	CompleteTime *metav1.Time `json:"completeTime,omitempty"`
+	CompleteTime *metav1.MicroTime `json:"completeTime,omitempty"`
 }
 
 // WorkflowStatus defines the observed state of the Workflow
