@@ -307,18 +307,21 @@ func (r *NnfNodeReconciler) configureElementControllerService(ctx context.Contex
 	}
 
 	for _, object := range []client.Object{service, endpoints} {
-		res, err := ctrl.CreateOrUpdate(ctx, r.Client, object, func() error {
+		result, err := ctrl.CreateOrUpdate(ctx, r.Client, object, func() error {
 			return ctrl.SetControllerReference(node, object, r.Scheme)
 		})
 
 		if err != nil {
-			log.Error(err, "Failed to create object", "Object.Kind", object.GetObjectKind())
+			log.Error(err, "Failed to create service/endpoint")
 			return ctrl.Result{}, err
 		}
 
-		if res != controllerutil.OperationResultNone {
-			log.Info("Operation succeeded", "Result", res, "Object.Kind", object.GetObjectKind())
-			return ctrl.Result{Requeue: true}, err
+		if result == controllerutil.OperationResultCreated {
+			log.Info("Created service/endpoint")
+		} else if result == controllerutil.OperationResultNone {
+			// no change
+		} else {
+			log.Info("Updated service/endpoint")
 		}
 	}
 

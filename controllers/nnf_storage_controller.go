@@ -195,10 +195,10 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 		if result == controllerutil.OperationResultCreated {
 			log.Info("Created NnfNodeStorage", "Name", nnfNodeStorage.Name, "Namespace", nnfNodeStorage.Namespace)
-		}
-
-		if result != controllerutil.OperationResultNone {
-			return &ctrl.Result{}, nil
+		} else if result == controllerutil.OperationResultNone {
+			// no change
+		} else {
+			log.Info("Updated NnfNodeStorage", "Name", nnfNodeStorage.Name, "Namespace", nnfNodeStorage.Namespace)
 		}
 
 		// Add an object reference to the storage resource

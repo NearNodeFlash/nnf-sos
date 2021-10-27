@@ -335,7 +335,13 @@ func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dir
 				return
 			}
 
-			log.Info("added breakdown", "directiveBreakdown", directiveBreakdown.Spec.DW.DWDirective)
+			if result == controllerutil.OperationResultCreated {
+				log.Info("Created breakdown", "directiveBreakdown", directiveBreakdown.Spec.DW.DWDirective)
+			} else if result == controllerutil.OperationResultNone {
+				// no change
+			} else {
+				log.Info("Updated breakdown", "directiveBreakdown", directiveBreakdown.Spec.DW.DWDirective)
+			}
 
 			// The directive's command has been matched, no need to look at the other breakDownCommands
 			return
@@ -405,7 +411,7 @@ func (r *WorkflowReconciler) createServers(ctx context.Context, wf *dwsv1alpha1.
 	}
 	log.Info("Trying to create/update Servers", "name", server.Name)
 
-	_, err = ctrl.CreateOrUpdate(ctx, r.Client, server,
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, server,
 		func() error {
 			// Link the Servers to the DirectiveBreakdown
 			return ctrl.SetControllerReference(dbd, server, r.Scheme)
@@ -416,7 +422,13 @@ func (r *WorkflowReconciler) createServers(ctx context.Context, wf *dwsv1alpha1.
 		return nil, err
 	}
 
-	log.Info("done", "workflow", wf, "name", server.Name)
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created server", "server name", server.Name)
+	} else if result == controllerutil.OperationResultNone {
+		// no change
+	} else {
+		log.Info("Updated server", "server name", server.Name)
+	}
 
 	return server, err
 }
@@ -451,7 +463,7 @@ func (r *WorkflowReconciler) handleSetupState(ctx context.Context, workflow *dws
 			return ctrl.Result{}, err
 		}
 
-		nnfStorage, result, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
+		result, nnfStorage, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -485,7 +497,7 @@ func (r *WorkflowReconciler) handleSetupState(ctx context.Context, workflow *dws
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (nnfv1alpha1.NnfStorage, controllerutil.OperationResult, error) {
+func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (controllerutil.OperationResult, nnfv1alpha1.NnfStorage, error) {
 
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -532,10 +544,18 @@ func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alph
 
 	if err != nil {
 		log.Error(err, "Failed to create or update NnfStorage", "name", nnfStorage.Name)
-		return *nnfStorage, result, err
+		return result, *nnfStorage, err
 	}
 
-	return *nnfStorage, result, nil
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created nnfStorage", "name", nnfStorage.Name)
+	} else if result == controllerutil.OperationResultNone {
+		// no change
+	} else {
+		log.Info("Updated nnfStorage", "name", nnfStorage.Name)
+	}
+
+	return result, *nnfStorage, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

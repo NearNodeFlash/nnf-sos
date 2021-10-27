@@ -184,6 +184,10 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 	}
 	if result == controllerutil.OperationResultCreated {
 		log.Info("Created Computes", "name", computes.Name)
+	} else if result == controllerutil.OperationResultNone {
+		// no change
+	} else {
+		log.Info("Updated Computes", "name", computes.Name)
 	}
 
 	return computes, nil
