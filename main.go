@@ -187,6 +187,14 @@ func (*storageController) GetNamespace() string     { return "" }
 func (*storageController) Start(*nnf.Options) error { return nil }
 
 func (c *storageController) SetupReconciler(mgr manager.Manager) error {
+	if err := (&controllers.NnfNodeSLCReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	if err := (&controllers.WorkflowReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Workflow"),

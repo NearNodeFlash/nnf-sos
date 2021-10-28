@@ -74,6 +74,11 @@ if [ $CMD == "docker-build" ] || [ $CMD == "kind-push" ] || [ $CMD == "deploy" ]
 fi
 
 if [ $CMD == "undeploy" ]; then
+    # Remove the nnfnode resources created by the NLCs
+    for NAMESPACE in $(kubectl get nnfnodes -A -o custom-columns=":metadata.namespace" --no-headers); do
+        kubectl delete nnfnode -n $NAMESPACE nnf-nlc
+    done
+
     # Reverse the list.
     for PKG in $(echo ${SUB_PKGS[@]} | tr ' ' '\n' | tac); do
         ( cd $PKG; make $CMD )
