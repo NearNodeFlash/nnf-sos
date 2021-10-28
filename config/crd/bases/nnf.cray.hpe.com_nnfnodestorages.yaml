@@ -65,7 +65,6 @@ spec:
                   here, if FileSystemType specifies a Lustre target.
                 properties:
                   backFs:
-                    default: ldiskfs
                     description: BackFs is the type of backing filesystem to use.
                     enum:
                     - ldiskfs
@@ -81,7 +80,6 @@ spec:
                       only when creating MDT and OST targets.
                     type: string
                   startIndex:
-                    default: 0
                     description: StartIndex is used to order a series of MDTs or OSTs.  This
                       is used only when creating MDT and OST targets. If count in
                       the NnfNodeStorageSpec is more than 1, then StartIndex is the

@@ -49,7 +49,6 @@ type LustreStorageSpec struct {
 	// than 1, then StartIndex is the index of the first allocation, and the indexes
 	// increment from there.
 	// +kubebuilder:validation:Minimum:=0
-	// +kubebuilder:default:=0
 	StartIndex int `json:"startIndex,omitempty"`
 
 	// MgsNode is the NID of the MGS to use. This is used only when
@@ -58,7 +57,6 @@ type LustreStorageSpec struct {
 
 	// BackFs is the type of backing filesystem to use.
 	// +kubebuilder:validation:Enum=ldiskfs;zfs
-	// +kubebuilder:default:=ldiskfs
 	BackFs string `json:"backFs,omitempty"`
 }
 

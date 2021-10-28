@@ -28,7 +28,6 @@ type NnfStorageLustreSpec struct {
 
 	// BackFs is the type of backing filesystem to use.
 	// +kubebuilder:validation:Enum=ldiskfs;zfs
-	// +kubebuilder:default:=zfs
 	BackFs string `json:"backFs,omitempty"`
 }
 

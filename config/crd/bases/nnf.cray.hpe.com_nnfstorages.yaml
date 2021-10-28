@@ -48,7 +48,6 @@ spec:
                 items:
                   properties:
                     backFs:
-                      default: zfs
                       description: BackFs is the type of backing filesystem to use.
                       enum:
                       - ldiskfs
