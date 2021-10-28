@@ -7,9 +7,10 @@ PROG=$(basename "$0")
 
 printhelp()
 {
-  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS | -i RABBITS] [-a ALLOCATION_COUNT] [-Y] [-X]"
+  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS | -i RABBITS] [-a ALLOCATION_COUNT] [-Y] [-X] [-C]"
   echo
   echo "  -w WORKFLOW  Resource name of the workflow."
+  echo "  -C           Colocate MDT and MGT on same rabbit (but separate devices)."
   echo "  -c COUNT     Number of rabbit nodes to use."
   echo "  -i RABBITS   Comma-separated list of rabbit nodes to use."
   echo "  -x XRABBITS  Comma-separated list of rabbit nodes to exclude."
@@ -22,11 +23,12 @@ printhelp()
 
 ALLOCATION_COUNT=1
 OPTIND=1
-while getopts ":hw:c:x:i:a:YX" opt
+while getopts ":hw:c:x:i:a:YXC" opt
 do
   case $opt in
   w) WORKFLOW=$OPTARG ;;
   c) COUNT=$OPTARG ;;
+  C) COLOCATE_MDT_MGT=yes ;;
   i) IRABBITS=$OPTARG ;;
   x) XRABBITS=$OPTARG ;;
   a) ALLOCATION_COUNT=$OPTARG ;;
@@ -110,6 +112,7 @@ query_rabbits()
     RABBITS=$(echo "$RABBITS" | sed "$COUNT"q)
   fi
 
+  # shellcheck disable=SC2206
   RABBIT_ARRAY=($RABBITS)
   RABBIT_COUNT="${#RABBIT_ARRAY[@]}"
   if [ "$RABBIT_COUNT" = 0 ]; then
@@ -185,81 +188,59 @@ patch_servers()
 {
   SERVERS_PATCH=servers-patch.yaml
 
-  case "$RABBIT_COUNT" in
-  "1")
-    {
-cat > $SERVERS_PATCH << EOF
-kind: Servers
-name: $SERVERS
-apiVersion: dws.cray.hpe.com/v1alpha1
-data:
-- allocationSize: $MGT_SIZE_IN_BYTES
-  label: mgt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[0]}
-- allocationSize: $MDT_SIZE_IN_BYTES
-  label: mdt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[0]}
-- allocationSize: 10995116277760
-  label: ost
-  hosts:
-  - allocationCount: $ALLOCATION_COUNT
-    name: ${RABBIT_ARRAY[0]}
-EOF
-    }
-    ;;
-  "2")
-    {
-cat > $SERVERS_PATCH << EOF
-kind: Servers
-name: $SERVERS
-apiVersion: dws.cray.hpe.com/v1alpha1
-data:
-- allocationSize: $MGT_SIZE_IN_BYTES
-  label: mgt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[0]}
-- allocationSize: $MDT_SIZE_IN_BYTES
-  label: mdt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[1]}
-- allocationSize: 10995116277760
-  label: ost
-  hosts:
-  - allocationCount: $ALLOCATION_COUNT
-    name: ${RABBIT_ARRAY[1]}
-EOF
-    }
-    ;;
-  *)
-    {
+  # The MGT will be RABBIT_ARRAY[0].  The MDT will normally be RABBIT_ARRAY[1],
+  # unless we need to put it on the same node as the MGT.
+  MDT_IDX=1
+  if (( RABBIT_COUNT == 1 )) || [[ -n $COLOCATE_MDT_MGT ]]
+  then
+    MDT_IDX=0
+  fi
 
+  cat > $SERVERS_PATCH << EOF
+kind: Servers
+name: $SERVERS
+apiVersion: dws.cray.hpe.com/v1alpha1
+data:
+- allocationSize: $MGT_SIZE_IN_BYTES
+  label: mgt
+  hosts:
+  - allocationCount: 1
+    name: ${RABBIT_ARRAY[0]}
+- allocationSize: $MDT_SIZE_IN_BYTES
+  label: mdt
+  hosts:
+  - allocationCount: 1
+    name: ${RABBIT_ARRAY[$MDT_IDX]}
+EOF
+
+  case $RABBIT_COUNT in
+  1)
+cat >> $SERVERS_PATCH << EOF
+- allocationSize: 10995116277760
+  label: ost
+  hosts:
+  - allocationCount: $ALLOCATION_COUNT
+    name: ${RABBIT_ARRAY[0]}
+EOF
+  ;;
+
+  2)
+cat >> $SERVERS_PATCH << EOF
+- allocationSize: 10995116277760
+  label: ost
+  hosts:
+  - allocationCount: $ALLOCATION_COUNT
+    name: ${RABBIT_ARRAY[1]}
+EOF
+  ;;
+
+  *)
     echo Building ost hosts...
     ost_section=$(build_ost_hosts)
 
-cat > $SERVERS_PATCH << EOF
-kind: Servers
-name: $SERVERS
-apiVersion: dws.cray.hpe.com/v1alpha1
-data:
-- allocationSize: $MGT_SIZE_IN_BYTES
-  label: mgt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[0]}
-- allocationSize: $MDT_SIZE_IN_BYTES
-  label: mdt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[1]}
+cat >> $SERVERS_PATCH << EOF
 $ost_section
 EOF
-    }
     ;;
   esac
 

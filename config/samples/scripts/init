@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # kill any running proxy
-pkill kubectl
+pkill -f 'kubectl proxy --port 8080'
 
 # Nice article explaining the need for a proxy: <https://stackoverflow.com/questions/54332972/what-is-the-purpose-of-kubectl-proxy#54345488>
 # Also: <https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/>
