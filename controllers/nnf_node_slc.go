@@ -129,11 +129,22 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			// Access information for how to get to the storage
 			storage.Data.Access.Protocol = "PCIe"
+
+			// Wait until the servers array has been filled in with the Rabbit info
+			if len(nnfNode.Status.Servers) == 0 {
+				return nil
+			}
+
 			storage.Data.Access.Servers = []dwsv1alpha1.Node{{
 				// The Rabbit node is always server 0 in NNFNode
 				Name:   nnfNode.Status.Servers[0].Name,
 				Status: string(nnfNode.Status.Servers[0].Status),
 			}}
+
+			// Wait until the servers array has been filled in with the compute node info
+			if len(nnfNode.Status.Servers) == 1 {
+				return nil
+			}
 
 			computes := []dwsv1alpha1.Node{}
 			for _, c := range nnfNode.Status.Servers[1:] {
