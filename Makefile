@@ -93,10 +93,66 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # Explicitly specifying directories to test here to avoid running tests in .dws-operator for the time being.
 # ./controllers/...
 # ./api/...
+# Below is a list of ginkgo test flags that may be used to generate different test patterns.
+# Specifying 'count=1' is the idiomatic way to disable test caching
+#   -ginkgo.debug
+#         If set, ginkgo will emit node output to files when running in parallel.
+#   -ginkgo.dryRun
+#         If set, ginkgo will walk the test hierarchy without actually running anything.  Best paired with -v.
+#   -ginkgo.failFast
+#         If set, ginkgo will stop running a test suite after a failure occurs.
+#   -ginkgo.failOnPending
+#         If set, ginkgo will mark the test suite as failed if any specs are pending.
+#   -ginkgo.flakeAttempts int
+#         Make up to this many attempts to run each spec. Please note that if any of the attempts succeed, the suite will not be failed. But any failures will still be recorded. (default 1)
+#   -ginkgo.focus value
+#         If set, ginkgo will only run specs that match this regular expression. Can be specified multiple times, values are ORed.
+#   -ginkgo.noColor
+#         If set, suppress color output in default reporter.
+#   -ginkgo.noisyPendings
+#         If set, default reporter will shout about pending tests. (default true)
+#   -ginkgo.noisySkippings
+#         If set, default reporter will shout about skipping tests. (default true)
+#   -ginkgo.parallel.node int
+#         This worker node's (one-indexed) node number.  For running specs in parallel. (default 1)
+#   -ginkgo.parallel.streamhost string
+#         The address for the server that the running nodes should stream data to.
+#   -ginkgo.parallel.synchost string
+#         The address for the server that will synchronize the running nodes.
+#   -ginkgo.parallel.total int
+#         The total number of worker nodes.  For running specs in parallel. (default 1)
+#   -ginkgo.progress
+#         If set, ginkgo will emit progress information as each spec runs to the GinkgoWriter.
+#   -ginkgo.randomizeAllSpecs
+#         If set, ginkgo will randomize all specs together.  By default, ginkgo only randomizes the top level Describe, Context and When groups.
+#   -ginkgo.regexScansFilePath
+#         If set, ginkgo regex matching also will look at the file path (code location).
+#   -ginkgo.reportFile string
+#         Override the default reporter output file path.
+#   -ginkgo.reportPassed
+#         If set, default reporter prints out captured output of passed tests.
+#   -ginkgo.seed int
+#         The seed used to randomize the spec suite. (default 1635181882)
+#   -ginkgo.skip value
+#         If set, ginkgo will only run specs that do not match this regular expression. Can be specified multiple times, values are ORed.
+#   -ginkgo.skipMeasurements
+#         If set, ginkgo will skip any measurement specs.
+#   -ginkgo.slowSpecThreshold float
+#         (in seconds) Specs that take longer to run than this threshold are flagged as slow by the default reporter. (default 5)
+#   -ginkgo.succinct
+#         If set, default reporter prints out a very succinct report
+#   -ginkgo.trace
+#         If set, default reporter prints out the full stack trace when a failure occurs
+#   -ginkgo.v
+#         If set, default reporter print out all specs as they begin.
+#
+#  To see the test results as they execute:
+# export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; go test -v -count=1 ./controllers/... -args -ginkgo.v
+
 test: manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
-	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./controllers/... ./api/... -coverprofile cover.out
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./controllers/... ./api/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress
 
 ##@ Build
 

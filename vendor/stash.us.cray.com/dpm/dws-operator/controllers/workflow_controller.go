@@ -8,6 +8,7 @@ import (
 	"context"
 	myerror "errors"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -135,6 +136,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				workflow.Status.Ready = ConditionTrue
 				ts := metav1.NowMicro()
 				workflow.Status.ReadyChange = &ts
+				workflow.Status.ElapsedTimeLastState = ts.Time.Sub(workflow.Status.DesiredStateChange.Time).Round(time.Microsecond).String()
 				workflow.Status.Reason = "Completed"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " completed successfully"
 				log.Info("Workflow transitioning to ready state " + workflow.Status.State)

@@ -72,6 +72,24 @@ rules:
   - directivebreakdowns
   verbs:
   - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - directivebreakdowns/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - directivebreakdowns/status
+  verbs:
+  - create
   - get
   - list
   - patch
@@ -83,6 +101,7 @@ rules:
   - servers
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -116,6 +135,14 @@ rules:
   - workflows/finalizers
   verbs:
   - update
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - directivebreakdowns/status
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

@@ -122,6 +122,9 @@ type WorkflowStatus struct {
 
 	// Time of the most recent desiredState's achieving Ready status
 	ReadyChange *metav1.MicroTime `json:"readyChange,omitempty"`
+
+	// Duration of the last state change
+	ElapsedTimeLastState string `json:"elapsedTimeLastState,omitempty"`
 }
 
 //+kubebuilder:object:root=true

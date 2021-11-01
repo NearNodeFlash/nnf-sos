@@ -39,4 +39,9 @@ resources:
   group: dws
   kind: Workflow
   version: v1alpha1
+- controller: true
+  domain: cray.com
+  group: nnf
+  kind: DirectiveBreakdown
+  version: v1alpha1
 version: "3"

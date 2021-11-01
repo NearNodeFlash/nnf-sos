@@ -22,33 +22,48 @@ var _ = Describe("Integration Test", func() {
 	const (
 		WorkflowNamespace = "default"
 		WorkflowID        = "test"
-		wfDirective       = "#DW jobdw name=test type=%s capacity=10GiB"
+		supported         = true
+		unsupported       = false
 	)
-	const timeout = time.Second * 5
+	wfDirectives := []string{
+		"#DW jobdw name=test%d type=%s capacity=%dGiB",
+		"#DW jobdw name=test%d type=%s capacity=%dGiB",
+		"#DW jobdw name=test%d type=%s capacity=%dGiB",
+		"#DW jobdw name=test%d type=%s capacity=%dGiB", // Add more if you want more directivebreakdowns and servers
+	}
+
+	const timeout = time.Second * 10
 	const interval = time.Millisecond * 100
 
 	var savedWorkflow *dwsv1alpha1.Workflow
-	var savedDirectiveBreakdown *dwsv1alpha1.DirectiveBreakdown
 
 	type fsToTest struct {
-		fsName      string
-		isSupported bool
+		fsName        string
+		allocSetCount int
+		isSupported   bool
 	}
 	var filesystems = []fsToTest{
-		{"raw", true},
-		{"xfs", true},
-		{"lustre", true},
+		{"raw", 1, supported},
+		{"xfs", 1, supported},
+		{"lustre", 3, supported},
 
 		// The following are not yet supported
-		// {"lvm", false},
-		// {"gfs2", false},
+		// {"lvm", 1, unsupported},
+		// {"gfs2", 1, unsupported},
 	}
 
 	// Spin through the supported file systems
 	for index := range filesystems {
-		f := filesystems[index] // Ensure closure has the current value from the loop above.
-		workflowName := "wf-" + f.fsName
+		f := filesystems[index] // Ensure closure has the current value from the loop.
+		workflowName := f.fsName + "-" + strconv.Itoa(int(time.Now().UnixMicro()))
 
+		// Initialize dwDirectives to unique names and sizes
+		var dwDirectives []string
+		for i := range wfDirectives {
+			m := (i + 1) * 10
+			dwDirectives = append(dwDirectives, fmt.Sprintf(wfDirectives[i], m, f.fsName, m))
+
+		}
 		Describe(fmt.Sprintf("Creating workflow %s for file system %s", workflowName, f.fsName), func() {
 			BeforeEach(func() {
 				if !f.isSupported {
@@ -65,9 +80,7 @@ var _ = Describe("Integration Test", func() {
 					Spec: dwsv1alpha1.WorkflowSpec{
 						DesiredState: "proposal", // TODO: This should be defined somewhere
 						WLMID:        WorkflowID,
-						DWDirectives: []string{
-							fmt.Sprintf(wfDirective, f.fsName),
-						},
+						DWDirectives: dwDirectives,
 					},
 				}
 				Expect(k8sClient.Create(context.Background(), workflow)).Should(Succeed())
@@ -123,67 +136,90 @@ var _ = Describe("Integration Test", func() {
 				Expect(computes.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
 			})
 
-			It("Should have a directiveBreakdown that is owned by the workflow", func() {
-				directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
-				name := workflowName + "-" + strconv.Itoa(0)
-				namespace := WorkflowNamespace
+			It("Should have directiveBreakdown(s) owned by the workflow, 1 for each #DW", func() {
+				for i := 0; i < len(wfDirectives); i++ {
+					directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
+					name := workflowName + "-" + strconv.Itoa(i)
+					namespace := WorkflowNamespace
 
-				Eventually(func() error {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
-					return err
-				}, timeout, interval).Should(Succeed())
+					Eventually(func() error {
+						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
+						if err != nil {
+							return err
+						}
 
-				// From https://book.kubebuilder.io/reference/envtest.html
-				// Unless you’re using an existing cluster, keep in mind that no built-in controllers
-				// are running in the test context. In some ways, the test control plane will behave
-				// differently from “real” clusters, and that might have an impact on how you write tests.
-				// One common example is garbage collection; because there are no controllers monitoring
-				// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
-				//
-				// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
-				t := true
-				expectedOwnerReference := metav1.OwnerReference{
-					APIVersion:         savedWorkflow.APIVersion,
-					Kind:               savedWorkflow.Kind,
-					Name:               savedWorkflow.Name,
-					UID:                savedWorkflow.UID,
-					Controller:         &t,
-					BlockOwnerDeletion: &t,
+						if directiveBreakdown.Status.Ready != true {
+							return fmt.Errorf("not ready")
+						}
+
+						return nil
+					}, timeout, interval).Should(Succeed())
+
+					// From https://book.kubebuilder.io/reference/envtest.html
+					// Unless you’re using an existing cluster, keep in mind that no built-in controllers
+					// are running in the test context. In some ways, the test control plane will behave
+					// differently from “real” clusters, and that might have an impact on how you write tests.
+					// One common example is garbage collection; because there are no controllers monitoring
+					// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
+					//
+					// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
+					t := true
+					expectedOwnerReference := metav1.OwnerReference{
+						APIVersion:         savedWorkflow.APIVersion,
+						Kind:               savedWorkflow.Kind,
+						Name:               savedWorkflow.Name,
+						UID:                savedWorkflow.UID,
+						Controller:         &t,
+						BlockOwnerDeletion: &t,
+					}
+
+					Expect(directiveBreakdown.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
 				}
-
-				Expect(directiveBreakdown.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
-				savedDirectiveBreakdown = directiveBreakdown
 			})
 
-			It("Should have a single Servers that is owned by the directiveBreakdown", func() {
-				servers := &dwsv1alpha1.Servers{}
-				name := workflowName + "-" + strconv.Itoa(0)
-				namespace := WorkflowNamespace
+			It("Should have directiveBreakdown(s) that are ready, each referrring to an associated Servers", func() {
+				for i := 0; i < len(wfDirectives); i++ {
+					servers := &dwsv1alpha1.Servers{}
+					name := workflowName + "-" + strconv.Itoa(i)
+					namespace := WorkflowNamespace
 
-				Eventually(func() error {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, servers)
-					return err
-				}, timeout, interval).Should(Succeed())
+					Eventually(func() error {
+						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, servers)
+						return err
+					}, timeout, interval).Should(Succeed())
 
-				// From https://book.kubebuilder.io/reference/envtest.html
-				// Unless you’re using an existing cluster, keep in mind that no built-in controllers
-				// are running in the test context. In some ways, the test control plane will behave
-				// differently from “real” clusters, and that might have an impact on how you write tests.
-				// One common example is garbage collection; because there are no controllers monitoring
-				// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
-				//
-				// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
-				t := true
-				expectedOwnerReference := metav1.OwnerReference{
-					APIVersion:         savedDirectiveBreakdown.APIVersion,
-					Kind:               savedDirectiveBreakdown.Kind,
-					Name:               savedDirectiveBreakdown.Name,
-					UID:                savedDirectiveBreakdown.UID,
-					Controller:         &t,
-					BlockOwnerDeletion: &t,
+					directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
+					Eventually(func() error {
+						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
+						return err
+					}, timeout, interval).Should(Succeed())
+
+					Expect(directiveBreakdown.Status.Servers.Name).Should(Equal(servers.Name))
+					Expect(directiveBreakdown.Status.Servers.Namespace).Should(Equal(servers.Namespace))
+					Expect(len(directiveBreakdown.Status.AllocationSet)).Should(BeNumerically("==", f.allocSetCount))
+
+					Expect(directiveBreakdown.Status.Ready).Should(BeTrue())
+
+					// From https://book.kubebuilder.io/reference/envtest.html
+					// Unless you’re using an existing cluster, keep in mind that no built-in controllers
+					// are running in the test context. In some ways, the test control plane will behave
+					// differently from “real” clusters, and that might have an impact on how you write tests.
+					// One common example is garbage collection; because there are no controllers monitoring
+					// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
+					//
+					// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
+					t := true
+					expectedOwnerReference := metav1.OwnerReference{
+						APIVersion:         directiveBreakdown.APIVersion,
+						Kind:               directiveBreakdown.Kind,
+						Name:               directiveBreakdown.Name,
+						UID:                directiveBreakdown.UID,
+						Controller:         &t,
+						BlockOwnerDeletion: &t,
+					}
+
+					Expect(servers.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
 				}
-
-				Expect(servers.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
 			})
 
 			// Once all of the objects above have been created, the workflow should achieve "proposal"
