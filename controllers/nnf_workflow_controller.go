@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,15 +27,15 @@ import (
 )
 
 const (
-	// finalizerWorkflow defines the key used in identifying the
+	// finalizerNnfWorkflow defines the key used in identifying the
 	// storage object as being owned by this NNF Storage Reconciler. This
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished in using the resource.
-	finalizerWorkflow = "nnf.cray.hpe.com/workflow"
+	finalizerNnfWorkflow = "nnf.cray.hpe.com/nnf_workflow"
 )
 
-// WorkflowReconciler contains the pieces used by the reconciler
-type WorkflowReconciler struct {
+// NnfWorkflowReconciler contains the pieces used by the reconciler
+type NnfWorkflowReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -56,7 +57,7 @@ type WorkflowReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
-func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
 
 	// Fetch the Workflow instance
@@ -74,7 +75,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !workflow.GetDeletionTimestamp().IsZero() {
 		log.Info("Deleting workflow...")
 
-		if !controllerutil.ContainsFinalizer(workflow, finalizerWorkflow) {
+		if !controllerutil.ContainsFinalizer(workflow, finalizerNnfWorkflow) {
 			return ctrl.Result{}, nil
 		}
 
@@ -84,7 +85,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				return ctrl.Result{}, err
 			}
 
-			controllerutil.RemoveFinalizer(workflow, finalizerWorkflow)
+			controllerutil.RemoveFinalizer(workflow, finalizerNnfWorkflow)
 			if err := r.Update(ctx, workflow); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -115,7 +116,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 }
 
-func (r *WorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) bool {
+func (r *NnfWorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) bool {
 
 	log.Info("Drivers complete", "state", workflow.Status.State)
 
@@ -145,7 +146,7 @@ func (r *WorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1al
 	return updateWorkflow
 }
 
-func (r *WorkflowReconciler) completeDriverState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) completeDriverState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 
 	driverUpdate := r.updateDriversStatusForStatusState(workflow, driverID, log)
 	if driverUpdate {
@@ -159,7 +160,7 @@ func (r *WorkflowReconciler) completeDriverState(ctx context.Context, workflow *
 	return ctrl.Result{}, nil
 }
 
-func (r *WorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 
 	log.Info("Proposal")
 
@@ -183,10 +184,15 @@ func (r *WorkflowReconciler) handleProposalState(ctx context.Context, workflow *
 
 		err := r.Update(ctx, workflow)
 		if err != nil {
+			// Ignore conflict errors
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
 			log.Error(err, "Failed to update Workflow DirectiveBreakdowns")
+			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Ensure all DirectiveBreakdowns are ready
@@ -210,7 +216,7 @@ func (r *WorkflowReconciler) handleProposalState(ctx context.Context, workflow *
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-func (r *WorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, wf *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
+func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, wf *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
 
 	// DWDirectives that we need to generate directiveBreakdowns for look like this:
 	//  #DW command            arguments...
@@ -302,7 +308,7 @@ func needDirectiveBreakdownReference(dbdNeeded *dwsv1alpha1.DirectiveBreakdown, 
 	return true
 }
 
-func (r *WorkflowReconciler) handleSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 
 	log.Info("Setup")
 
@@ -360,7 +366,7 @@ func (r *WorkflowReconciler) handleSetupState(ctx context.Context, workflow *dws
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (controllerutil.OperationResult, nnfv1alpha1.NnfStorage, error) {
+func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (controllerutil.OperationResult, nnfv1alpha1.NnfStorage, error) {
 
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -423,7 +429,7 @@ func (r *WorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alph
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha1.Workflow{}).
 		Owns(&nnfv1alpha1.NnfStorage{}).

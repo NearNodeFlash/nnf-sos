@@ -195,9 +195,9 @@ func (c *storageController) SetupReconciler(mgr manager.Manager) error {
 		return err
 	}
 
-	if err := (&controllers.WorkflowReconciler{
+	if err := (&controllers.NnfWorkflowReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Workflow"),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfWorkflow"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		return err

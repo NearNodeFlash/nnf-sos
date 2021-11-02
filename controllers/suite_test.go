@@ -134,7 +134,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&WorkflowReconciler{
+	err = (&NnfWorkflowReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfWorkflow"),
 		Scheme: testEnv.Scheme,

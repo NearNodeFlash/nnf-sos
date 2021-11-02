@@ -1278,5 +1278,3 @@ sigs.k8s.io/yaml v1.2.0 h1:kr/MCeFWJWTwyaHoR9c8EjH9OumOmoF9YGiZd7lFm/Q=
 sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211019151222-9d48e022ea99 h1:03w8d5P4QOklUJ4i9RIaOcUJ4ZRfu0NyvjIHg7UT5ak=
 stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211019151222-9d48e022ea99/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211020142650-6f5ea49f4bd0 h1:prMsOT/k2JEq3/LTF1AffX4EuPTWzxF9n5H7mkDO1rQ=
-stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211020142650-6f5ea49f4bd0/go.mod h1:PSgBzUKzirX/wOqdrFmFUB75mIFf5G5CN5Va6GRG19w=
