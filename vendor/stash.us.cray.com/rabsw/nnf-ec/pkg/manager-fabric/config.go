@@ -22,9 +22,6 @@ type ConfigFile struct {
 	Metadata struct {
 		Name string
 	}
-
-	DebugLevel string `yaml:"debugLevel"`
-
 	ManagementConfig ManagementConfig `yaml:"managementConfig"`
 	Switches         []SwitchConfig
 

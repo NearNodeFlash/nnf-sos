@@ -12,7 +12,6 @@ import (
 // updating the http.ResponesWriter.
 type Api interface {
 	Initialize(NnfControllerInterface) error
-	Close() error
 
 	Id() string
 
@@ -54,7 +53,6 @@ type Api interface {
 // an equivalent method. Methods take request paramters and a Redfish / Swordfish model to populate.
 type StorageServiceApi interface {
 	Initialize(NnfControllerInterface) error
-	Close() error
 
 	Id() string
 

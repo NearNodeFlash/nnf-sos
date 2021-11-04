@@ -38,11 +38,6 @@ func (r *DefaultApiRouter) Start() error {
 	return Start()
 }
 
-// Close -
-func (r *DefaultApiRouter) Close() error {
-	return nil // TODO: This should close the switchtec device files
-}
-
 // Routes -
 func (r *DefaultApiRouter) Routes() ec.Routes {
 	s := r.servicer

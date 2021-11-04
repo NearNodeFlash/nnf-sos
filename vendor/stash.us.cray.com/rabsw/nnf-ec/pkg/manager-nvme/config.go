@@ -24,8 +24,7 @@ type ConfigFile struct {
 	Metadata struct {
 		Name string
 	}
-	DebugLevel string `yaml:"debugLevel"`
-	Storage    StorageConfig
+	Storage StorageConfig
 }
 
 func loadConfig() (*ConfigFile, error) {

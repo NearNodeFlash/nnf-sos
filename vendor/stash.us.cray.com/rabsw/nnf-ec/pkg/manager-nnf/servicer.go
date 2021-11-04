@@ -9,17 +9,6 @@ import (
 	. "stash.us.cray.com/rabsw/nnf-ec/pkg/common"
 )
 
-const (
-	StorageServiceOdataType = "#StorageService.v1_5_0.StorageService"
-	StoragePoolOdataType    = "#StoragePool.v1_5_0.StoragePool"
-	CapacitySourceOdataType = "#CapacitySource.v1_0_0.CapacitySource"
-	VolumeOdataType         = "#Volume.v1_6_1.Volume"
-	EndpointOdataType       = "#Endpoint.v1_5_0.Endpoint"
-	StorageGroupOdataType   = "#StorageGroup.v1_5_0.StorageGroup"
-	FileSystemOdataType     = "#FileSystem.v1_2_2.FileSystem"
-	FileShareOdataType      = "#FileShare.v1_2_0.FileShare"
-)
-
 // DefaultApiService -
 type DefaultApiService struct {
 	ss StorageServiceApi
@@ -36,10 +25,6 @@ func (s *DefaultApiService) Id() string {
 
 func (s *DefaultApiService) Initialize(ctrl NnfControllerInterface) error {
 	return s.ss.Initialize(ctrl)
-}
-
-func (s *DefaultApiService) Close() error {
-	return s.ss.Close()
 }
 
 // RedfishV1StorageServicesGet -
@@ -63,7 +48,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdGet(w http.R
 
 	model := sf.StorageServiceV150StorageService{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s", storageServiceId),
-		OdataType: StorageServiceOdataType,
+		OdataType: "#StorageService.v1_5_0.StorageService",
 		Name:      "Storage Service",
 	}
 
@@ -79,7 +64,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdCapacitySour
 
 	model := sf.CapacityCapacitySource{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/CapacitySource", storageServiceId),
-		OdataType: CapacitySourceOdataType,
+		OdataType: "#CapacitySource.v1_0_0.CapacitySource",
 		Name:      "Capacity Source",
 	}
 
@@ -122,7 +107,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 	}
 
 	model.OdataId = fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s", storageServiceId, model.Id)
-	model.OdataType = StoragePoolOdataType
+	model.OdataType = "#StoragePool.v1_5_0.StoragePool"
 
 	EncodeResponse(model, nil, w)
 }
@@ -135,7 +120,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 
 	model := sf.StoragePoolV150StoragePool{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s", storageServiceId, storagePoolId),
-		OdataType: StoragePoolOdataType,
+		OdataType: "#StoragePool.v1_5_0.StoragePool",
 		Name:      "Storage Pool",
 	}
 
@@ -181,7 +166,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 
 	model := sf.CapacityCapacitySource{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s/CapacitySources/%s", storageServiceId, storagePoolId, capacitySourceId),
-		OdataType: CapacitySourceOdataType,
+		OdataType: "#CapacitySource.v1_0_0.CapacitySource",
 		Name:      "Capacity Source",
 	}
 
@@ -234,7 +219,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 
 	model := sf.VolumeV161Volume{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s/AllocatedVolumes/%s", storageServiceId, storagePoolId, volumeId),
-		OdataType: VolumeOdataType,
+		OdataType: "#Volume.v1_6_1.Volume",
 		Name:      "Volume",
 	}
 
@@ -277,7 +262,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroup
 	}
 
 	model.OdataId = fmt.Sprintf("/redfish/v1/StorageServices/%s/StorageGroups/%s", storageServiceId, model.Id)
-	model.OdataType = StorageGroupOdataType
+	model.OdataType = "#StorageGroup.v1_5_0.StorageGroup"
 	model.Name = "Storage Group"
 
 	EncodeResponse(model, nil, w)
@@ -291,7 +276,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroup
 
 	model := sf.StorageGroupV150StorageGroup{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StorageGroups/%s", storageServiceId, storageGroupId),
-		OdataType: StorageGroupOdataType,
+		OdataType: "#StorageGroup.v1_5_0.StorageGroup",
 		Name:      "Storage Group",
 	}
 
@@ -335,7 +320,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdEndpointsEnd
 
 	model := sf.EndpointV150Endpoint{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/Endpoints/%s", storageServiceId, endpointId),
-		OdataType: EndpointOdataType,
+		OdataType: "#Endpoint.v1_5_0.Endpoint",
 		Name:      "Endpoint",
 	}
 
@@ -378,7 +363,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsP
 	}
 
 	model.OdataId = fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s", storageServiceId, model.Id)
-	model.OdataType = FileSystemOdataType
+	model.OdataType = "#FileSystem.v1_2_2.FileSystem"
 	model.Name = "File System"
 
 	EncodeResponse(model, nil, w)
@@ -392,7 +377,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 
 	model := sf.FileSystemV122FileSystem{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s", storageServiceId, fileSystemId),
-		OdataType: FileSystemOdataType,
+		OdataType: "#FileSystem.v1_2_2.FileSystem",
 		Name:      "File System",
 	}
 
@@ -445,7 +430,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 	err := s.ss.StorageServiceIdFileSystemIdExportedSharesPost(storageServiceId, fileSystemId, &model)
 
 	model.OdataId = fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s/ExportedShares/%s", storageServiceId, fileSystemId, model.Id)
-	model.OdataType = FileShareOdataType
+	model.OdataType = "#FileShare.v1_2_0.FileShare"
 	model.Name = "Exported File Share"
 
 	EncodeResponse(model, err, w)
@@ -460,7 +445,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 
 	model := sf.FileShareV120FileShare{
 		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s/ExportedShares/%s", storageServiceId, fileSystemId, exportedShareId),
-		OdataType: FileShareOdataType,
+		OdataType: "#FileShare.v1_2_0.FileShare",
 		Name:      "Exported File Share",
 	}
 

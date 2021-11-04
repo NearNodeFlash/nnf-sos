@@ -353,8 +353,15 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	}
 
 	// Walk the nnfStorages looking for them to be Ready. We exit the reconciler if
-	// we encounter a non-ready AllocationSet indicating we haven't finished creating the storage.
+	// - the status section of the NnfStorage has not yet been filled in
+	// - the AllocationSet is not ready indicating we haven't finished creating the storage
 	for i := range nnfStorages {
+		// If the Status section has not been filled in yet, exit and wait.
+		if len(nnfStorages[i].Status.AllocationSets) != len(nnfStorages[i].Spec.AllocationSets) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// Status section should be usable now, check for Ready
 		for _, set := range nnfStorages[i].Status.AllocationSets {
 			if set.Status != "Ready" {
 				return ctrl.Result{Requeue: true}, nil

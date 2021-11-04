@@ -2,7 +2,6 @@ version: v1
 metadata:
   name: Rabbit Storage Manager
 id: NNF
-debugLevel: info
 allocationConfig:
   policy: spares
   standard: strict

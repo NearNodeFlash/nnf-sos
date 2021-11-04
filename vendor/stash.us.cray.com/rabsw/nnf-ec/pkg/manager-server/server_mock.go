@@ -23,11 +23,10 @@ func (m *MockServerController) GetServerInfo() ServerInfo {
 	}
 }
 
-func (c *MockServerController) NewStorage(pid uuid.UUID, expectedNamespaces []StorageNamespace) *Storage {
+func (c *MockServerController) NewStorage(pid uuid.UUID) *Storage {
 	return &Storage{
-		Id:                 pid,
-		expectedNamespaces: expectedNamespaces,
-		ctrl:               c,
+		Id:   pid,
+		ctrl: c,
 	}
 }
 
@@ -35,8 +34,8 @@ func (c *MockServerController) Delete(s *Storage) error {
 	return nil
 }
 
-func (*MockServerController) GetStatus(s *Storage) (StorageStatus, error) {
-	return StorageStatus_Ready, nil
+func (*MockServerController) GetStatus(s *Storage) StorageStatus {
+	return StorageStatus_Ready
 }
 
 func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {

@@ -164,7 +164,7 @@ build_ost_hosts()
     # "hosts" array.
     # This would allow asymmetric OSTs.
     for ((i = 2; i < RABBIT_COUNT; i++)); do
-      accumulator+="- allocationSize: 10995116277760\n"
+      accumulator+="- allocationSize: 1073741824\n"
       accumulator+="  label: ost\n"
       accumulator+="  hosts:\n"
       accumulator+="  - allocationCount: $ALLOCATION_COUNT\n"
@@ -173,7 +173,7 @@ build_ost_hosts()
   else
     # List all OST rabbit nodes in the same "hosts" array.  This implies that
     # the OSTs are symmetric.
-    accumulator+="- allocationSize: 10995116277760\n"
+    accumulator+="- allocationSize: 1073741824\n"
     accumulator+="  label: ost\n"
     accumulator+="  hosts:\n"
     for ((i = 2; i < RABBIT_COUNT; i++)); do
@@ -217,7 +217,7 @@ EOF
   case $RABBIT_COUNT in
   1)
 cat >> $SERVERS_PATCH << EOF
-  - allocationSize: 10995116277760
+  - allocationSize: 1073741824
     label: ost
     storage:
     - allocationCount: $ALLOCATION_COUNT
@@ -227,7 +227,7 @@ EOF
 
   2)
 cat >> $SERVERS_PATCH << EOF
-  - allocationSize: 10995116277760
+  - allocationSize: 1073741824
     label: ost
     storage:
     - allocationCount: $ALLOCATION_COUNT

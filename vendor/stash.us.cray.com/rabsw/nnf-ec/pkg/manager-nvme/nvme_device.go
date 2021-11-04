@@ -22,9 +22,6 @@ func (SwitchtecNvmeController) NewNvmeDeviceController() NvmeDeviceController {
 
 type SwitchtecNvmeDeviceController struct{}
 
-func (SwitchtecNvmeDeviceController) Initialize() error { return nil }
-func (SwitchtecNvmeDeviceController) Close() error      { return nil }
-
 func (SwitchtecNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	return newNvmeDevice(fabricId, switchId, portId)
 }
@@ -118,52 +115,58 @@ func (d *nvmeDevice) ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdenti
 	return ret[:count], nil
 }
 
-// ListAttachedControllers -
-func (d *nvmeDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier) ([]uint16, error) {
-	list, err := d.dev.IdentifyNamespaceControllerList(uint32(namespaceId))
-	if err != nil {
-		return nil, err
-	}
-
-	return list.Identifiers[:list.Num], nil
-}
-
 // GetNamespace -
 func (d *nvmeDevice) GetNamespace(namespaceId nvme.NamespaceIdentifier) (*nvme.IdNs, error) {
 	return d.dev.IdentifyNamespace(uint32(namespaceId), true)
 }
 
 // CreateNamespace -
-func (d *nvmeDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
+func (d *nvmeDevice) CreateNamespace(capacityBytes uint64, metadata []byte) (nvme.NamespaceIdentifier, error) {
+
+	// Want to get the best LBA format for creating a Namespace
+	// We first read the unique namespace ID that describes common namespace properties
+	dns, err := d.IdentifyNamespace(CommonNamespaceIdentifier)
+	if err != nil {
+		return 0, err
+	}
+
+	// We then iterate over the LBA formats presented by the drive and look for
+	// the best performing LBA format that has no metadata.
+	var bestPerformance = ^uint8(0) // Performance improves as the RelativePerformance value gets lower
+	var bestIndex = 0
+	for i := 0; i < int(dns.NumberOfLBAFormats); i++ {
+		if dns.LBAFormats[i].MetadataSize != 0 {
+			continue
+		}
+		if dns.LBAFormats[i].RelativePerformance < bestPerformance {
+			bestIndex = i
+			bestPerformance = dns.LBAFormats[i].RelativePerformance
+		}
+	}
+
+	// TODO: We should probably do the above only once when identifying the drive
+	// and then check at certain points the requested CapacityBytes is a good
+	// value.
 
 	roundUpToMultiple := func(n, m uint64) uint64 {
 		return ((n + m - 1) / m) * m
 	}
 
-	size := roundUpToMultiple(capacityBytes/sectorSizeBytes, sectorSizeBytes)
+	dataSizeBytes := uint64(1 << dns.LBAFormats[bestIndex].LBADataSize)
+	size := roundUpToMultiple(capacityBytes/dataSizeBytes, dataSizeBytes)
 
 	id, err := d.dev.CreateNamespace(
-		size,            // Size in Data Size Units (usually 4096)
-		size,            // Capacity in Data Size Units (usually 4096),
-		sectorSizeIndex, // LBA Format Index (see above)
-		0,               // Data Protection Capaiblities (none)
-		0x1,             // Capabilities (sharing = 1b)
-		0,               // ANA Group Identifier (none)
-		0,               // NVM Set Identifier (none)
-		100,             // Timeout (???)
+		size,             // Size in Data Size Units (usually 4096)
+		size,             // Capacity in Data Size Units (usually 4096),
+		uint8(bestIndex), // LBA Format Index (see above)
+		0,                // Data Protection Capaiblities (none)
+		0x1,              // Capabilities (sharing = 1b)
+		0,                // ANA Group Identifier (none)
+		0,                // NVM Set Identifier (non)
+		100,              // Timeout (???)
 	)
 
-	if err != nil {
-		return nvme.NamespaceIdentifier(0), nvme.NamespaceGloballyUniqueIdentifier{}, err
-	}
-
-	// Turn around and identify the namespace so we can read the GUID that is assigned by the controller
-	ns, err := d.dev.IdentifyNamespace(id, true)
-	if err != nil {
-		return nvme.NamespaceIdentifier(id), nvme.NamespaceGloballyUniqueIdentifier{}, err
-	}
-
-	return nvme.NamespaceIdentifier(id), ns.GloballyUniqueIdentifier, err
+	return nvme.NamespaceIdentifier(id), err
 }
 
 // DeleteNamespace -

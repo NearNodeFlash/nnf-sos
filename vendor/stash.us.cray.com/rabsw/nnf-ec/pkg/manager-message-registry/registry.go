@@ -20,10 +20,6 @@ var ResourceEventMessageRegistry []byte
 //go:embed registries/Fabric.1.0.0.json
 var FabricMessageRegistry []byte
 
-//go:generate ./generator/msgenerator ./registries/Nnf.1.0.0.json
-//go:embed registries/Nnf.1.0.0.json
-var NnfMessageRegistry []byte
-
 type Registry struct {
 	PublicationUri string
 
@@ -36,7 +32,6 @@ var RegistryFiles = []Registry{
 	{"https://redfish.dmtf.org/registries/Base.1.10.0.json", &BaseMessageRegistry, sf.MessageRegistryV142MessageRegistry{}},
 	{"https://redfish.dmtf.org/registries/ResourceEvent.1.0.3.json", &ResourceEventMessageRegistry, sf.MessageRegistryV142MessageRegistry{}},
 	{"https://redfish.dmtf.org/registries/Fabric.1.0.0.json", &FabricMessageRegistry, sf.MessageRegistryV142MessageRegistry{}},
-	{"", &NnfMessageRegistry, sf.MessageRegistryV142MessageRegistry{}},
 }
 
 func (r *Registry) initialize() error {

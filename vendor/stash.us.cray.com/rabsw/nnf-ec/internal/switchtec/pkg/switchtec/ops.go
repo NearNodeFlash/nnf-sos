@@ -57,7 +57,7 @@ func (ops *charOps) close(dev *Device) error {
 
 func (ops *charOps) getDeviceID(dev *Device) (uint32, error) {
 	linkPath := fmt.Sprintf("%s/%s/device/device", "/sys/class/switchtec", path.Base(dev.name))
-	ret, err := sysFsReadInt(linkPath)
+	ret, err := sysFsReadInt(linkPath, 16)
 	return uint32(ret), err
 }
 
@@ -283,11 +283,11 @@ func sysFsReadString(path string) (string, error) {
 	return strings.Trim(string(buf[:n]), "\n"), err
 }
 
-func sysFsReadInt(path string) (int64, error) {
+func sysFsReadInt(path string, base int) (int64, error) {
 	str, err := sysFsReadString(path)
 	if err != nil {
 		return -1, err
 	}
 
-	return strconv.ParseInt(str, 0, 64)
+	return strconv.ParseInt(str, base, 64)
 }

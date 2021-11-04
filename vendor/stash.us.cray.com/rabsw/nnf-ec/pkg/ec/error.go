@@ -7,11 +7,10 @@ import (
 )
 
 type ControllerError struct {
-	statusCode   int
-	cause        string
-	resourceType string
-	err          error
-	Event        interface{}
+	statusCode int
+	cause      string
+	err        error
+	Event      interface{}
 }
 
 func NewControllerError(sc int) *ControllerError {
@@ -30,22 +29,6 @@ func (e *ControllerError) Unwrap() error {
 	return e.err
 }
 
-// Getters
-
-func (e *ControllerError) StatusCode() int {
-	return e.statusCode
-}
-
-func (e *ControllerError) Cause() string {
-	return e.cause
-}
-
-func (e *ControllerError) ResourceType() string {
-	return e.resourceType
-}
-
-// Setters
-
 func (e *ControllerError) WithError(err error) *ControllerError {
 	e.err = err
 	return e
@@ -53,11 +36,6 @@ func (e *ControllerError) WithError(err error) *ControllerError {
 
 func (e *ControllerError) WithCause(cause string) *ControllerError {
 	e.cause = cause
-	return e
-}
-
-func (e *ControllerError) WithResourceType(t string) *ControllerError {
-	e.resourceType = t
 	return e
 }
 
