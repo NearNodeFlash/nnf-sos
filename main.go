@@ -211,6 +211,14 @@ func (c *storageController) SetupReconciler(mgr manager.Manager) error {
 		return err
 	}
 
+	if err := (&controllers.DWSServersReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Servers"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	return (&controllers.NnfStorageReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),

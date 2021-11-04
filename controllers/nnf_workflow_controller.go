@@ -382,14 +382,14 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 			nnfStorage.Spec.AllocationSets = nil
 
 			// Iterate the Servers data elements to pull out the allocation sets for the server
-			for i := range s.Data {
+			for i := range s.Spec.AllocationSets {
 				nnfAllocSet := nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
-				nnfAllocSet.Name = d.Spec.Name + "-" + s.Data[i].Label // Note: DirectiveBreakdown contains the name of the allocation
-				nnfAllocSet.FileSystemType = d.Spec.Type               // DirectiveBreakdown contains the filesystem type (lustre, xfs, etc)
-				nnfAllocSet.Capacity = s.Data[i].AllocationSize
+				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
+				nnfAllocSet.FileSystemType = d.Spec.Type // DirectiveBreakdown contains the filesystem type (lustre, xfs, etc)
+				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
 				if nnfAllocSet.FileSystemType == "lustre" {
-					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Data[i].Label)
+					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					charsWanted := 8
 					if len(d.Spec.Name) < charsWanted {
@@ -399,8 +399,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 				}
 
 				// Create Nodes for this allocation set.
-				for _, host := range s.Data[i].Hosts {
-					node := nnfv1alpha1.NnfStorageAllocationNodes{Name: host.Name, Count: host.AllocationCount}
+				for _, storage := range s.Spec.AllocationSets[i].Storage {
+					node := nnfv1alpha1.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount}
 					nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
 				}
 

@@ -110,6 +110,30 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
+  - servers/finalizers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - servers/status
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
   - storages
   verbs:
   - create
@@ -211,5 +235,7 @@ rules:
   - nnfstorages/status
   verbs:
   - get
+  - list
   - patch
   - update
+  - watch

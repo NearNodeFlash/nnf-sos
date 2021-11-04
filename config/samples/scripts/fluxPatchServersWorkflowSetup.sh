@@ -200,37 +200,38 @@ patch_servers()
 kind: Servers
 name: $SERVERS
 apiVersion: dws.cray.hpe.com/v1alpha1
-data:
-- allocationSize: $MGT_SIZE_IN_BYTES
-  label: mgt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[0]}
-- allocationSize: $MDT_SIZE_IN_BYTES
-  label: mdt
-  hosts:
-  - allocationCount: 1
-    name: ${RABBIT_ARRAY[$MDT_IDX]}
+spec:
+  allocationSets:
+  - allocationSize: $MGT_SIZE_IN_BYTES
+    label: mgt
+    storage:
+    - allocationCount: 1
+      name: ${RABBIT_ARRAY[0]}
+  - allocationSize: $MDT_SIZE_IN_BYTES
+    label: mdt
+    storage:
+    - allocationCount: 1
+      name: ${RABBIT_ARRAY[$MDT_IDX]}
 EOF
 
   case $RABBIT_COUNT in
   1)
 cat >> $SERVERS_PATCH << EOF
-- allocationSize: 10995116277760
-  label: ost
-  hosts:
-  - allocationCount: $ALLOCATION_COUNT
-    name: ${RABBIT_ARRAY[0]}
+  - allocationSize: 10995116277760
+    label: ost
+    storage:
+    - allocationCount: $ALLOCATION_COUNT
+      name: ${RABBIT_ARRAY[0]}
 EOF
   ;;
 
   2)
 cat >> $SERVERS_PATCH << EOF
-- allocationSize: 10995116277760
-  label: ost
-  hosts:
-  - allocationCount: $ALLOCATION_COUNT
-    name: ${RABBIT_ARRAY[1]}
+  - allocationSize: 10995116277760
+    label: ost
+    storage:
+    - allocationCount: $ALLOCATION_COUNT
+      name: ${RABBIT_ARRAY[1]}
 EOF
   ;;
 
