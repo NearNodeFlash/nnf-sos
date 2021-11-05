@@ -186,14 +186,10 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 			return &ctrl.Result{}, nil
 		}
 
-		equal := statusUpdater.updateWithEqual(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
 			allocationStatus.StoragePool.Health = nnfv1alpha1.ResourceHealth(sp.Status)
 		})
-
-		if !equal {
-			return &ctrl.Result{}, nil
-		}
 
 		return nil, nil
 	}
@@ -221,7 +217,7 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 
 	log.Info("Created storage pool", "Id", sp.Id)
 
-	return &ctrl.Result{}, nil
+	return nil, nil
 }
 
 func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
@@ -244,14 +240,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 			return &ctrl.Result{}, nil
 		}
 
-		equal := statusUpdater.updateWithEqual(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
 			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
 		})
-
-		if !equal {
-			return &ctrl.Result{}, nil
-		}
 
 		return nil, nil
 	}
@@ -278,7 +270,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 
 	log.Info("Created storage group", "Id", sg.Id)
 
-	return &ctrl.Result{}, nil
+	return nil, nil
 }
 
 func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
@@ -332,8 +324,6 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		})
 
 		log.Info("Created filesystem", "Id", fs.Id)
-
-		return &ctrl.Result{}, nil
 	}
 
 	if len(allocationStatus.FileShare.Id) == 0 {
@@ -396,15 +386,11 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		}
 	}
 
-	equal := statusUpdater.updateWithEqual(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 		allocationStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
 		allocationStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
 		nodeStorage.Status.LustreStorage.Nid = nid
 	})
-
-	if !equal {
-		return &ctrl.Result{}, nil
-	}
 
 	return nil, nil
 }
@@ -629,15 +615,6 @@ func newNodeStorageStatusUpdater(n *nnfv1alpha1.NnfNodeStorage) *nodeStorageStat
 
 func (s *nodeStorageStatusUpdater) update(update func(*nnfv1alpha1.NnfNodeStorageStatus)) {
 	update(&s.storage.Status)
-}
-
-func (s *nodeStorageStatusUpdater) updateWithEqual(update func(*nnfv1alpha1.NnfNodeStorageStatus)) bool {
-	update(&s.storage.Status)
-	if reflect.DeepEqual(s.storage.Status, s.existingStatus) {
-		return true
-	}
-
-	return false
 }
 
 func (s *nodeStorageStatusUpdater) updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {

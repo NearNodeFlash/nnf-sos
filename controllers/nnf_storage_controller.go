@@ -208,13 +208,9 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 			Kind:      nnfNodeStorage.Kind,
 		}
 
-		equal := statusUpdater.updateWithEqual(func(s *nnfv1alpha1.NnfStorageStatus) {
+		statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
 			storage.Status.AllocationSets[allocationSetIndex].NodeStorageReferences[i] = objectRef
 		})
-
-		if equal == false {
-			return &ctrl.Result{}, nil
-		}
 	}
 
 	return nil, nil
@@ -245,6 +241,20 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
 				s.MgsNode = nnfNodeStorage.Status.LustreStorage.Nid
 			})
+		}
+
+		// Wait until the status section of the nnfNodeStorage has been initialized
+		if len(nnfNodeStorage.Status.Allocations) != nnfNodeStorage.Spec.Count {
+			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
+				// Set the Status to starting unless we've found a failure in one
+				// of the earlier nnfNodeStorages
+				startingStatus := nnfv1alpha1.ResourceStarting
+				startingStatus.UpdateIfWorseThan(&status)
+				allocationSet.Status = status
+				allocationSet.Health = health
+			})
+
+			return &ctrl.Result{}, nil
 		}
 
 		for _, nodeAllocation := range nnfNodeStorage.Status.Allocations {
@@ -322,15 +332,6 @@ func newStorageStatusUpdater(s *nnfv1alpha1.NnfStorage) *storageStatusUpdater {
 		storage:        s,
 		existingStatus: (*s.DeepCopy()).Status,
 	}
-}
-
-func (s *storageStatusUpdater) updateWithEqual(update func(s *nnfv1alpha1.NnfStorageStatus)) bool {
-	update(&s.storage.Status)
-	if reflect.DeepEqual(s.storage.Status, s.existingStatus) {
-		return true
-	}
-
-	return false
 }
 
 func (s *storageStatusUpdater) updateError(allocationSet *nnfv1alpha1.NnfStorageAllocationSetStatus, err error) {
