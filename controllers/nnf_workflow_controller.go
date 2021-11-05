@@ -96,6 +96,11 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	driverID := os.Getenv("DWS_DRIVER_ID")
 
+	// If the dws-operator has yet to set the Status.State, just return and wait for it.
+	if workflow.Status.State == "" {
+		return ctrl.Result{}, nil
+	}
+
 	// Handle the state work required to achieve the desired State.
 	// The model right now is that we continue to call the state handler until it completes the state
 	// in which case the reconciler will no longer be called.
@@ -103,22 +108,20 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	//       until the state is finished.
 	//       Once the state is finished, we can update the drivers in 1 spot. Right now, the drivers are updated
 	//       at the end of each state handler.
-	switch workflow.Spec.DesiredState {
+	switch workflow.Status.State {
 
 	case dwsv1alpha1.StateProposal.String():
 		return r.handleProposalState(ctx, workflow, driverID, log)
 	case dwsv1alpha1.StateSetup.String():
 		return r.handleSetupState(ctx, workflow, driverID, log)
 	default:
-		err = fmt.Errorf("desiredState %s not yet supported", workflow.Spec.DesiredState)
-		log.Error(err, "Unsupported desiredState")
+		err = fmt.Errorf("Status.State %s not yet supported", workflow.Status.State)
+		log.Error(err, "Unsupported Status.State", "state", workflow.Status.State)
 		return ctrl.Result{}, err
 	}
 }
 
 func (r *NnfWorkflowReconciler) updateDriversStatusForStatusState(workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) bool {
-
-	log.Info("Drivers complete", "state", workflow.Status.State)
 
 	updateWorkflow := false
 	for i := range workflow.Status.Drivers {
@@ -150,11 +153,14 @@ func (r *NnfWorkflowReconciler) completeDriverState(ctx context.Context, workflo
 
 	driverUpdate := r.updateDriversStatusForStatusState(workflow, driverID, log)
 	if driverUpdate {
-		err := r.Update(ctx, workflow)
-		if err != nil {
+		if err := r.Update(ctx, workflow); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+
 			log.Error(err, "Failed to update Workflow state")
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -166,8 +172,6 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 
 	var dbList []v1.ObjectReference
 	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
-		log.Info("DirectiveBreakdown", "dwDirective", dwDirective)
-
 		_, directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, dwDirective, dwIndex, workflow, log)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -182,17 +186,16 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 		log.Info("Updating directiveBreakdown references")
 		workflow.Status.DirectiveBreakdowns = dbList
 
-		err := r.Update(ctx, workflow)
-		if err != nil {
-			// Ignore conflict errors
+		if err := r.Update(ctx, workflow); err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
+
 			log.Error(err, "Failed to update Workflow DirectiveBreakdowns")
 			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// Ensure all DirectiveBreakdowns are ready
@@ -319,7 +322,6 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 
 	// Iterate through the directive breakdowns...
 	for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-		log.Info("DirectiveBreakdown", "name", dbdRef.Name)
 
 		// Chain through the DirectiveBreakdown to the Servers object
 		dbd := &dwsv1alpha1.DirectiveBreakdown{}
@@ -336,17 +338,14 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 			return ctrl.Result{}, err
 		}
 
-		result, nnfStorage, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
+		nnfStorage, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
 		if err != nil {
-			return ctrl.Result{}, err
-		}
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
 
-		if result == controllerutil.OperationResultCreated {
-			log.Info("Created nnfStorage", "name", nnfStorage.Name)
-		} else if result == controllerutil.OperationResultNone {
-			// no change
-		} else {
-			log.Info("Updated nnfStorage", "name", nnfStorage.Name)
+			log.Error(err, "Failed to update Workflow state")
+			return ctrl.Result{}, err
 		}
 
 		nnfStorages = append(nnfStorages, nnfStorage)
@@ -373,7 +372,7 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (controllerutil.OperationResult, nnfv1alpha1.NnfStorage, error) {
+func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (nnfv1alpha1.NnfStorage, error) {
 
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -421,7 +420,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 
 	if err != nil {
 		log.Error(err, "Failed to create or update NnfStorage", "name", nnfStorage.Name)
-		return result, *nnfStorage, err
+		return *nnfStorage, err
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -432,7 +431,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 		log.Info("Updated nnfStorage", "name", nnfStorage.Name)
 	}
 
-	return result, *nnfStorage, nil
+	return *nnfStorage, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
