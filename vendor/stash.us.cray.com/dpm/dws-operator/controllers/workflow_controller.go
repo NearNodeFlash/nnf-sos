@@ -199,5 +199,6 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha1.Workflow{}).
+		Owns(&dwsv1alpha1.Computes{}).
 		Complete(r)
 }

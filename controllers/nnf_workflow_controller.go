@@ -211,7 +211,7 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 
 		// Wait for all directiveBreakdowns to become ready
 		if directiveBreakdown.Status.Ready != ConditionTrue {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -439,5 +439,6 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha1.Workflow{}).
 		Owns(&nnfv1alpha1.NnfStorage{}).
+		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
 		Complete(r)
 }

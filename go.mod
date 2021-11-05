@@ -14,6 +14,6 @@ require (
 	k8s.io/apimachinery v0.22.2
 	k8s.io/client-go v0.22.2
 	sigs.k8s.io/controller-runtime v0.10.2
-	stash.us.cray.com/dpm/dws-operator v0.0.0-20211102134755-8b9a14e54a4f
+	stash.us.cray.com/dpm/dws-operator v0.0.0-20211105204338-f355ca4e8336
 	stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211004155012-7dd27384c90c
 )
