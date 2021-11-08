@@ -164,21 +164,21 @@ build_ost_hosts()
     # "hosts" array.
     # This would allow asymmetric OSTs.
     for ((i = 2; i < RABBIT_COUNT; i++)); do
-      accumulator+="- allocationSize: 1073741824\n"
-      accumulator+="  label: ost\n"
-      accumulator+="  hosts:\n"
-      accumulator+="  - allocationCount: $ALLOCATION_COUNT\n"
-      accumulator+="    name: ${RABBIT_ARRAY[i]}\n"
+      accumulator+="  - allocationSize: 1073741824\n"
+      accumulator+="    label: ost\n"
+      accumulator+="    storage:\n"
+      accumulator+="    - allocationCount: $ALLOCATION_COUNT\n"
+      accumulator+="      name: ${RABBIT_ARRAY[i]}\n"
     done
   else
     # List all OST rabbit nodes in the same "hosts" array.  This implies that
     # the OSTs are symmetric.
-    accumulator+="- allocationSize: 1073741824\n"
-    accumulator+="  label: ost\n"
-    accumulator+="  hosts:\n"
+    accumulator+="  - allocationSize: 1073741824\n"
+    accumulator+="    label: ost\n"
+    accumulator+="    storage:\n"
     for ((i = 2; i < RABBIT_COUNT; i++)); do
-      accumulator+="  - allocationCount: $ALLOCATION_COUNT\n"
-      accumulator+="    name: ${RABBIT_ARRAY[i]}\n"
+      accumulator+="    - allocationCount: $ALLOCATION_COUNT\n"
+      accumulator+="      name: ${RABBIT_ARRAY[i]}\n"
     done
   fi
   echo -e "$accumulator"
@@ -187,6 +187,7 @@ build_ost_hosts()
 patch_servers()
 {
   SERVERS_PATCH=servers-patch.yaml
+  rm -f "$SERVERS_PATCH"
 
   # The MGT will be RABBIT_ARRAY[0].  The MDT will normally be RABBIT_ARRAY[1],
   # unless we need to put it on the same node as the MGT.
@@ -246,7 +247,11 @@ EOF
   esac
 
   # Patch the Servers object with the nodes
-  kubectl patch servers.dws.cray.hpe.com "$SERVERS" --type='merge' --patch-file $SERVERS_PATCH
+  if ! kubectl patch servers.dws.cray.hpe.com "$SERVERS" --type='merge' --patch-file $SERVERS_PATCH
+  then
+    echo "Servers patch file: $SERVERS_PATCH"
+    exit 2
+  fi
   rm "$SERVERS_PATCH"
 }
 
