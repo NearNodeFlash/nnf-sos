@@ -140,12 +140,15 @@ if [[ "$CMD" == pause || "$CMD" == resume ]]; then
 fi
 
 if [[ "$CMD" == list ]]; then
-    kinds_dws=$(kubectl api-resources | grep -i dws | awk '{print $1}' | sort)
-    kinds_nnf=$(kubectl api-resources | grep -i nnf | awk '{print $1}' | sort)
-    for x in $kinds_dws $kinds_nnf; do
-        echo "=== $x"
-        kubectl get -A "$x"
-        echo
+     kinds_dws_nnf=$(kubectl api-resources | grep -iE 'dws|nnf' | awk '{print $1":"$2}' | sort)
+     for want_kind in dws nnf
+     do
+         for x in $(echo "$kinds_dws_nnf" | grep ":$want_kind\." | awk -F: '{print $1}')
+         do
+             echo "=== $x"
+             kubectl get -A "$x"
+             echo
+         done
     done
 fi
 
