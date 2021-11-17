@@ -21,6 +21,28 @@ type DWRecord struct {
 	DWDirective string `json:"dwDirective"`
 }
 
+// A colocation constraint specifies how the location(s) of an allocation set should be
+// selected with relation to other allocation sets. Locations for allocation sets with the
+// same colocation key should be picked according to the colocation type.
+type AllocationSetColocationConstraint struct {
+	// Type of colocation constraint
+	// +kubebuilder:validation:Enum=exclusive
+	Type string `json:"type"`
+
+	// Key shared by all the allocation sets that have their location constrained
+	// in relation to each other.
+	Key string `json:"key"`
+}
+
+type AllocationSetConstraints struct {
+	// Labels is a list of labels is used to filter the Storage resources
+	Labels []string `json:"labels,omitempty"`
+
+	// Colocation is a list of constraints for which Storage resources
+	// to pick in relation to Storage resources for other allocation sets.
+	Colocation []AllocationSetColocationConstraint `json:"colocation,omitempty"`
+}
+
 // AllocationSetComponents define the details of the allocation
 type AllocationSetComponents struct {
 	// AllocationStrategy specifies the way to determine the number of allocations of the MinimumCapacity required for this AllocationSet.
@@ -37,9 +59,9 @@ type AllocationSetComponents struct {
 	// +kubebuilder:validation:Enum=raw;xfs;gfs2;mgt;mdt;ost;
 	Label string `json:"label"`
 
-	// Constraint is an additional requirement pertaining to the suitability of Servers that may be used for this AllocationSet
-	// +kubebuilder:validation:Enum=MayNotBeShared;
-	Constraint string `json:"constraint,omitempty"`
+	// Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used
+	// for this AllocationSet
+	Constraints AllocationSetConstraints `json:"constraints,omitempty"`
 }
 
 // DirectiveBreakdownSpec defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
@@ -57,15 +79,6 @@ type DirectiveBreakdownSpec struct {
 	// Lifetime is the duration of the allocation
 	// +kubebuilder:validation:Enum=job;persistent
 	Lifetime string `json:"lifetime"`
-
-	// TODO: Remove everything below because they are in the Status Section.
-	//       Once nnf-sos has the directivebreakdown controller that understands status
-	// 	     these can be removed.
-	// Servers is a reference to the Server CR
-	Servers corev1.ObjectReference `json:"servers,omitempty"`
-
-	// AllocationSets lists the allocations required to fulfill the #DW Directive
-	AllocationSet []AllocationSetComponents `json:"allocationSet,omitempty"`
 }
 
 // DirectiveBreakdownStatus defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes

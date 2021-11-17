@@ -177,16 +177,16 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 			strategy      string
 			cap           int64
 			labelsStr     string
-			constraintStr string
+			colocationKey string
 		}{
 			{"AllocateAcrossServers", breakdownCapacity, "ost", ""},
-			{"AllocateSingleServer", mdtCapacity, "mdt", ""},               // NOTE: hardcoded size
-			{"AllocateSingleServer", mgtCapacity, "mgt", "MayNotBeShared"}, // NOTE: hardcoded size
+			{"AllocateSingleServer", mdtCapacity, "mdt", ""},           // NOTE: hardcoded size
+			{"AllocateSingleServer", mgtCapacity, "mgt", "lustre-mgt"}, // NOTE: hardcoded size
 		}
 
 		for _, i := range lustreComponents {
 			component := dwsv1alpha1.AllocationSetComponents{}
-			populateAllocationSetComponents(&component, i.strategy, i.cap, i.labelsStr, i.constraintStr)
+			populateAllocationSetComponents(&component, i.strategy, i.cap, i.labelsStr, i.colocationKey)
 
 			allocationSet = append(allocationSet, component)
 		}
@@ -245,11 +245,17 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, strategy string, cap int64, labelStr string, labelConstraintStr string) {
+func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, strategy string, cap int64, labelStr string, constraintKey string) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
-	a.Constraint = labelConstraintStr
 	a.MinimumCapacity = cap
+	a.Constraints.Labels = []string{"dws.cray.hpe.com/storage=Rabbit"}
+	if len(constraintKey) > 0 {
+		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{{
+			Type: "exclusive",
+			Key:  constraintKey,
+		}}
+	}
 }
 
 func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, serverName string, log logr.Logger) (*dwsv1alpha1.Servers, error) {
