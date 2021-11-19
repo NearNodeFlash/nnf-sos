@@ -46,6 +46,13 @@ const (
 	ownerAnnotation = "nnf.cray.hpe.com/owner"
 )
 
+type nodeStoragesState bool
+
+const (
+	nodeStoragesExist   nodeStoragesState = true
+	nodeStoragesDeleted nodeStoragesState = false
+)
+
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/finalizers,verbs=update
@@ -67,13 +74,35 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Create an updater for the entire node. This will handle calls to r.Status().Update() such
+	// that we can repeatedly make calls to the internal update method, with the final update
+	// occuring on the on function exit.
+	statusUpdater := newStorageStatusUpdater(storage)
+	defer func() {
+		if err == nil {
+			var updated bool
+			updated, err = statusUpdater.close(ctx, r)
+
+			if updated == true {
+				res.Requeue = true
+			}
+		}
+	}()
+
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
 		if !controllerutil.ContainsFinalizer(storage, finalizerNnfStorage) {
 			return ctrl.Result{}, nil
 		}
 
-		if err := r.teardownStorage(ctx, storage); err != nil {
+		exists, err := r.teardownStorage(ctx, statusUpdater, storage)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Wait for all the nodeStorages to finish deleting before removing
+		// the finalizer.
+		if exists == nodeStoragesExist {
 			return ctrl.Result{}, err
 		}
 
@@ -95,21 +124,6 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		return ctrl.Result{}, nil
 	}
-
-	// Create an updater for the entire node. This will handle calls to r.Status().Update() such
-	// that we can repeatedly make calls to the internal update method, with the final update
-	// occuring on the on function exit.
-	statusUpdater := newStorageStatusUpdater(storage)
-	defer func() {
-		if err == nil {
-			var updated bool
-			updated, err = statusUpdater.close(ctx, r)
-
-			if updated == true {
-				res.Requeue = true
-			}
-		}
-	}()
 
 	// Initialize the status section of the NnfStorage if it hasn't been done already.
 	if len(storage.Status.AllocationSets) == 0 {
@@ -224,6 +238,8 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	var health nnfv1alpha1.NnfResourceHealthType = nnfv1alpha1.ResourceOkay
 	var status nnfv1alpha1.NnfResourceStatusType = nnfv1alpha1.ResourceReady
 
+	allocationSet.AllocationCount = 0
+
 	for _, nodeStorageReference := range allocationSet.NodeStorageReferences {
 		namespacedName := types.NamespacedName{
 			Name:      nodeStorageReference.Name,
@@ -233,8 +249,14 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
 		err := r.Get(ctx, namespacedName, nnfNodeStorage)
 		if err != nil {
-			statusUpdater.updateError(allocationSet, err)
-			return &ctrl.Result{Requeue: true}, nil
+			if !apierrors.IsNotFound(err) {
+				statusUpdater.updateError(allocationSet, err)
+				return &ctrl.Result{Requeue: true}, nil
+			} else {
+				startingStatus := nnfv1alpha1.ResourceStarting
+				startingStatus.UpdateIfWorseThan(&status)
+				continue
+			}
 		}
 
 		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" {
@@ -258,6 +280,10 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		}
 
 		for _, nodeAllocation := range nnfNodeStorage.Status.Allocations {
+			if nodeAllocation.CapacityAllocated > 0 {
+				allocationSet.AllocationCount++
+			}
+
 			nodeAllocation.StoragePool.Health.UpdateIfWorseThan(&health)
 			nodeAllocation.StorageGroup.Health.UpdateIfWorseThan(&health)
 			nodeAllocation.FileSystem.Health.UpdateIfWorseThan(&health)
@@ -282,20 +308,54 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // or the object references in the storage resource. We may have created children
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
-func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) error {
+func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
 	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 	var firstErr error
 
+	// Collect status information from the NnfNodeStorage resources and aggregate it into the
+	// NnfStorage
+	for i := range storage.Spec.AllocationSets {
+		_, err := r.aggregateNodeStorageStatus(ctx, statusUpdater, storage, i)
+		if err != nil {
+			return nodeStoragesExist, err
+		}
+	}
+
+	state := nodeStoragesDeleted
+
 	for allocationSetIndex, allocationSet := range storage.Spec.AllocationSets {
 		for i, node := range allocationSet.Nodes {
-			nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
+			namespacedName := types.NamespacedName{
+				Name:      nnfNodeStorageName(storage, allocationSetIndex, i),
+				Namespace: node.Name,
+			}
+
+			// Do a Get on the nnfNodeStorage first to check if it's already been marked
+			// for deletion.
+			nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
+			err := r.Get(ctx, namespacedName, nnfNodeStorage)
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					if firstErr == nil {
+						firstErr = err
+					}
+					log.Info("Unable to get NnfNodeStorage", "Error", err, "NnfNodeStorage", namespacedName)
+				}
+			} else {
+				state = nodeStoragesExist
+				if !nnfNodeStorage.GetDeletionTimestamp().IsZero() {
+					continue
+				}
+			}
+
+			nnfNodeStorage = &nnfv1alpha1.NnfNodeStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfNodeStorageName(storage, allocationSetIndex, i),
 					Namespace: node.Name,
 				},
 			}
 
-			err := r.Delete(ctx, nnfNodeStorage)
+			err = r.Delete(ctx, nnfNodeStorage)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					if firstErr == nil {
@@ -303,11 +363,13 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 					}
 					log.Info("Unable to delete NnfNodeStorage", "Error", err, "NnfNodeStorage", nnfNodeStorage)
 				}
+			} else {
+				state = nodeStoragesExist
 			}
 		}
 	}
 
-	return firstErr
+	return state, firstErr
 }
 
 // Build up the name of an NnfNodeStorage. This is a long name because:

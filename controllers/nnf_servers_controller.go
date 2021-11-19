@@ -7,11 +7,15 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -146,7 +150,6 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *dwsv1alpha1.Servers) (ctrl.Result, error) {
-	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
 	originalServers := servers.DeepCopy()
 
 	if len(servers.Status.AllocationSets) == 0 {
@@ -165,6 +168,9 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 	}
 
 	ready := true
+	expectedAllocations := 0
+	actualAllocations := 0
+
 	for storageIndex := range nnfStorage.Spec.AllocationSets {
 		// The nnfStorage may not have the status section filled in yet.
 		if len(nnfStorage.Status.AllocationSets) < storageIndex+1 {
@@ -174,11 +180,14 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 
 		allocationSet := nnfStorage.Status.AllocationSets[storageIndex]
 
-		// Don't bother updating the capacities in the servers resource until
-		// we know everything has been allocated in the nnfNodeStorage resources
-		if allocationSet.Status == nnfv1alpha1.ResourceStarting {
+		if allocationSet.Status != nnfv1alpha1.ResourceReady {
 			ready = false
-			break
+		}
+
+		// Increment the actual and expected allocation counts from this allocationSet
+		actualAllocations += allocationSet.AllocationCount
+		for _, node := range nnfStorage.Spec.AllocationSets[storageIndex].Nodes {
+			expectedAllocations += node.Count
 		}
 
 		// Use the label to find the allocation set in the servers resource that matches
@@ -199,25 +208,27 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 			return ctrl.Result{}, fmt.Errorf("Unable to find allocation label %s", label)
 		}
 
-		// Make a map of the storage list in the servers status section so we can quickly match
-		// them up to the nnfNodeStorage resources they correspond to based on name.
-		storageStatusMap := make(map[string]*dwsv1alpha1.ServersStatusStorage)
-		for i := range servers.Status.AllocationSets[serversIndex].Storage {
-			storageStatus := &servers.Status.AllocationSets[serversIndex].Storage[i]
-			storageStatus.AllocationSize = 0
-			storageStatusMap[storageStatus.Name] = storageStatus
-		}
-
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
 		// the allocated size
-		for _, nnfNodeStorageRef := range allocationSet.NodeStorageReferences {
+		for i, nnfNodeStorageRef := range allocationSet.NodeStorageReferences {
 			nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
 			namespacedName := types.NamespacedName{
 				Name:      nnfNodeStorageRef.Name,
 				Namespace: nnfNodeStorageRef.Namespace,
 			}
 
+			// Ignore any uninitialized references
+			if namespacedName.Name == "" {
+				ready = false
+				continue
+			}
+
 			if err := r.Get(ctx, namespacedName, nnfNodeStorage); err != nil {
+				if apierrors.IsNotFound(err) {
+					servers.Status.AllocationSets[serversIndex].Storage[i].AllocationSize = 0
+					continue
+				}
+
 				return ctrl.Result{}, err
 			}
 
@@ -231,12 +242,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 				allocationSize += nnfNodeAllocation.CapacityAllocated
 			}
 
-			storageStatus, ok := storageStatusMap[nnfNodeStorage.Namespace]
-			if !ok {
-				return ctrl.Result{}, fmt.Errorf("NnfNodeStorage %v has no corresponding storage entry in the servers resource", namespacedName)
-			}
-
-			storageStatus.AllocationSize = allocationSize
+			servers.Status.AllocationSets[serversIndex].Storage[i].AllocationSize = allocationSize
 		}
 
 		for _, storageStatus := range servers.Status.AllocationSets[serversIndex].Storage {
@@ -253,20 +259,49 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		servers.Status.Ready = true
 	}
 
-	if ready == false {
+	if reflect.DeepEqual(originalServers, servers) {
 		return ctrl.Result{}, nil
 	}
 
-	if !reflect.DeepEqual(originalServers, servers) {
-		log.Info("Updating servers status with allocation data")
-		if err := r.Status().Update(ctx, servers); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
+	// Force the update (no batch) if all the allocations were made or all the
+	// allocations were deleted
+	batch := true
+	if expectedAllocations == actualAllocations || actualAllocations == 0 {
+		batch = false
+	}
 
-			return ctrl.Result{}, err
+	return r.statusUpdate(ctx, servers, batch)
+}
+
+func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1alpha1.Servers, batch bool) (ctrl.Result, error) {
+	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
+	if batch == true && servers.Status.LastUpdate != nil {
+		batchTime, err := strconv.Atoi(os.Getenv("SERVERS_BATCH_TIME_MSEC"))
+		if err != nil {
+			batchTime = 0
+		}
+
+		// Check if the last update time was more than SERVERS_BATCH_TIME_MSEC ago. If it's not,
+		// then return without doing the Update() and requeue.
+		if metav1.NowMicro().Time.Before(servers.Status.LastUpdate.Time.Add(time.Millisecond * time.Duration(batchTime))) {
+			log.Info("Batching status update")
+			// Requeue in case nothing triggers a reconcile after the batch time is over
+			return ctrl.Result{RequeueAfter: time.Millisecond * time.Duration(batchTime)}, nil
 		}
 	}
+
+	t := metav1.NowMicro()
+	servers.Status.LastUpdate = &t
+
+	if err := r.Status().Update(ctx, servers); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	log.Info("Status updated")
 
 	return ctrl.Result{}, nil
 }

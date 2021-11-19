@@ -120,6 +120,10 @@ spec:
                   of the AllocationSets from the spec.
                 items:
                   properties:
+                    allocationCount:
+                      description: AllocationCount is the total number of allocations
+                        that currently exist
+                      type: integer
                     health:
                       description: Health reflects the health of this NNF Storage
                       type: string
@@ -197,6 +201,7 @@ spec:
                       description: Status reflects the status of this NNF Storage
                       type: string
                   required:
+                  - allocationCount
                   - nodeStorageReferences
                   type: object
                 type: array

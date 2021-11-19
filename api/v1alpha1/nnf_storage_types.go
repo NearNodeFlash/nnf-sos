@@ -77,6 +77,10 @@ type NnfStorageAllocationSetStatus struct {
 	// Reason is the human readable reason for the status
 	Reason string `json:"reason,omitempty"`
 
+	// AllocationCount is the total number of allocations that currently
+	// exist
+	AllocationCount int `json:"allocationCount"`
+
 	// NodeStorageReferences is the list of object references to the child NnfNodeStorage resources
 	NodeStorageReferences []corev1.ObjectReference `json:"nodeStorageReferences"`
 }
