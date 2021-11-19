@@ -14,8 +14,8 @@ RUN wget \
 
 WORKDIR /
 
-# Install Golang v1.16
-RUN wget https://golang.org/dl/go1.16.7.linux-amd64.tar.gz && tar -xzf go1.16.7.linux-amd64.tar.gz
+# Install Golang v1.17.3
+RUN wget https://golang.org/dl/go1.17.3.linux-amd64.tar.gz && tar -xzf go1.17.3.linux-amd64.tar.gz
 
 
 # Start from scratch to make the base stage for the final application.
