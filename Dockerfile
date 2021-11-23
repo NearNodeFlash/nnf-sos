@@ -59,6 +59,7 @@ COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
 COPY vendor/ vendor/
+COPY config/ config/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
@@ -70,7 +71,7 @@ WORKDIR /workspace
 
 COPY .dws-operator/ .dws-operator/
 COPY hack/ hack/
-COPY runContainerTest.sh .
+COPY initiateContainerTest.sh .
 COPY Makefile .
 
 RUN go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest && \
@@ -78,7 +79,7 @@ RUN go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest && \
     mkdir -p /workspace/testbin && /bin/bash -c "test -f /workspace/testbin/setup-envtest.sh || curl -sSLo /workspace/testbin/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh" && \
     /bin/bash -c "source /workspace/testbin/setup-envtest.sh; fetch_envtest_tools /workspace/testbin; setup_envtest_env /workspace/testbin"
 
-ENTRYPOINT ["sh", "/workspace/runContainerTest.sh"]
+ENTRYPOINT ["sh", "/workspace/initiateContainerTest.sh"]
 
 # The final application stage.
 FROM application-base

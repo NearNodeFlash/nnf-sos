@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 CWD=`pwd`
-echo "Running in $CWD, setting up envtest"
+echo "Running in $CWD, setting up envtest."
 
 export ENVTEST_ASSETS_DIR=/nnf/testbin
 mkdir -p ${ENVTEST_ASSETS_DIR}
@@ -12,7 +12,7 @@ setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
 echo Running unit tests
 
-go test ./... -coverprofile cover.out > results.txt
+go test ./... -coverprofile cover.out |/usr/bin/tee results.txt
 cat results.txt
 
 grep FAIL results.txt && echo "Unit tests failure" && rm results.txt && exit 1 

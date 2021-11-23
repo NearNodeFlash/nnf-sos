@@ -1,4 +1,4 @@
 [submodule ".dws-operator"]
 	path = .dws-operator
-	url = ssh://git@stash.us.cray.com:7999/dpm/dws-operator
+	url = https://stash.us.cray.com/scm/dpm/dws-operator.git
 	branch = master
