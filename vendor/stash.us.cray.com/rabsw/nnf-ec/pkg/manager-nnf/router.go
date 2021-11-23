@@ -25,6 +25,10 @@ func (r *DefaultApiRouter) Start() error {
 	return nil
 }
 
+func (r *DefaultApiRouter) Close() error {
+	return r.servicer.Close()
+}
+
 func (r *DefaultApiRouter) Routes() ec.Routes {
 	s := r.servicer
 	return ec.Routes{
@@ -63,6 +67,12 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 			Method:      ec.POST_METHOD,
 			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/StoragePools",
 			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdStoragePoolsPost,
+		},
+		{
+			Name:        "RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPut",
+			Method:      ec.PUT_METHOD,
+			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/StoragePools/{StoragePoolId}",
+			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPut,
 		},
 		{
 			Name:        "RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdGet",
@@ -122,6 +132,12 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdStorageGroupsPost,
 		},
 		{
+			Name:        "RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdPut",
+			Method:      ec.PUT_METHOD,
+			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/StorageGroups/{StorageGroupId}",
+			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdPut,
+		},
+		{
 			Name:        "RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdGet",
 			Method:      ec.GET_METHOD,
 			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/StorageGroups/{StorageGroupId}",
@@ -165,6 +181,12 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdFileSystemsPost,
 		},
 		{
+			Name:        "RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdPut",
+			Method:      ec.PUT_METHOD,
+			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/FileSystems/{FileSystemId}",
+			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdPut,
+		},
+		{
 			Name:        "RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdGet",
 			Method:      ec.GET_METHOD,
 			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/FileSystems/{FileSystemId}",
@@ -190,6 +212,12 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 			Method:      ec.POST_METHOD,
 			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/FileSystems/{FileSystemsId}/ExportedFileShares",
 			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesPost,
+		},
+		{
+			Name:        "RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdPut",
+			Method:      ec.PUT_METHOD,
+			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/FileSystems/{FileSystemsId}/ExportedFileShares/{ExportedFileSharesId}",
+			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdPut,
 		},
 		{
 			Name:        "RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdGet",

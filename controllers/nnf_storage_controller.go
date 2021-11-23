@@ -203,7 +203,10 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 		startIndex += node.Count
 
 		if err != nil {
-			statusUpdater.updateError(&storage.Status.AllocationSets[allocationSetIndex], err)
+			if !apierrors.IsConflict(err) {
+				statusUpdater.updateError(&storage.Status.AllocationSets[allocationSetIndex], err)
+			}
+
 			return &ctrl.Result{Requeue: true}, nil
 		}
 

@@ -13,14 +13,14 @@ package openapi
 type CapacityV100CapacityInfo struct {
 
 	// The number of bytes currently allocated by the storage system in this data store for this data type.
-	AllocatedBytes int64 `json:"AllocatedBytes,omitempty"`
+	AllocatedBytes int64 `json:"AllocatedBytes"`
 
 	// The number of bytes consumed in this data store for this data type.
-	ConsumedBytes int64 `json:"ConsumedBytes,omitempty"`
+	ConsumedBytes int64 `json:"ConsumedBytes"`
 
 	// The number of bytes the storage system guarantees can be allocated in this data store for this data type.
-	GuaranteedBytes int64 `json:"GuaranteedBytes,omitempty"`
+	GuaranteedBytes int64 `json:"GuaranteedBytes"`
 
 	// The maximum number of bytes that can be allocated in this data store for this data type.
-	ProvisionedBytes int64 `json:"ProvisionedBytes,omitempty"`
+	ProvisionedBytes int64 `json:"ProvisionedBytes"`
 }

@@ -23,6 +23,7 @@ var (
 	GET_METHOD    = http.MethodGet
 	POST_METHOD   = http.MethodPost
 	PATCH_METHOD  = http.MethodPatch
+	PUT_METHOD    = http.MethodPut
 	DELETE_METHOD = http.MethodDelete
 )
 
@@ -44,6 +45,7 @@ type Router interface {
 	Name() string
 	Init() error
 	Start() error
+	Close() error
 }
 
 // Routers -
@@ -296,6 +298,10 @@ func (c *Controller) Attach(router *mux.Router, handlerFunc HandlerFunc) {
 
 func (c *Controller) Close() {
 	c.processor.Close()
+
+	for _, api := range c.Routers {
+		api.Close()
+	}
 }
 
 // EncodeResponse -

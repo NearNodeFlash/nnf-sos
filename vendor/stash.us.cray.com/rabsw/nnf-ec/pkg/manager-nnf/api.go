@@ -12,6 +12,7 @@ import (
 // updating the http.ResponesWriter.
 type Api interface {
 	Initialize(NnfControllerInterface) error
+	Close() error
 
 	Id() string
 
@@ -22,6 +23,7 @@ type Api interface {
 
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsPost(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPut(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdDelete(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdCapacitySourcesGet(w http.ResponseWriter, r *http.Request)
@@ -32,6 +34,7 @@ type Api interface {
 
 	RedfishV1StorageServicesStorageServiceIdStorageGroupsGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStorageGroupsPost(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdPut(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdDelete(w http.ResponseWriter, r *http.Request)
 
@@ -40,11 +43,13 @@ type Api interface {
 
 	RedfishV1StorageServicesStorageServiceIdFileSystemsGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsPost(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdPut(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdDelete(w http.ResponseWriter, r *http.Request)
 
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesPost(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdPut(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdDelete(w http.ResponseWriter, r *http.Request)
 }
@@ -53,6 +58,7 @@ type Api interface {
 // an equivalent method. Methods take request paramters and a Redfish / Swordfish model to populate.
 type StorageServiceApi interface {
 	Initialize(NnfControllerInterface) error
+	Close() error
 
 	Id() string
 
@@ -64,6 +70,7 @@ type StorageServiceApi interface {
 	StorageServiceIdStoragePoolsGet(string, *sf.StoragePoolCollectionStoragePoolCollection) error
 	StorageServiceIdStoragePoolsPost(string, *sf.StoragePoolV150StoragePool) error
 	StorageServiceIdStoragePoolIdGet(string, string, *sf.StoragePoolV150StoragePool) error
+	StorageServiceIdStoragePoolIdPut(string, string, *sf.StoragePoolV150StoragePool) error
 	StorageServiceIdStoragePoolIdDelete(string, string) error
 	StorageServiceIdStoragePoolIdCapacitySourcesGet(string, string, *sf.CapacitySourceCollectionCapacitySourceCollection) error
 	StorageServiceIdStoragePoolIdCapacitySourceIdGet(string, string, string, *sf.CapacityCapacitySource) error
@@ -73,6 +80,7 @@ type StorageServiceApi interface {
 
 	StorageServiceIdStorageGroupsGet(string, *sf.StorageGroupCollectionStorageGroupCollection) error
 	StorageServiceIdStorageGroupPost(string, *sf.StorageGroupV150StorageGroup) error
+	StorageServiceIdStorageGroupIdPut(string, string, *sf.StorageGroupV150StorageGroup) error
 	StorageServiceIdStorageGroupIdGet(string, string, *sf.StorageGroupV150StorageGroup) error
 	StorageServiceIdStorageGroupIdDelete(string, string) error
 
@@ -81,11 +89,13 @@ type StorageServiceApi interface {
 
 	StorageServiceIdFileSystemsGet(string, *sf.FileSystemCollectionFileSystemCollection) error
 	StorageServiceIdFileSystemsPost(string, *sf.FileSystemV122FileSystem) error
+	StorageServiceIdFileSystemIdPut(string, string, *sf.FileSystemV122FileSystem) error
 	StorageServiceIdFileSystemIdGet(string, string, *sf.FileSystemV122FileSystem) error
 	StorageServiceIdFileSystemIdDelete(string, string) error
 
 	StorageServiceIdFileSystemIdExportedSharesGet(string, string, *sf.FileShareCollectionFileShareCollection) error
 	StorageServiceIdFileSystemIdExportedSharesPost(string, string, *sf.FileShareV120FileShare) error
+	StorageServiceIdFileSystemIdExportedShareIdPut(string, string, string, *sf.FileShareV120FileShare) error
 	StorageServiceIdFileSystemIdExportedShareIdGet(string, string, string, *sf.FileShareV120FileShare) error
 	StorageServiceIdFileSystemIdExportedShareIdDelete(string, string, string) error
 }

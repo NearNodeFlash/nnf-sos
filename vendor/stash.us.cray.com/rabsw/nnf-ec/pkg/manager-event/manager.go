@@ -120,6 +120,7 @@ type subscription struct {
 	id       string
 	prefixes []string
 	s        Subscription
+	t        sf.EventDestinationV190SubscriptionType
 }
 
 func (e *subscription) OdataId() string { return fmt.Sprintf("/redfish/v1/EventService/%s", e.id) }
@@ -127,7 +128,7 @@ func (e *subscription) Name() string    { return fmt.Sprintf("EventSubscription 
 
 func (m *manager) Initialize() error {
 
-	m.events = make([]Event, 0, MaxNumEvents)
+	m.events = make([]Event, MaxNumEvents, MaxNumEvents)
 	m.maxEvents = MaxNumEvents
 	m.numEvents = 0
 
@@ -140,19 +141,32 @@ func (m *manager) Initialize() error {
 // Subscribe will add the subscription to the Event Manager. When an event is published to the Event Manager
 // (through the Publish() method), the Event Manager will broadcast the event to all registered subscriptions.
 func (m *manager) Subscribe(s Subscription) {
-	m.addSubscription(s)
+	m.addSubscription(s, sf.OEM_EDV190ST)
 }
 
 // Publish will publish the provided event to all interested subscriptions. It will also add the event
 // to the Event Managers list of historic events. The Event must contain a valid MessageId - that is
 // to say the event's MessageId must be backed by an entry in the Message Registry.
 func (m *manager) Publish(e Event) {
+	e.Id = strconv.Itoa(m.numEvents)
+
+	m.events[m.numEvents%m.maxEvents] = e
+	m.numEvents++
+
 	for _, s := range m.subscriptions {
 		s.s.EventHandler(e)
 	}
 }
 
-func (m *manager) addSubscription(s Subscription) {
+// Publish Resource Event will publish the provided event with the resource details included in the
+// event as the Origin of Condition. This is useful for any Redfish/Swordfish model that includes
+// an Id or OdataId
+func (m *manager) PublishResourceEvent(e Event, r Resource) {
+	e.OriginOfCondition = r.OdataId()
+	m.Publish(e)
+}
+
+func (m *manager) addSubscription(s Subscription, t sf.EventDestinationV190SubscriptionType) {
 	var sid = -1
 	for _, s := range m.subscriptions {
 		id, _ := strconv.Atoi(s.id)
@@ -166,6 +180,7 @@ func (m *manager) addSubscription(s Subscription) {
 	m.subscriptions = append(m.subscriptions, subscription{
 		id: fmt.Sprintf("%d", sid),
 		s:  s,
+		t:  t,
 	})
 }
 
@@ -225,11 +240,11 @@ func (m *manager) EventSubscriptionsPost(model *sf.EventDestinationV190EventDest
 		return ec.NewErrNotAcceptable().WithCause(fmt.Sprintf("retry policy %s is not supported by the event service", string(model.DeliveryRetryPolicy)))
 	}
 
-	m.Subscribe(RedfishSubscription{
+	m.addSubscription(RedfishSubscription{
 		Context:             model.Context,
 		Destination:         model.Destination,
 		DeliveryRetryPolicy: model.DeliveryRetryPolicy,
-	})
+	}, sf.REDFISH_EVENT_EDV190ST)
 
 	return m.EventSubscriptionsSubscriptionIdGet(m.subscriptions[len(m.subscriptions)-1].id, model)
 }
@@ -241,7 +256,10 @@ func (m *manager) EventSubscriptionsSubscriptionIdGet(id string, model *sf.Event
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("subscription %s not found", id))
 	}
 
-	// TODO: The subscription should populate the model
+	// TODO: The subscription should populate more of the model
+
+	model.Id = s.id
+	model.SubscriptionType = s.t
 
 	return nil
 }
@@ -261,15 +279,16 @@ func (m *manager) EventSubscriptionsSubscriptionIdDelete(id string) error {
 // EventsGet
 func (m *manager) EventsGet(model *sf.EventCollectionEventCollection) error {
 
-	model.MembersodataCount = int64(len(m.events))
-	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
-
-	start := (m.numEvents % m.maxEvents)
-	if start < m.maxEvents {
-		start = 0
+	count := m.numEvents
+	start := 0
+	if m.numEvents > m.maxEvents {
+		count = m.maxEvents
+		start = (m.numEvents % m.maxEvents)
 	}
 
-	for idx := range m.events {
+	model.MembersodataCount = int64(count)
+	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
+	for idx := range m.events[:count] {
 		model.Members[idx] = sf.OdataV4IdRef{OdataId: m.events[(start+idx)%m.maxEvents].OdataId()}
 	}
 
@@ -283,7 +302,7 @@ func (m *manager) EventsEventIdGet(id string, model *sf.EventV161Event) error {
 		return ec.NewErrBadRequest().WithError(err).WithCause(fmt.Sprintf("event id %s is non-integer type", id))
 	}
 
-	if idx < m.numEvents {
+	if m.numEvents < idx {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("event id %s not found", id))
 	}
 

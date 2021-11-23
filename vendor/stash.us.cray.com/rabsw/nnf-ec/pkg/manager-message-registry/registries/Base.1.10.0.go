@@ -4,165 +4,67 @@ package messageregistry
 
 import events "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event"
 
-func CreatedBase() events.Event {
+// arg0: The name of the property. This argument shall contain the name of the property.
+func PropertyNotWritableBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The resource has been created successfully.",
-		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.Created",
+		Message:         "The property %1 is a read only property and cannot be assigned a value.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyNotWritable",
+		MessageArgs:     []string{arg0},
 	}
 }
 
-// arg0: The name of the action. This argument shall contain the name of the action.
-// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
-func ActionParameterDuplicateBase(arg0, arg1 string) events.Event {
+func OperationTimeoutBase() events.Event {
 	return events.Event{
-		Message:         "The action %1 was submitted with more than one value for the parameter %2.",
+		Message:         "A timeout internal to the service occured as part of the request.  Partial results may have been returned.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionParameterDuplicate",
-		MessageArgs:     []string{arg0, arg1},
+		MessageId:       "Base.1.10.0.OperationTimeout",
+	}
+}
+
+// arg0: The `Id` of the chassis that requires to be powered off. The value of this argument shall be a string containing the value of the `Id` property of the chassis that requires to be powered off.
+func ChassisPowerStateOffRequiredBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The Chassis with Id '%1' requires to be powered off to perform this request.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ChassisPowerStateOffRequired",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func PreconditionFailedBase() events.Event {
+	return events.Event{
+		Message:         "The ETag supplied did not match the ETag required to change this resource.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.PreconditionFailed",
 	}
 }
 
 // arg0: The value provided for the query parameter. This argument shall contain the value provided for the query parameter.
 // arg1: The query parameter. This argument shall contain the name of the query parameter.
-func QueryParameterValueTypeErrorBase(arg0, arg1 string) events.Event {
+// arg2: The valid range for the query parameter. This argument shall contain a string representation of the valid range of values supported for the query parameter.
+func QueryParameterOutOfRangeBase(arg0, arg1, arg2 string) events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the query parameter %2 is of a different type than the parameter can accept.",
+		Message:         "The value '%1' for the query parameter %2 is out of range %3.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryParameterValueTypeError",
-		MessageArgs:     []string{arg0, arg1},
+		MessageId:       "Base.1.10.0.QueryParameterOutOfRange",
+		MessageArgs:     []string{arg0, arg1, arg2},
 	}
 }
 
-func QueryCombinationInvalidBase() events.Event {
+func SessionLimitExceededBase() events.Event {
 	return events.Event{
-		Message:         "Two or more query parameters in the request cannot be used together.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryCombinationInvalid",
-	}
-}
-
-// arg0: The array index. This argument shall contain the array index value provided.
-func InvalidIndexBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The index %1 is not a valid offset into the array.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.InvalidIndex",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The `@odata.type` of the request. This argument shall contain the value of the `@odata.type` property provided in the request.
-// arg1: The supported `@odata.type` value. This argument shall contain the value of the `@odata.type` property supported by the resource.
-func ResourceTypeIncompatibleBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The @odata.type of the request body %1 is incompatible with the @odata.type of the resource, which is %2.",
+		Message:         "The session establishment failed due to the number of simultaneous sessions exceeding the limit of the implementation.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceTypeIncompatible",
-		MessageArgs:     []string{arg0, arg1},
+		MessageId:       "Base.1.10.0.SessionLimitExceeded",
 	}
 }
 
-func ConditionInRelatedResourceBase() events.Event {
+func SessionTerminatedBase() events.Event {
 	return events.Event{
-		Message:         "One or more conditions exist in a related resource.  See the OriginOfCondition property.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ConditionInRelatedResource",
-	}
-}
-
-func SuccessBase() events.Event {
-	return events.Event{
-		Message:         "The request completed successfully.",
+		Message:         "The session was successfully terminated.",
 		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.Success",
-	}
-}
-
-func ResourceInUseBase() events.Event {
-	return events.Event{
-		Message:         "The change to the requested resource failed because the resource is in use or in transition.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ResourceInUse",
-	}
-}
-
-// arg0: The type of resource. This argument shall contain the schema name of the resource.
-// arg1: The `Id` of the resource. This argument shall contain the value of the `Id` property of the requested resource.
-func ResourceNotFoundBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The requested resource of type %1 named '%2' was not found.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceNotFound",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func InsufficientPrivilegeBase() events.Event {
-	return events.Event{
-		Message:         "There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.InsufficientPrivilege",
-	}
-}
-
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-func AccessDeniedBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "While attempting to establish a connection to '%1', the service denied access.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.AccessDenied",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the restricted privilege. This argument shall contain the name of the restricted privilege.
-func RestrictedPrivilegeBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The operation was not successful because the privilege '%1' is restricted.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.RestrictedPrivilege",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the duplicate property. This argument shall contain the name of the duplicate property.
-func PropertyDuplicateBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The property %1 was duplicated in the request.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyDuplicate",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The value provided for the property. This argument shall contain the value provided for the property.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
-// arg1: The name of the property. This argument shall contain the name of the property.
-func PropertyValueTypeErrorBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The value '%1' for the property %2 is of a different type than the property can accept.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueTypeError",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-// arg0: The name of the action parameter. This argument shall contain the name of the action parameter.
-// arg1: The name of the action. This argument shall contain the name of the action.
-func ActionParameterNotSupportedBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The parameter %1 for the action %2 is not supported on the target resource.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionParameterNotSupported",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func ResourceCannotBeDeletedBase() events.Event {
-	return events.Event{
-		Message:         "The delete request failed because the resource requested cannot be deleted.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceCannotBeDeleted",
+		MessageId:       "Base.1.10.0.SessionTerminated",
 	}
 }
 
@@ -176,13 +78,11 @@ func PasswordChangeRequiredBase(arg0 string) events.Event {
 	}
 }
 
-// arg0: The name of the required property. This argument shall contain the name of the required property.
-func CreateFailedMissingReqPropertiesBase(arg0 string) events.Event {
+func ServiceInUnknownStateBase() events.Event {
 	return events.Event{
-		Message:         "The create operation failed because the required property %1 was missing from the request.",
+		Message:         "The operation failed because the service is in an unknown state and can no longer take incoming requests.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.CreateFailedMissingReqProperties",
-		MessageArgs:     []string{arg0},
+		MessageId:       "Base.1.10.0.ServiceInUnknownState",
 	}
 }
 
@@ -197,14 +97,21 @@ func ResourceAtUriUnauthorizedBase(arg0, arg1 string) events.Event {
 	}
 }
 
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-// arg1: The protocol specified. This argument shall contain the name of the protocol requested for this operation.
-func SourceDoesNotSupportProtocolBase(arg0, arg1 string) events.Event {
+// arg0: The software, provider, or service that reported the fault condition. This argument shall contain the name of the entity that reported the fault condition.
+func UndeterminedFaultBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The other end of the connection at '%1' does not support the specified protocol %2.",
+		Message:         "A undetermined fault condition has been reported by '%1'.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.SourceDoesNotSupportProtocol",
-		MessageArgs:     []string{arg0, arg1},
+		MessageId:       "Base.1.10.0.UndeterminedFault",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func SuccessBase() events.Event {
+	return events.Event{
+		Message:         "The request completed successfully.",
+		MessageSeverity: "OK",
+		MessageId:       "Base.1.10.0.Success",
 	}
 }
 
@@ -228,46 +135,113 @@ func InvalidJSONBase(arg0 string) events.Event {
 	}
 }
 
-// arg0: The name of the action. This argument shall contain the name of the action.
+// arg0: The value provided for the action parameter. This argument shall contain the value provided for the action parameter.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
 // arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
-func ActionParameterMissingBase(arg0, arg1 string) events.Event {
+// arg2: The name of the action. This argument shall contain the name of the action.
+func ActionParameterValueFormatErrorBase(arg0, arg1, arg2 string) events.Event {
 	return events.Event{
-		Message:         "The action %1 requires the parameter %2 to be present in the request body.",
+		Message:         "The value '%1' for the parameter %2 in the action %3 is of a different format than the parameter can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ActionParameterValueFormatError",
+		MessageArgs:     []string{arg0, arg1, arg2},
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+// arg1: The protocol specified. This argument shall contain the name of the protocol requested for this operation.
+func SourceDoesNotSupportProtocolBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The other end of the connection at '%1' does not support the specified protocol %2.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ActionParameterMissing",
+		MessageId:       "Base.1.10.0.SourceDoesNotSupportProtocol",
 		MessageArgs:     []string{arg0, arg1},
 	}
 }
 
-// arg0: The value provided for the action parameter. This argument shall contain the value provided for the action parameter.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
-// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
-// arg2: The name of the action. This argument shall contain the name of the action.
-func ActionParameterValueTypeErrorBase(arg0, arg1, arg2 string) events.Event {
+// arg0: The name of the property. This argument shall contain the name of the property.
+// arg1: The value assigned for property. This argument shall contain the value assigned for property.
+func PropertyValueModifiedBase(arg0, arg1 string) events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the parameter %2 in the action %3 is of a different type than the parameter can accept.",
+		Message:         "The property %1 was assigned the value '%2' due to modification by the service.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionParameterValueTypeError",
-		MessageArgs:     []string{arg0, arg1, arg2},
+		MessageId:       "Base.1.10.0.PropertyValueModified",
+		MessageArgs:     []string{arg0, arg1},
 	}
 }
 
-// arg0: The value provided for the query parameter. This argument shall contain the value provided for the query parameter.
-// arg1: The query parameter. This argument shall contain the name of the query parameter.
-// arg2: The valid range for the query parameter. This argument shall contain a string representation of the valid range of values supported for the query parameter.
-func QueryParameterOutOfRangeBase(arg0, arg1, arg2 string) events.Event {
+func ResourceInStandbyBase() events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the query parameter %2 is out of range %3.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryParameterOutOfRange",
-		MessageArgs:     []string{arg0, arg1, arg2},
+		Message:         "The request could not be performed because the resource is in standby.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceInStandby",
 	}
 }
 
-func OperationTimeoutBase() events.Event {
+// arg0: URI of the resource that conflicts with the creation request. This argument shall contain the URI of the resource with which there is a conflict.
+func ResourceCreationConflictBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "A timeout internal to the service occured as part of the request.  Partial results may have been returned.",
+		Message:         "The resource could not be created.  The service has a resource at URI '%1' that conflicts with the creation request.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.OperationTimeout",
+		MessageId:       "Base.1.10.0.ResourceCreationConflict",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func ResourceInUseBase() events.Event {
+	return events.Event{
+		Message:         "The change to the requested resource failed because the resource is in use or in transition.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ResourceInUse",
+	}
+}
+
+// arg0: The supplied URI. This argument shall contain the invalid URI that was encountered.
+func InvalidURIBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The URI %1 was not found.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.InvalidURI",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func CreateLimitReachedForResourceBase() events.Event {
+	return events.Event{
+		Message:         "The create operation failed because the resource has reached the limit of possible resources.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.CreateLimitReachedForResource",
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+func InvalidObjectBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The object at '%1' is invalid.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.InvalidObject",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The string provided. This argument shall contain the string value provided for this operation.
+// arg1: The maximum string length. This argument shall contain the maximum supported string length for this property.
+func StringValueTooLongBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The string '%1' exceeds the length limit %2.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.StringValueTooLong",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The value provided for the property. This argument shall contain the value provided for the property.
+// arg1: The name of the property. This argument shall contain the name of the property.
+func PropertyValueNotInListBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the property %2 is not in the list of acceptable values.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyValueNotInList",
+		MessageArgs:     []string{arg0, arg1},
 	}
 }
 
@@ -283,119 +257,27 @@ func ActionParameterValueNotInListBase(arg0, arg1, arg2 string) events.Event {
 	}
 }
 
-func ServiceShuttingDownBase() events.Event {
+func QueryNotSupportedOnResourceBase() events.Event {
 	return events.Event{
-		Message:         "The operation failed because the service is shutting down and can no longer take incoming requests.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ServiceShuttingDown",
-	}
-}
-
-func UnrecognizedRequestBodyBase() events.Event {
-	return events.Event{
-		Message:         "The service detected a malformed request body that it was unable to interpret.",
+		Message:         "Querying is not supported on the requested resource.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.UnrecognizedRequestBody",
+		MessageId:       "Base.1.10.0.QueryNotSupportedOnResource",
 	}
 }
 
-func MaximumErrorsExceededBase() events.Event {
+func AccountForSessionNoLongerExistsBase() events.Event {
 	return events.Event{
-		Message:         "Too many errors have occurred to report them all.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.MaximumErrorsExceeded",
-	}
-}
-
-func OperationFailedBase() events.Event {
-	return events.Event{
-		Message:         "An error occurred internal to the service as part of the overall request.  Partial results may have been returned.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.OperationFailed",
-	}
-}
-
-// arg0: The name of the property. This argument shall contain the name of the property that is deprecated.
-func PropertyDeprecatedBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The deprecated property %1 was included in the request body.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyDeprecated",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func MalformedJSONBase() events.Event {
-	return events.Event{
-		Message:         "The request body submitted was malformed JSON and could not be parsed by the receiving service.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.MalformedJSON",
-	}
-}
-
-func EmptyJSONBase() events.Event {
-	return events.Event{
-		Message:         "The request body submitted contained an empty JSON object and the service is unable to process it.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.EmptyJSON",
-	}
-}
-
-// arg0: The name of the action. This argument shall contain the name of the action.
-// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
-func ActionParameterUnknownBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The action %1 was submitted with the invalid parameter %2.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionParameterUnknown",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func AccountModifiedBase() events.Event {
-	return events.Event{
-		Message:         "The account was successfully modified.",
+		Message:         "The account for the current session has been removed, thus the current session has been removed as well.",
 		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.AccountModified",
+		MessageId:       "Base.1.10.0.AccountForSessionNoLongerExists",
 	}
 }
 
-// arg0: The name of the property for which a write was requested. This argument shall contain the name of the property for which a write was requested.
-// arg1: The name of the property with which there is a conflict. This argument shall contain the name of the property with which there is a conflict.
-func PropertyValueConflictBase(arg0, arg1 string) events.Event {
+func NoValidSessionBase() events.Event {
 	return events.Event{
-		Message:         "The property '%1' could not be written because its value would conflict with the value of the '%2' property.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueConflict",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-// arg0: The name of the unknown property. This argument shall contain the name of the unknown property.
-func PropertyUnknownBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The property %1 is not in the list of valid properties for the resource.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyUnknown",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func QueryNotSupportedBase() events.Event {
-	return events.Event{
-		Message:         "Querying is not supported by the implementation.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryNotSupported",
-	}
-}
-
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-func ResourceAtUriInUnknownFormatBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The resource at '%1' is in a format not recognized by the service.",
+		Message:         "There is no valid session established with the implementation.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceAtUriInUnknownFormat",
-		MessageArgs:     []string{arg0},
+		MessageId:       "Base.1.10.0.NoValidSession",
 	}
 }
 
@@ -407,38 +289,80 @@ func PreconditionRequiredBase() events.Event {
 	}
 }
 
-func EventSubscriptionLimitExceededBase() events.Event {
+func OperationFailedBase() events.Event {
 	return events.Event{
-		Message:         "The event subscription failed due to the number of simultaneous subscriptions exceeding the limit of the implementation.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.EventSubscriptionLimitExceeded",
+		Message:         "An error occurred internal to the service as part of the overall request.  Partial results may have been returned.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.OperationFailed",
 	}
 }
 
-func NoOperationBase() events.Event {
+// arg0: The value provided for the property. This argument shall contain the deprecated value provided for the property.
+func PropertyValueDeprecatedBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The request body submitted contain no data to act upon and no changes to the resource took place.",
+		Message:         "The value '%1' for the property %2 is deprecated.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.NoOperation",
+		MessageId:       "Base.1.10.0.PropertyValueDeprecated",
+		MessageArgs:     []string{arg0},
 	}
 }
 
-// arg0: The value provided for the query parameter. This argument shall contain the value provided for the query parameter.
-// arg1: The query parameter. This argument shall contain the name of the query parameter.
-func QueryParameterValueFormatErrorBase(arg0, arg1 string) events.Event {
+// arg0: The name of the action. This argument shall contain the name of the action that is deprecated.
+func ActionDeprecatedBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the parameter %2 is of a different format than the parameter can accept.",
+		Message:         "The action %1 is deprecated.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryParameterValueFormatError",
+		MessageId:       "Base.1.10.0.ActionDeprecated",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The value provided for the property. This argument shall contain the value provided for the property.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
+// arg1: The name of the property. This argument shall contain the name of the property.
+func PropertyValueFormatErrorBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the property %2 is of a different format than the property can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyValueFormatError",
 		MessageArgs:     []string{arg0, arg1},
 	}
 }
 
-func QueryNotSupportedOnResourceBase() events.Event {
+// arg0: The name of the action parameter. This argument shall contain the name of the action parameter.
+// arg1: The name of the action. This argument shall contain the name of the action.
+func ActionParameterNotSupportedBase(arg0, arg1 string) events.Event {
 	return events.Event{
-		Message:         "Querying is not supported on the requested resource.",
+		Message:         "The parameter %1 for the action %2 is not supported on the target resource.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryNotSupportedOnResource",
+		MessageId:       "Base.1.10.0.ActionParameterNotSupported",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func QueryCombinationInvalidBase() events.Event {
+	return events.Event{
+		Message:         "Two or more query parameters in the request cannot be used together.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.QueryCombinationInvalid",
+	}
+}
+
+func AccountRemovedBase() events.Event {
+	return events.Event{
+		Message:         "The account was successfully removed.",
+		MessageSeverity: "OK",
+		MessageId:       "Base.1.10.0.AccountRemoved",
+	}
+}
+
+// arg0: The `@odata.type` of the request. This argument shall contain the value of the `@odata.type` property provided in the request.
+// arg1: The supported `@odata.type` value. This argument shall contain the value of the `@odata.type` property supported by the resource.
+func ResourceTypeIncompatibleBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The @odata.type of the request body %1 is incompatible with the @odata.type of the resource, which is %2.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceTypeIncompatible",
+		MessageArgs:     []string{arg0, arg1},
 	}
 }
 
@@ -454,31 +378,205 @@ func PropertyValueResourceConflictBase(arg0, arg1, arg2 string) events.Event {
 	}
 }
 
-// arg0: URI of the resource that conflicts with the creation request. This argument shall contain the URI of the resource with which there is a conflict.
-func ResourceCreationConflictBase(arg0 string) events.Event {
+// arg0: The URI of the resource. This argument shall contain the URI of the resource that is deprecated.
+func ResourceDeprecatedBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The resource could not be created.  The service has a resource at URI '%1' that conflicts with the creation request.",
+		Message:         "The operation was performed on a deprecated resource '%1'.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ResourceCreationConflict",
+		MessageId:       "Base.1.10.0.ResourceDeprecated",
 		MessageArgs:     []string{arg0},
 	}
 }
 
-// arg0: The name of the restricted role. This argument shall contain the name of the restricted role.
-func RestrictedRoleBase(arg0 string) events.Event {
+func MalformedJSONBase() events.Event {
 	return events.Event{
-		Message:         "The operation was not successful because the role '%1' is restricted.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.RestrictedRole",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func SessionLimitExceededBase() events.Event {
-	return events.Event{
-		Message:         "The session establishment failed due to the number of simultaneous sessions exceeding the limit of the implementation.",
+		Message:         "The request body submitted was malformed JSON and could not be parsed by the receiving service.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.SessionLimitExceeded",
+		MessageId:       "Base.1.10.0.MalformedJSON",
+	}
+}
+
+// arg0: The name of the action. This argument shall contain the name of the action.
+// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
+func ActionParameterDuplicateBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The action %1 was submitted with more than one value for the parameter %2.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ActionParameterDuplicate",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func QueryNotSupportedOnOperationBase() events.Event {
+	return events.Event{
+		Message:         "Querying is not supported with the requested operation.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.QueryNotSupportedOnOperation",
+	}
+}
+
+func QueryNotSupportedBase() events.Event {
+	return events.Event{
+		Message:         "Querying is not supported by the implementation.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.QueryNotSupported",
+	}
+}
+
+// arg0: The name of the required property. This argument shall contain the name of the required property.
+func CreateFailedMissingReqPropertiesBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The create operation failed because the required property %1 was missing from the request.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.CreateFailedMissingReqProperties",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func InternalErrorBase() events.Event {
+	return events.Event{
+		Message:         "The request failed due to an internal service error.  The service is still operational.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.InternalError",
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+func CouldNotEstablishConnectionBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The service failed to establish a connection with the URI '%1'.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.CouldNotEstablishConnection",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The name of the restricted privilege. This argument shall contain the name of the restricted privilege.
+func RestrictedPrivilegeBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The operation was not successful because the privilege '%1' is restricted.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.RestrictedPrivilege",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func SubscriptionTerminatedBase() events.Event {
+	return events.Event{
+		Message:         "The event subscription has been terminated.",
+		MessageSeverity: "OK",
+		MessageId:       "Base.1.10.0.SubscriptionTerminated",
+	}
+}
+
+func NoOperationBase() events.Event {
+	return events.Event{
+		Message:         "The request body submitted contain no data to act upon and no changes to the resource took place.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.NoOperation",
+	}
+}
+
+// arg0: The name of the action. This argument shall contain the name of the action.
+// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
+func ActionParameterUnknownBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The action %1 was submitted with the invalid parameter %2.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ActionParameterUnknown",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func InsufficientPrivilegeBase() events.Event {
+	return events.Event{
+		Message:         "There are insufficient privileges for the account or credentials associated with the current session to perform the requested operation.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.InsufficientPrivilege",
+	}
+}
+
+func UnrecognizedRequestBodyBase() events.Event {
+	return events.Event{
+		Message:         "The service detected a malformed request body that it was unable to interpret.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.UnrecognizedRequestBody",
+	}
+}
+
+// arg0: The name of the property. This argument shall contain the name of the property that is deprecated.
+func PropertyDeprecatedBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The deprecated property %1 was included in the request body.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyDeprecated",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The name of the duplicate property. This argument shall contain the name of the duplicate property.
+func PropertyDuplicateBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The property %1 was duplicated in the request.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyDuplicate",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+func ResourceAtUriInUnknownFormatBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The resource at '%1' is in a format not recognized by the service.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceAtUriInUnknownFormat",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+func MaximumErrorsExceededBase() events.Event {
+	return events.Event{
+		Message:         "Too many errors have occurred to report them all.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.MaximumErrorsExceeded",
+	}
+}
+
+func ConditionInRelatedResourceBase() events.Event {
+	return events.Event{
+		Message:         "One or more conditions exist in a related resource.  See the OriginOfCondition property.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ConditionInRelatedResource",
+	}
+}
+
+func ServiceShuttingDownBase() events.Event {
+	return events.Event{
+		Message:         "The operation failed because the service is shutting down and can no longer take incoming requests.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ServiceShuttingDown",
+	}
+}
+
+// arg0: The name of the action. This argument shall contain the name of the action.
+func ActionNotSupportedBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The action %1 is not supported by the resource.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ActionNotSupported",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The value provided for the action parameter. This argument shall contain the value provided for the action parameter.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
+// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
+// arg2: The name of the action. This argument shall contain the name of the action.
+func ActionParameterValueTypeErrorBase(arg0, arg1, arg2 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the parameter %2 in the action %3 is of a different type than the parameter can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ActionParameterValueTypeError",
+		MessageArgs:     []string{arg0, arg1, arg2},
 	}
 }
 
@@ -494,13 +592,22 @@ func ResourceAlreadyExistsBase(arg0, arg1, arg2 string) events.Event {
 	}
 }
 
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-func ResourceMissingAtURIBase(arg0 string) events.Event {
+// arg0: The type of resource. This argument shall contain the schema name of the resource.
+// arg1: The `Id` of the resource. This argument shall contain the value of the `Id` property of the requested resource.
+func ResourceNotFoundBase(arg0, arg1 string) events.Event {
 	return events.Event{
-		Message:         "The resource at the URI '%1' was not found.",
+		Message:         "The requested resource of type %1 named '%2' was not found.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceMissingAtURI",
-		MessageArgs:     []string{arg0},
+		MessageId:       "Base.1.10.0.ResourceNotFound",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func AccountNotModifiedBase() events.Event {
+	return events.Event{
+		Message:         "The account modification request failed.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.AccountNotModified",
 	}
 }
 
@@ -524,6 +631,139 @@ func ChassisPowerStateOnRequiredBase(arg0 string) events.Event {
 	}
 }
 
+// arg0: The name of the property for which a write was requested. This argument shall contain the name of the property for which a write was requested.
+// arg1: The value of the property that is in conflict. This argument shall contain the value of the property that is in conflict.
+func PropertyValueExternalConflictBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The property '%1' with the requested value of '%2' could not be written because the value is not available due to a configuration conflict.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyValueExternalConflict",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The value provided for the property. This argument shall contain the value provided for the property.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
+// arg1: The name of the property. This argument shall contain the name of the property.
+func PropertyValueTypeErrorBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the property %2 is of a different type than the property can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyValueTypeError",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func EmptyJSONBase() events.Event {
+	return events.Event{
+		Message:         "The request body submitted contained an empty JSON object and the service is unable to process it.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.EmptyJSON",
+	}
+}
+
+// arg0: The name of the action. This argument shall contain the name of the action.
+// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
+func ActionParameterMissingBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The action %1 requires the parameter %2 to be present in the request body.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ActionParameterMissing",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+func ResourceCannotBeDeletedBase() events.Event {
+	return events.Event{
+		Message:         "The delete request failed because the resource requested cannot be deleted.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceCannotBeDeleted",
+	}
+}
+
+// arg0: The value provided for the query parameter. This argument shall contain the value provided for the query parameter.
+// arg1: The query parameter. This argument shall contain the name of the query parameter.
+func QueryParameterValueTypeErrorBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the query parameter %2 is of a different type than the parameter can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.QueryParameterValueTypeError",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The value provided for the query parameter. This argument shall contain the value provided for the query parameter.
+// arg1: The query parameter. This argument shall contain the name of the query parameter.
+func QueryParameterValueFormatErrorBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The value '%1' for the parameter %2 is of a different format than the parameter can accept.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.QueryParameterValueFormatError",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+func AccessDeniedBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "While attempting to establish a connection to '%1', the service denied access.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.AccessDenied",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The name of the property for which a write was requested. This argument shall contain the name of the property for which a write was requested.
+// arg1: The name of the property with which there is a conflict. This argument shall contain the name of the property with which there is a conflict.
+func PropertyValueConflictBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The property '%1' could not be written because its value would conflict with the value of the '%2' property.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.PropertyValueConflict",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The array index. This argument shall contain the array index value provided.
+func InvalidIndexBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The index %1 is not a valid offset into the array.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.InvalidIndex",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The URI of the resource. This argument shall contain the URI of the relevant resource.
+func ResourceExhaustionBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The resource '%1' was unable to satisfy the request due to unavailability of resources.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceExhaustion",
+		MessageArgs:     []string{arg0},
+	}
+}
+
+// arg0: The URI for the reset action of the component that requires a reset. This argument shall contain the URI for the reset action that is required to be invoked for changes or operations to complete.
+// arg1: The `ResetType` required in a reset action on the component URI. This argument shall contain the `ResetType` required in a reset action on the component URI for changes or operations to complete.  A reset action POST shall contain this `ResetType` parameter.
+func ResetRequiredBase(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "In order to complete the operation, a component reset is required with the Reset action URI '%1' and ResetType '%2'.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.ResetRequired",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The name of the restricted role. This argument shall contain the name of the restricted role.
+func RestrictedRoleBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The operation was not successful because the role '%1' is restricted.",
+		MessageSeverity: "Warning",
+		MessageId:       "Base.1.10.0.RestrictedRole",
+		MessageArgs:     []string{arg0},
+	}
+}
+
 func GeneralErrorBase() events.Event {
 	return events.Event{
 		Message:         "A general error has occurred.  See Resolution for information on how to resolve the error, or @Message.ExtendedInfo if Resolution is not provided.",
@@ -532,79 +772,47 @@ func GeneralErrorBase() events.Event {
 	}
 }
 
-func NoValidSessionBase() events.Event {
+func CreatedBase() events.Event {
 	return events.Event{
-		Message:         "There is no valid session established with the implementation.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.NoValidSession",
-	}
-}
-
-func AccountRemovedBase() events.Event {
-	return events.Event{
-		Message:         "The account was successfully removed.",
+		Message:         "The resource has been created successfully.",
 		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.AccountRemoved",
+		MessageId:       "Base.1.10.0.Created",
 	}
 }
 
-// arg0: The software, provider, or service that reported the fault condition. This argument shall contain the name of the entity that reported the fault condition.
-func UndeterminedFaultBase(arg0 string) events.Event {
+func EventSubscriptionLimitExceededBase() events.Event {
 	return events.Event{
-		Message:         "A undetermined fault condition has been reported by '%1'.",
+		Message:         "The event subscription failed due to the number of simultaneous subscriptions exceeding the limit of the implementation.",
 		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.UndeterminedFault",
+		MessageId:       "Base.1.10.0.EventSubscriptionLimitExceeded",
+	}
+}
+
+// arg0: The URI provided. This argument shall contain the URI provided for this operation.
+func ResourceMissingAtURIBase(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The resource at the URI '%1' was not found.",
+		MessageSeverity: "Critical",
+		MessageId:       "Base.1.10.0.ResourceMissingAtURI",
 		MessageArgs:     []string{arg0},
 	}
 }
 
-// arg0: The value provided for the property. This argument shall contain the deprecated value provided for the property.
-func PropertyValueDeprecatedBase(arg0 string) events.Event {
+// arg0: The name of the unknown property. This argument shall contain the name of the unknown property.
+func PropertyUnknownBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the property %2 is deprecated.",
+		Message:         "The property %1 is not in the list of valid properties for the resource.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueDeprecated",
+		MessageId:       "Base.1.10.0.PropertyUnknown",
 		MessageArgs:     []string{arg0},
 	}
 }
 
-// arg0: The value provided for the property. This argument shall contain the value provided for the property.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
-// arg1: The name of the property. This argument shall contain the name of the property.
-func PropertyValueFormatErrorBase(arg0, arg1 string) events.Event {
+func AccountModifiedBase() events.Event {
 	return events.Event{
-		Message:         "The value '%1' for the property %2 is of a different format than the property can accept.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueFormatError",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-// arg0: The value provided for the property. This argument shall contain the value provided for the property.
-// arg1: The name of the property. This argument shall contain the name of the property.
-func PropertyValueNotInListBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The value '%1' for the property %2 is not in the list of acceptable values.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueNotInList",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func SubscriptionTerminatedBase() events.Event {
-	return events.Event{
-		Message:         "The event subscription has been terminated.",
+		Message:         "The account was successfully modified.",
 		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.SubscriptionTerminated",
-	}
-}
-
-// arg0: The name of the property. This argument shall contain the name of the property `AccountTypes` or `OEMAccountTypes`.
-func StrictAccountTypesBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The request was not possible to fulfill with the account types included in property '%1' and property StrictAccountTypes set to true.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.StrictAccountTypes",
-		MessageArgs:     []string{arg0},
+		MessageId:       "Base.1.10.0.AccountModified",
 	}
 }
 
@@ -619,220 +827,12 @@ func PropertyValueIncorrectBase(arg0, arg1 string) events.Event {
 	}
 }
 
-func PreconditionFailedBase() events.Event {
+// arg0: The name of the property. This argument shall contain the name of the property `AccountTypes` or `OEMAccountTypes`.
+func StrictAccountTypesBase(arg0 string) events.Event {
 	return events.Event{
-		Message:         "The ETag supplied did not match the ETag required to change this resource.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.PreconditionFailed",
-	}
-}
-
-// arg0: The name of the action. This argument shall contain the name of the action that is deprecated.
-func ActionDeprecatedBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The action %1 is deprecated.",
+		Message:         "The request was not possible to fulfill with the account types included in property '%1' and property StrictAccountTypes set to true.",
 		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionDeprecated",
+		MessageId:       "Base.1.10.0.StrictAccountTypes",
 		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the property. This argument shall contain the name of the property.
-func PropertyNotWritableBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The property %1 is a read only property and cannot be assigned a value.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyNotWritable",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the action. This argument shall contain the name of the action.
-func ActionNotSupportedBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The action %1 is not supported by the resource.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ActionNotSupported",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func QueryNotSupportedOnOperationBase() events.Event {
-	return events.Event{
-		Message:         "Querying is not supported with the requested operation.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.QueryNotSupportedOnOperation",
-	}
-}
-
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-func InvalidObjectBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The object at '%1' is invalid.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.InvalidObject",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the property. This argument shall contain the name of the property.
-// arg1: The value assigned for property. This argument shall contain the value assigned for property.
-func PropertyValueModifiedBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The property %1 was assigned the value '%2' due to modification by the service.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueModified",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-// arg0: The URI of the resource. This argument shall contain the URI of the resource that is deprecated.
-func ResourceDeprecatedBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The operation was performed on a deprecated resource '%1'.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ResourceDeprecated",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The value provided for the action parameter. This argument shall contain the value provided for the action parameter.  Numeric values shall be converted to a string, and null values shall be represented by the string `null`.
-// arg1: The name of the action parameter. This argument shall contain the name of the action parameter.
-// arg2: The name of the action. This argument shall contain the name of the action.
-func ActionParameterValueFormatErrorBase(arg0, arg1, arg2 string) events.Event {
-	return events.Event{
-		Message:         "The value '%1' for the parameter %2 in the action %3 is of a different format than the parameter can accept.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ActionParameterValueFormatError",
-		MessageArgs:     []string{arg0, arg1, arg2},
-	}
-}
-
-// arg0: The supplied URI. This argument shall contain the invalid URI that was encountered.
-func InvalidURIBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The URI %1 was not found.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.InvalidURI",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func ServiceInUnknownStateBase() events.Event {
-	return events.Event{
-		Message:         "The operation failed because the service is in an unknown state and can no longer take incoming requests.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ServiceInUnknownState",
-	}
-}
-
-func AccountForSessionNoLongerExistsBase() events.Event {
-	return events.Event{
-		Message:         "The account for the current session has been removed, thus the current session has been removed as well.",
-		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.AccountForSessionNoLongerExists",
-	}
-}
-
-func InternalErrorBase() events.Event {
-	return events.Event{
-		Message:         "The request failed due to an internal service error.  The service is still operational.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.InternalError",
-	}
-}
-
-func CreateLimitReachedForResourceBase() events.Event {
-	return events.Event{
-		Message:         "The create operation failed because the resource has reached the limit of possible resources.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.CreateLimitReachedForResource",
-	}
-}
-
-// arg0: The URI provided. This argument shall contain the URI provided for this operation.
-func CouldNotEstablishConnectionBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The service failed to establish a connection with the URI '%1'.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.CouldNotEstablishConnection",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-func ResourceInStandbyBase() events.Event {
-	return events.Event{
-		Message:         "The request could not be performed because the resource is in standby.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceInStandby",
-	}
-}
-
-// arg0: The `Id` of the chassis that requires to be powered off. The value of this argument shall be a string containing the value of the `Id` property of the chassis that requires to be powered off.
-func ChassisPowerStateOffRequiredBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The Chassis with Id '%1' requires to be powered off to perform this request.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ChassisPowerStateOffRequired",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The name of the property for which a write was requested. This argument shall contain the name of the property for which a write was requested.
-// arg1: The value of the property that is in conflict. This argument shall contain the value of the property that is in conflict.
-func PropertyValueExternalConflictBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The property '%1' with the requested value of '%2' could not be written because the value is not available due to a configuration conflict.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.PropertyValueExternalConflict",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func AccountNotModifiedBase() events.Event {
-	return events.Event{
-		Message:         "The account modification request failed.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.AccountNotModified",
-	}
-}
-
-// arg0: The URI of the resource. This argument shall contain the URI of the relevant resource.
-func ResourceExhaustionBase(arg0 string) events.Event {
-	return events.Event{
-		Message:         "The resource '%1' was unable to satisfy the request due to unavailability of resources.",
-		MessageSeverity: "Critical",
-		MessageId:       "Base.1.10.0.ResourceExhaustion",
-		MessageArgs:     []string{arg0},
-	}
-}
-
-// arg0: The string provided. This argument shall contain the string value provided for this operation.
-// arg1: The maximum string length. This argument shall contain the maximum supported string length for this property.
-func StringValueTooLongBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The string '%1' exceeds the length limit %2.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.StringValueTooLong",
-		MessageArgs:     []string{arg0, arg1},
-	}
-}
-
-func SessionTerminatedBase() events.Event {
-	return events.Event{
-		Message:         "The session was successfully terminated.",
-		MessageSeverity: "OK",
-		MessageId:       "Base.1.10.0.SessionTerminated",
-	}
-}
-
-// arg0: The URI for the reset action of the component that requires a reset. This argument shall contain the URI for the reset action that is required to be invoked for changes or operations to complete.
-// arg1: The `ResetType` required in a reset action on the component URI. This argument shall contain the `ResetType` required in a reset action on the component URI for changes or operations to complete.  A reset action POST shall contain this `ResetType` parameter.
-func ResetRequiredBase(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "In order to complete the operation, a component reset is required with the Reset action URI '%1' and ResetType '%2'.",
-		MessageSeverity: "Warning",
-		MessageId:       "Base.1.10.0.ResetRequired",
-		MessageArgs:     []string{arg0, arg1},
 	}
 }

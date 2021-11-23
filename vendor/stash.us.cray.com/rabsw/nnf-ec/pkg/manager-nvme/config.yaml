@@ -1,6 +1,7 @@
 version: v1
 metadata:
   name: Rabbit
+debugLevel: info
 storage:
   controller:
     functions: 17

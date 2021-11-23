@@ -75,6 +75,10 @@ func (e Event) Args(args ...*string) error {
 	return nil
 }
 
+type Resource interface {
+	OdataId() string
+}
+
 // MessageId is an encoding of the Message Registry (Registry Prefix), Message Version, and Message Identifer
 // The format is [Registry Prefix].[Major Version].[Minor Version].[Message Identifier]
 //

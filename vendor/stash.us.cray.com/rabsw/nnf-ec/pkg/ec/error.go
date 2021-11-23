@@ -7,10 +7,11 @@ import (
 )
 
 type ControllerError struct {
-	statusCode int
-	cause      string
-	err        error
-	Event      interface{}
+	statusCode   int
+	cause        string
+	resourceType string
+	err          error
+	Event        interface{}
 }
 
 func NewControllerError(sc int) *ControllerError {
@@ -20,7 +21,10 @@ func NewControllerError(sc int) *ControllerError {
 func (e *ControllerError) Error() string {
 	errorString := fmt.Sprintf("Error %d: %s", e.statusCode, http.StatusText(e.statusCode))
 	if len(e.cause) != 0 {
-		return fmt.Sprintf("%s, %s", errorString, e.cause)
+		errorString += fmt.Sprintf(", Cause: %s", e.cause)
+	}
+	if e.err != nil {
+		errorString += fmt.Sprintf(", Internal Error: %s", e.err)
 	}
 	return errorString
 }
@@ -29,6 +33,22 @@ func (e *ControllerError) Unwrap() error {
 	return e.err
 }
 
+// Getters
+
+func (e *ControllerError) StatusCode() int {
+	return e.statusCode
+}
+
+func (e *ControllerError) Cause() string {
+	return e.cause
+}
+
+func (e *ControllerError) ResourceType() string {
+	return e.resourceType
+}
+
+// Setters
+
 func (e *ControllerError) WithError(err error) *ControllerError {
 	e.err = err
 	return e
@@ -36,6 +56,11 @@ func (e *ControllerError) WithError(err error) *ControllerError {
 
 func (e *ControllerError) WithCause(cause string) *ControllerError {
 	e.cause = cause
+	return e
+}
+
+func (e *ControllerError) WithResourceType(t string) *ControllerError {
+	e.resourceType = t
 	return e
 }
 

@@ -1,8 +1,11 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 
+	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme"
 	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -14,37 +17,38 @@ type Storage struct {
 	// which are part of that storage pool.
 	Id uuid.UUID
 
+	// Expected Namespaces are the list of storage namespaces that are expected
+	// to be part of this Storage resource. This is configured once upon creation
+	// of the Storage resource.
+	expectedNamespaces []StorageNamespace
+
+	// Discovered Namespaces contains the list of storage namespaces that were
+	// discovered by the server controller. If everything is operating correctly
+	// this list should compare to the expected namespaces.
+	discoveredNamespaces []StorageNamespace
+
 	ctrl ServerControllerApi
 
 	// The assigned File System for this Storage object, or nil if no
 	// fs is present.
 	fileSystem FileSystemApi
-
-	ns []StorageNamespace
-
-	nsExpected int // Expected number of namespaces within this storage pool
 }
 
 // Storage Namespace represents an NVMe Namespace present on the host.
 type StorageNamespace struct {
+	Id   nvme.NamespaceIdentifier               `json:"Id"`
+	Guid nvme.NamespaceGloballyUniqueIdentifier `json:"Guid"`
+
 	// Path refers to the system path for this particular NVMe Namespace. On unix
 	// variants, the path is of the form `/dev/nvme[CTRL]n[INDEX]` where CTRL is the
 	// parent NVMe Controller and INDEX is assigned by the operating system. INDEX
 	// does _not_ refer to the namespace ID (NSID)
 	path string
 
-	nsid int
-
-	id uuid.UUID
-
-	poolId    uuid.UUID
-	poolIdx   int // Index of this namespace wihin the storage pool
-	poolTotal int // Total number of namespaces within the storage pool, as reported by this namespace
-
 	debug bool // If this storage namespace is in debug mode
 }
 
-func (s *Storage) GetStatus() StorageStatus {
+func (s *Storage) GetStatus() (StorageStatus, error) {
 	return s.ctrl.GetStatus(s)
 }
 
@@ -62,34 +66,20 @@ func (s *Storage) DeleteFileSystem(fs FileSystemApi) error {
 
 // Returns the list of devices for this pool.
 func (s *Storage) Devices() []string {
-	devices := make([]string, len(s.ns))
-	for idx := range s.ns {
-		devices[idx] = s.ns[idx].path
+	devices := make([]string, len(s.discoveredNamespaces))
+	for idx := range s.discoveredNamespaces {
+		devices[idx] = s.discoveredNamespaces[idx].path
 	}
 
 	return devices
 }
 
-func (s *Storage) UpsertStorageNamespace(sns *StorageNamespace) {
-	for _, ns := range s.ns {
-		// Debug mode uses matching paths to track the namespaces
-		// This isn't practical in production because the same namespace
-		// and come and go on different paths.
-		if sns.debug {
+func (a StorageNamespace) String() string {
+	return fmt.Sprintf("NSID: %d GUID: %s", a.Id, a.Guid.String())
+}
 
-			if ns.path == sns.path {
-				return
-			}
-		} else {
-			if ns.id == sns.id {
-				return
-			}
-		}
-	}
-
-	s.ns = append(s.ns, *sns)
-
-	s.nsExpected = sns.poolTotal
+func (a StorageNamespace) Equals(b *StorageNamespace) bool {
+	return a.Id == b.Id && a.Guid == b.Guid
 }
 
 type StorageStatus string

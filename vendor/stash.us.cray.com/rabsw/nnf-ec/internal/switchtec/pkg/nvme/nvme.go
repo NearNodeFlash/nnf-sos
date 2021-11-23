@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/HewlettPackard/structex"
+	"github.com/google/uuid"
 
 	"stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec"
 )
@@ -186,6 +187,16 @@ const (
 	COMMON_NAMESPACE_IDENTIFIER NamespaceIdentifier = 0xFFFFFFFF
 )
 
+type NamespaceGloballyUniqueIdentifier [16]byte
+
+func (a NamespaceGloballyUniqueIdentifier) String() string {
+	return string(a[:])
+}
+
+func (a *NamespaceGloballyUniqueIdentifier) Parse(s string) {
+	*a = NamespaceGloballyUniqueIdentifier(uuid.MustParse(s))
+}
+
 // IdentifyNamespace -
 func (dev *Device) IdentifyNamespace(namespaceId uint32, present bool) (*IdNs, error) {
 
@@ -257,7 +268,7 @@ func (dev *Device) IdentifyNamespaceControllerList(namespaceId uint32) (*CtrlLis
 	ctrlList := new(CtrlList)
 	buf := structex.NewBuffer(ctrlList)
 
-	if err := dev.Identify(0, ControllerNamespaceList_CNS, buf.Bytes()); err != nil {
+	if err := dev.Identify(namespaceId, ControllerNamespaceList_CNS, buf.Bytes()); err != nil {
 		return nil, err
 	}
 
@@ -492,10 +503,10 @@ type IdNs struct {
 		WriteProtected uint8 `bitfield:"1"` // Bit 0: indicates namespace is currently write protected due to any error condition
 		Reserved       uint8 `bitfield:"7"` // Bits 7:1 are reserved
 	} // NSATTR
-	NvmSetIdentifier             uint16    // NVMSETID
-	EnduranceGroupIdentifier     uint16    // ENDGID
-	GloballyUniqueIdentifier     [16]uint8 // NGUID
-	IeeeExtendedUniqueIdentifier [8]uint8  // EUI64
+	NvmSetIdentifier             uint16                            // NVMSETID
+	EnduranceGroupIdentifier     uint16                            // ENDGID
+	GloballyUniqueIdentifier     NamespaceGloballyUniqueIdentifier // NGUID
+	IeeeExtendedUniqueIdentifier [8]uint8                          // EUI64
 	LBAFormats                   [16]struct {
 		MetadataSize        uint16 // MS
 		LBADataSize         uint8  // LBADS Indicates the LBA data size supported in terms of a power-of-two value. If the value is 0, the the LBA format is not supported
