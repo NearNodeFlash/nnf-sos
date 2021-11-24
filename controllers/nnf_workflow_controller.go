@@ -34,6 +34,19 @@ const (
 	finalizerNnfWorkflow = "nnf.cray.hpe.com/nnf_workflow"
 )
 
+type nnfStoragesState int
+
+// State enumerations
+const (
+	nnfStoragesExist nnfStoragesState = iota
+	nnfStoragesDeleted
+)
+
+var nnfStorageStateStrings = [...]string{
+	"exist",
+	"deleted",
+}
+
 // NnfWorkflowReconciler contains the pieces used by the reconciler
 type NnfWorkflowReconciler struct {
 	client.Client
@@ -97,7 +110,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	driverID := os.Getenv("DWS_DRIVER_ID")
 
 	// If the dws-operator has yet to set the Status.State, just return and wait for it.
-	if workflow.Status.State == "" {
+	if workflow.Status.State == "" || workflow.Status.State != workflow.Spec.DesiredState {
 		return ctrl.Result{}, nil
 	}
 
@@ -114,6 +127,8 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.handleProposalState(ctx, workflow, driverID, log)
 	case dwsv1alpha1.StateSetup.String():
 		return r.handleSetupState(ctx, workflow, driverID, log)
+	case dwsv1alpha1.StateTeardown.String():
+		return r.handleTeardownState(ctx, workflow, driverID, log)
 	default:
 		err = fmt.Errorf("Status.State %s not yet supported", workflow.Status.State)
 		log.Error(err, "Unsupported Status.State", "state", workflow.Status.State)
@@ -432,6 +447,79 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 	}
 
 	return *nnfStorage, nil
+}
+
+func (r *NnfWorkflowReconciler) handleTeardownState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+
+	log.Info("Teardown")
+
+	exists, err := r.teardownStorage(ctx, workflow)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Wait for all the nnfStorages to finish deleting before completing the
+	// teardown state.
+	if exists == nnfStoragesExist {
+		return ctrl.Result{}, err
+	}
+
+	// Complete state in the drivers
+	return r.completeDriverState(ctx, workflow, driverID, log)
+}
+
+// Delete all the child NnfStorage resources. Don't trust the client cache
+// We may have created children that aren't in the cache
+func (r *NnfWorkflowReconciler) teardownStorage(ctx context.Context, wf *dwsv1alpha1.Workflow) (nnfStoragesState, error) {
+	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace})
+	var firstErr error
+	state := nnfStoragesDeleted
+
+	// Iterate through the directive breakdowns to determine the names for the NnfStorage
+	// objects we need to delete.
+	// There will be 1 NnfStorage object
+	for _, dbdRef := range wf.Status.DirectiveBreakdowns {
+		nameSpacedName := types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}
+
+		// Do a Get on the nnfStorage first to check if it's already been marked
+		// for deletion.
+		nnfStorage := &nnfv1alpha1.NnfStorage{}
+		err := r.Get(ctx, nameSpacedName, nnfStorage)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				if firstErr == nil {
+					firstErr = err
+				}
+				log.Info("Unable to get NnfStorage", "Error", err, "NnfStorage", nameSpacedName)
+			}
+		} else {
+			state = nnfStoragesExist
+			if !nnfStorage.GetDeletionTimestamp().IsZero() {
+				continue
+			}
+		}
+
+		nnfStorage = &nnfv1alpha1.NnfStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nameSpacedName.Name,
+				Namespace: nameSpacedName.Namespace,
+			},
+		}
+
+		err = r.Delete(ctx, nnfStorage)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				if firstErr == nil {
+					firstErr = err
+				}
+				log.Info("Unable to delete NnfStorage", "Error", err, "NnfStorage", nnfStorage)
+			}
+		} else {
+			state = nnfStoragesExist
+		}
+	}
+
+	return state, firstErr
 }
 
 // SetupWithManager sets up the controller with the Manager.

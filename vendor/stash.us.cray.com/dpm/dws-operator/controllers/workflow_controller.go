@@ -81,6 +81,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if workflow.Status.State != workflow.Spec.DesiredState {
 		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
+		workflow.Status.Ready = ConditionFalse
 		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
 

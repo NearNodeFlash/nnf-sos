@@ -136,7 +136,7 @@ func (mgr *MockNvmePersistenceManager) recordDeleteNamespace(dev *mockDevice, ns
 		Capacity:    0,
 	})
 
-	if err := ledger.Log(mockNvmePersistenceNamespaceCreate, data); err != nil {
+	if err := ledger.Log(mockNvmePersistenceNamespaceDelete, data); err != nil {
 		panic(err)
 	}
 }
@@ -224,6 +224,7 @@ func (r *mockNvmePersistenceReplay) Entry(t uint32, data []byte) error {
 			if namespace.NamespaceId == ns.NamespaceId {
 				copy(r.data.namespaces[nsIdx:], r.data.namespaces[nsIdx+1:])
 				r.data.namespaces = r.data.namespaces[:len(r.data.namespaces)-1]
+				break
 			}
 		}
 
@@ -235,6 +236,7 @@ func (r *mockNvmePersistenceReplay) Entry(t uint32, data []byte) error {
 
 		ns := r.findNamespace(controller.NamespaceId)
 		ns.controllerIds = append(ns.controllerIds, controller.ControllerId)
+
 	case mockNvmePersistenceDetachController:
 		controller := &mockNvmeDevicePersistentControllerData{}
 		if err := json.Unmarshal(data, controller); err != nil {
@@ -252,8 +254,9 @@ func (r *mockNvmePersistenceReplay) Entry(t uint32, data []byte) error {
 
 	return nil
 }
+
 func (*mockNvmePersistenceReplay) Done() error {
-	// TODO: Do we need to run some sort of verification?
+
 	return nil
 }
 

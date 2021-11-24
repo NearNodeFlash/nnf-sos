@@ -233,6 +233,39 @@ var _ = Describe("Integration Test", func() {
 					return wf.Status.Ready, nil
 				}, timeout, interval).Should(BeTrue())
 			})
+
+			It("Should accept change to teardown state", func() {
+				wf := &dwsv1alpha1.Workflow{}
+				Eventually(func() (bool, error) {
+					wf := wf
+					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
+					if err != nil {
+						return false, err
+					}
+					return wf.Status.Ready, nil
+				}, timeout, interval).Should(BeTrue())
+
+				wf.Spec.DesiredState = dwsv1alpha1.StateTeardown.String()
+				Eventually(func() error {
+					wf := wf
+					err := k8sClient.Update(context.Background(), wf)
+					return err
+				}).Should(BeNil())
+
+				Eventually(func() bool {
+					// wf := &dwsv1alpha1.Workflow{}
+					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
+					if err != nil {
+						return false
+					}
+					Expect(err).Should(BeNil())
+
+					return wf.Status.State == dwsv1alpha1.StateTeardown.String() && wf.Status.Ready == true
+				}, timeout, interval).Should(BeTrue())
+
+				Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), "Status.State should equal Spec.DesiredState")
+				Expect(wf.Status.Ready).Should(BeTrue())
+			})
 		})
 
 		Describe(fmt.Sprintf("Deleting workflow %s for file system %s", workflowName, f.fsName), func() {

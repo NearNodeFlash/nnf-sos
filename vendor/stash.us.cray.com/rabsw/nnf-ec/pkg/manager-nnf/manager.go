@@ -251,7 +251,7 @@ func (s *StorageService) createFileSystem(id string, sp *StoragePool, fsApi serv
 
 func (s *StorageService) deleteFileSystem(fs *FileSystem) {
 	sp := s.findStoragePool(fs.storagePoolId)
-	fmt.Printf("DeleteFS SP %p FS %p\n", sp, fs)
+
 	sp.fileSystemId = ""
 
 	for fileSystemIdx, fileSystem := range s.fileSystems {
@@ -613,13 +613,6 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 	}
 
 	p := s.createStoragePool(model.Id, model.Name, model.Description, policy)
-	fmt.Printf("CreateSP SP %p\n", p)
-
-	fmt.Println("All Pools:")
-	for i := range s.pools {
-		fmt.Printf("  %d: %p", i, &s.pools[i])
-	}
-	fmt.Println()
 
 	updateFunc := func() (err error) {
 		p.providingVolumes, err = policy.Allocate(p.uid)
@@ -710,7 +703,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdGet(storageServiceId, storag
 // StorageServiceIdStoragePoolIdDelete -
 func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, storagePoolId string) error {
 	s, p := findStoragePool(storageServiceId, storagePoolId)
-	fmt.Printf("DeleteSP SP %p\n", p)
+
 	if p == nil {
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolId))
 	}
@@ -911,7 +904,6 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 	// Everything validated OK - create the Storage Group
 
 	sg := s.createStorageGroup(model.Id, sp, ep)
-	fmt.Printf("CreateSG SP %p SG %p\n", sp, sg)
 
 	updateFunc := func() error {
 		for _, pv := range sp.providingVolumes {
@@ -987,7 +979,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, stora
 // StorageServiceIdStorageGroupIdDelete -
 func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, storageGroupId string) error {
 	s, sg := findStorageGroup(storageServiceId, storageGroupId)
-	fmt.Printf("DeleteSG %p\n", sg)
+
 	if sg == nil {
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StorageGroupOdataType, storageGroupId))
 	}
@@ -1001,19 +993,25 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 		return ec.NewErrInternalServerError().WithCause(fmt.Sprintf("Storage group '%s' does not have associated storage pool '%s'", storageGroupId, sg.storagePoolId))
 	}
 
-	// Detach the endpoint from the NVMe namespaces
+	deleteFunc := func() error {
 
-	for _, pv := range sp.providingVolumes {
-		if err := nvme.DetachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
-			log.WithError(err).Errorf("Failed to detach controllers")
-			return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' Failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
+		// Detach the endpoint from the NVMe namespaces
+		for _, pv := range sp.providingVolumes {
+			if err := nvme.DetachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
+				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
+			}
 		}
+
+		// Notify the Server the namespaces were removed
+		if err := sg.serverStorage.Delete(); err != nil {
+			return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' server delete failed", storageGroupId))
+		}
+
+		return nil
 	}
 
-	// Notify the Server the namespaces were removed
-
-	if err := sg.serverStorage.Delete(); err != nil {
-		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' server delete failed", storageGroupId))
+	if err := DeletePersistentObject(sg, deleteFunc, storageGroupDeleteStartLogEntryType, storageGroupDeleteCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause("Failed to delete storage group")
 	}
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), sg)
@@ -1125,7 +1123,6 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 	}
 
 	fs := s.createFileSystem(model.Id, sp, fsApi)
-	fmt.Printf("CreateFS SP %p FS %p\n", sp, fs)
 
 	if err := NewPersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to create", fs.id))
@@ -1336,19 +1333,19 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 
 	sg := s.findStorageGroup(sh.storageGroupId)
 	if sg == nil {
-		return ec.NewErrInternalServerError().WithCause(fmt.Sprintf("File share '%s' does not have associated storage group '%s'", exportedShareId, sh.storageGroupId))
+		return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithCause(fmt.Sprintf("File share '%s' does not have associated storage group '%s'", exportedShareId, sh.storageGroupId))
 	}
 
 	deleteFunc := func() error {
-		if err := sg.serverStorage.Delete(); err != nil {
-			return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
+		if err := sg.serverStorage.DeleteFileSystem(fs.fsApi); err != nil {
+			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
 		}
 
 		return nil
 	}
 
 	if err := DeletePersistentObject(sh, deleteFunc, fileShareDeleteStartLogEntryType, fileShareDeleteCompleteLogEntryType); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause("Failed to delete file share")
+		return ec.NewErrInternalServerError().WithError(err).WithResourceType(FileShareOdataType).WithCause("Failed to delete file share")
 	}
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), sh)

@@ -312,7 +312,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
-	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
+	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 	var firstErr error
 
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
