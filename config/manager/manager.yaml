@@ -64,12 +64,9 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
         resources:
-          limits:
-            cpu: 100m
-            memory: 60Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 60Mi
         securityContext:
           privileged: True
       serviceAccountName: controller-manager
@@ -122,11 +119,8 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
-          limits:
-            cpu: 100m
-            memory: 30Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 30Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
