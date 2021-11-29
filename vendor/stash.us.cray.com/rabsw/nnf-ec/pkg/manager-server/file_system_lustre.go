@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type LustreTargetType string
@@ -33,6 +34,10 @@ var backFsTypes = map[string]LustreBackFsType{
 	"zfs":     BackFsZfs,
 }
 
+func init() {
+	FileSystemRegistry.RegisterFileSystem(&FileSystemLustre{})
+}
+
 type FileSystemLustre struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
@@ -43,7 +48,7 @@ type FileSystemLustre struct {
 	backFs     LustreBackFsType
 }
 
-func NewFileSystemLustre(oem FileSystemOem) FileSystemApi {
+func (*FileSystemLustre) New(oem FileSystemOem) FileSystemApi {
 	fs := &FileSystemLustre{
 		FileSystem: FileSystem{name: oem.Name},
 		mgsNode:    oem.MgsNode,
@@ -63,8 +68,10 @@ func (*FileSystemLustre) IsType(oem FileSystemOem) bool {
 	}
 	return ok
 }
-func (*FileSystemLustre) Type() string   { return "lustre" }
-func (f *FileSystemLustre) Name() string { return f.name }
+
+func (*FileSystemLustre) IsMockable() bool { return false }
+func (*FileSystemLustre) Type() string     { return "lustre" }
+func (f *FileSystemLustre) Name() string   { return f.name }
 
 func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) error {
 
@@ -96,7 +103,34 @@ func runCmd(f *FileSystemLustre, cmd string) error {
 	return err
 }
 
-func (f *FileSystemLustre) Delete() error { return nil }
+func (f *FileSystemLustre) Delete() error {
+	var err error
+	if f.backFs == BackFsZfs {
+		zpool := f.zfsPoolName()
+		// Query the existence of the pool.
+		err = runCmd(f, fmt.Sprintf("zpool list %s", zpool))
+		if err != nil {
+			return err
+		}
+		err = runCmd(f, fmt.Sprintf("zpool destroy %s", zpool))
+		if err != nil {
+			return err
+		}
+	}
+
+	var devName string = f.devices[0]
+	err = runCmd(f, fmt.Sprintf("wipefs --all %s", devName))
+	if err != nil {
+		return err
+	}
+	// Inform the OS of partition table changes.
+	err = runCmd(f, "partprobe")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func (f *FileSystemLustre) Mount(mountpoint string) error {
 
@@ -137,7 +171,14 @@ func (f *FileSystemLustre) Unmount() error {
 	return nil
 }
 
+func (f *FileSystemLustre) zfsTargType() string {
+	return strings.ToLower(string(f.targetType))
+}
+
+func (f *FileSystemLustre) zfsPoolName() string {
+	return fmt.Sprintf("%s-%spool", f.name, f.zfsTargType())
+}
+
 func (f *FileSystemLustre) zfsVolName() string {
-	targType := strings.ToLower(string(f.targetType))
-	return fmt.Sprintf("%s-%spool/%s%d", f.name, targType, targType, f.index)
+	return fmt.Sprintf("%s/%s%d", f.zfsPoolName(), f.zfsTargType(), f.index)
 }

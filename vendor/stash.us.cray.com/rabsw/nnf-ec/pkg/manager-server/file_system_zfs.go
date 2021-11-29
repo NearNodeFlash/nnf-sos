@@ -10,13 +10,19 @@ type FileSystemZfs struct {
 	FileSystem
 }
 
-func NewFileSystemZfs(oem FileSystemOem) FileSystemApi {
+func init() {
+	FileSystemRegistry.RegisterFileSystem(&FileSystemZfs{})
+}
+
+func (*FileSystemZfs) New(oem FileSystemOem) FileSystemApi {
 	return &FileSystemZfs{FileSystem: FileSystem{name: oem.Name}}
 }
 
 func (*FileSystemZfs) IsType(oem FileSystemOem) bool { return oem.Type == "zfs" }
-func (*FileSystemZfs) Type() string                  { return "zfs" }
-func (f *FileSystemZfs) Name() string                { return f.name }
+func (*FileSystemZfs) IsMockable() bool              { return false }
+
+func (*FileSystemZfs) Type() string   { return "zfs" }
+func (f *FileSystemZfs) Name() string { return f.name }
 
 func (f *FileSystemZfs) Create(devices []string, options FileSystemOptions) error {
 

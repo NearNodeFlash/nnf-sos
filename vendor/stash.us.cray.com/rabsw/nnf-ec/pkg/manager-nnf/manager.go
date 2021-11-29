@@ -1183,15 +1183,7 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 		}
 	}
 
-	deleteFunc := func() error {
-		if err := fs.fsApi.Delete(); err != nil {
-			return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to delete file system", fileSystemId))
-		}
-
-		return nil
-	}
-
-	if err := DeletePersistentObject(fs, deleteFunc, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
+	if err := DeletePersistentObject(fs, func() error { return nil }, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause("Failed to delete file system")
 	}
 

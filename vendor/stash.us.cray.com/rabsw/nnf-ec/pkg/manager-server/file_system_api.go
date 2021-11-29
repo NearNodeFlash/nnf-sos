@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
@@ -18,6 +19,11 @@ func NewFileSystemController(config *ConfigFile) FileSystemControllerApi {
 
 type fileSystemController struct {
 	config *ConfigFile
+}
+
+// NewFileSystem -
+func (c *fileSystemController) NewFileSystem(oem FileSystemOem) FileSystemApi {
+	return FileSystemRegistry.NewFileSystem(oem)
 }
 
 var (
@@ -42,8 +48,12 @@ type FileSystemOptions = map[string]interface{}
 // FileSystemApi - Defines the interface for interacting with various file systems
 // supported by the NNF element controller.
 type FileSystemApi interface {
+	New(oem FileSystemOem) FileSystemApi
+
+	IsType(oem FileSystemOem) bool // Returns true if the provided oem fields match the file system type, false otherwise
+	IsMockable() bool              // Returns true if the file system can be instantiated by the mock server, false otherwise
+
 	Type() string
-	IsType(oem FileSystemOem) bool
 	Name() string
 
 	Create(devices []string, opts FileSystemOptions) error
@@ -51,24 +61,6 @@ type FileSystemApi interface {
 
 	Mount(mountpoint string) error
 	Unmount() error
-}
-
-// NewFileSystem -
-func (c *fileSystemController) NewFileSystem(oem FileSystemOem) (fsApi FileSystemApi) {
-
-	if (&FileSystemZfs{}).IsType(oem) {
-		fsApi = NewFileSystemZfs(oem)
-	} else if (&FileSystemLvm{}).IsType(oem) {
-		fsApi = NewFileSystemLvm(oem)
-	} else if (&FileSystemXfs{}).IsType(oem) {
-		fsApi = NewFileSystemXfs(oem)
-	} else if (&FileSystemLustre{}).IsType(oem) {
-		fsApi = NewFileSystemLustre(oem)
-	}
-	if fsApi != nil {
-		log.Info("New file system", " type ", fsApi.Type())
-	}
-	return fsApi
 }
 
 // FileSystem - Represents an abstract file system, with individual operations
@@ -95,4 +87,38 @@ type FileSystemOem struct {
 	TargetType string `json:"TargetType,omitempty"`
 	Index      int    `json:"Index,omitempty"`
 	BackFs     string `json:"BackFs,omitempty"`
+}
+
+// File System Registry - Maintains a list of eligible file systems registered in the system.
+type fileSystemRegistry []FileSystemApi
+
+var (
+	FileSystemRegistry fileSystemRegistry
+)
+
+func (r *fileSystemRegistry) RegisterFileSystem(fileSystem FileSystemApi) {
+
+	// Sanity check provided FS has a valid type
+	if len(fileSystem.Type()) == 0 {
+		panic("File system has no type")
+	}
+
+	// Sanity check for duplicate file systems
+	for _, fs := range *r {
+		if fs.Type() == fileSystem.Type() {
+			panic(fmt.Sprintf("File system '%s' already registered", fileSystem.Type()))
+		}
+	}
+
+	*r = append(*r, fileSystem)
+}
+
+func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) FileSystemApi {
+	for _, fs := range *r {
+		if fs.IsType(oem) {
+			return fs.New(oem)
+		}
+	}
+
+	return nil
 }

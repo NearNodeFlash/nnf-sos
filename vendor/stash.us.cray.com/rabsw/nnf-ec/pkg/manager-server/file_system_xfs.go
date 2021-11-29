@@ -7,7 +7,11 @@ type FileSystemXfs struct {
 	FileSystemLvm
 }
 
-func NewFileSystemXfs(oem FileSystemOem) FileSystemApi {
+func init() {
+	FileSystemRegistry.RegisterFileSystem(&FileSystemXfs{})
+}
+
+func (*FileSystemXfs) New(oem FileSystemOem) FileSystemApi {
 	return &FileSystemXfs{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
@@ -17,6 +21,8 @@ func NewFileSystemXfs(oem FileSystemOem) FileSystemApi {
 }
 
 func (*FileSystemXfs) IsType(oem FileSystemOem) bool { return oem.Type == "xfs" }
+func (*FileSystemXfs) IsMockable() bool              { return false }
+
 func (*FileSystemXfs) Type() string                  { return "xfs" }
 func (f *FileSystemXfs) Name() string                { return f.name }
 

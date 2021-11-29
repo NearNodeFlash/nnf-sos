@@ -13,13 +13,19 @@ type FileSystemLvm struct {
 	leader bool
 }
 
-func NewFileSystemLvm(oem FileSystemOem) FileSystemApi {
+func init() {
+	FileSystemRegistry.RegisterFileSystem(&FileSystemLvm{})
+}
+
+func (*FileSystemLvm) New(oem FileSystemOem) FileSystemApi {
 	return &FileSystemLvm{FileSystem: FileSystem{name: oem.Name}, leader: true}
 }
 
 func (*FileSystemLvm) IsType(oem FileSystemOem) bool { return oem.Type == "lvm" }
-func (*FileSystemLvm) Type() string                  { return "lvm" }
-func (f *FileSystemLvm) Name() string                { return f.name }
+func (*FileSystemLvm) IsMockable() bool              { return false }
+
+func (*FileSystemLvm) Type() string   { return "lvm" }
+func (f *FileSystemLvm) Name() string { return f.name }
 
 func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
