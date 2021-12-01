@@ -255,11 +255,11 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			if !apierrors.IsNotFound(err) {
 				statusUpdater.updateError(allocationSet, err)
 				return &ctrl.Result{Requeue: true}, nil
-			} else {
-				startingStatus := nnfv1alpha1.ResourceStarting
-				startingStatus.UpdateIfWorseThan(&status)
-				continue
 			}
+
+			startingStatus := nnfv1alpha1.ResourceStarting
+			startingStatus.UpdateIfWorseThan(&status)
+			continue
 		}
 
 		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" {

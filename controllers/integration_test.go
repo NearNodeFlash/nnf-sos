@@ -234,6 +234,52 @@ var _ = Describe("Integration Test", func() {
 				}, timeout, interval).Should(BeTrue())
 			})
 
+			// TODO: Insert Setup State checks
+
+			// Try moving the workflow through the unsupported states
+			It("It should complete each unsupported state", func() {
+				wf := &dwsv1alpha1.Workflow{}
+				Eventually(func() (bool, error) {
+					wf := wf
+					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
+					if err != nil {
+						return false, err
+					}
+					return wf.Status.Ready, nil
+				}, timeout, interval).Should(BeTrue())
+
+				unsupportedStates := []string{
+					dwsv1alpha1.StateSetup.String(), // TODO: Remove this when we transition to Setup on line 237.
+					dwsv1alpha1.StateDataIn.String(),
+					dwsv1alpha1.StatePreRun.String(),
+					dwsv1alpha1.StatePostRun.String(),
+					dwsv1alpha1.StateDataOut.String(),
+				}
+
+				// Iterate the unsupported states and ensure workflow completes them
+				for _, s := range unsupportedStates {
+					wf.Spec.DesiredState = s
+					Eventually(func() error {
+						wf := wf
+						err := k8sClient.Update(context.Background(), wf)
+						return err
+					}, timeout, interval).Should(BeNil(), fmt.Sprintf("Update desiredState: %s", s))
+
+					Eventually(func() bool {
+						err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
+						if err != nil {
+							return false
+						}
+						Expect(err).Should(BeNil())
+
+						return wf.Status.State == s && wf.Status.Ready == true
+					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("Waiting for ready state: %s", s))
+
+					Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), fmt.Sprintf("Status.State should equal Spec.DesiredState: %s", s))
+					Expect(wf.Status.Ready).Should(BeTrue())
+				}
+			})
+
 			It("Should accept change to teardown state", func() {
 				wf := &dwsv1alpha1.Workflow{}
 				Eventually(func() (bool, error) {
@@ -253,7 +299,6 @@ var _ = Describe("Integration Test", func() {
 				}).Should(BeNil())
 
 				Eventually(func() bool {
-					// wf := &dwsv1alpha1.Workflow{}
 					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
 					if err != nil {
 						return false
@@ -263,7 +308,7 @@ var _ = Describe("Integration Test", func() {
 					return wf.Status.State == dwsv1alpha1.StateTeardown.String() && wf.Status.Ready == true
 				}, timeout, interval).Should(BeTrue())
 
-				Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), "Status.State should equal Spec.DesiredState")
+				Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), fmt.Sprintf("Status.State should equal Spec.DesiredState: %s", dwsv1alpha1.StateTeardown.String()))
 				Expect(wf.Status.Ready).Should(BeTrue())
 			})
 		})

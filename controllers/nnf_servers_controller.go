@@ -56,6 +56,15 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;update;patch
 
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Workflow object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("DwsServers", req.NamespacedName)
 
@@ -234,7 +243,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 
 			// There can be multiple allocations per Rabbit. Add them all up and present a
 			// single size for the servers resource
-			var allocationSize int64 = 0
+			var allocationSize int64
 			for _, nnfNodeAllocation := range nnfNodeStorage.Status.Allocations {
 				if nnfNodeAllocation.CapacityAllocated == 0 {
 					ready = false

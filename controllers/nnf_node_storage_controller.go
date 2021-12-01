@@ -186,8 +186,8 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 		})
 	}
 
-	storagePoolId := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	sp, err := r.createStoragePool(ss, storagePoolId, nodeStorage.Spec.Capacity)
+	storagePoolID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
+	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.StoragePool, err)
 
@@ -231,8 +231,8 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 		})
 	}
 
-	storageGroupId := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	sg, err := r.createStorageGroup(ss, storageGroupId, allocationStatus.StoragePool.Id, os.Getenv("RABBIT_NODE"))
+	storageGroupID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
+	sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.Id, os.Getenv("RABBIT_NODE"))
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
 
@@ -305,8 +305,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		BackFs:     nodeStorage.Spec.LustreStorage.BackFs,
 	}
 
-	fileSystemId := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	fs, err := r.createFileSystem(ss, fileSystemId, allocationStatus.StoragePool.Id, oem)
+	fileSystemID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
+	fs, err := r.createFileSystem(ss, fileSystemID, allocationStatus.StoragePool.Id, oem)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileSystem, err)
 
@@ -343,8 +343,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
 	}
 
-	fileShareId := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	sh, err := r.createFileShare(ss, fileShareId, allocationStatus.FileSystem.Id, os.Getenv("RABBIT_NODE"), mountPath)
+	fileShareID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
+	sh, err := r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.Id, os.Getenv("RABBIT_NODE"), mountPath)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
 

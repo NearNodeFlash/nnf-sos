@@ -6,7 +6,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -130,9 +129,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	case dwsv1alpha1.StateTeardown.String():
 		return r.handleTeardownState(ctx, workflow, driverID, log)
 	default:
-		err = fmt.Errorf("Status.State %s not yet supported", workflow.Status.State)
-		log.Error(err, "Unsupported Status.State", "state", workflow.Status.State)
-		return ctrl.Result{}, err
+		return r.handleUnsupportedState(ctx, workflow, driverID, log)
 	}
 }
 
@@ -181,9 +178,18 @@ func (r *NnfWorkflowReconciler) completeDriverState(ctx context.Context, workflo
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) handleUnsupportedState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+	log.Info(workflow.Status.State)
 
-	log.Info("Proposal")
+	log.Info("Unsupported Status.State", "state", workflow.Status.State)
+
+	// TODO: This should return an error, but for now unhandled states simply succeed to allow Flux to exercise workflow...
+	// Complete state in the drivers
+	return r.completeDriverState(ctx, workflow, driverID, log)
+}
+
+func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+	log.Info(workflow.Status.State)
 
 	var dbList []v1.ObjectReference
 	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
@@ -327,8 +333,7 @@ func needDirectiveBreakdownReference(dbdNeeded *dwsv1alpha1.DirectiveBreakdown, 
 }
 
 func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
-
-	log.Info("Setup")
+	log.Info(workflow.Status.State)
 
 	// We don't start looking for NnfStorage to be "Ready" until we've created all of them.
 	// In the following loop if we create anything, we requeue before we look at any
@@ -363,7 +368,10 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 			return ctrl.Result{}, err
 		}
 
-		nnfStorages = append(nnfStorages, nnfStorage)
+		// Allow an empty Servers object, only append if we have an nnfStorage object
+		if nnfStorage != nil {
+			nnfStorages = append(nnfStorages, *nnfStorage)
+		}
 	}
 
 	// Walk the nnfStorages looking for them to be Ready. We exit the reconciler if
@@ -387,7 +395,12 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (nnfv1alpha1.NnfStorage, error) {
+func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (*nnfv1alpha1.NnfStorage, error) {
+
+	// If the Servers object is empty, no work to do we're finished.
+	if len(s.Spec.AllocationSets) == 0 {
+		return nil, nil
+	}
 
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -435,7 +448,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 
 	if err != nil {
 		log.Error(err, "Failed to create or update NnfStorage", "name", nnfStorage.Name)
-		return *nnfStorage, err
+		return nnfStorage, err
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -446,12 +459,11 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 		log.Info("Updated nnfStorage", "name", nnfStorage.Name)
 	}
 
-	return *nnfStorage, nil
+	return nnfStorage, nil
 }
 
 func (r *NnfWorkflowReconciler) handleTeardownState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
-
-	log.Info("Teardown")
+	log.Info(workflow.Status.State)
 
 	exists, err := r.teardownStorage(ctx, workflow)
 	if err != nil {
