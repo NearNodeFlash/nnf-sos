@@ -66,7 +66,6 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	log := r.Log.WithValues("DwsServers", req.NamespacedName)
 
 	servers := &dwsv1alpha1.Servers{}
 	if err := r.Get(ctx, req.NamespacedName, servers); err != nil {
@@ -120,39 +119,13 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if len(servers.Spec.AllocationSets) == 0 {
 		servers.Status.Ready = false
-		if err := r.Status().Update(ctx, servers); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
 
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, nil
+		return r.statusUpdate(ctx, servers, false)
 	}
 	// Initialize the status section if it isn't filled in
 	if len(servers.Status.AllocationSets) != len(servers.Spec.AllocationSets) {
 		servers.Status.Ready = false
-		for _, allocationSetSpec := range servers.Spec.AllocationSets {
-			allocationSetStatus := dwsv1alpha1.ServersStatusAllocationSet{}
-			allocationSetStatus.Label = allocationSetSpec.Label
-			for _, storage := range allocationSetSpec.Storage {
-				allocationSetStatus.Storage = append(allocationSetStatus.Storage, dwsv1alpha1.ServersStatusStorage{Name: storage.Name, AllocationSize: 0})
-			}
-
-			servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)
-		}
-
-		log.Info("Initializing servers status")
-		if err := r.Status().Update(ctx, servers); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{}, nil
+		return r.statusSetEmpty(ctx, servers)
 	}
 
 	return r.updateCapacityUsed(ctx, servers)
@@ -166,11 +139,11 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 	}
 
 	// Get the NnfStorage with the same name/namespace as the servers resource. It may not exist
-	// yet if we're still in proposal phase.
+	// yet if we're still in proposal phase, or if it was deleted in teardown.
 	nnfStorage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace}, nnfStorage); err != nil {
 		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+			return r.statusSetEmpty(ctx, servers)
 		}
 
 		return ctrl.Result{}, err
@@ -280,6 +253,23 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 	}
 
 	return r.statusUpdate(ctx, servers, batch)
+}
+
+func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha1.Servers) (ctrl.Result, error) {
+	servers.Status.AllocationSets = []dwsv1alpha1.ServersStatusAllocationSet{}
+	for _, allocationSetSpec := range servers.Spec.AllocationSets {
+		allocationSetStatus := dwsv1alpha1.ServersStatusAllocationSet{}
+		allocationSetStatus.Label = allocationSetSpec.Label
+		for _, storage := range allocationSetSpec.Storage {
+			allocationSetStatus.Storage = append(allocationSetStatus.Storage, dwsv1alpha1.ServersStatusStorage{Name: storage.Name, AllocationSize: 0})
+		}
+
+		servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)
+	}
+
+	// Update the status with batch=false to prevent batching. Using statusUpdate will keep the LastUpdate
+	// field valid
+	return r.statusUpdate(ctx, servers, false)
 }
 
 func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1alpha1.Servers, batch bool) (ctrl.Result, error) {
