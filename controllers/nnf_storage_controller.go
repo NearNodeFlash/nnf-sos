@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -15,10 +16,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -31,7 +33,7 @@ import (
 type NnfStorageReconciler struct {
 	client.Client
 	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme *kruntime.Scheme
 }
 
 const (
@@ -438,7 +440,9 @@ func nnfNodeStorageMapFunc(o client.Object) []reconcile.Request {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfStorage{}).
 		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfNodeStorageMapFunc)).
 		Complete(r)

@@ -15,7 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,7 +38,7 @@ const (
 type NnfNodeReconciler struct {
 	client.Client
 	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme *kruntime.Scheme
 
 	types.NamespacedName
 }
@@ -355,10 +355,13 @@ func (s *statusUpdater) Close(ctx context.Context, r *NnfNodeReconciler) error {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Causes NnfNodeReconciler.Start() to be called.
 	if err := mgr.Add(r); err != nil {
 		return err
 	}
 
+	// There can be only one NnfNode resource for this controller to
+	// manage, so we don't set MaxConcurrentReconciles.
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource

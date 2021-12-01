@@ -8,6 +8,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -15,10 +16,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
@@ -50,7 +52,7 @@ var nnfStorageStateStrings = [...]string{
 type NnfWorkflowReconciler struct {
 	client.Client
 	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Scheme *kruntime.Scheme
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
@@ -536,7 +538,9 @@ func (r *NnfWorkflowReconciler) teardownStorage(ctx context.Context, wf *dwsv1al
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha1.Workflow{}).
 		Owns(&nnfv1alpha1.NnfStorage{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).

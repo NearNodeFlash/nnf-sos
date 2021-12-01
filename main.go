@@ -7,13 +7,14 @@ package main
 import (
 	"flag"
 	"os"
+	"runtime"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -33,7 +34,7 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme   = kruntime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
@@ -71,6 +72,8 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
 
 	nnfCtrl := newNnfControllerInitializer(controller)
 	if nnfCtrl == nil {
