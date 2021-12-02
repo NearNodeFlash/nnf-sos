@@ -119,11 +119,15 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	if len(servers.Spec.AllocationSets) == 0 {
+	// In the case where WLM has not filled in Servers Spec information generate a status update
+	// to initialize the LastUpdate timestamp but don't proceed to create the Status section
+	// since there is nothing to report status on.
+	if len(servers.Spec.AllocationSets) == 0 && servers.Status.LastUpdate == nil {
 		servers.Status.Ready = false
 
 		return r.statusUpdate(ctx, servers, false)
 	}
+
 	// Initialize the status section if it isn't filled in
 	if len(servers.Status.AllocationSets) != len(servers.Spec.AllocationSets) {
 		servers.Status.Ready = false
@@ -243,6 +247,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		servers.Status.Ready = true
 	}
 
+	// Avoid updates when nothing has changed.
 	if reflect.DeepEqual(originalServers, servers) {
 		return ctrl.Result{}, nil
 	}
@@ -257,7 +262,11 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 	return r.statusUpdate(ctx, servers, batch)
 }
 
+// Either the NnfStorage has not been created yet, or it existed and has been deleted
 func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha1.Servers) (ctrl.Result, error) {
+	// Keep the original to check later for updates
+	originalServers := servers.DeepCopy()
+
 	servers.Status.AllocationSets = []dwsv1alpha1.ServersStatusAllocationSet{}
 	for _, allocationSetSpec := range servers.Spec.AllocationSets {
 		allocationSetStatus := dwsv1alpha1.ServersStatusAllocationSet{}
@@ -269,11 +278,18 @@ func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv
 		servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)
 	}
 
+	// If nothing has changed avoid the update here because every update modifies LastUpdate
+	// which in turn generates another update.
+	if reflect.DeepEqual(originalServers, servers) {
+		return ctrl.Result{}, nil
+	}
+
 	// Update the status with batch=false to prevent batching. Using statusUpdate will keep the LastUpdate
 	// field valid
 	return r.statusUpdate(ctx, servers, false)
 }
 
+// Update Status if we've eclipsed the batch time
 func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1alpha1.Servers, batch bool) (ctrl.Result, error) {
 	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
 	if batch == true && servers.Status.LastUpdate != nil {
