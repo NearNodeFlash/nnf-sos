@@ -215,5 +215,15 @@ if [[ "$CMD" == "wfDelete" ]]; then
     done
 fi
 
-
+if [[ "$CMD" == make-standalone-playground ]]
+then
+    PLAY=standalone-playground
+    DWSPLAY=$PLAY/.dws-operator
+    mkdir $PLAY
+    mkdir $DWSPLAY
+    cp -r .dws-operator/config $DWSPLAY
+    cp .dws-operator/Makefile $DWSPLAY
+    cp -r config $PLAY
+    cp .version Makefile playground.sh $PLAY
+fi
 

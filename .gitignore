@@ -26,5 +26,5 @@ testbin/*
 
 commands.log
 kind-config.yaml
-
+standalone-playground
 nnf-sos
