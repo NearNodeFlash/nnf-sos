@@ -1,4 +1,4 @@
 [submodule ".dws-operator"]
 	path = .dws-operator
-        url = https://github.hpe.com/hpe/hpc-dpm-dws-operator.git
+	url = https://github.hpe.com/hpe/hpc-dpm-dws-operator.git
 	branch = master
