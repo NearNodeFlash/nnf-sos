@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: nnf-sos
-repo: stash.us.cray.com/RABSW/nnf-sos
+repo: github.hpe.com/hpe/hpc-rabsw-nnf-sos
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: cray.com
   group: nnf
   kind: NnfNode
-  path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
+  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: cray.com
   group: nnf
   kind: NnfStorage
-  path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
+  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -32,7 +32,7 @@ resources:
   domain: cray.com
   group: nnf
   kind: NnfNodeStorage
-  path: stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1
+  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
 - controller: true
   domain: cray.com

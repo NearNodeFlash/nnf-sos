@@ -14,8 +14,8 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
 )
 
 var _ = Describe("Integration Test", func() {

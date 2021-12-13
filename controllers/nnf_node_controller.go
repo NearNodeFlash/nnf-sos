@@ -22,11 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	ec "stash.us.cray.com/rabsw/nnf-ec/pkg"
-	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
-	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
+	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
+	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
+	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 
-	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
+	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
 const (

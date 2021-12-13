@@ -138,7 +138,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.16.0
+# github.com/onsi/gomega v1.17.0
 ## explicit
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -183,6 +183,31 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
+# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20211213160018-2b73fb1030f9 => ./.dws-operator
+## explicit
+github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
+github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
+github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
+# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211213185652-ece897e5fe46
+## explicit
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/switchtec
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/api
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/common
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/logging
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-event
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-fabric
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-message-registry
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-message-registry/registries
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nvme
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-server
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-telemetry
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/common
+github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models
 # go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29
 go.chromium.org/luci/common/runtime/goroutine
 # go.opencensus.io v0.23.0
@@ -660,29 +685,4 @@ sigs.k8s.io/structured-merge-diff/v4/typed
 sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
-# stash.us.cray.com/dpm/dws-operator v0.0.0-20211123152848-c1026ba64950 => ./.dws-operator
-## explicit
-stash.us.cray.com/dpm/dws-operator/api/v1alpha1
-stash.us.cray.com/dpm/dws-operator/controllers
-stash.us.cray.com/dpm/dws-operator/utils/dwdparse
-# stash.us.cray.com/rabsw/nnf-ec v1.0.6-0.20211129174427-f09f056958f5
-## explicit
-stash.us.cray.com/rabsw/nnf-ec/internal/kvstore
-stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/nvme
-stash.us.cray.com/rabsw/nnf-ec/internal/switchtec/pkg/switchtec
-stash.us.cray.com/rabsw/nnf-ec/pkg
-stash.us.cray.com/rabsw/nnf-ec/pkg/api
-stash.us.cray.com/rabsw/nnf-ec/pkg/common
-stash.us.cray.com/rabsw/nnf-ec/pkg/ec
-stash.us.cray.com/rabsw/nnf-ec/pkg/logging
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-event
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-fabric
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-message-registry/registries
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nvme
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server
-stash.us.cray.com/rabsw/nnf-ec/pkg/manager-telemetry
-stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common
-stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models
-# stash.us.cray.com/dpm/dws-operator => ./.dws-operator
+# github.hpe.com/hpe/hpc-dpm-dws-operator => ./.dws-operator

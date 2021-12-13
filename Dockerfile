@@ -46,7 +46,7 @@ FROM base as builder
 
 # Set Go environment
 ENV GOROOT="/go"
-ENV PATH="${PATH}:${GOROOT}/bin" GOPRIVATE="stash.us.cray.com"
+ENV PATH="${PATH}:${GOROOT}/bin" GOPRIVATE="github.hpe.com"
 
 WORKDIR /workspace
 

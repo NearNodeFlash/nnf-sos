@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
-	dwsv1alpha1 "stash.us.cray.com/dpm/dws-operator/api/v1alpha1"
+	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
 // DWSServersReconciler reconciles a DWS Servers object

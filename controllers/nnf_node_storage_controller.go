@@ -22,13 +22,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nnf "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-nnf"
-	nnfserver "stash.us.cray.com/rabsw/nnf-ec/pkg/manager-server"
+	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
+	nnfserver "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-server"
 
-	openapi "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/common"
-	sf "stash.us.cray.com/rabsw/nnf-ec/pkg/rfsf/pkg/models"
+	openapi "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/common"
+	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 
-	nnfv1alpha1 "stash.us.cray.com/RABSW/nnf-sos/api/v1alpha1"
+	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
 const (
