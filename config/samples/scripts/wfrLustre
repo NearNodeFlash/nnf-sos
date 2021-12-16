@@ -25,7 +25,7 @@ data+='    "wlmID": "5f239bd8-30db-450b-8c2c-a1a7c8631a1a"'
 data+='  }'
 data+='}'
 
-echo Attempting to create $rname ...
+echo Attempting to create $rname on "$DWSHOST":"$DWSPORT"
 jsondata="$data"
 
 admitResponse=$(curl -s -X POST "http://${DWSHOST}:${DWSPORT}/apis/dws.cray.hpe.com/v1alpha1/namespaces/$NAMESPACE/workflows" -H "Content-Type: application/json" -d "$jsondata")

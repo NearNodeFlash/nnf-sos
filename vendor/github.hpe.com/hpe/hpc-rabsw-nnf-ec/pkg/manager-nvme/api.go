@@ -15,6 +15,8 @@ package nvme
 
 import (
 	"net/http"
+
+	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // Api - defines an interface for Near-Node Flash related methods
@@ -36,4 +38,21 @@ type Api interface {
 
 	RedfishV1StorageStorageIdVolumesVolumeIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageStorageIdVolumesVolumeIdDelete(w http.ResponseWriter, r *http.Request)
+}
+
+type StorageApi interface {
+	Get(*sf.StorageCollectionStorageCollection) error
+	StorageIdGet(string, *sf.StorageV190Storage) error
+
+	StorageIdStoragePoolsGet(string, *sf.StoragePoolCollectionStoragePoolCollection) error
+	StorageIdStoragePoolsStoragePoolIdGet(string, string, *sf.StoragePoolV150StoragePool) error
+
+	StorageIdControllersGet(string, *sf.StorageControllerCollectionStorageControllerCollection) error
+	StorageIdControllersControllerIdGet(string, string, *sf.StorageControllerV100StorageController) error
+
+	StorageIdVolumesGet(string, *sf.VolumeCollectionVolumeCollection) error
+	StorageIdVolumesPost(string, *sf.VolumeV161Volume) error
+
+	StorageIdVolumeIdGet(string, string, *sf.VolumeV161Volume) error
+	StorageIdVolumeIdDelete(string, string) error
 }

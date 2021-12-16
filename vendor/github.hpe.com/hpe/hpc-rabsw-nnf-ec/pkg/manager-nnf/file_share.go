@@ -138,7 +138,9 @@ func (rh *fileShareRecoveryReplayHandler) Metadata(data []byte) error {
 	fileSystem.shares = append(fileSystem.shares, FileShare{
 		id:             rh.fileShareId,
 		fileSystemId:   metadata.FileSystemId,
+		mountRoot:      *metadata.MountRoot,
 		storageGroupId: *metadata.StorageGroupId,
+		storageService: rh.storageService,
 	})
 
 	rh.fileSystem = fileSystem

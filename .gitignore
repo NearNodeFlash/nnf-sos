@@ -31,3 +31,6 @@ commands.log
 kind-config.yaml
 standalone-playground
 nnf-sos
+
+# .vscode log files
+.vscode/*.log

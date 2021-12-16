@@ -31,6 +31,12 @@ const (
 	defaultStoragePoolId = "0"
 )
 
+var mgr = Manager{id: ResourceBlockId}
+
+func NewDefaultStorageService() StorageApi {
+	return &mgr
+}
+
 // Manager -
 type Manager struct {
 	id string
@@ -126,8 +132,6 @@ type Volume struct {
 //   /​redfish/​v1/​ResourceBlocks/​{ResourceBlockId}/​Systems/{​ComputerSystemId}/​PCIeDevices/​{PCIeDeviceId}/​PCIeFunctions/{​PCIeFunctionId}
 //
 //   /​redfish/​v1/​ResourceBlocks/{​ResourceBlockId}/​Systems/{​ComputerSystemId}/​Storage/​{StorageId}/​Controllers/​{ControllerId}
-
-var mgr = Manager{id: ResourceBlockId}
 
 func init() {
 	RegisterNvmeInterface(&mgr)
@@ -228,7 +232,7 @@ func EnumerateStorage(storageHandlerFunc func(odataId string, capacityBytes uint
 			return err
 		}
 
-		storageHandlerFunc(s.fmt("/StoragePools"), s.capacityBytes, s.unallocatedBytes)
+		storageHandlerFunc(s.OdataId()+"/StoragePools", s.capacityBytes, s.unallocatedBytes)
 	}
 
 	return nil
@@ -277,8 +281,12 @@ func (s *Storage) FindVolumeByNamespaceId(namespaceId nvme.NamespaceIdentifier) 
 	return nil, ec.NewErrNotFound()
 }
 
-func (s *Storage) fmt(format string, a ...interface{}) string {
-	return fmt.Sprintf("/redfish/v1/Storage/%s", s.id) + fmt.Sprintf(format, a...)
+func (s *Storage) OdataId() string {
+	return fmt.Sprintf("/redfish/v1/Storage/%s", s.id)
+}
+
+func (s *Storage) OdataIdRef(ref string) sf.OdataV4IdRef {
+	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", s.OdataId(), ref)}
 }
 
 func (s *Storage) initialize() error {
@@ -506,7 +514,7 @@ func (s *Storage) findVolume(volumeId string) *Volume {
 }
 
 func (v *Volume) Id() string                               { return v.id }
-func (v *Volume) GetOdataId() string                       { return v.storage.fmt("/Volumes/%s", v.id) }
+func (v *Volume) GetOdataId() string                       { return v.storage.OdataId() + "/Volumes/" + v.id }
 func (v *Volume) GetCapaityBytes() uint64                  { return uint64(v.capacityBytes) }
 func (v *Volume) GetNamespaceId() nvme.NamespaceIdentifier { return v.namespaceId }
 
@@ -853,17 +861,17 @@ func (s *Storage) LinkDroppedEventHandler() error {
 }
 
 // Get -
-func Get(model *sf.StorageCollectionStorageCollection) error {
+func (mgr *Manager) Get(model *sf.StorageCollectionStorageCollection) error {
 	model.MembersodataCount = int64(len(mgr.storage))
 	model.Members = make([]sf.OdataV4IdRef, int(model.MembersodataCount))
 	for idx, s := range mgr.storage {
-		model.Members[idx].OdataId = s.fmt("") // fmt.Sprintf("/redfish/v1/Storage/%s", s.id)
+		model.Members[idx].OdataId = s.OdataId()
 	}
 	return nil
 }
 
 // StorageIdGet -
-func StorageIdGet(storageId string, model *sf.StorageV190Storage) error {
+func (mgr *Manager) StorageIdGet(storageId string, model *sf.StorageV190Storage) error {
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound()
@@ -878,15 +886,15 @@ func StorageIdGet(storageId string, model *sf.StorageV190Storage) error {
 		},
 	}
 
-	model.Controllers.OdataId = fmt.Sprintf("/redfish/v1/Storage/%s/Controllers", storageId)
-	model.StoragePools.OdataId = fmt.Sprintf("/redfish/v1/Storage/%s/StoragePools", storageId)
-	model.Volumes.OdataId = fmt.Sprintf("/redfish/v1/Storage/%s/Volumes", storageId)
+	model.Controllers = s.OdataIdRef("/Controllers")
+	model.StoragePools = s.OdataIdRef("/StoragePools")
+	model.Volumes = s.OdataIdRef("/Volumes")
 
 	return nil
 }
 
 // StorageIdStoragePoolsGet -
-func StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionStoragePoolCollection) error {
+func (mgr *Manager) StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionStoragePoolCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound()
@@ -894,13 +902,13 @@ func StorageIdStoragePoolsGet(storageId string, model *sf.StoragePoolCollectionS
 
 	model.MembersodataCount = 1
 	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
-	model.Members[0].OdataId = fmt.Sprintf("/redfish/v1/Storage/%s/StoragePools/%s", storageId, defaultStoragePoolId)
+	model.Members[0] = s.OdataIdRef("/StoragePools/" + defaultStoragePoolId)
 
 	return nil
 }
 
-// StorageIdStoragePoolIdGet -
-func StorageIdStoragePoolIdGet(storageId, storagePoolId string, model *sf.StoragePoolV150StoragePool) error {
+// StorageIdStoragePoolsStoragePoolIdGet -
+func (mgr *Manager) StorageIdStoragePoolsStoragePoolIdGet(storageId, storagePoolId string, model *sf.StoragePoolV150StoragePool) error {
 	if storagePoolId != defaultStoragePoolId {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("storage pool %s not found", storagePoolId))
 	}
@@ -930,7 +938,7 @@ func StorageIdStoragePoolIdGet(storageId, storagePoolId string, model *sf.Storag
 }
 
 // StorageIdControllersGet -
-func StorageIdControllersGet(storageId string, model *sf.StorageControllerCollectionStorageControllerCollection) error {
+func (mgr *Manager) StorageIdControllersGet(storageId string, model *sf.StorageControllerCollectionStorageControllerCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound()
@@ -939,14 +947,14 @@ func StorageIdControllersGet(storageId string, model *sf.StorageControllerCollec
 	model.MembersodataCount = int64(len(s.controllers))
 	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
 	for idx, c := range s.controllers {
-		model.Members[idx].OdataId = fmt.Sprintf("/redfish/v1/Storage/%s/Controllers/%s", storageId, c.id)
+		model.Members[idx] = s.OdataIdRef("/Controllers/" + c.id)
 	}
 
 	return nil
 }
 
-// StorageIdControllerIdGet -
-func StorageIdControllerIdGet(storageId, controllerId string, model *sf.StorageControllerV100StorageController) error {
+// StorageIdControllersControllerIdGet -
+func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId string, model *sf.StorageControllerV100StorageController) error {
 	s, c := findStorageController(storageId, controllerId)
 	if c == nil {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("Storage Controller not found: Storage: %s Controller: %s", storageId, controllerId))
@@ -995,7 +1003,7 @@ func StorageIdControllerIdGet(storageId, controllerId string, model *sf.StorageC
 }
 
 // StorageIdVolumesGet -
-func StorageIdVolumesGet(storageId string, model *sf.VolumeCollectionVolumeCollection) error {
+func (mgr *Manager) StorageIdVolumesGet(storageId string, model *sf.VolumeCollectionVolumeCollection) error {
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound()
@@ -1006,14 +1014,14 @@ func StorageIdVolumesGet(storageId string, model *sf.VolumeCollectionVolumeColle
 	model.MembersodataCount = int64(len(s.volumes))
 	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
 	for idx, volume := range s.volumes {
-		model.Members[idx].OdataId = s.fmt("/Volumes/%s", volume.id)
+		model.Members[idx] = s.OdataIdRef("/Volumes/" + volume.id)
 	}
 
 	return nil
 }
 
 // StorageIdVolumeIdGet -
-func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume) error {
+func (mgr *Manager) StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume) error {
 	s, v := findStorageVolume(storageId, volumeId)
 	if v == nil {
 		return ec.NewErrNotFound()
@@ -1063,6 +1071,8 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 
 	model.VolumeType = sf.RAW_DEVICE_VVT
 
+	model.Links.OwningStorageResource.OdataId = s.OdataId()
+
 	// TODO: Find the attached status of the volume - if it is attached via a connection
 	// to an endpoint that should go in model.Links.ClientEndpoints or model.Links.ServerEndpoints
 
@@ -1074,8 +1084,8 @@ func StorageIdVolumeIdGet(storageId, volumeId string, model *sf.VolumeV161Volume
 	return nil
 }
 
-// StorageIdVolumePost -
-func StorageIdVolumePost(storageId string, model *sf.VolumeV161Volume) error {
+// StorageIdVolumesPost -
+func (mgr *Manager) StorageIdVolumesPost(storageId string, model *sf.VolumeV161Volume) error {
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound()
@@ -1088,11 +1098,11 @@ func StorageIdVolumePost(storageId string, model *sf.VolumeV161Volume) error {
 		return err
 	}
 
-	return StorageIdVolumeIdGet(storageId, volume.id, model)
+	return mgr.StorageIdVolumeIdGet(storageId, volume.id, model)
 }
 
 // StorageIdVolumeIdDelete -
-func StorageIdVolumeIdDelete(storageId, volumeId string) error {
+func (mgr *Manager) StorageIdVolumeIdDelete(storageId, volumeId string) error {
 	s, v := findStorageVolume(storageId, volumeId)
 	if v == nil {
 		return ec.NewErrBadRequest().WithCause(fmt.Sprintf("storage volume id %s not found", volumeId))

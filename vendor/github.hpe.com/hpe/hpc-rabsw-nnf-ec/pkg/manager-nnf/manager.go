@@ -439,12 +439,12 @@ func (s *StorageService) EventHandler(e event.Event) error {
 
 		endpoint := &s.endpoints[ep.Index()]
 
-		if linkEstablished {
+		endpoint.id = ep.Id()
+		endpoint.name = ep.Name()
+		endpoint.controllerId = ep.ControllerId()
+		endpoint.fabricId = fabric.FabricId
 
-			endpoint.id = ep.Id()
-			endpoint.name = ep.Name()
-			endpoint.controllerId = ep.ControllerId()
-			endpoint.fabricId = fabric.FabricId
+		if linkEstablished {
 
 			opts := server.ServerControllerOptions{
 				Local:   ep.Type() == sf.PROCESSOR_EV150ET,

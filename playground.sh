@@ -47,7 +47,7 @@ EOF
     # Taint the kind workers as rabbit nodes for the NLCMs, to keep any
     # non-NLCM pods off of them.
     NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -v control-plane | paste -d" " -s -)
-    kubectl taint nodes $NODES cray.nnf.node=true:NoSchedule
+    kubectl taint nodes "$NODES" cray.nnf.node=true:NoSchedule
 
     # Label the kind-workers as rabbit nodes for the NLCMs.
     for NODE in $(kubectl get nodes --no-headers | grep --invert-match "control-plane" | awk '{print $1}'); do
@@ -67,6 +67,42 @@ if [[ "$CMD" == kind-reset ]]; then
     ./playground.sh kind-destroy
     ./playground.sh kind-create
 fi
+
+
+# The following commands apply to initializing the current DP0 environment
+# Nodes containing 'cn' are considered to be worker nodes for the time being.
+if [[ "$CMD" == dp0-init ]]; then
+    COMPUTE_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep cn | paste -d" " -s -)
+    RABBIT_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -v cn | grep -v master | paste -d" " -s -)
+    MASTER_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep master | paste -d" " -s -)
+
+    echo COMPUTE_NODES "$COMPUTE_NODES"
+    echo RABBIT_NODES "$RABBIT_NODES"
+    echo MASTER_NODES "$MASTER_NODES"
+
+    # Label the COMPUTE_NODES to allow them to handle wlm and nnf-sos
+    # We are using COMPUTE_NODES as generic k8s workers
+    for NODE in $COMPUTE_NODES; do
+        # Label them for SLCMs.
+        kubectl label node "$NODE" cray.nnf.manager=true
+        kubectl label node "$NODE" cray.wlm.manager=true
+    done
+
+    for NODE in $RABBIT_NODES; do
+        # Taint the rabbit nodes for the NLCMs, to keep any
+        # non-NLCM pods off of them.
+        kubectl taint node "$NODE" cray.nnf.node=true:NoSchedule
+
+        # Label the rabbit nodes for the NLCMs.
+        kubectl label node "$NODE" cray.nnf.node=true
+        kubectl label node "$NODE" cray.nnf.x-name="$NODE"
+    done
+
+    #Required for webhooks
+    # kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+fi
+
 
 if [[ "$CMD" == restart-pods ]]; then
     ./playground.sh pause all
@@ -229,7 +265,7 @@ then
     mkdir $PLAY
     mkdir $DWSPLAY
     cp -r .dws-operator/config $DWSPLAY
-    cp .dws-operator/Makefile $DWSPLAY
+    cp .dws-operator/Makefile .dws-operator/.version $DWSPLAY
     cp -r config $PLAY
     cp .version Makefile playground.sh $PLAY
 fi

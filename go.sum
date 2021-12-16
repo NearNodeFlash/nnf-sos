@@ -669,6 +669,10 @@ github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211213150822-62de995dac76 h1:8+gz
 github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211213150822-62de995dac76/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
 github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211213185652-ece897e5fe46 h1:FNiN76QwONYRtNhTsUQkuJdNJrM03P2T+K+lWcKlatE=
 github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211213185652-ece897e5fe46/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211214153118-c080d8e8f741 h1:jIUZGJHK8/nbg/QfILKnQWDAKqt8fq8G75tiXZkaYsU=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20211214153118-c080d8e8f741/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220107171404-8b3a8cdbd9de h1:ewkY6kL1sIjb0FXGCGIUFHCtiCYkyWG5Ey/QfBIIXnU=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220107171404-8b3a8cdbd9de/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29 h1:TgvWIQO0I0E7pKVLq/ARDhT2p2kHGKLtZhAN0EtUxiI=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29/go.mod h1:gk1qa1CBZAdya1PqugRJjkwk8LIymAoB5wf5UA7NrFk=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
