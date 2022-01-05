@@ -26,7 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/ghodss/yaml"
+
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	dmv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 
 	dwsctrls "github.hpe.com/hpe/hpc-dpm-dws-operator/controllers"
@@ -87,7 +89,9 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", ".dws-operator", "config", "crd", "bases")},
+			filepath.Join("..", ".dws-operator", "config", "crd", "bases"),
+			filepath.Join("..", ".nnf-dm", "config", "crd", "bases"),
+		},
 		AttachControlPlaneOutput: true,
 	}
 
@@ -101,6 +105,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = dwsv1alpha1.AddToScheme(testEnv.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = dmv1alpha1.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
