@@ -1,6 +1,0 @@
-apiVersion: nnf.cray.hpe.com/v1alpha1
-kind: NnfJobStorageInstance
-metadata:
-  name: nnfjobstorageinstance-sample
-spec:
-  # Add fields here

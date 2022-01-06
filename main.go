@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	dmv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 	"github.hpe.com/hpe/hpc-rabsw-nnf-sos/controllers"
 
@@ -49,7 +48,6 @@ func init() {
 
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dmv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -229,5 +227,4 @@ func (c *storageController) SetupReconciler(mgr manager.Manager) error {
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr)
-
 }

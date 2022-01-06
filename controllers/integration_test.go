@@ -62,8 +62,8 @@ var _ = Describe("Integration Test", func() {
 		for i := range wfDirectives {
 			m := (i + 1) * 10
 			dwDirectives = append(dwDirectives, fmt.Sprintf(wfDirectives[i], m, f.fsName, m))
-		}
 
+		}
 		Describe(fmt.Sprintf("Creating workflow %s for file system %s", workflowName, f.fsName), func() {
 			BeforeEach(func() {
 				if !f.isSupported {
@@ -79,7 +79,7 @@ var _ = Describe("Integration Test", func() {
 					},
 					Spec: dwsv1alpha1.WorkflowSpec{
 						DesiredState: "proposal", // TODO: This should be defined somewhere
-						WLMID:        WorkflowID + f.fsName,
+						WLMID:        WorkflowID,
 						DWDirectives: dwDirectives,
 					},
 				}
@@ -334,7 +334,7 @@ var _ = Describe("Integration Test", func() {
 				wf := &dwsv1alpha1.Workflow{}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-				}, "3s", "1s").ShouldNot(Succeed())
+				}).ShouldNot(Succeed())
 			})
 		})
 	}

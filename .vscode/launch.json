@@ -4,7 +4,6 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-    
         {
             "name": "Code",
             "type": "go",
@@ -23,11 +22,7 @@
             "request": "launch",
             "mode": "test",
             "program": "${relativeFileDirname}",
-            "args": [
-                "-v=4",
-                "-ginkgo.v",
-                "-ginkgo.progress"
-            ],
+            "args": [],
             "env": {
                 "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin"
             },
