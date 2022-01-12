@@ -27,3 +27,25 @@ spec:
         type: "string"
         isRequired: false
         isValueRequired: true
+  - command: "copy_in"
+    watchStates: data_in
+    ruleDefs:
+      - key: "source"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "destination"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+  - command: "copy_out"
+    watchStates: data_out
+    ruleDefs:
+      - key: "source"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "destination"
+        type: "string"
+        isRequired: true
+        isValueRequired: true

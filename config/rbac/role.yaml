@@ -56,6 +56,14 @@ rules:
   - update
   - watch
 - apiGroups:
+  - dm.cray.hpe.com
+  resources:
+  - datamovements
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - dws.cray.hpe.com
   resources:
   - computes
@@ -160,12 +168,46 @@ rules:
   verbs:
   - update
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - directivebreakdowns/status
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfjobstorageinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfjobstorageinstances/finalizers
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfjobstorageinstances/status
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - nnf.cray.hpe.com
