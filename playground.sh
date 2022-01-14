@@ -103,6 +103,38 @@ if [[ "$CMD" == dp0-init ]]; then
     kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
 fi
 
+# The following commands apply to initializing the current DP1 environment
+# Nodes containing 'cn' are considered to be worker nodes for the time being.
+if [[ "$CMD" == dp1-init ]]; then
+    WORKER_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'worker' | paste -d" " -s -)
+    RABBIT_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'node'   | grep -v master | paste -d" " -s -)
+    MASTER_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'master' | paste -d" " -s -)
+
+    echo WORKER_NODES "$WORKER_NODES"
+    echo RABBIT_NODES "$RABBIT_NODES"
+    echo MASTER_NODES "$MASTER_NODES"
+
+    # Label the WORKER_NODES to allow them to handle wlm and nnf-sos
+    for NODE in $WORKER_NODES; do
+        # Label them for SLCMs.
+        kubectl label node "$NODE" cray.nnf.manager=true
+        kubectl label node "$NODE" cray.wlm.manager=true
+    done
+
+    for NODE in $RABBIT_NODES; do
+        # Taint the rabbit nodes for the NLCMs, to keep any
+        # non-NLCM pods off of them.
+        kubectl taint node "$NODE" cray.nnf.node=true:NoSchedule
+
+        # Label the rabbit nodes for the NLCMs.
+        kubectl label node "$NODE" cray.nnf.node=true
+        kubectl label node "$NODE" cray.nnf.x-name="$NODE"
+    done
+
+    #Required for webhooks
+    # kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+fi
 
 if [[ "$CMD" == restart-pods ]]; then
     ./playground.sh pause all

@@ -28,7 +28,7 @@ data+='}'
 echo Attempting to create $rname on "$DWSHOST":"$DWSPORT"
 jsondata="$data"
 
-admitResponse=$(curl -s -X POST "http://${DWSHOST}:${DWSPORT}/apis/dws.cray.hpe.com/v1alpha1/namespaces/$NAMESPACE/workflows" -H "Content-Type: application/json" -d "$jsondata")
+admitResponse=$(curl -s -X POST "https://${DWSHOST}:${DWSPORT}/apis/dws.cray.hpe.com/v1alpha1/namespaces/$NAMESPACE/workflows" -H "Content-Type: application/json" -d "$jsondata")
 retCode=$?
 
 # If the curl command failed, then we assume we failed to create the WFR...
