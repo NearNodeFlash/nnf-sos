@@ -29,19 +29,28 @@ type DataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Source describes the source of the data movement operation
 	Source DataMovementSpecSourceDestination `json:"source,omitempty"`
 
+	// Destination describes the destination of the data movement operation
 	Destination DataMovementSpecSourceDestination `json:"destination,omitempty"`
 
-	Servers corev1.ObjectReference `json:"storageInstance,omitempty"`
+	// Storage references the storage elements that will perform data movement
+	Storage corev1.ObjectReference `json:"storage,omitempty"`
 
+	// Node Access references the access elements that are needed to perform data movement
 	NodeAccess corev1.ObjectReference `json:"nodeAccess,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
 type DataMovementSpecSourceDestination struct {
+
+	// Path describes the location of the user data relative to the storage instance
 	Path string `json:"path,omitempty"`
 
+	// Storage Instance describes the storage instance backing this specification; The storage
+	// instance describes the type of storage as well as other attributes like its location
+	// within the kubernetes cluster
 	StorageInstance *corev1.ObjectReference `json:"storageInstance,omitempty"`
 }
 
@@ -50,13 +59,18 @@ type DataMovementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Job references the underlying job that performs data movement
 	Job corev1.ObjectReference `json:"job,omitempty"`
 
+	// Conditions represents an array of conditions that refect the current
+	// status of the data movement operation. Each condition type must be
+	// one of Starting, Running, or Finished, reflect the three states that
+	// data movement performs.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 const (
-	DataMovementConditionCreating = "Creating"
+	DataMovementConditionStarting = "Starting"
 	DataMovementConditionRunning  = "Running"
 	DataMovementConditionFinished = "Finished"
 )

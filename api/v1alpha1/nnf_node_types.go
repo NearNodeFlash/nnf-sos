@@ -44,12 +44,12 @@ type NnfNodeStatus struct {
 	Drives []NnfDriveStatus `json:"drives,omitempty"`
 }
 
-// NNF Server Status defines the observed status of servers connected to this NNF Node
+// NnfServerStatus defines the observed status of servers connected to this NNF Node
 type NnfServerStatus struct {
 	NnfResourceStatus `json:",inline"`
 }
 
-// NNF Drive Status defines the observe status of drives connected to this NNF Node
+// NnfDriveStatus defines the observe status of drives connected to this NNF Node
 type NnfDriveStatus struct {
 	NnfResourceStatus `json:",inline"`
 }

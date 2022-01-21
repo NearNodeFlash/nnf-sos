@@ -215,15 +215,18 @@ func (c *LocalServerController) namespaces() ([]string, error) {
 
 func (c *LocalServerController) newStorageNamespace(path string) (*StorageNamespace, error) {
 
-	// First we need to identify the NSID for the provided path.
-	nsidStr, err := c.run(fmt.Sprintf("nvme id-ns %s | awk '/NVME Identify Namespace/{printf $3}'", path))
+	// First we need to identify the NSID for the provided path. The output is something like
+	// "NVME Identify Namespace 1:" so we awk the 4th value, which gives us "1:", then trim
+	// the colon below.
+	nsidStr, err := c.run(fmt.Sprintf("nvme id-ns %s | awk '/NVME Identify Namespace/{printf $4}'", path))
 	if err != nil {
 		return nil, err
 	}
 
-	nsid, _ := strconv.Atoi(string(nsidStr[:len(nsidStr)-1]))
+	nsid, _ := strconv.Atoi(strings.TrimSuffix(string(nsidStr[:]), ":"))
 
-	// Retrieve the namespace GUID
+	// Retrieve the namespace GUID. The output is something like "nguid   : 00000000000000008ce38ee205e70401"
+	// so we awk the third parameter.
 	guidStr, err := c.run(fmt.Sprintf("nvme id-ns %s --namespace-id=%d | awk '/nguid/{printf $3}'", path, nsid))
 	if err != nil {
 		return nil, err

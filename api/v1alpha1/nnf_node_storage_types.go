@@ -11,7 +11,7 @@ import (
 // IMPORTANT: Run "make" to regenerate code after modifying this file
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// NNF Node Storage Specifications defines the desired storage attributes on a NNF Node.
+// NnfNodeStorageSpec defines the desired storage attributes on a NNF Node.
 // Storage spec are created on bequest of the user and fullfilled by the NNF Node Controller.
 type NnfNodeStorageSpec struct {
 	// Count is the number of allocations to make on this node. All of the allocations will
@@ -60,7 +60,7 @@ type LustreStorageSpec struct {
 	BackFs string `json:"backFs,omitempty"`
 }
 
-// NNF Node Storage Status
+// NnfNodeStorageStatus defines the status for NnfNodeStorage
 type NnfNodeStorageStatus struct {
 	// Allocations is the list of storage allocations that were made
 	Allocations []NnfNodeStorageAllocationStatus `json:"allocations,omitempty"`
@@ -69,6 +69,7 @@ type NnfNodeStorageStatus struct {
 	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`
 }
 
+// NnfNodeStorageAllocationStatus defines the allocation status for each allocation in the NnfNodeStorage
 type NnfNodeStorageAllocationStatus struct {
 	// Represents the time when the storage was created by the controller
 	// It is represented in RFC3339 form and is in UTC.

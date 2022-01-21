@@ -190,7 +190,7 @@ const (
 type NamespaceGloballyUniqueIdentifier [16]byte
 
 func (a NamespaceGloballyUniqueIdentifier) String() string {
-	return string(a[:])
+	return fmt.Sprintf("%x", string(a[:]))
 }
 
 func (a *NamespaceGloballyUniqueIdentifier) Parse(s string) {

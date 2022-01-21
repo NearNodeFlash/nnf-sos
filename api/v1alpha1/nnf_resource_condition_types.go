@@ -30,6 +30,7 @@ const (
 	// INSERT NEW ITEMS HERE - Ensure NewConditions() is updated to contain item and correct ordering
 )
 
+// NewConditions generates a new conditions array for NNFNodeStorage
 func NewConditions() []metav1.Condition {
 
 	types := []string{
@@ -60,8 +61,10 @@ func NewConditions() []metav1.Condition {
 	c[ConditionIndexCreateStoragePool].LastTransitionTime = metav1.Now()
 
 	return c
+
 }
 
+// SetGetResourceFailureCondition sets/gets the specified condition to failed
 func SetGetResourceFailureCondition(c []metav1.Condition, err error) {
 	c[ConditionIndexGetResource] = metav1.Condition{
 		Type:               ConditionGetResource,
@@ -72,6 +75,7 @@ func SetGetResourceFailureCondition(c []metav1.Condition, err error) {
 	}
 }
 
+// SetResourceInvalidCondition sets/gets the specified condition to invalid
 func SetResourceInvalidCondition(c []metav1.Condition, err error) {
 	c[ConditionIndexInvalidResource] = metav1.Condition{
 		Type:               ConditionInvalidResource,

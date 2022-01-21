@@ -62,7 +62,7 @@ spec:
                 type: integer
               drives:
                 items:
-                  description: NNF Drive Status defines the observe status of drives
+                  description: NnfDriveStatus defines the observe status of drives
                     connected to this NNF Node
                   properties:
                     health:
@@ -70,7 +70,7 @@ spec:
                         NNF resource.
                       type: string
                     id:
-                      description: Id reflects the NNF Node unique identifier for
+                      description: ID reflects the NNF Node unique identifier for
                         this NNF Server resource.
                       type: string
                     name:
@@ -78,6 +78,8 @@ spec:
                         resource.
                       type: string
                     status:
+                      description: NnfResourceStatusType is the string that indicates
+                        the resource's status
                       type: string
                   type: object
                 type: array
@@ -86,7 +88,7 @@ spec:
                 type: string
               servers:
                 items:
-                  description: NNF Server Status defines the observed status of servers
+                  description: NnfServerStatus defines the observed status of servers
                     connected to this NNF Node
                   properties:
                     health:
@@ -94,7 +96,7 @@ spec:
                         NNF resource.
                       type: string
                     id:
-                      description: Id reflects the NNF Node unique identifier for
+                      description: ID reflects the NNF Node unique identifier for
                         this NNF Server resource.
                       type: string
                     name:
@@ -102,6 +104,8 @@ spec:
                         resource.
                       type: string
                     status:
+                      description: NnfResourceStatusType is the string that indicates
+                        the resource's status
                       type: string
                   type: object
                 type: array

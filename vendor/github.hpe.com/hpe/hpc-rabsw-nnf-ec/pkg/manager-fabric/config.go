@@ -43,7 +43,7 @@ type SwitchConfig struct {
 	Metadata struct {
 		Name string
 	}
-	pciGen int
+	PciGen int32 `yaml:"pciGen"`
 	Ports  []PortConfig
 
 	ManagementPortCount int

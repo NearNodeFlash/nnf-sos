@@ -35,18 +35,26 @@ type RsyncDataMovementSpec struct {
 	// Destination is the destination file or directory used during data movement
 	Destination string `json:"destination,omitempty"`
 
-	// Node Access refers to the
-	NodeAccess corev1.ObjectReference `json:"nodeAccess,omitempty"`
+	// Access refers to the NNF Server Node's Local Access to the file system
+	Access corev1.ObjectReference `json:"access,omitempty"`
 
-	// Servers refers to the list of NNF Servers that will conduct the data movement from Source to Destination
-	Servers corev1.ObjectReference `json:"servers,omitempty"`
+	// Storage refers to the list of NNF Storage that will conduct the data movement from Source to Destination
+	Storage corev1.ObjectReference `json:"storage,omitempty"`
 }
 
 // RsyncDataMovementStatus defines the observed state of RsyncDataMovement
 type RsyncDataMovementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+const (
+	RsyncDataMovementConditionStarting = "Starting"
+	RsyncDataMovementConditionRunning  = "Running"
+	RsyncDataMovementConditionFinished = "Finished"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

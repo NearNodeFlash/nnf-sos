@@ -12,13 +12,17 @@ import (
 type NnfResourceHealthType string
 
 const (
+	// ResourceOkay is SF health OK
 	ResourceOkay NnfResourceHealthType = NnfResourceHealthType(sf.OK_RH)
 
+	// ResourceWarning is SF health WARNING
 	ResourceWarning = NnfResourceHealthType(sf.WARNING_RH)
 
+	// ResourceCritical is SF health CRITICAL
 	ResourceCritical = NnfResourceHealthType(sf.CRITICAL_RH)
 )
 
+// ResourceHealth maps a SF ResourceStatus to an NNFResourceHealthType
 func ResourceHealth(s sf.ResourceStatus) NnfResourceHealthType {
 	switch s.Health {
 	case sf.OK_RH:
@@ -32,8 +36,10 @@ func ResourceHealth(s sf.ResourceStatus) NnfResourceHealthType {
 	panic("Unknown Resource Health " + string(s.Health))
 }
 
-func (this NnfResourceHealthType) UpdateIfWorseThan(health *NnfResourceHealthType) {
-	switch this {
+// UpdateIfWorseThan examines the input health type and update the health if it is worse
+// than the stored value
+func (rht NnfResourceHealthType) UpdateIfWorseThan(health *NnfResourceHealthType) {
+	switch rht {
 	case ResourceWarning:
 		if *health == ResourceOkay {
 			*health = ResourceWarning

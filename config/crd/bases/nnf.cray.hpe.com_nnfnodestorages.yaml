@@ -34,9 +34,9 @@ spec:
           metadata:
             type: object
           spec:
-            description: NNF Node Storage Specifications defines the desired storage
-              attributes on a NNF Node. Storage spec are created on bequest of the
-              user and fullfilled by the NNF Node Controller.
+            description: NnfNodeStorageSpec defines the desired storage attributes
+              on a NNF Node. Storage spec are created on bequest of the user and fullfilled
+              by the NNF Node Controller.
             properties:
               capacity:
                 description: Capacity defines the capacity, in bytes, of this storage
@@ -100,12 +100,14 @@ spec:
             - fileSystemType
             type: object
           status:
-            description: NNF Node Storage Status
+            description: NnfNodeStorageStatus defines the status for NnfNodeStorage
             properties:
               allocations:
                 description: Allocations is the list of storage allocations that were
                   made
                 items:
+                  description: NnfNodeStorageAllocationStatus defines the allocation
+                    status for each allocation in the NnfNodeStorage
                   properties:
                     capacityAllocated:
                       description: Total capacity allocated for the storage. This
@@ -211,7 +213,7 @@ spec:
                             an NNF resource.
                           type: string
                         id:
-                          description: Id reflects the NNF Node unique identifier
+                          description: ID reflects the NNF Node unique identifier
                             for this NNF Server resource.
                           type: string
                         name:
@@ -219,18 +221,20 @@ spec:
                             resource.
                           type: string
                         status:
+                          description: NnfResourceStatusType is the string that indicates
+                            the resource's status
                           type: string
                       type: object
                     fileSystem:
-                      description: NNF Resource Status provides common fields that
-                        are included in all NNF Resources
+                      description: NnfResourceStatus provides common fields that are
+                        included in all NNF Resources
                       properties:
                         health:
                           description: NnfResourceHealthType defines the health of
                             an NNF resource.
                           type: string
                         id:
-                          description: Id reflects the NNF Node unique identifier
+                          description: ID reflects the NNF Node unique identifier
                             for this NNF Server resource.
                           type: string
                         name:
@@ -238,6 +242,8 @@ spec:
                             resource.
                           type: string
                         status:
+                          description: NnfResourceStatusType is the string that indicates
+                            the resource's status
                           type: string
                       type: object
                     storageGroup:
@@ -251,7 +257,7 @@ spec:
                             an NNF resource.
                           type: string
                         id:
-                          description: Id reflects the NNF Node unique identifier
+                          description: ID reflects the NNF Node unique identifier
                             for this NNF Server resource.
                           type: string
                         name:
@@ -259,18 +265,20 @@ spec:
                             resource.
                           type: string
                         status:
+                          description: NnfResourceStatusType is the string that indicates
+                            the resource's status
                           type: string
                       type: object
                     storagePool:
-                      description: NNF Resource Status provides common fields that
-                        are included in all NNF Resources
+                      description: NnfResourceStatus provides common fields that are
+                        included in all NNF Resources
                       properties:
                         health:
                           description: NnfResourceHealthType defines the health of
                             an NNF resource.
                           type: string
                         id:
-                          description: Id reflects the NNF Node unique identifier
+                          description: ID reflects the NNF Node unique identifier
                             for this NNF Server resource.
                           type: string
                         name:
@@ -278,6 +286,8 @@ spec:
                             resource.
                           type: string
                         status:
+                          description: NnfResourceStatusType is the string that indicates
+                            the resource's status
                           type: string
                       type: object
                   type: object

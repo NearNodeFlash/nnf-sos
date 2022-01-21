@@ -19,7 +19,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Storage is the Schema for the storages API
+        description: NnfStorage is the Schema for the storages API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,6 +46,8 @@ spec:
                   all of the OSTs in a Lustre filesystem, or all of the raw block
                   devices in a raw block configuration.
                 items:
+                  description: NnfStorageAllocationSetSpec defines the details for
+                    an allocation set
                   properties:
                     backFs:
                       description: BackFs is the type of backing filesystem to use.
@@ -83,6 +85,8 @@ spec:
                       description: Nodes is the list of Rabbit nodes to make allocations
                         on
                       items:
+                        description: NnfStorageAllocationNodes identifies the node
+                          and properties of the allocation to make on that node
                         properties:
                           count:
                             description: Number of allocations to make on this node
@@ -119,6 +123,8 @@ spec:
                 description: AllocationsSets holds the status information for each
                   of the AllocationSets from the spec.
                 items:
+                  description: NnfStorageAllocationSetStatus contains the status information
+                    for an allocation set
                   properties:
                     allocationCount:
                       description: AllocationCount is the total number of allocations

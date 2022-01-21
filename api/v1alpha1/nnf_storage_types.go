@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NnfStorageAllocationNodes identifies the node and properties of the allocation to make on that node
 type NnfStorageAllocationNodes struct {
 	// Name of the node to make the allocation on
 	Name string `json:"name"`
@@ -17,6 +18,7 @@ type NnfStorageAllocationNodes struct {
 	Count int `json:"count"`
 }
 
+// NnfStorageLustreSpec defines the specifications for a Lustre filesystem
 type NnfStorageLustreSpec struct {
 	// FileSystemName is the fsname parameter for the Lustre filesystem.
 	// +kubebuilder:validation:MaxLength:=8
@@ -31,6 +33,7 @@ type NnfStorageLustreSpec struct {
 	BackFs string `json:"backFs,omitempty"`
 }
 
+// NnfStorageAllocationSetSpec defines the details for an allocation set
 type NnfStorageAllocationSetSpec struct {
 	// Name is a human readable label for this set of allocations (e.g., xfs)
 	Name string `json:"name"`
@@ -63,10 +66,7 @@ type NnfStorageSpec struct {
 	AllocationSets []NnfStorageAllocationSetSpec `json:"allocationSets"`
 }
 
-type NnfStorageAllocationNodeStatus struct {
-	Reference corev1.ObjectReference `json:"reference,omitempty"`
-}
-
+// NnfStorageAllocationSetStatus contains the status information for an allocation set
 type NnfStorageAllocationSetStatus struct {
 	// Status reflects the status of this NNF Storage
 	Status NnfResourceStatusType `json:"status,omitempty"`
@@ -102,7 +102,7 @@ type NnfStorageStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Storage is the Schema for the storages API
+// NnfStorage is the Schema for the storages API
 type NnfStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -113,7 +113,7 @@ type NnfStorage struct {
 
 //+kubebuilder:object:root=true
 
-// StorageList contains a list of Storage
+// NnfStorageList contains a list of Storage
 type NnfStorageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

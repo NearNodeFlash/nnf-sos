@@ -379,6 +379,11 @@ func (s *Switch) refreshPortStatus() error {
 		return err
 	}
 
+	log.Infof("Switch %s Port Status:", s.id)
+	for _, status := range switchPortStatus {
+		log.Infof("  Port %2d CfgWidth %2d NegWidth %2d NegRate %5.2f State %d", status.PhysPortId, status.CfgLinkWidth, status.NegLinkWidth, status.CurLinkRateGBps, status.LinkState)
+	}
+
 StatusLoop:
 	for _, st := range switchPortStatus {
 		for portIdx := range s.ports {
@@ -407,7 +412,7 @@ StatusLoop:
 					cfgLinkWidth:    st.CfgLinkWidth,
 					negLinkWidth:    st.NegLinkWidth,
 					curLinkRateGBps: st.CurLinkRateGBps,
-					maxLinkRateGBps: switchtec.GetDataRateGBps(uint8(s.config.pciGen)) * float64(p.config.Width),
+					maxLinkRateGBps: switchtec.GetDataRateGBps(uint8(s.config.PciGen)) * float64(p.config.Width),
 					linkStatus:      getStatusFromState(st.LinkState),
 					linkState:       sf.ENABLED_PV130LST,
 				}
@@ -1323,7 +1328,7 @@ func FabricIdConnectionsConnectionIdGet(fabricId string, connectionId string, mo
 		model.VolumeInfo = make([]sf.ConnectionV100VolumeInfo, len(volumes))
 		for idx, volume := range volumes {
 			v := &model.VolumeInfo[idx]
-	
+
 			v.Volume.OdataId = volume
 			v.AccessState = sf.OPTIMIZED_CV100AST
 			v.AccessCapabilities = []sf.ConnectionV100AccessCapability{

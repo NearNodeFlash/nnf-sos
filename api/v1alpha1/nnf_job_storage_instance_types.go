@@ -61,6 +61,7 @@ func init() {
 	SchemeBuilder.Register(&NnfJobStorageInstance{}, &NnfJobStorageInstanceList{})
 }
 
-func NnfJobStorageInstanceMakeName(jobId int, workflowId string, dwIndex int) string {
-	return fmt.Sprintf("job-%d-%s-%d", jobId, workflowId, dwIndex)
+// NnfJobStorageInstanceMakeName generate the formatted string for the name
+func NnfJobStorageInstanceMakeName(jobID int, workflowID string, dwIndex int) string {
+	return fmt.Sprintf("job-%d-%s-%d", jobID, workflowID, dwIndex)
 }

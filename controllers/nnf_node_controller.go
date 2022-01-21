@@ -207,9 +207,9 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 			return ctrl.Result{}, err
 		}
 
-		if node.Status.Servers[idx].Id != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
+		if node.Status.Servers[idx].ID != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
 			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].Id = serverEndpoint.Id
+				s.Servers[idx].ID = serverEndpoint.Id
 				s.Servers[idx].Name = serverEndpoint.Name
 			})
 		}
