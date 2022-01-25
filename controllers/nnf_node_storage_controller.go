@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"runtime"
@@ -22,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec"
 	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
 	nnfserver "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-server"
 
@@ -402,9 +404,15 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 
 	err := r.deleteStoragePool(ss, allocationStatus.StoragePool.ID)
 	if err != nil {
-		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+		ecErr, ok := err.(*ec.ControllerError)
 
-		return &ctrl.Result{Requeue: true}, nil
+		// If the error is from a 404 error, then there's nothing to clean up and we
+		// assume everything has been deleted
+		if !ok || ecErr.StatusCode() != http.StatusNotFound {
+			statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+
+			return &ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
