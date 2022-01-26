@@ -184,7 +184,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 #  To see the test results as they execute:
 # export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; go test -v -count=1 -cover ./controllers/... -args -ginkgo.v
 
-container-unit-test:
+container-unit-test: ## Build docker image with the manager and execute unit tests.
 	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
 	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 

@@ -43,7 +43,7 @@ const (
 	nnfNodeStorageResourceName = "nnf-node-storage"
 )
 
-// NnfNodeStorageReconciler contains the elements needed during reconcilation for NnfNodeStorage
+// NnfNodeStorageReconciler contains the elements needed during reconciliation for NnfNodeStorage
 type NnfNodeStorageReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -116,7 +116,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// First time setup requires programming of the storage status such that the resource
-	// is labeled as "Starting" and all Conditions are initializaed. After this is done,
+	// is labeled as "Starting" and all Conditions are initialized. After this is done,
 	// the resource obtains a finalizer to manage the resource lifetime.
 	if !controllerutil.ContainsFinalizer(nodeStorage, finalizerNnfNodeStorage) {
 		controllerutil.AddFinalizer(nodeStorage, finalizerNnfNodeStorage)

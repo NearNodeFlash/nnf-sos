@@ -4,5 +4,23 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"cSpell.words": [
+			"arti",
+			"corev",
+			"cpus",
+			"dbus",
+			"libudev",
+			"logr",
+			"nnfjobstorageinstances",
+			"Odata",
+			"sigs",
+			"testbin",
+			"ubin",
+			"udev"
+		],
+		"cSpell.enableFiletypes": [
+			"makefile"
+		]
+	}
 }

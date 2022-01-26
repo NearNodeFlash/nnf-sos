@@ -258,6 +258,19 @@ if [[ "$CMD" == "nlc-log" ]]; then
     kubectl logs "$POD" -n nnf-system
 fi
 
+if [[ "$CMD" == "nlc-sh" ]]; then
+    NS="$2"
+    if [[ -z "$NS" ]]; then
+        echo "Node name required. Should be one of..."
+        kubectl get nodes --selector=cray.nnf.node=true --no-headers | awk '{print $1}'
+        exit 1
+    fi
+
+    POD=$(kubectl get pods -n nnf-system --no-headers -o wide --field-selector spec.nodeName="$NS" | awk '{print $1}')
+    echo Shelling into "$NS": "$POD"
+    kubectl exec --stdin --tty $POD -n nnf-system -- /bin/bash
+fi
+
 if [[ "$CMD" == "wfCreate" ]]; then
     if [[ -z "$2" ]]; then
         NWF=1

@@ -6,7 +6,7 @@ resources:
 - bases/nnf.cray.hpe.com_nnfnodestorages.yaml
 - bases/nnf.cray.hpe.com_nnfstorages.yaml
 - bases/nnf.cray.hpe.com_nnfjobstorageinstances.yaml
-- bases/nnf.cray.com_datamovements.yaml
+- bases/nnf.cray.hpe.com_nnfdatamovements.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

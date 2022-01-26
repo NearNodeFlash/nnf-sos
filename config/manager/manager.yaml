@@ -73,7 +73,7 @@ spec:
             cpu: 100m
             memory: 60Mi
         securityContext:
-          privileged: True
+          privileged: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
 

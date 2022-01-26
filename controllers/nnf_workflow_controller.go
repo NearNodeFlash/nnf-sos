@@ -584,7 +584,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 
 			mutateFn := func() error {
 
-				var sourceInstance *corev1.ObjectReference = nil
+				var sourceInstance *corev1.ObjectReference
 				sourceName, sourcePath := splitIntoNameAndPath(parameters["source"])
 				if strings.Contains(parameters["source"], "$JOB_DW_") {
 					sourceInstance = &corev1.ObjectReference{
@@ -600,7 +600,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 					}
 				}
 
-				var destinationInstance *corev1.ObjectReference = nil
+				var destinationInstance *corev1.ObjectReference
 				destinationName, destinationPath := splitIntoNameAndPath(parameters["destination"])
 				if strings.Contains(parameters["destination"], "$JOB_DW_") {
 					destinationInstance = &corev1.ObjectReference{

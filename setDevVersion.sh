@@ -1,9 +1,9 @@
 #!/bin/bash
-# Use source to push the environment variables back into the calling shell
+# Use `source`` to push the environment variables back into the calling shell
 # "source ./setDevVersion.sh"
 
 # Command to access arti and list all of the docker images there filtering out the tag for the
-# version matching the current git SHA
+# version matching the current branch's git SHA
 unset VERSION
 unset IMAGE_TAG_BASE
 

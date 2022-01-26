@@ -23,8 +23,8 @@ func (*FileSystemXfs) New(oem FileSystemOem) FileSystemApi {
 func (*FileSystemXfs) IsType(oem FileSystemOem) bool { return oem.Type == "xfs" }
 func (*FileSystemXfs) IsMockable() bool              { return false }
 
-func (*FileSystemXfs) Type() string                  { return "xfs" }
-func (f *FileSystemXfs) Name() string                { return f.name }
+func (*FileSystemXfs) Type() string   { return "xfs" }
+func (f *FileSystemXfs) Name() string { return f.name }
 
 func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
@@ -57,6 +57,10 @@ func (f *FileSystemXfs) Mount(mountpoint string) error {
 }
 
 func (f *FileSystemXfs) Unmount() error {
+	if f.mountpoint == "" {
+		return nil
+	}
+
 	_, err := f.run(fmt.Sprintf("umount %s", f.mountpoint))
 	return err
 }
