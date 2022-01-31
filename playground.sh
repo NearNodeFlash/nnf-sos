@@ -47,7 +47,7 @@ EOF
     # Taint the kind workers as rabbit nodes for the NLCMs, to keep any
     # non-NLCM pods off of them.
     NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -v control-plane | paste -d" " -s -)
-    kubectl taint nodes "$NODES" cray.nnf.node=true:NoSchedule
+    kubectl taint nodes $NODES cray.nnf.node=true:NoSchedule
 
     # Label the kind-workers as rabbit nodes for the NLCMs.
     for NODE in $(kubectl get nodes --no-headers | grep --invert-match "control-plane" | awk '{print $1}'); do
