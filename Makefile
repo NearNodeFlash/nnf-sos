@@ -1,3 +1,8 @@
+# Default container tool to use.
+#   To use podman:
+#   $ DOCKER=podman make docker-build
+DOCKER ?= docker
+
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -180,8 +185,8 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; go test -v -count=1 -cover ./controllers/... -args -ginkgo.v
 
 container-unit-test:
-	docker build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
-	docker run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
+	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
+	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 
 test: manifests generate fmt vet ## Run tests.
 	mkdir -p ${ENVTEST_ASSETS_DIR}
@@ -198,16 +203,16 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 docker-build: test ## Build docker image with the manager.
 	# Name the base stages so they are not lost during a cache prune.
-	time docker build -t ${IMG}-base --target base .
-	time docker build -t ${IMG}-app-base --target application-base .
-	time docker build -t ${IMG} .
+	time ${DOCKER} build -t ${IMG}-base --target base .
+	time ${DOCKER} build -t ${IMG}-app-base --target application-base .
+	time ${DOCKER} build -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	${DOCKER} push ${IMG}
 
 kind-push: ## Push docker image to kind
 	kind load docker-image --nodes `kubectl get node --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` ${IMG}
-	docker pull gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
 	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
 
 ##@ Deployment
@@ -257,7 +262,7 @@ bundle: manifests kustomize ## Generate bundle manifests and metadata, then vali
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	${DOCKER} build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
@@ -297,7 +302,7 @@ endif
 # https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
 catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	$(OPM) index add --container-tool ${DOCKER} --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
 # Push the catalog image.
 .PHONY: catalog-push
