@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	dmv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
@@ -576,7 +575,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$PERSISTENT_DW_[name]/[path]
 
 			name := fmt.Sprintf("%d-%d", workflow.Spec.JobID, directiveIdx) // TODO: Should this move to a MakeName()?
-			dm := &dmv1alpha1.DataMovement{
+			dm := &nnfv1alpha1.NnfDataMovement{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: workflow.Namespace,
@@ -617,12 +616,12 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 					}
 				}
 
-				dm.Spec = dmv1alpha1.DataMovementSpec{
-					Source: dmv1alpha1.DataMovementSpecSourceDestination{
+				dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
+					Source: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
 						Path:            sourcePath,
 						StorageInstance: sourceInstance,
 					},
-					Destination: dmv1alpha1.DataMovementSpecSourceDestination{
+					Destination: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
 						Path:            destinationPath,
 						StorageInstance: destinationInstance,
 					},
@@ -644,7 +643,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			case controllerutil.OperationResultNone:
 				// The copy_in directive was already handled; retrieve the data-movement request and check
 				// if it has finished
-				dm := &dmv1alpha1.DataMovement{}
+				dm := &nnfv1alpha1.NnfDataMovement{}
 				if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: workflow.Namespace}, dm); err != nil {
 					log.Error(err, "Failed to retrieve DataMovement resource", "Name", name)
 					return ctrl.Result{}, err
@@ -652,7 +651,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 
 				finished := false
 				for _, condition := range dm.Status.Conditions {
-					if condition.Type == dmv1alpha1.DataMovementConditionTypeFinished {
+					if condition.Type == nnfv1alpha1.DataMovementConditionTypeFinished {
 						finished = true
 						// TODO: Finished could be in error - check for an error message
 					}

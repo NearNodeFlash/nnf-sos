@@ -70,7 +70,6 @@ FROM builder as testing
 WORKDIR /workspace
 
 COPY .dws-operator/ .dws-operator/
-COPY .nnf-dm/ .nnf-dm/
 COPY hack/ hack/
 COPY initiateContainerTest.sh .
 COPY Makefile .

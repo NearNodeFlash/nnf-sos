@@ -1,17 +1,5 @@
 /*
-Copyright 2021.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright 2021 Hewlett Packard Enterprise Development LP
 */
 
 package v1alpha1
@@ -24,16 +12,16 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// DataMovementSpec defines the desired state of DataMovement
-type DataMovementSpec struct {
+// NnfDataMovementSpec defines the desired state of DataMovement
+type NnfDataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Source describes the source of the data movement operation
-	Source DataMovementSpecSourceDestination `json:"source,omitempty"`
+	Source NnfDataMovementSpecSourceDestination `json:"source,omitempty"`
 
 	// Destination describes the destination of the data movement operation
-	Destination DataMovementSpecSourceDestination `json:"destination,omitempty"`
+	Destination NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
 
 	// Storage references the storage elements that will perform data movement
 	Storage corev1.ObjectReference `json:"storage,omitempty"`
@@ -43,7 +31,7 @@ type DataMovementSpec struct {
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
-type DataMovementSpecSourceDestination struct {
+type NnfDataMovementSpecSourceDestination struct {
 
 	// Path describes the location of the user data relative to the storage instance
 	Path string `json:"path,omitempty"`
@@ -55,7 +43,7 @@ type DataMovementSpecSourceDestination struct {
 }
 
 // DataMovementStatus defines the observed state of DataMovement
-type DataMovementStatus struct {
+type NnfDataMovementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -63,7 +51,7 @@ type DataMovementStatus struct {
 	Job corev1.ObjectReference `json:"job,omitempty"`
 
 	// Node Status reflects the status of individual NNF Node Data Movement operations
-	NodeStatus []DataMovementNodeStatus `json:"nodeStatus,omitempty"`
+	NodeStatus []NnfDataMovementNodeStatus `json:"nodeStatus,omitempty"`
 
 	// Conditions represents an array of conditions that refect the current
 	// status of the data movement operation. Each condition type must be
@@ -72,8 +60,8 @@ type DataMovementStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// DataMovementNodeStatus defines the observed state of a DataMovementNode
-type DataMovementNodeStatus struct {
+// NnfDataMovementNodeStatus defines the observed state of a DataMovementNode
+type NnfDataMovementNodeStatus struct {
 	// Node is the node who's status this status element describes
 	Node string `json:"node,omitempty"`
 
@@ -111,24 +99,24 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// DataMovement is the Schema for the datamovements API
-type DataMovement struct {
+// NnfDataMovement is the Schema for the datamovements API
+type NnfDataMovement struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DataMovementSpec   `json:"spec,omitempty"`
-	Status DataMovementStatus `json:"status,omitempty"`
+	Spec   NnfDataMovementSpec   `json:"spec,omitempty"`
+	Status NnfDataMovementStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// DataMovementList contains a list of DataMovement
-type DataMovementList struct {
+// NnfDataMovementList contains a list of NnfDataMovement
+type NnfDataMovementList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DataMovement `json:"items"`
+	Items           []NnfDataMovement `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&DataMovement{}, &DataMovementList{})
+	SchemeBuilder.Register(&NnfDataMovement{}, &NnfDataMovementList{})
 }

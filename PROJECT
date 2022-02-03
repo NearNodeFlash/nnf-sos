@@ -52,4 +52,12 @@ resources:
   kind: NnfJobStorageInstance
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.com
+  group: nnf
+  kind: NnfDataMovement
+  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  version: v1alpha1
 version: "3"

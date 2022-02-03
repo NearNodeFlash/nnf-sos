@@ -6,4 +6,5 @@ resources:
 - dws_v1alpha1_workflow.yaml
 - nnf_v1alpha1_directivebreakdown.yaml
 - nnf_v1alpha1_nnfjobstorageinstance.yaml
+- nnf_v1alpha1_datamovement.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

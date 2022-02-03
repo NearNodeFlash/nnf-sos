@@ -2,7 +2,3 @@
 	path = .dws-operator
 	url = https://github.hpe.com/hpe/hpc-dpm-dws-operator.git
 	branch = master
-
-[submodule ".nnf-dm"]
-	path = .nnf-dm
-	url = https://github.hpe.com/hpe/hpc-rabsw-nnf-dm.git
