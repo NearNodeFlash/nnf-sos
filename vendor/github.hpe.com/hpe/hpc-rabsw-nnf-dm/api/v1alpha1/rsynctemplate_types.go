@@ -29,11 +29,24 @@ type RsyncTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Selector metav1.LabelSelector `json:"selector,omitempty"`
+	// Selector defines the pod selector used in scheduling the rsync nodes. This value is duplicated
+	// to the template.spec.metadata.labels to satisfy the requirements of the Rsync Daemon Set.
+	Selector metav1.LabelSelector `json:"selector"`
 
 	// Template defines the pod template that is used for the basis of the Rsync Daemon set that
 	// manages the Rsync Node Data Movement requests.
-	Template v1.PodTemplateSpec `json:"template,omitempty"`
+	Template v1.PodTemplateSpec `json:"template"`
+
+	// Host Path defines the directory location of shared mounts on an individual rsync node.
+	HostPath string `json:"hostPath"`
+
+	// Mount Path defines the location within the container at which the Host Path volume should be mounted.
+	MountPath string `json:"mountPath"`
+
+	// Disable Lustre File Systems will disable the lustre file systems from within the generated
+	// Rsync Daemon Set. The result is an Rsync Daemon Set without any volume mounts. This is
+	// strictly used for testing and should be omitted during normal operation.
+	DisableLustreFileSystems *bool `json:"disableLustreFileSystems,omitempty"`
 }
 
 // RsyncTemplateStatus defines the observed state of RsyncTemplate

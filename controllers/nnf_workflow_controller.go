@@ -652,7 +652,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 
 				finished := false
 				for _, condition := range dm.Status.Conditions {
-					if condition.Type == dmv1alpha1.DataMovementConditionFinished {
+					if condition.Type == dmv1alpha1.DataMovementConditionTypeFinished {
 						finished = true
 						// TODO: Finished could be in error - check for an error message
 					}

@@ -38,8 +38,8 @@ type DataMovementSpec struct {
 	// Storage references the storage elements that will perform data movement
 	Storage corev1.ObjectReference `json:"storage,omitempty"`
 
-	// Node Access references the access elements that are needed to perform data movement
-	NodeAccess corev1.ObjectReference `json:"nodeAccess,omitempty"`
+	// Access references the access elements that are needed to perform data movement.
+	Access corev1.ObjectReference `json:"access,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
@@ -62,6 +62,9 @@ type DataMovementStatus struct {
 	// Job references the underlying job that performs data movement
 	Job corev1.ObjectReference `json:"job,omitempty"`
 
+	// Node Status reflects the status of individual NNF Node Data Movement operations
+	NodeStatus []DataMovementNodeStatus `json:"nodeStatus,omitempty"`
+
 	// Conditions represents an array of conditions that refect the current
 	// status of the data movement operation. Each condition type must be
 	// one of Starting, Running, or Finished, reflect the three states that
@@ -69,10 +72,40 @@ type DataMovementStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+// DataMovementNodeStatus defines the observed state of a DataMovementNode
+type DataMovementNodeStatus struct {
+	// Node is the node who's status this status element describes
+	Node string `json:"node,omitempty"`
+
+	// Count is the total number of resources managed by this node
+	Count uint32 `json:"count,omitempty"`
+
+	// Running is the number of resources running under this node
+	Running uint32 `json:"running,omitemtpy"`
+
+	// Complete is the number of resource completed by this node
+	Complete uint32 `json:"complete,omitempty"`
+
+	// Status is an array of status strings reported by resources in this node
+	Status []string `json:"status,omitempty"`
+
+	// Messages is an array of error messages reported by resources in this node
+	Messages []string `json:"messages,omitempty"`
+}
+
+// Types describing the various data movement status conditions.
 const (
-	DataMovementConditionStarting = "Starting"
-	DataMovementConditionRunning  = "Running"
-	DataMovementConditionFinished = "Finished"
+	DataMovementConditionTypeStarting = "Starting"
+	DataMovementConditionTypeRunning  = "Running"
+	DataMovementConditionTypeFinished = "Finished"
+)
+
+// Reasons describing the various data movement status conditions. Must be
+// in CamelCase format (see metav1.Condition)
+const (
+	DataMovementConditionReasonSuccess = "Success"
+	DataMovementConditionReasonFailed  = "Failed"
+	DataMovementConditionReasonInvalid = "Invalid"
 )
 
 //+kubebuilder:object:root=true

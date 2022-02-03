@@ -28,7 +28,6 @@ type RsyncNodeDataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of RsyncNodeDataMovement. Edit rsyncnodedatamovement_types.go to remove/update
 	Id string `json:"id,omitempty"`
 
 	Source string `json:"source,omitempty"`
@@ -42,26 +41,26 @@ type RsyncNodeDataMovementSpec struct {
 	DryRun bool `json:"dryRun,omitempty"`
 }
 
-//
-type RsyncDataMovementState string
-
-const (
-	RsyncDataMovementStatusState_Starting  RsyncDataMovementState = "Starting"
-	RsyncDataMovementStatusState_Running   RsyncDataMovementState = "Running"
-	RsyncDataMovementStatusState_Completed RsyncDataMovementState = "Completed"
-	RsyncDataMovementStatusState_Failed    RsyncDataMovementState = "Failed"
-)
-
 // RsyncNodeDataMovementStatus defines the observed state of RsyncNodeDataMovement
 type RsyncNodeDataMovementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Current State of the data movement request
-	State RsyncDataMovementState `json:"state,omitempty"`
+	// Start Time of the data movement operation
+	StartTime metav1.Time `json:"startTime,omitempty"`
 
-	// Status describes the helper message that accompanies the state
+	// End Time of the data movement operation
+	EndTime metav1.Time `json:"endTime,omitempty"`
+
+	// Current state of the data movement operation
+	State string `json:"state,omitempty"`
+
+	// Current status of the data movement operation; valid only when the state is finished.
 	Status string `json:"status,omitempty"`
+
+	// Message provides details on the data movement operation; can be used to diagnose problems pertaining to
+	// a failed status.
+	Message string `json:"message,omitempty"`
 }
 
 //+kubebuilder:object:root=true
