@@ -105,7 +105,7 @@ type WorkflowStatus struct {
 	//		- DW_JOB_STRIPED_CACHE
 	//		- DW_JOB_LDBAL_CACHE
 	//		- DW_PERSISTENT_STRIPED_{resname}
-	Env []string `json:"env,omitempty"`
+	Env map[string]string `json:"env,omitempty"`
 
 	// List of registered drivers and related status.  Updated by drivers.
 	Drivers []WorkflowDriverStatus `json:"drivers,omitempty"`

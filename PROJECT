@@ -60,4 +60,11 @@ resources:
   kind: NnfDataMovement
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cray.com
+  group: nnf
+  kind: NnfAccess
 version: "3"

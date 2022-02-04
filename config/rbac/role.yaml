@@ -9,6 +9,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - endpoints
   verbs:
   - create
@@ -63,6 +71,26 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - clientmounts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - clientmounts/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - dws.cray.hpe.com
   resources:
@@ -175,6 +203,32 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfaccesses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfaccesses/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfaccesses/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

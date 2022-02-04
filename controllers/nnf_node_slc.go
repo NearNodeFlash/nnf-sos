@@ -6,7 +6,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -45,6 +47,7 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=storages,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the NnfNodeSLC to the desired state.
@@ -89,6 +92,11 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-node-map", Namespace: "default"}, configMap); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
@@ -143,8 +151,8 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			storage.Data.Access.Servers = []dwsv1alpha1.Node{{
-				// The Rabbit node is always server 0 in NNFNode
-				Name:   nnfNode.Status.Servers[0].Name,
+				// The Rabbit node is the name of the nnfNode namespace
+				Name:   nnfNode.Namespace,
 				Status: string(nnfNode.Status.Servers[0].Status),
 			}}
 
@@ -154,9 +162,15 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			computes := []dwsv1alpha1.Node{}
-			for _, c := range nnfNode.Status.Servers[1:] {
+			data, exists := configMap.Data[nnfNode.Namespace]
+			if exists == false {
+				return fmt.Errorf("Could not find compute mapping for Rabbit %s", nnfNode.Namespace)
+			}
+
+			computeNames := strings.Split(data, ";")
+			for i, c := range nnfNode.Status.Servers[1:] {
 				compute := dwsv1alpha1.Node{
-					Name:   c.Name,
+					Name:   computeNames[i],
 					Status: string(c.Status),
 				}
 				computes = append(computes, compute)

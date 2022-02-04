@@ -1,0 +1,24 @@
+# permissions for end users to edit nnfaccesses.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nnfaccess-editor-role
+rules:
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfaccesses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - nnfaccesses/status
+  verbs:
+  - get

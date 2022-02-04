@@ -57,6 +57,17 @@ EOF
 
     #Required for webhooks
     kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nnf-node-map
+  namespace: default
+data:
+  kind-worker: compute0;compute1;compute2;compute3;compute4;compute5;compute6;compute7;compute8;compute9;compute10;compute11;compute12;compute13;compute14;compute15
+  kind-worker2: compute16;compute17;compute18;compute19;compute20;compute21;compute22;compute23;compute24;compute25;compute26;compute27;compute28;compute29;compute30;compute31
+EOF
 fi
 
 if [[ "$CMD" == kind-destroy ]]; then
