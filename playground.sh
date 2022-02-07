@@ -36,7 +36,7 @@ nodes:
 EOF
     fi
 
-    kind create cluster --wait 60s --image=kindest/node:v1.20.0 --config kind-config.yaml
+    kind create cluster --wait 60s --image=kindest/node:v1.22.5 --config kind-config.yaml
 
     # Use the kind-control-plane node for the SLCMs.  Remove its default taint
     # and label it for our use.
@@ -47,6 +47,7 @@ EOF
     # Taint the kind workers as rabbit nodes for the NLCMs, to keep any
     # non-NLCM pods off of them.
     NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -v control-plane | paste -d" " -s -)
+    # shellcheck disable=2086
     kubectl taint nodes $NODES cray.nnf.node=true:NoSchedule
 
     # Label the kind-workers as rabbit nodes for the NLCMs.
@@ -185,6 +186,21 @@ if [[ "$CMD" == "undeploy" ]]; then
     done
 fi
 
+if [[ "$CMD" == "deploy-dp" ]]; then
+    kubectl config view | grep current-context
+    for PKG in "${SUB_PKGS[@]}"; do
+        (cd "$PKG" || exit
+        echo "$PKG"
+        source ./setDevVersion.sh
+        ver=$VERSION
+        [[ -z $ver ]] && echo VERSION not set && exit 1
+
+        # OVERLAY is not defined in dws-operator at this time
+        # for dws-operator, this is equivalent to 'make deploy'
+        make deploy OVERLAY=dp0 )
+    done
+fi
+
 if [[ "$CMD" == pause || "$CMD" == resume ]]; then
     COMP="$2"
 
@@ -279,7 +295,7 @@ if [[ "$CMD" == "nlc-sh" ]]; then
 
     POD=$(kubectl get pods -n nnf-system --no-headers -o wide --field-selector spec.nodeName="$NS" | awk '{print $1}')
     echo Shelling into "$NS": "$POD"
-    kubectl exec --stdin --tty $POD -n nnf-system -- /bin/bash
+    kubectl exec --stdin --tty "$POD" -n nnf-system -- /bin/bash
 fi
 
 if [[ "$CMD" == "wfCreate" ]]; then
