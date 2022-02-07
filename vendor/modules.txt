@@ -185,7 +185,7 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220131175146-31ee9c7ce7be => ./.dws-operator
+# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220204213853-1c58c388f2f1 => ./.dws-operator
 ## explicit
 github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
