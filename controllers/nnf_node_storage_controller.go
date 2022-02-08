@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"runtime"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -635,9 +634,9 @@ func (s *nodeStorageStatusUpdater) close(ctx context.Context, r *NnfNodeStorageR
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	maxReconciles := runtime.GOMAXPROCS(0)
+	// nnf-ec is not thread safe, so we are limited to a single reconcile thread.
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&nnfv1alpha1.NnfNodeStorage{}).
 		Complete(r)
 }
