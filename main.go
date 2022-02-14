@@ -24,7 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+
 	"github.hpe.com/hpe/hpc-rabsw-nnf-sos/controllers"
 
 	//+kubebuilder:scaffold:imports
@@ -48,6 +50,7 @@ func init() {
 
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(lusv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

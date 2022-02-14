@@ -145,6 +145,8 @@ github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
 github.com/onsi/gomega/gexec
+github.com/onsi/gomega/gstruct
+github.com/onsi/gomega/gstruct/errors
 github.com/onsi/gomega/internal
 github.com/onsi/gomega/internal/gutil
 github.com/onsi/gomega/matchers
@@ -190,6 +192,10 @@ github.com/spf13/pflag
 github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
 github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
+# github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220207222326-93e1e70f148c
+## explicit
+github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1
+github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases
 # github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore

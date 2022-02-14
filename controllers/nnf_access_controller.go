@@ -489,7 +489,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 	// Loop through each Rabbit node in the existingStorage map, and find a client for
 	// each of the allocations. This is done by finding the compute and servers list from
 	// the Storage resource.
-	for storageName, _ := range existingStorage {
+	for storageName := range existingStorage {
 		namespacedName := types.NamespacedName{
 			Name:      storageName,
 			Namespace: "default",

@@ -28,7 +28,10 @@ import (
 	"github.com/ghodss/yaml"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+
+	_ "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases"
 
 	dwsctrls "github.hpe.com/hpe/hpc-dpm-dws-operator/controllers"
 	//+kubebuilder:scaffold:imports
@@ -90,6 +93,7 @@ var _ = BeforeSuite(func() {
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", ".dws-operator", "config", "crd", "bases"),
+			filepath.Join("..", "vendor", "github.hpe.com", "hpe", "hpc-rabsw-lustre-fs-operator", "config", "crd", "bases"),
 		},
 		AttachControlPlaneOutput: true,
 	}
@@ -104,6 +108,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = dwsv1alpha1.AddToScheme(testEnv.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = lusv1alpha1.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

@@ -22,8 +22,7 @@ SUB_PKGS=(
 
 if [[ "$CMD" == "kind-create" ]]; then
     CONFIG=kind-config.yaml
-    if [[ ! -f "$CONFIG" ]]; then
-        cat > $CONFIG << EOF
+    cat > $CONFIG << EOF
 # three node (two workers) cluster config
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -32,8 +31,19 @@ networking:
 nodes:
 - role: control-plane
 - role: worker
+  extraMounts:
+  - hostPath: /tmp/nnf
+    containerPath: /nnf
+    propagation: None
 - role: worker
+  extraMounts:
+  - hostPath: /tmp/nnf
+    containerPath: /nnf
+    propagation: None
 EOF
+
+    if [ ! -f /tmp/nnf/file.in ]; then
+        mkdir -p /tmp/nnf && dd if=/dev/zero of=/tmp/nnf/file.in bs=128 count=0 seek=$[1024 * 1024]
     fi
 
     kind create cluster --wait 60s --image=kindest/node:v1.22.5 --config kind-config.yaml

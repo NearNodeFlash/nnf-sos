@@ -64,9 +64,9 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dm.cray.hpe.com
+  - cray.hpe.com
   resources:
-  - datamovements
+  - lustrefilesystems
   verbs:
   - get
   - list
@@ -229,6 +229,18 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfdatamovements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -28,6 +27,7 @@ import (
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 	"github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse"
+	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
@@ -63,13 +63,14 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=directivebreakdowns/status,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfjobstorageinstances,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfjobstorageinstances/status,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfjobstorageinstances/finalizers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/finalizers,verbs=update
-//+kubebuilder:rbac:groups=dm.cray.hpe.com,resources=datamovements,verbs=get;list;watch
+//+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -533,10 +534,10 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 	for directiveIdx, directive := range workflow.Spec.DWDirectives {
 		if strings.HasPrefix(directive, "#DW copy_in") {
 			hasCopyInDirective = true
-			_, parameters, err := parseDirective(directive)
+			parameters, err := dwdparse.BuildArgsMap(directive)
 			if err != nil {
 				workflow.Status.Message = fmt.Sprintf("Stage %s failed: %v", workflow.Spec.DesiredState, err)
-				// TODO: Return with error
+				return ctrl.Result{}, err
 			}
 
 			// NOTE: We don't need to check for the occurrence of a source or destination parameters since these are required fields and validated through the webhook
@@ -546,22 +547,21 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			// i.e. $JOB_DW_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
 			splitIntoNameAndPath := func(s string) (string, string) {
 				var name = ""
-				if strings.Contains(s, "$JOB_DW_") {
-					name = strings.SplitN(strings.Replace(s, "$JOB_DW_", "", 1), "/", 1)[0]
-
-				} else if strings.Contains(s, "$PERSISTENT_DW_") {
-					name = strings.SplitN(strings.Replace(s, "$PERSISTENT_DW_", "", 1), "/", 1)[0]
+				if strings.HasPrefix(s, "$JOB_DW_") {
+					name = strings.SplitN(strings.Replace(s, "$JOB_DW_", "", 1), "/", 2)[0]
+				} else if strings.HasPrefix(s, "$PERSISTENT_DW_") {
+					name = strings.SplitN(strings.Replace(s, "$PERSISTENT_DW_", "", 1), "/", 2)[0]
 				}
 				var path = "/"
-				if strings.Count(s, "/") > 1 {
-					path = "/" + strings.SplitN(s, "/", 1)[1]
+				if strings.Count(s, "/") >= 1 {
+					path = "/" + strings.SplitN(s, "/", 2)[1]
 				}
 				return name, path
 			}
 
 			findDirectiveIndexByName := func(name string) int {
 				for idx, directive := range workflow.Spec.DWDirectives {
-					_, parameters, _ := parseDirective(directive)
+					parameters, _ := dwdparse.BuildArgsMap(directive)
 					if parameters["name"] == name {
 						return idx
 					}
@@ -575,7 +575,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			// 3. PersistentStorageInstance to JobStorageInstance           #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$JOB_DW_[name]/[path]
 			// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$PERSISTENT_DW_[name]/[path]
 
-			name := fmt.Sprintf("%d-%d", workflow.Spec.JobID, directiveIdx) // TODO: Should this move to a MakeName()?
+			name := fmt.Sprintf("%s-%d", workflow.Name, directiveIdx) // TODO: Should this move to a MakeName()?
 			dm := &nnfv1alpha1.NnfDataMovement{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -583,39 +583,58 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 				},
 			}
 
+			var parentDirectiveIndex = -1 // Directive index of parent storage #DW or -1 if not defined
+			var sourceInstance *corev1.ObjectReference
+			sourceName, sourcePath := splitIntoNameAndPath(parameters["source"])
+			if strings.HasPrefix(parameters["source"], "$JOB_DW_") {
+				parentDirectiveIndex = findDirectiveIndexByName(sourceName)
+				sourceInstance = &corev1.ObjectReference{
+					Kind:      reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name(),
+					Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, parentDirectiveIndex),
+					Namespace: workflow.Namespace,
+				}
+			} else if strings.HasPrefix(parameters["source"], "$PERSISTENT_DW_") {
+				sourceInstance = &corev1.ObjectReference{
+					Kind:      "NnfPersistentStorageInstance", // TODO: Use reflect.TypeOf().Name() once defined
+					Name:      sourceName,
+					Namespace: workflow.Namespace,
+				}
+			} else if lustre := r.findLustreFileSystemForPath(ctx, parameters["source"], log); lustre != nil {
+				sourceInstance = &corev1.ObjectReference{
+					Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
+					Name:      lustre.Name,
+					Namespace: lustre.Namespace,
+				}
+			} else {
+				return ctrl.Result{}, fmt.Errorf("Source parameter '%s' invalid", parameters["source"])
+			}
+
+			var destinationInstance *corev1.ObjectReference
+			destinationName, destinationPath := splitIntoNameAndPath(parameters["destination"])
+			if strings.HasPrefix(parameters["destination"], "$JOB_DW_") {
+				parentDirectiveIndex = findDirectiveIndexByName(destinationName)
+				destinationInstance = &corev1.ObjectReference{
+					Kind:      reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name(),
+					Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, parentDirectiveIndex),
+					Namespace: workflow.Namespace,
+				}
+			} else if strings.HasPrefix(parameters["destination"], "$PERSISTENT_DW_") {
+				destinationInstance = &corev1.ObjectReference{
+					Kind:      "NnfPersistentStorageInstance", // TODO: Use reflect.TypeOf().Name() once defined
+					Name:      destinationName,
+					Namespace: workflow.Namespace,
+				}
+			} else if lustre := r.findLustreFileSystemForPath(ctx, parameters["destination"], log); lustre != nil {
+				destinationInstance = &corev1.ObjectReference{
+					Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
+					Name:      lustre.Name,
+					Namespace: lustre.Namespace,
+				}
+			} else {
+				return ctrl.Result{}, fmt.Errorf("Destination parameter '%s' invalid", parameters["destination"])
+			}
+
 			mutateFn := func() error {
-
-				var sourceInstance *corev1.ObjectReference
-				sourceName, sourcePath := splitIntoNameAndPath(parameters["source"])
-				if strings.Contains(parameters["source"], "$JOB_DW_") {
-					sourceInstance = &corev1.ObjectReference{
-						Kind:      "JobStorageInstance",
-						Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, findDirectiveIndexByName(sourceName)),
-						Namespace: workflow.Namespace,
-					}
-				} else if strings.Contains(parameters["source"], "$PERSISTENT_DW_") {
-					sourceInstance = &corev1.ObjectReference{
-						Kind:      "PersistentStorageInstance",
-						Name:      sourceName,
-						Namespace: workflow.Namespace,
-					}
-				}
-
-				var destinationInstance *corev1.ObjectReference
-				destinationName, destinationPath := splitIntoNameAndPath(parameters["destination"])
-				if strings.Contains(parameters["destination"], "$JOB_DW_") {
-					destinationInstance = &corev1.ObjectReference{
-						Kind:      "JobStorageInstance",
-						Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, findDirectiveIndexByName(destinationName)),
-						Namespace: workflow.Namespace,
-					}
-				} else if strings.Contains(parameters["destination"], "$PERSISTENT_DW_") {
-					destinationInstance = &corev1.ObjectReference{
-						Kind:      "PersistentStorageInstance",
-						Name:      destinationName,
-						Namespace: workflow.Namespace,
-					}
-				}
 
 				dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
 					Source: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
@@ -626,11 +645,25 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 						Path:            destinationPath,
 						StorageInstance: destinationInstance,
 					},
+					// Access describes how either source or destination path is referenced while running the data movement
+					// request. In the case of copy_in, we expect it to reference a Job Storage Instance as the destination;
+					// and for copy_out it references the Job Storage Instance at the source.
+					Access: corev1.ObjectReference{
+						Kind:      reflect.TypeOf(nnfv1alpha1.NnfAccess{}).Name(),
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, parentDirectiveIndex),
+						Namespace: workflow.Namespace,
+					},
+					Storage: corev1.ObjectReference{
+						Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, parentDirectiveIndex),
+						Namespace: workflow.Namespace,
+					},
 				}
 
 				return ctrl.SetControllerReference(workflow, dm, r.Scheme)
 			}
 
+			log.Info("Creating data movement instance", "Directive", directive)
 			result, err := ctrl.CreateOrUpdate(ctx, r.Client, dm, mutateFn)
 			if err != nil {
 				log.Error(err, "DataMovement CreateOrUpdate failed", "name", name)
@@ -677,30 +710,20 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 	return ctrl.Result{}, nil
 }
 
-func parseDirective(directive string) (command string, parameters map[string]string, err error) {
-	if !strings.HasPrefix(directive, "#DW") {
-		return "", nil, fmt.Errorf("Malformed directive: No #DW prefix")
+func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1alpha1.LustreFileSystem {
+	lustres := &lusv1alpha1.LustreFileSystemList{}
+	if err := r.List(ctx, lustres); err != nil {
+		log.Error(err, "Failed to list lustre file systems")
+		return nil
 	}
 
-	re := regexp.MustCompile("^#DW\\s+(\\w+)\\s+(.*)")
-	fields := re.FindAllString(directive, -1)
-	if len(fields) == 0 {
-		return "", nil, fmt.Errorf("Malformed directive: Failed regexp match")
-	}
-	if len(fields) == 1 {
-		return "", nil, fmt.Errorf("Malformed directive: Missing arguments")
-	}
-
-	command = fields[0]
-
-	params := strings.Fields(fields[1])
-	for _, param := range params {
-		if arg := strings.Split(param, "="); len(arg) == 2 {
-			parameters[arg[0]] = arg[1]
+	for _, lustre := range lustres.Items {
+		if strings.HasPrefix(path, lustre.Spec.MountRoot) {
+			return &lustre
 		}
 	}
 
-	return
+	return nil
 }
 
 func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
@@ -1019,8 +1042,8 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&dwsv1alpha1.Workflow{}).
 		Owns(&nnfv1alpha1.NnfStorage{}).
 		Owns(&nnfv1alpha1.NnfAccess{}).
+		Owns(&nnfv1alpha1.NnfDataMovement{}).
 		Owns(&nnfv1alpha1.NnfJobStorageInstance{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
-		//Owns(&dmv1alpha1.DataMovement{}). Enable once data movement is fully deployable
 		Complete(r)
 }

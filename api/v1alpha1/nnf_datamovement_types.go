@@ -23,11 +23,11 @@ type NnfDataMovementSpec struct {
 	// Destination describes the destination of the data movement operation
 	Destination NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
 
-	// Storage references the storage elements that will perform data movement
-	Storage corev1.ObjectReference `json:"storage,omitempty"`
-
 	// Access references the access elements that are needed to perform data movement.
 	Access corev1.ObjectReference `json:"access,omitempty"`
+
+	// Storage references the storage elements that will perform data movement
+	Storage corev1.ObjectReference `json:"storage,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement

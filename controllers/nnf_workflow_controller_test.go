@@ -2,16 +2,22 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
@@ -53,12 +59,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 			workflow.Spec.DesiredState = dwsv1alpha1.StateTeardown.String()
 			return k8sClient.Update(context.TODO(), workflow)
-		}).Should(Succeed())
+		}).Should(Succeed(), "teardown")
 
 		Eventually(func() bool {
 			Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 			return workflow.Status.State == workflow.Spec.DesiredState
-		}).Should(BeTrue())
+		}).Should(BeTrue(), "reach desired teardown state")
 
 		Eventually(func() bool {
 			Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
@@ -96,41 +102,103 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}).Should(BeTrue(), "transition through setup")
 		})
 
+		// Create a fake global lustre file system.
+		var (
+			lustre *lusv1alpha1.LustreFileSystem
+		)
+
+		BeforeEach(func() {
+			lustre = &lusv1alpha1.LustreFileSystem{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "maui",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: lusv1alpha1.LustreFileSystemSpec{
+					MountRoot: "/lus/maui",
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+		})
+
 		When("using $JOB_DW_ references", func() {
+
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=test type=lustre capacity=1GiB",
-					"#DW copy_in source=/lus/maui/my-file destination=$JOB_DW_test",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_test/my-file.out",
 				}
 			})
 
-			It("creates valid job storage instance", func() {
-				Eventually(func() error {
-					storageInstanceKey := types.NamespacedName{
+			It("transition to data movement", func() {
+
+				By("creates valid job storage instance")
+				storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
+					ObjectMeta: metav1.ObjectMeta{
 						Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, 0),
 						Namespace: key.Namespace,
-					}
-					storageInstance := &nnfv1alpha1.NnfJobStorageInstance{}
-					return k8sClient.Get(context.TODO(), storageInstanceKey, storageInstance)
+					},
+				}
+
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageInstance), storageInstance)
 				}, "3s").Should(Succeed(), "get job storage instance")
 
-				// TODO: Expect the workflow has owner reference to the job storage instance; this verifies the garbage collection
+				// Expect the workflow has owner reference to the job storage instance; this verifies the garbage collection
 				// chain is set up, but recall that GC is not running in the testenv so we can't prove it is deleted on teardown.
 				// See https://book.kubebuilder.io/reference/envtest.html#testing-considerations
+				controller := true
+				blockOwnerDeletion := true
+				ownerRef := metav1.OwnerReference{
+					Kind:               "Workflow",
+					APIVersion:         dwsv1alpha1.GroupVersion.String(),
+					UID:                workflow.GetUID(),
+					Name:               workflow.GetName(),
+					Controller:         &controller,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				}
 
-			})
+				Expect(storageInstance.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
-			PIt("transitions through data_in", func() {
+				By("transition to data in state")
 				Eventually(func() error {
 					Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 					workflow.Spec.DesiredState = dwsv1alpha1.StateDataIn.String()
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to data_in")
 
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == workflow.Spec.DesiredState
-				}, "3s").Should(BeTrue(), "go ready")
+				By("creates the data movement resource")
+				dm := &nnfv1alpha1.NnfDataMovement{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, 1),
+						Namespace: workflow.Namespace,
+					},
+				}
+
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
+				}).Should(Succeed(), "expect data movement resource")
+
+				Expect(dm.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+
+				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
+				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Name":      Equal(lustre.ObjectMeta.Name),
+						"Namespace": Equal(lustre.Namespace),
+					}))
+
+				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
+				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind": Equal(reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name()),
+						"Name": HaveSuffix("-0"), // Should reference the #DW that generated the job storage instance
+					}))
 			})
 		})
 
