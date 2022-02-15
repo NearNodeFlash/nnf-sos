@@ -707,12 +707,10 @@ github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9dec
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.0/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.hpe.com/hpe/hpc-rabsw-lustre-csi-driver v0.0.0-20211216142843-0b84f0d84e3f/go.mod h1:3VOepCJRh1UbeNCrCRWKpT/JjGXc4MQ2bseCBQ7WEn4=
-github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220207222326-93e1e70f148c h1:fiR+NP969RZ088otZs8IpBcYYnwoOtOSPOqDDGjGvLU=
-github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220207222326-93e1e70f148c/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488 h1:oTq6iv1c0IfV2c9kdM3PeqwAnov6FTUgW4GYmIufM8c=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488 h1:oTq6iv1c0IfV2c9kdM3PeqwAnov6FTUgW4GYmIufM8c=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
+github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7 h1:oKi+gp+Q9MzmrxuZHV8sknfWGCdhkoIik2CGONo/QLM=
+github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220215170732-4fe43f97f881 h1:I9++H1fZ9N/mKSMpcIbjqQcLafuUABPje/maz/D4BIA=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220215170732-4fe43f97f881/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29 h1:TgvWIQO0I0E7pKVLq/ARDhT2p2kHGKLtZhAN0EtUxiI=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29/go.mod h1:gk1qa1CBZAdya1PqugRJjkwk8LIymAoB5wf5UA7NrFk=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
@@ -1349,8 +1347,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.22/go.mod h1:LEScyz
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.25/go.mod h1:Mlj9PNLmG9bZ6BHFwFKDo5afkpWyUISkb9Me0GnK66I=
 sigs.k8s.io/controller-runtime v0.9.2/go.mod h1:TxzMCHyEUpaeuOiZx/bIdc2T81vfs/aKdvJt9wuu0zk=
 sigs.k8s.io/controller-runtime v0.10.0/go.mod h1:GCdh6kqV6IY4LK0JLwX0Zm6g233RtVGdb/f0+KSfprg=
-sigs.k8s.io/controller-runtime v0.11.0 h1:DqO+c8mywcZLFJWILq4iktoECTyn30Bkj0CwgqMpZWQ=
-sigs.k8s.io/controller-runtime v0.11.0/go.mod h1:KKwLiTooNGu+JmLZGn9Sl3Gjmfj66eMbCQznLP5zcqA=
+sigs.k8s.io/controller-runtime v0.11.1 h1:7YIHT2QnHJArj/dk9aUkYhfqfK5cIxPOX5gPECfdZLU=
+sigs.k8s.io/controller-runtime v0.11.1/go.mod h1:KKwLiTooNGu+JmLZGn9Sl3Gjmfj66eMbCQznLP5zcqA=
 sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 h1:fD1pz4yfdADVNfFmcP2aBEtudwUQ1AlLnRBALr33v3s=
 sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6/go.mod h1:p4QtZmO4uMYipTQNzagwnNoseA6OxSUutVw05NhYDRs=
 sigs.k8s.io/structured-merge-diff/v4 v4.0.2/go.mod h1:bJZC9H9iH24zzfZ/41RGcq60oK1F7G282QMXDPYydCw=

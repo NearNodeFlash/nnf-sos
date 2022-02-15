@@ -192,11 +192,11 @@ github.com/spf13/pflag
 github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
 github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
-# github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220207222326-93e1e70f148c
+# github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases
-# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220201134105-36fbf15bc488
+# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220215170732-4fe43f97f881
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme
@@ -648,7 +648,7 @@ k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/pointer
 k8s.io/utils/trace
-# sigs.k8s.io/controller-runtime v0.11.0
+# sigs.k8s.io/controller-runtime v0.11.1
 ## explicit
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder

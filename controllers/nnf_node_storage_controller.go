@@ -204,6 +204,7 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 			allocationStatus.StoragePool.ID = sp.Id
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = nnfv1alpha1.ConditionSuccess
+			condition.Message = ""
 		})
 	}
 
@@ -247,8 +248,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 		log.Info("Created storage group", "Id", sg.Id)
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.StorageGroup.ID = sg.Id
-			condition.Status = metav1.ConditionFalse
+			condition.LastTransitionTime = metav1.Now()
+			condition.Status = metav1.ConditionFalse // we are finished with this state
 			condition.Reason = nnfv1alpha1.ConditionSuccess
+			condition.Message = ""
 		})
 	}
 
@@ -321,8 +324,10 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		log.Info("Created filesystem", "Id", fs.Id)
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.FileSystem.ID = fs.Id
+			condition.LastTransitionTime = metav1.Now()
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = nnfv1alpha1.ConditionSuccess
+			condition.Message = ""
 		})
 	}
 
@@ -369,8 +374,10 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		log.Info("Created file share", "Id", sh.Id)
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.FileShare.ID = sh.Id
+			condition.LastTransitionTime = metav1.Now()
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = nnfv1alpha1.ConditionSuccess
+			condition.Message = ""
 		})
 	}
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 
@@ -73,7 +74,20 @@ type FileSystem struct {
 
 func (*FileSystem) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
-		return exec.Command("bash", "-c", cmd).Output()
+		// Capture stdout and stderr
+		// Return the byte array of either stdout or stderr depending on error result
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		shellCmd := exec.Command("bash", "-c", cmd)
+		shellCmd.Stdout = &out
+		shellCmd.Stderr = &stderr
+		err := shellCmd.Run()
+		if err != nil {
+			// Command failed, return stderr
+			return stderr.Bytes(), err
+		}
+		// Command success, return stdout
+		return out.Bytes(), err
 	})
 }
 

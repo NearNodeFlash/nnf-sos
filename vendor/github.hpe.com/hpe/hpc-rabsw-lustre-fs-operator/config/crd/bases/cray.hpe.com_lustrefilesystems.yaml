@@ -16,7 +16,26 @@ spec:
     singular: lustrefilesystem
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Lustre file system name
+      jsonPath: .spec.name
+      name: FSNAME
+      type: string
+    - description: MGS NID
+      jsonPath: .spec.mgsNid
+      name: MgsNID
+      type: string
+    - description: Mount path used to mount filesystem
+      jsonPath: .spec.mountRoot
+      name: MountRoot
+      priority: 1
+      type: string
+    - description: StorageClass to use
+      jsonPath: .spec.storageClassName
+      name: StorageClass
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: LustreFileSystem is the Schema for the lustrefilesystems API

@@ -9,8 +9,6 @@ import (
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
-
-	leader bool
 }
 
 func init() {
@@ -18,7 +16,7 @@ func init() {
 }
 
 func (*FileSystemLvm) New(oem FileSystemOem) FileSystemApi {
-	return &FileSystemLvm{FileSystem: FileSystem{name: oem.Name}, leader: true}
+	return &FileSystemLvm{FileSystem: FileSystem{name: oem.Name}}
 }
 
 func (*FileSystemLvm) IsType(oem FileSystemOem) bool { return oem.Type == "lvm" }
@@ -35,7 +33,7 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	// TODO: Some sort of rollback mechanism on failure condition
 
 	// Ensure the existing volume groups are scanned. Use this information to determine
-	// if initilization is required for the Volume Group, or if it exists and can be
+	// if initialization is required for the Volume Group, or if it exists and can be
 	// activated.
 	if _, err := f.run("vgscan"); err != nil {
 		return err
@@ -43,8 +41,6 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
 	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", volumeGroup))
 	if len(rsp) != 0 && !strings.Contains(string(rsp), "not found") {
-		f.leader = false
-
 		// Volume Group is present, activate the volume
 		if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", volumeGroup)); err != nil {
 			return err
@@ -53,7 +49,7 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return nil
 	}
 
-	// Only create the file system if it doesn't exist yet
+	// Create the physical volumes.
 	for _, device := range devices {
 		if _, err := f.run(fmt.Sprintf("pvcreate %s", device)); err != nil {
 			return err
@@ -72,7 +68,26 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	}
 
 	// Create the logical volume
-	if _, err := f.run(fmt.Sprintf("lvcreate --size %s --stripes %d --stripesize=32KiB --name %s %s", size, len(devices), logicalVolume, volumeGroup)); err != nil {
+	// -Zn - don't zero the volume, it will fail.
+	// We are depending on the drive behavior for newly allocated blocks to track
+	// NVM Command Set spec, Section 3.2.3.2.1 Deallocated or Unwritten Logical Blocks
+	// The Kioxia drives support DLFEAT=001b
+	// 	3.2.3.2.1 Deallocated or Unwritten Logical Blocks
+	// A logical block that has never been written to, or which has been deallocated using the Dataset
+	// Management command, the Write Zeroes command or the Sanitize command is called a deallocated or unwritten logical block.
+	// Using the Error Recovery feature (refer to section 4.1.3.2), host software may select the behavior
+	// of the controller when reading deallocated or unwritten blocks. The controller shall abort Copy, Read, Verify,
+	// or Compare commands that include deallocated or unwritten blocks with a status of Deallocated or Unwritten Logical Block
+	// if that error has been enabled using the DULBE bit in the Error Recovery feature. If the Deallocated or Unwritten Logical
+	// error is not enabled, the values read from a deallocated or unwritten block and its metadata (excluding protection information)
+	// shall be:
+	// • all bytes cleared to 0h if bits 2:0 in the DLFEAT field are set to 001b;
+	if _, err := f.run(fmt.Sprintf("lvcreate -Zn --size %s --stripes %d --stripesize=32KiB --name %s %s", size, len(devices), logicalVolume, volumeGroup)); err != nil {
+		return err
+	}
+
+	// Activate the volume group.
+	if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", volumeGroup)); err != nil {
 		return err
 	}
 
@@ -80,10 +95,6 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 }
 
 func (f *FileSystemLvm) Delete() error {
-	if !f.leader {
-		return nil
-	}
-
 	if _, err := f.run(fmt.Sprintf("lvremove --yes %s", f.devPath())); err != nil {
 		return err
 	}

@@ -15,7 +15,6 @@ func (*FileSystemXfs) New(oem FileSystemOem) FileSystemApi {
 	return &FileSystemXfs{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
-			leader:     true,
 		},
 	}
 }
