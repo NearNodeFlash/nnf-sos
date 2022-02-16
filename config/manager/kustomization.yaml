@@ -14,3 +14,7 @@ images:
 - name: controller
   newName: arti.dev.cray.com/rabsw-docker-master-local/cray-dp-nnf-sos
   newTag: 0.0.1
+
+patchesStrategicMerge:
+#- manager_imagepullsecret_patch.yaml
+
