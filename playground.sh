@@ -15,6 +15,13 @@ reset_proxy ()
     sleep .1
 }
 
+install_cert_manager ()
+{
+    certver="v1.7.0"
+    #Required for webhooks
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/"$certver"/cert-manager.yaml
+}
+
 SUB_PKGS=(
     ".dws-operator"
     "."
@@ -67,7 +74,7 @@ EOF
     done
 
     #Required for webhooks
-    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+    install_cert_manager
 
     cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -121,8 +128,7 @@ if [[ "$CMD" == dp0-init ]]; then
     done
 
     #Required for webhooks
-    # kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
-    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+    install_cert_manager
 fi
 
 # The following commands apply to initializing the current DP1 environment
@@ -154,8 +160,7 @@ if [[ "$CMD" == dp1-init ]]; then
     done
 
     #Required for webhooks
-    # kubectl delete -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
-    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.4.0/cert-manager.yaml
+    install_cert_manager
 fi
 
 if [[ "$CMD" == restart-pods ]]; then
