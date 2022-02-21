@@ -30,7 +30,7 @@ type PortV130Port struct {
 	ActiveWidth int64 `json:"ActiveWidth,omitempty"`
 
 	// The current speed of this port.
-	CurrentSpeedGbps *float32 `json:"CurrentSpeedGbps,omitempty"`
+	CurrentSpeedGbps float32 `json:"CurrentSpeedGbps,omitempty"`
 
 	// The description of this resource.  Used for commonality in the schema definitions.
 	Description string `json:"Description,omitempty"`
@@ -70,7 +70,7 @@ type PortV130Port struct {
 	MaxFrameSize int64 `json:"MaxFrameSize,omitempty"`
 
 	// The maximum speed of this port as currently configured.
-	MaxSpeedGbps *float32 `json:"MaxSpeedGbps,omitempty"`
+	MaxSpeedGbps float32 `json:"MaxSpeedGbps,omitempty"`
 
 	Metrics OdataV4IdRef `json:"Metrics,omitempty"`
 

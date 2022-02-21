@@ -379,11 +379,6 @@ func (s *Switch) refreshPortStatus() error {
 		return err
 	}
 
-	log.Infof("Switch %s Port Status:", s.id)
-	for _, status := range switchPortStatus {
-		log.Infof("  Port %2d CfgWidth %2d NegWidth %2d NegRate %5.2f State %d", status.PhysPortId, status.CfgLinkWidth, status.NegLinkWidth, status.CurLinkRateGBps, status.LinkState)
-	}
-
 StatusLoop:
 	for _, st := range switchPortStatus {
 		for portIdx := range s.ports {
@@ -538,6 +533,24 @@ func (p *Port) findEndpoint(functionId string) *Endpoint {
 		return nil
 	}
 	return p.endpoints[id]
+}
+
+func (p *Port) getResourceHealth() sf.ResourceHealth {
+	if p.linkStatus == sf.LINK_DOWN_PV130LS {
+		return sf.CRITICAL_RH
+	}
+	if p.negLinkWidth < p.cfgLinkWidth {
+		return sf.WARNING_RH
+	}
+	return sf.OK_RH
+}
+
+func (p *Port) getResourceState() sf.ResourceState {
+	if p.linkStatus == sf.LINK_DOWN_PV130LS {
+		return sf.UNAVAILABLE_OFFLINE_RST
+	}
+
+	return sf.ENABLED_RST
 }
 
 func (p *Port) Initialize() error {
@@ -1150,13 +1163,18 @@ func FabricIdSwitchesSwitchIdPortsPortIdGet(fabricId string, switchId string, po
 	model.PortId = strconv.Itoa(p.config.Port)
 
 	model.Width = int64(p.config.Width)
-	model.ActiveWidth = 0 // TODO
+	model.ActiveWidth = int64(p.negLinkWidth)
 
-	//model.MaxSpeedGbps = 0 // TODO
-	//model.CurrentSpeedGbps = 0 // TODO
+	model.MaxSpeedGbps = float32(p.maxLinkRateGBps * 8)
+	model.CurrentSpeedGbps = float32(p.curLinkRateGBps * 8)
 
 	model.LinkState = sf.ENABLED_PV130LST
 	model.LinkStatus = p.linkStatus
+
+	model.Status = sf.ResourceStatus{
+		Health: p.getResourceHealth(),
+		State: p.getResourceState(),
+	}
 
 	model.Links.AssociatedEndpointsodataCount = int64(len(p.endpoints))
 	model.Links.AssociatedEndpoints = make([]sf.OdataV4IdRef, model.Links.AssociatedEndpointsodataCount)
@@ -1213,15 +1231,27 @@ func FabricIdEndpointsEndpointIdGet(fabricId string, endpointId string, model *s
 		FunctionNumber: 0,  // TODO
 	}
 
-	model.Links.Ports = make([]sf.OdataV4IdRef, len(ep.ports))
-	for idx, port := range ep.ports {
-		model.Links.Ports[idx].OdataId = fmt.Sprintf("/redfish/v1/Fabrics/%s/Switches/%s/Ports/%s", fabricId, port.swtch.id, port.id)
-	}
-
-	// TODO: Correctly report endpoint state
 	model.Status = sf.ResourceStatus{
 		State:  sf.ENABLED_RST,
 		Health: sf.OK_RH,
+	}
+
+	model.Links.Ports = make([]sf.OdataV4IdRef, len(ep.ports))
+	for idx, port := range ep.ports {
+		model.Links.Ports[idx].OdataId = fmt.Sprintf("/redfish/v1/Fabrics/%s/Switches/%s/Ports/%s", fabricId, port.swtch.id, port.id)
+
+		// Update the resource state with the state of any non-enabled port associated with this endpoint
+		if model.Status.State == sf.ENABLED_RST {
+			model.Status.State = port.getResourceState()
+		}
+		
+		// Update the resource health with the health of the worst port associated with this endpoint
+		portHealth := port.getResourceHealth()
+		if (model.Status.Health == sf.OK_RH && portHealth != sf.OK_RH) ||
+		   (model.Status.Health == sf.WARNING_RH && portHealth == sf.CRITICAL_RH) ||
+		   (portHealth == sf.CRITICAL_RH) {
+			model.Status.Health = portHealth
+		}
 	}
 
 	type Oem struct {

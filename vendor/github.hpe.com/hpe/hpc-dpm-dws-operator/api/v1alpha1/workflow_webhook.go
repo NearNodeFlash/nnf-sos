@@ -44,6 +44,13 @@ func (w *Workflow) Default() {
 	workflowlog.Info("default", "name", w.Name)
 
 	_ = checkDirectives(w, &MutatingRuleParser{})
+
+	if w.Status.Env == nil {
+		w.Status.Env = make(map[string]string)
+	}
+
+	w.Status.Env["DW_WORKFLOW_NAME"] = w.Name
+	w.Status.Env["DW_WORKFLOW_NAMESPACE"] = w.Namespace
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
