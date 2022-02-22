@@ -79,6 +79,46 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		}).ShouldNot(Succeed())
 	})
 
+	When("Using bad copy_in directives", func() {
+		It("Fails missing or malformed job-dw reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_INCORRECT/my-file.out",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			expected := &dwsv1alpha1.Workflow{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(), key, expected)
+				return err == nil && expected.Status.Ready
+			}).Should(BeTrue(), "waiting for ready after create")
+
+			Expect(expected.Status.Message).ShouldNot(BeEmpty())
+		})
+
+		PIt("Fails missing or malformed persistent-dw reference", func() {
+
+		})
+
+		It("Fails missing or malformed global lustre reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_in source=/lus/INCORRECT/my-file.in destination=$JOB_DW_test/my-file.out",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			expected := &dwsv1alpha1.Workflow{}
+			Eventually(func() bool {
+				err := k8sClient.Get(context.TODO(), key, expected)
+				return err == nil && expected.Status.Ready
+			}).Should(BeTrue(), "waiting for ready after create")
+
+			Expect(expected.Status.Message).ShouldNot(BeEmpty())
+		})
+	})
+
 	When("Using copy_in directives", func() {
 
 		JustBeforeEach(func() {

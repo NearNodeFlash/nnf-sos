@@ -209,6 +209,11 @@ func (r *NnfWorkflowReconciler) handleUnsupportedState(ctx context.Context, work
 func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 	log.Info(workflow.Status.State)
 
+	if err := r.validateWorkflow(ctx, workflow); err != nil {
+		workflow.Status.Message = err.Error()
+		return r.completeDriverState(ctx, workflow, driverID, log)
+	}
+
 	var dbList []v1.ObjectReference
 	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
 		_, directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, dwDirective, dwIndex, workflow, log)
@@ -254,15 +259,68 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 		}
 	}
 
-	// TODO: PROPOSAL STAGE - Validate that...
-	// Extract the job instance or persistent storage instance names
-	// For each copy_in directive
-	//   Make sure all $JOB_DW_ references point to storage instance names
-	//   Make sure all $PERSISTENT_DW references a new or existing create_persistent instance
-	//   Make sure source is prefixed with a valid lustre file system
-
 	// Complete state in the drivers
 	return r.completeDriverState(ctx, workflow, driverID, log)
+}
+
+// Validate the workflow and return any error found
+func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
+
+	for _, directive := range wf.Spec.DWDirectives {
+		if strings.HasPrefix(directive, "#DW copy_in") || strings.HasPrefix(directive, "#DW copy_out") {
+			if err := r.validateStagingDirective(ctx, wf, directive); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// Validate staging directives copy_in/copy_out directives
+func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
+	// Validate staging directive of the form...
+	//   #DW copy_in source=[SOURCE] destination=[DESTINATION]
+	//   #DW copy_out source=[SOURCE] destination=[DESTINATION]
+
+	// For each copy_in/copy_out directive
+	//   Make sure all $JOB_DW_ references point to job storage instance names
+	//   Make sure all $PERSISTENT_DW references a new or existing create_persistent instance
+	//   Otherwise, make sure source/destination is prefixed with a valid global lustre file system
+	validateStagingArgument := func(arg string) error {
+		name, _ := splitStagingArgumentIntoNameAndPath(arg)
+		if strings.HasPrefix(arg, "$JOB_DW_") {
+			if findDirectiveIndexByName(wf, name) == -1 {
+				return fmt.Errorf("Job storage instance '%s' not found", name)
+			}
+		} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
+			if findDirectiveIndexByName(wf, name) == -1 {
+				return fmt.Errorf("Persistent storage instance '%s' not found", name)
+				// TODO: This may be defined by another job; we need to query the list of NNF Persistent Storage Instances
+			}
+		} else {
+			if r.findLustreFileSystemForPath(ctx, arg, r.Log) == nil {
+				return fmt.Errorf("Global Lustre file system containing '%s' not found", arg)
+			}
+		}
+
+		return nil
+	}
+
+	args, err := dwdparse.BuildArgsMap(directive)
+	if err != nil {
+		return err
+	}
+
+	if err := validateStagingArgument(args["source"]); err != nil {
+		return err
+	}
+
+	if err := validateStagingArgument(args["destination"]); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, wf *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
@@ -545,29 +603,6 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 
 			// Split the source string into a file system name and a companion path
 			// i.e. $JOB_DW_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
-			splitIntoNameAndPath := func(s string) (string, string) {
-				var name = ""
-				if strings.HasPrefix(s, "$JOB_DW_") {
-					name = strings.SplitN(strings.Replace(s, "$JOB_DW_", "", 1), "/", 2)[0]
-				} else if strings.HasPrefix(s, "$PERSISTENT_DW_") {
-					name = strings.SplitN(strings.Replace(s, "$PERSISTENT_DW_", "", 1), "/", 2)[0]
-				}
-				var path = "/"
-				if strings.Count(s, "/") >= 1 {
-					path = "/" + strings.SplitN(s, "/", 2)[1]
-				}
-				return name, path
-			}
-
-			findDirectiveIndexByName := func(name string) int {
-				for idx, directive := range workflow.Spec.DWDirectives {
-					parameters, _ := dwdparse.BuildArgsMap(directive)
-					if parameters["name"] == name {
-						return idx
-					}
-				}
-				return -1
-			}
 
 			// copy_in needs to handle four cases
 			// 1. Lustre to JobStorageInstance                              #DW copy_in source=[path] destination=$JOB_DW_[name]/[path]
@@ -585,9 +620,9 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 
 			var parentDirectiveIndex = -1 // Directive index of parent storage #DW or -1 if not defined
 			var sourceInstance *corev1.ObjectReference
-			sourceName, sourcePath := splitIntoNameAndPath(parameters["source"])
+			sourceName, sourcePath := splitStagingArgumentIntoNameAndPath(parameters["source"])
 			if strings.HasPrefix(parameters["source"], "$JOB_DW_") {
-				parentDirectiveIndex = findDirectiveIndexByName(sourceName)
+				parentDirectiveIndex = findDirectiveIndexByName(workflow, sourceName)
 				sourceInstance = &corev1.ObjectReference{
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name(),
 					Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, parentDirectiveIndex),
@@ -610,9 +645,9 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			}
 
 			var destinationInstance *corev1.ObjectReference
-			destinationName, destinationPath := splitIntoNameAndPath(parameters["destination"])
+			destinationName, destinationPath := splitStagingArgumentIntoNameAndPath(parameters["destination"])
 			if strings.HasPrefix(parameters["destination"], "$JOB_DW_") {
-				parentDirectiveIndex = findDirectiveIndexByName(destinationName)
+				parentDirectiveIndex = findDirectiveIndexByName(workflow, destinationName)
 				destinationInstance = &corev1.ObjectReference{
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name(),
 					Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, parentDirectiveIndex),
