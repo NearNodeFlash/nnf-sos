@@ -44,10 +44,16 @@ const (
 	// prevent multiple accesses to a non-clustered file system
 	NnfAccessAnnotation = "nnf.cray.hpe.com/access"
 
-	// NnfOwnerNameLabel and NnfOwnerNamespaceLabel are labels applied to the ClientMount
-	// resources. These serve as the owner references since they are in a different namespace
+	// NnfOwnerNameLabel is the label containing the name for an NnfOwner.
+	// It is applied to the ClientMount resources.
+	// These serve as the owner references since they are in a different namespace
 	// than the NnfAccess
-	NnfOwnerNameLabel      = "nnf.cray.hpe.com/owner.name"
+	NnfOwnerNameLabel = "nnf.cray.hpe.com/owner.name"
+
+	// NnfOwnerNamespaceLabel is a label containing the namespace for an NnfOwner
+	// It is applied to the ClientMount resources.
+	// These serve as the owner references since they are in a different namespace
+	// than the NnfAccess
 	NnfOwnerNamespaceLabel = "nnf.cray.hpe.com/owner.namespace"
 )
 
@@ -298,7 +304,7 @@ func (r *NnfAccessReconciler) deleteClientMounts(ctx context.Context, access *nn
 	}
 
 	// Delete all the resources from the list
-	var firstError error = nil
+	var firstError error
 	for _, clientMount := range clientMountList.Items {
 		err := r.Delete(ctx, &clientMount)
 		if err != nil {

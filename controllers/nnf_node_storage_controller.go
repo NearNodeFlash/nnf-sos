@@ -36,7 +36,7 @@ const (
 	// finalizerNnfNodeStorage defines the key used in identifying the
 	// storage object as being owned by this NNF Storage Reconciler. This
 	// prevents the system from deleting the custom resource until the
-	// reconciler has finished in using the resource.
+	// reconciler has finished using the resource.
 	finalizerNnfNodeStorage = "nnf.cray.hpe.com/nnf_node_storage"
 
 	nnfNodeStorageResourceName = "nnf-node-storage"

@@ -103,6 +103,13 @@ func ResourceStatus(s sf.ResourceStatus) NnfResourceStatusType {
 		return ResourceStarting
 	case sf.ENABLED_RST:
 		return ResourceReady
+	case sf.DISABLED_RST:
+		return ResourceDisabled
+	case sf.ABSENT_RST:
+		return ResourceNotPresent
+	case sf.UNAVAILABLE_OFFLINE_RST:
+		return ResourceOffline
+
 	default:
 		return ResourceFailed
 	}

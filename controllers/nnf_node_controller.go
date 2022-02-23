@@ -214,9 +214,9 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 			})
 		}
 
-		if node.Status.Servers[idx].Status != nnfv1alpha1.ResourceStatus(storageService.Status) || node.Status.Servers[idx].Health != nnfv1alpha1.ResourceHealth(serverEndpoint.Status) {
+		if node.Status.Servers[idx].Status != nnfv1alpha1.ResourceStatus(serverEndpoint.Status) || node.Status.Servers[idx].Health != nnfv1alpha1.ResourceHealth(serverEndpoint.Status) {
 			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(storageService.Status)
+				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(serverEndpoint.Status)
 				s.Servers[idx].Health = nnfv1alpha1.ResourceHealth(serverEndpoint.Status)
 			})
 		}

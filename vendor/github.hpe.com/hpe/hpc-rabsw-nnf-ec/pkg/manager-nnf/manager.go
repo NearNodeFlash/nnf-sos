@@ -1054,18 +1054,6 @@ func (*StorageService) StorageServiceIdEndpointIdGet(storageServiceId, endpointI
 
 	model.OdataId = ep.OdataId() // Done twice so the fabric manager doesn't hijak the @odata.id
 
-	// Since the Fabric Manager is only aware of PCI-e Connectivity, if we have a different
-	// view of the endpoint from our ability to controller the server, record the state here.
-	if model.Status.State == sf.ENABLED_RST {
-		if ep.serverCtrl.Connected() {
-			ep.state = sf.ENABLED_RST
-		} else {
-			ep.state = sf.UNAVAILABLE_OFFLINE_RST
-		}
-
-		model.Status.State = ep.state
-	}
-
 	serverInfo := ep.serverCtrl.GetServerInfo()
 	model.Oem["LNetNids"] = serverInfo.LNetNids
 
