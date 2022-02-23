@@ -32,7 +32,7 @@ type StorageDevices struct {
 	WearLevel int64 `json:"wearLevel,omitempty"`
 
 	// Status of the individual device
-	// +kubebuilder:validation:Enum=Ready;NotReady;Failed;Missing
+	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
 }
 
@@ -42,7 +42,7 @@ type Node struct {
 	Name string `json:"name,omitempty"`
 
 	// Status of the node
-	// +kubebuilder:validation:Enum=Ready;NotReady;Failed;Missing
+	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
 }
 
@@ -79,7 +79,7 @@ type StorageData struct {
 	Capacity int64 `json:"capacity,omitempty"`
 
 	// Status is the overall status of the storage
-	// +kubebuilder:validation:Enum=Ready;NotReady;Failed;Missing
+	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
 }
 

@@ -130,7 +130,7 @@ if [[ "$CMD" == dp0-init ]]; then
     #Required for webhooks
     install_cert_manager
 
-        cat <<EOF | kubectl apply -f -
+    cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: ConfigMap
 metadata:

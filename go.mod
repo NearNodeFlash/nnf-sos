@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
-	github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220217151406-daca164ea515
+	github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220224215738-8a65e2760753
 	github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7
 	github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220223174621-52cd6d180876
 	k8s.io/api v0.23.4
