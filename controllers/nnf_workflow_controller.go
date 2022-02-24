@@ -196,6 +196,19 @@ func (r *NnfWorkflowReconciler) completeDriverState(ctx context.Context, workflo
 	return ctrl.Result{}, nil
 }
 
+func (r *NnfWorkflowReconciler) failDriverState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, message string) (ctrl.Result, error) {
+	for i := range workflow.Status.Drivers {
+		driver := &workflow.Status.Drivers[i]
+		if driver.DriverID == driverID && workflow.Status.State == driver.WatchState {
+			driver.Reason = "error"
+			driver.Message = message
+			break
+		}
+	}
+
+	return r.completeDriverState(ctx, workflow, driverID, r.Log)
+}
+
 func (r *NnfWorkflowReconciler) handleUnsupportedState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 	log.Info(workflow.Status.State)
 
@@ -210,8 +223,7 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 	log.Info(workflow.Status.State)
 
 	if err := r.validateWorkflow(ctx, workflow); err != nil {
-		workflow.Status.Message = err.Error()
-		return r.completeDriverState(ctx, workflow, driverID, log)
+		return r.failDriverState(ctx, workflow, driverID, err.Error())
 	}
 
 	var dbList []v1.ObjectReference

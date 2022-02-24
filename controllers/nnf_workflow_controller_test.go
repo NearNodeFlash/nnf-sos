@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/google/uuid"
@@ -80,6 +81,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	})
 
 	When("Using bad copy_in directives", func() {
+
+		getErroredDriverStatus := func(workflow *dwsv1alpha1.Workflow) *dwsv1alpha1.WorkflowDriverStatus {
+			driverID := os.Getenv("DWS_DRIVER_ID")
+			for _, driver := range workflow.Status.Drivers {
+				if driver.DriverID == driverID {
+					if driver.Reason == "error" {
+						return &driver
+					}
+				}
+			}
+			return nil
+		}
+
 		It("Fails missing or malformed job-dw reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW jobdw name=test type=lustre capacity=1GiB",
@@ -88,13 +102,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			expected := &dwsv1alpha1.Workflow{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), key, expected)
-				return err == nil && expected.Status.Ready
-			}).Should(BeTrue(), "waiting for ready after create")
+			Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+				expected := &dwsv1alpha1.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
 
-			Expect(expected.Status.Message).ShouldNot(BeEmpty())
 		})
 
 		PIt("Fails missing or malformed persistent-dw reference", func() {
@@ -109,13 +122,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			expected := &dwsv1alpha1.Workflow{}
-			Eventually(func() bool {
-				err := k8sClient.Get(context.TODO(), key, expected)
-				return err == nil && expected.Status.Ready
-			}).Should(BeTrue(), "waiting for ready after create")
-
-			Expect(expected.Status.Message).ShouldNot(BeEmpty())
+			Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+				expected := &dwsv1alpha1.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
 		})
 	})
 
