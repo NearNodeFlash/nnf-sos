@@ -132,8 +132,8 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	//       until the state is finished.
 	//       Once the state is finished, we can update the drivers in 1 spot. Right now, the drivers are updated
 	//       at the end of each state handler.
-	switch workflow.Status.State {
 
+	switch workflow.Status.State {
 	case dwsv1alpha1.StateProposal.String():
 		return r.handleProposalState(ctx, workflow, driverID, log)
 	case dwsv1alpha1.StateSetup.String():
@@ -144,6 +144,8 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.handlePreRunState(ctx, workflow, driverID, log)
 	case dwsv1alpha1.StatePostRun.String():
 		return r.handlePostRunState(ctx, workflow, driverID, log)
+	case dwsv1alpha1.StateDataOut.String():
+		return r.handleDataOutState(ctx, workflow, driverID, log)
 	case dwsv1alpha1.StateTeardown.String():
 		return r.handleTeardownState(ctx, workflow, driverID, log)
 	default:
@@ -597,13 +599,21 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, wf *dwsv1a
 }
 
 func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+	return r.handleDataInOutState(ctx, workflow, driverID, log)
+}
+
+func (r *NnfWorkflowReconciler) handleDataOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
+	return r.handleDataInOutState(ctx, workflow, driverID, log)
+}
+
+func (r *NnfWorkflowReconciler) handleDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
 	log.Info(workflow.Status.State)
 
-	hasCopyInDirective := false
+	hasCopyInOutDirective := false
 	copyInDirectivesFinished := true
 	for directiveIdx, directive := range workflow.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW copy_in") {
-			hasCopyInDirective = true
+		if strings.HasPrefix(directive, "#DW copy_in") || strings.HasPrefix(directive, "#DW copy_out") {
+			hasCopyInOutDirective = true
 			parameters, err := dwdparse.BuildArgsMap(directive)
 			if err != nil {
 				workflow.Status.Message = fmt.Sprintf("Stage %s failed: %v", workflow.Spec.DesiredState, err)
@@ -621,6 +631,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			// 2. Lustre to PersistentStorageInstance                       #DW copy_in source=[path] destination=$PERSISTENT_DW_[name]/[path]
 			// 3. PersistentStorageInstance to JobStorageInstance           #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$JOB_DW_[name]/[path]
 			// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$PERSISTENT_DW_[name]/[path]
+			// copy_out is the same, but typically source and destination reversed
 
 			name := fmt.Sprintf("%s-%d", workflow.Name, directiveIdx) // TODO: Should this move to a MakeName()?
 			dm := &nnfv1alpha1.NnfDataMovement{
@@ -722,7 +733,7 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 			case controllerutil.OperationResultCreated, controllerutil.OperationResultUpdated:
 				return ctrl.Result{Requeue: true}, nil
 			case controllerutil.OperationResultNone:
-				// The copy_in directive was already handled; retrieve the data-movement request and check
+				// The copy_in/copy_out directive was already handled; retrieve the data-movement request and check
 				// if it has finished
 				dm := &nnfv1alpha1.NnfDataMovement{}
 				if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: workflow.Namespace}, dm); err != nil {
@@ -743,10 +754,10 @@ func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow 
 				}
 			}
 
-		} // if strings.HasPrefix(directive, "#DW copy_in")
+		} // if strings.HasPrefix(directive, "#DW copy_in") || strings.HasPrefix(directive, "#DW copy_out")
 	}
 
-	if !hasCopyInDirective {
+	if !hasCopyInOutDirective {
 		return r.completeDriverState(ctx, workflow, driverID, log)
 	}
 
