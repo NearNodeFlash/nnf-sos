@@ -72,22 +72,45 @@ type FileSystem struct {
 	mountpoint string
 }
 
+type FileSystemError struct {
+	command string
+	stdout  bytes.Buffer
+	stderr  bytes.Buffer
+	err     error
+}
+
+func (e *FileSystemError) Error() string {
+	errorString := fmt.Sprintf("Error Running Command '%s'", e.command)
+	if e.stdout.Len() > 0 {
+		errorString += fmt.Sprintf(", StdOut: %s", e.stdout.String())
+	}
+	if e.stderr.Len() > 0 {
+		errorString += fmt.Sprintf(", StdErr: %s", e.stderr.String())
+	}
+	if e.err != nil {
+		errorString += fmt.Sprintf(", Internal Error: %s", e.err)
+	}
+	return errorString
+}
+
+func (e *FileSystemError) Unwrap() error {
+	return e.err
+}
+
 func (*FileSystem) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
-		// Capture stdout and stderr
-		// Return the byte array of either stdout or stderr depending on error result
-		var out bytes.Buffer
-		var stderr bytes.Buffer
+
+		fsError := FileSystemError{}
 		shellCmd := exec.Command("bash", "-c", cmd)
-		shellCmd.Stdout = &out
-		shellCmd.Stderr = &stderr
+		shellCmd.Stdout = &fsError.stdout
+		shellCmd.Stderr = &fsError.stderr
 		err := shellCmd.Run()
 		if err != nil {
 			// Command failed, return stderr
-			return stderr.Bytes(), err
+			return nil, &fsError
 		}
 		// Command success, return stdout
-		return out.Bytes(), err
+		return fsError.stdout.Bytes(), nil
 	})
 }
 

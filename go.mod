@@ -13,7 +13,7 @@ require (
 	github.com/onsi/gomega v1.18.1
 	github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220224215738-8a65e2760753
 	github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7
-	github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220223174621-52cd6d180876
+	github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220224221647-3adb22fcc1d6
 	k8s.io/api v0.23.4
 	k8s.io/apimachinery v0.23.4
 	k8s.io/client-go v0.23.4
