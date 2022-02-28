@@ -1,0 +1,6 @@
+apiVersion: nnf.cray.com/v1alpha1
+kind: NnfPersistentStorageInstance
+metadata:
+  name: nnfpersistentstorageinstance-sample
+spec:
+  # Add fields here

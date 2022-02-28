@@ -67,4 +67,13 @@ resources:
   domain: cray.com
   group: nnf
   kind: NnfAccess
+  version: ""
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.com
+  group: nnf
+  kind: NnfPersistentStorageInstance
+  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  version: v1alpha1
 version: "3"
