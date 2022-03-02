@@ -22,12 +22,6 @@ type NnfDataMovementSpec struct {
 
 	// Destination describes the destination of the data movement operation
 	Destination NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
-
-	// Access references the access elements that are needed to perform data movement.
-	Access corev1.ObjectReference `json:"access,omitempty"`
-
-	// Storage references the storage elements that will perform data movement
-	Storage corev1.ObjectReference `json:"storage,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
@@ -40,6 +34,10 @@ type NnfDataMovementSpecSourceDestination struct {
 	// instance describes the type of storage as well as other attributes like its location
 	// within the kubernetes cluster
 	StorageInstance *corev1.ObjectReference `json:"storageInstance,omitempty"`
+
+	// Access references the NNF Access element that is needed to perform data movement. This provides
+	// details as to the mount path and backing storage across NNF Nodes.
+	Access *corev1.ObjectReference `json:"access,omitempty"`
 }
 
 // DataMovementStatus defines the observed state of DataMovement

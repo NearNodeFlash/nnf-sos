@@ -146,7 +146,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Create a list of names of the client nodes. This is pulled from either
-	// the Computes resource of the NnfStorage resource
+	// the Computes resource or the NnfStorage resource
 	clientList, err := r.getClientList(ctx, access)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -467,6 +467,13 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			return nil, err
 		}
 
+		storage := &dwsv1alpha1.Storage{}
+		if access.Spec.Target == "all" {
+			if err := r.Get(ctx, types.NamespacedName{Name: nnfNodeStorage.Namespace, Namespace: "default"}, storage); err != nil {
+				return nil, err
+			}
+		}
+
 		// Loop through each allocation to pull out the NVMe information and build the
 		// mount information
 		for i := 0; i < nnfNodeStorage.Spec.Count; i++ {
@@ -475,7 +482,11 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			// Bogus NVMe namespace ID for now
 			mountInfo.Device.Type = "nvme"
 			mountInfo.Device.NvmeNamespaceIds = []string{"12345", "54321"}
+
 			if access.Spec.Target == "all" {
+				if i < len(storage.Data.Access.Computes) {
+					mountInfo.Compute = storage.Data.Access.Computes[i].Name
+				}
 				mountInfo.MountPath = fmt.Sprintf("%s/%d", access.Spec.MountPathPrefix, i)
 			} else {
 				mountInfo.MountPath = access.Spec.MountPath

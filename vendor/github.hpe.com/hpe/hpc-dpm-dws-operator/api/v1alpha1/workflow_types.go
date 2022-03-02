@@ -11,6 +11,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// Workflow Name Label is defined for resources that relate to the name of a DWS Workflow
+	WorkflowNameLabel = "dws.cray.hpe.com/workflow.name"
+
+	// Workflow Namespace Label is defined for resources that relate to the namespace of a DWS Workflow
+	WorkflowNamespaceLabel = "dws.cray.hpe.com/workflow.namespace"
+)
+
 // WorkflowState is the enumeration of The state of the workflow
 type WorkflowState int
 

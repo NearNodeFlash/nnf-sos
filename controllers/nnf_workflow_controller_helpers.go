@@ -19,6 +19,7 @@ func findDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
 }
 
 // Returns a <name, path> pair for the given staging argument (typically source or destination)
+// i.e. $JOB_DW_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
 func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 	var name = ""

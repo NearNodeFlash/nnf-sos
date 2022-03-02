@@ -41,6 +41,9 @@ type ClientMountInfo struct {
 	// mount type
 	// +kubebuilder:validation:Enum=lustre;xfs;gfs2
 	Type string `json:"type"`
+
+	// Compute is the name of the compute node which shares this mount if present. Empty if not shared.
+	Compute string `json:"compute,omitempty"`
 }
 
 // ClientMountSpec defines the desired state of ClientMount
