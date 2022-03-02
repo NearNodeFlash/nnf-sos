@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	// Workflow Name Label is defined for resources that relate to the name of a DWS Workflow
+	// WorkflowNameLabel is defined for resources that relate to the name of a DWS Workflow
 	WorkflowNameLabel = "dws.cray.hpe.com/workflow.name"
 
-	// Workflow Namespace Label is defined for resources that relate to the namespace of a DWS Workflow
+	// WorkflowNamespaceLabel is defined for resources that relate to the namespace of a DWS Workflow
 	WorkflowNamespaceLabel = "dws.cray.hpe.com/workflow.namespace"
 )
 

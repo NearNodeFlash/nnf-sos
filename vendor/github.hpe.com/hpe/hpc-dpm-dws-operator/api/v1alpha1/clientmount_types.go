@@ -27,7 +27,7 @@ type ClientMountDevice struct {
 	NvmeNamespaceIds []string `json:"nvmeNamespaceIds,omitempty"`
 
 	// Lustre specific device information
-	Lustre ClientMountLustre `json:"lustre,omitempty"`
+	Lustre *ClientMountLustre `json:"lustre,omitempty"`
 }
 
 // ClientMountInfo defines a single mount

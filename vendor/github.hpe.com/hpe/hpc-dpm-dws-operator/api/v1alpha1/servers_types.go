@@ -59,6 +59,9 @@ type ServersStatusAllocationSet struct {
 	Storage []ServersStatusStorage `json:"storage"`
 }
 
+// ServersStatus specifies whether the Servers has achieved the
+// ready condition along with the allocationSets that are managed
+// by the Servers resource.
 type ServersStatus struct {
 	Ready          bool                         `json:"ready"`
 	LastUpdate     *metav1.MicroTime            `json:"lastUpdate,omitempty"`

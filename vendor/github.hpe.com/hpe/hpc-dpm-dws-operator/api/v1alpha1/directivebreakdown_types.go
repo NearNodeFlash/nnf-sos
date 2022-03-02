@@ -21,6 +21,7 @@ type DWRecord struct {
 	DWDirective string `json:"dwDirective"`
 }
 
+// AllocationSetColocationConstraint specifies how to colocate storage resources.
 // A colocation constraint specifies how the location(s) of an allocation set should be
 // selected with relation to other allocation sets. Locations for allocation sets with the
 // same colocation key should be picked according to the colocation type.
@@ -34,6 +35,8 @@ type AllocationSetColocationConstraint struct {
 	Key string `json:"key"`
 }
 
+// AllocationSetConstraints specifies the constraints required for colocation of Storage
+// resources
 type AllocationSetConstraints struct {
 	// Labels is a list of labels is used to filter the Storage resources
 	Labels []string `json:"labels,omitempty"`
