@@ -206,9 +206,19 @@ if [[ "$CMD" == "busybox" ]]; then
     kubectl run -it --rm --restart=Never busybox --image=radial/busyboxplus:curl sh
 fi
 
-if [[ "$CMD" == "docker-build" ]] || [[ "$CMD" == "kind-push" ]] || [[ "$CMD" == "deploy" ]]; then
+if [[ "$CMD" == "docker-build" ]] || [[ "$CMD" == "kind-push" ]]; then
     for PKG in "${SUB_PKGS[@]}"; do
         ( cd "$PKG" && make "$CMD" )
+    done
+fi
+
+if [[ "$CMD" == "deploy" ]]; then
+    for PKG in "${SUB_PKGS[@]}"; do
+	if [[ "$2" == "" ]]; then
+	        ( cd "$PKG" && make "$CMD" )
+	else
+	        ( cd "$PKG" && make "$CMD" "$2")
+	fi
     done
 fi
 

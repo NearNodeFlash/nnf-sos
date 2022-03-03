@@ -435,6 +435,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		mountInfo.Type = allocationSet.FileSystemType
 		mountInfo.MountPath = access.Spec.MountPath
 		mountInfo.Device.Type = "lustre"
+		mountInfo.Device.Lustre = &dwsv1alpha1.ClientMountLustre{}
 		mountInfo.Device.Lustre.FileSystemName = allocationSet.FileSystemName
 		mountInfo.Device.Lustre.MgsAddresses = []string{nnfStorage.Status.MgsNode}
 

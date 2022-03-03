@@ -1,0 +1,6 @@
+bases:
+- ../top
+
+patchesStrategicMerge:
+# Arguments for the controller manager that are specific to kind
+- manager_environment_patch.yaml

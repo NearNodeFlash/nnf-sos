@@ -81,7 +81,7 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 # To use the 'dp0' overlay:
 #   export KUBECONFIG=/my/dp0/kubeconfig.file
 #   make deploy OVERLAY=dp0
-OVERLAY ?= top
+OVERLAY ?= kind
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))

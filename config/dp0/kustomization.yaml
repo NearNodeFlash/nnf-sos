@@ -4,3 +4,5 @@ bases:
 patchesStrategicMerge:
 # Let the node-manager daemonset mount host dirs for lustre tools and libs.
 - manager_volumes_patch.yaml
+# Arguments for the controller manager that are specific to dp0
+- manager_environment_patch.yaml
