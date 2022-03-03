@@ -27,6 +27,24 @@ spec:
         type: "string"
         isRequired: false
         isValueRequired: true
+  - command: "create_persistent"
+    watchStates: proposal,setup
+    ruleDefs:
+      - key: "type"
+        type: "string"
+        pattern: "^(raw|xfs|lustre)$"
+        isRequired: true
+        isValueRequired: true
+      - key: "capacity"
+        type: "string"
+        pattern: "^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+        isRequired: true
+        isValueRequired: true
+      - key: "name"
+        type: "string"
+        pattern: "^([A-Za-z0-9\\-_]+)$"
+        isRequired: true
+        isValueRequired: true
   - command: "copy_in"
     watchStates: data_in
     ruleDefs:

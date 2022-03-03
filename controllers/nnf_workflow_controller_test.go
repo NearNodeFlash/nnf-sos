@@ -35,7 +35,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	BeforeEach(func() {
 		key = types.NamespacedName{
-			Name:      "nnf-workflow",
+			Name:      "nnf-workflow-" + uuid.NewString(),
 			Namespace: corev1.NamespaceDefault,
 		}
 
@@ -110,8 +110,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		})
 
-		PIt("Fails missing or malformed persistent-dw reference", func() {
+		It("Fails missing or malformed persistent-dw reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW create_persistent name=test type=lustre capacity=1GiB",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_INCORRECT/my-file.out",
+			}
 
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+				expected := &dwsv1alpha1.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
 		})
 
 		It("Fails missing or malformed global lustre reference", func() {
@@ -190,7 +201,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				By("creates valid job storage instance")
 				storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      nnfv1alpha1.NnfJobStorageInstanceMakeName(workflow.Spec.JobID, workflow.Spec.WLMID, 0),
+						Name:      "test",
 						Namespace: key.Namespace,
 					},
 				}
@@ -247,19 +258,82 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
 				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind": Equal(reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name()),
-						"Name": HaveSuffix("-0"), // Should reference the #DW that generated the job storage instance
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name()),
+						"Name":      Equal(storageInstance.Name),
+						"Namespace": Equal(storageInstance.Namespace),
 					}))
 			})
 		})
 
-		PWhen("using $PERSISTENT_DW_ references", func() {
+		When("using $PERSISTENT_DW_ references", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
-					"#DW create_persistent TODO",
-					"#DW copy_in source=/lus/maui/ destination=$PERSISTENT_DW_TODO",
+					"#DW create_persistent type=lustre capacity=1TiB name=my-persistent-storage",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_my-persistent-storage/my-persistent-file.out",
 				}
 			})
+
+			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
+			// placed in the "nnf-system" namespace so it must be present.
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "nnf-system",
+				},
+			}
+
+			BeforeEach(func() {
+				Expect(k8sClient.Create(context.TODO(), ns)).Should(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Delete(context.TODO(), ns)).Should(Succeed())
+			})
+
+			It("transitions to data movement", func() {
+				storageInstance := &nnfv1alpha1.NnfPersistentStorageInstance{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-persistent-storage",
+						Namespace: "nnf-system",
+					},
+				}
+
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageInstance), storageInstance)
+				}).Should(Succeed(), "get persistent storage instance")
+
+				Eventually(func() error {
+					Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateDataIn.String()
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "transition desired state to data_in")
+
+				dm := &nnfv1alpha1.NnfDataMovement{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, 1),
+						Namespace: workflow.Namespace,
+					},
+				}
+
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
+				}).Should(Succeed(), "data movement resource created")
+
+				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
+				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Name":      Equal(lustre.ObjectMeta.Name),
+						"Namespace": Equal(lustre.Namespace),
+					}))
+
+				Expect(dm.Spec.Destination.Path).To(Equal("/my-persistent-file.out"))
+				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfPersistentStorageInstance{}).Name()),
+						"Name":      Equal(storageInstance.Name),
+						"Namespace": Equal(storageInstance.Namespace),
+					}))
+			})
 		})
-	})
+	}) // When("Using copy_in directives", func()
 })

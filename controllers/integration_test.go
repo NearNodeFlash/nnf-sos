@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,10 +27,10 @@ var _ = Describe("Integration Test", func() {
 		unsupported       = false
 	)
 	wfDirectives := []string{
-		"#DW jobdw name=test%d type=%s capacity=%dGiB",
-		"#DW jobdw name=test%d type=%s capacity=%dGiB",
-		"#DW jobdw name=test%d type=%s capacity=%dGiB",
-		"#DW jobdw name=test%d type=%s capacity=%dGiB", // Add more if you want more directivebreakdowns and servers
+		"#DW jobdw name=%s type=%s capacity=1GiB",
+		"#DW jobdw name=%s type=%s capacity=1GiB",
+		"#DW jobdw name=%s type=%s capacity=1GiB",
+		"#DW jobdw name=%s type=%s capacity=1GiB", // Add more if you want more directivebreakdowns and servers
 	}
 
 	const timeout = time.Second * 10
@@ -55,13 +56,13 @@ var _ = Describe("Integration Test", func() {
 	// Spin through the supported file systems
 	for index := range filesystems {
 		f := filesystems[index] // Ensure closure has the current value from the loop.
-		workflowName := f.fsName + "-" + strconv.Itoa(int(time.Now().UnixMicro()))
+		workflowName := f.fsName + "-" + uuid.NewString()
 
 		// Initialize dwDirectives to unique names and sizes
 		var dwDirectives []string
 		for i := range wfDirectives {
-			m := (i + 1) * 10
-			dwDirectives = append(dwDirectives, fmt.Sprintf(wfDirectives[i], m, f.fsName, m))
+			name := fmt.Sprintf("%d-%s", i, workflowName)
+			dwDirectives = append(dwDirectives, fmt.Sprintf(wfDirectives[i], name, f.fsName))
 		}
 
 		Describe(fmt.Sprintf("Creating workflow %s for file system %s", workflowName, f.fsName), func() {

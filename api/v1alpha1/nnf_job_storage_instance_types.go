@@ -5,8 +5,6 @@ Copyright 2021 Hewlett Packard Enterprise Development LP
 package v1alpha1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -59,9 +57,4 @@ type NnfJobStorageInstanceList struct {
 
 func init() {
 	SchemeBuilder.Register(&NnfJobStorageInstance{}, &NnfJobStorageInstanceList{})
-}
-
-// NnfJobStorageInstanceMakeName generate the formatted string for the name
-func NnfJobStorageInstanceMakeName(jobID int, workflowID string, dwIndex int) string {
-	return fmt.Sprintf("job-%d-%s-%d", jobID, workflowID, dwIndex)
 }

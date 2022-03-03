@@ -256,28 +256,6 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
-  - nnfjobstorageinstances/finalizers
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfjobstorageinstances/status
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfnodes
   verbs:
   - create
@@ -319,6 +297,17 @@ rules:
   - nnfnodestorages/finalizers
   verbs:
   - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfpersistentstorageinstances
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
