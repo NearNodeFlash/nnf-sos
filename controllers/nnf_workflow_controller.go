@@ -763,6 +763,7 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 			} else if result != controllerutil.OperationResultNone {
 				return storage, access, path, &ctrl.Result{Requeue: true}, nil
 			}
+
 		} else if lustre := r.findLustreFileSystemForPath(ctx, param, r.Log); lustre != nil {
 			storage = &corev1.ObjectReference{
 				Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
@@ -788,6 +789,19 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 		return ctrl.Result{}, err
 	} else if result != nil {
 		return *result, nil
+	}
+
+	// Wait for accesses to go ready
+	for _, access := range []*nnfv1alpha1.NnfAccess{sourceAccess, destinationAccess} {
+		if access != nil {
+			if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			if access.Status.Ready == false {
+				return ctrl.Result{}, nil
+			}
+		}
 	}
 
 	accessToObjectReference := func(access *nnfv1alpha1.NnfAccess) *corev1.ObjectReference {

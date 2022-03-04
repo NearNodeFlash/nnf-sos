@@ -248,6 +248,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
+				Expect(dm.Spec.Source.StorageInstance).ToNot(BeNil())
 				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
@@ -256,12 +257,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
+				Expect(dm.Spec.Destination.StorageInstance).ToNot(BeNil())
 				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name()),
 						"Name":      Equal(storageInstance.Name),
 						"Namespace": Equal(storageInstance.Namespace),
 					}))
+
+				By("expect NnfAccess to be ready")
+				access := &nnfv1alpha1.NnfAccess{}
+				Expect(dm.Spec.Destination.Access).ToNot(BeNil())
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dm.Spec.Destination.Access.Name, Namespace: dm.Spec.Destination.Access.Namespace}, access)).To(Succeed())
+				Expect(access.Status.Ready).To(BeTrue())
 			})
 		})
 
@@ -319,6 +327,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(Succeed(), "data movement resource created")
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
+				Expect(dm.Spec.Source.StorageInstance).ToNot(BeNil())
 				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
@@ -327,12 +336,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-persistent-file.out"))
+				Expect(dm.Spec.Destination.StorageInstance).ToNot(BeNil())
 				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfPersistentStorageInstance{}).Name()),
 						"Name":      Equal(storageInstance.Name),
 						"Namespace": Equal(storageInstance.Namespace),
 					}))
+
+				By("expect NnfAccess to be ready")
+				access := &nnfv1alpha1.NnfAccess{}
+				Expect(dm.Spec.Destination.Access).ToNot(BeNil())
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dm.Spec.Destination.Access.Name, Namespace: dm.Spec.Destination.Access.Namespace}, access)).To(Succeed())
+				Expect(access.Status.Ready).To(BeTrue())
 			})
 		})
 	}) // When("Using copy_in directives", func()
