@@ -31,6 +31,8 @@ import (
 	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 
+	_ "github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases"
+	_ "github.hpe.com/hpe/hpc-dpm-dws-operator/config/webhook"
 	_ "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases"
 
 	dwsctrls "github.hpe.com/hpe/hpc-dpm-dws-operator/controllers"
@@ -87,12 +89,12 @@ var _ = BeforeSuite(func() {
 
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: []string{
-			filepath.Join("..", ".dws-operator", "config", "webhook"),
+			filepath.Join("..", "vendor", "github.hpe.com", "hpe", "hpc-dpm-dws-operator", "config", "webhook"),
 			filepath.Join("..", "config", "dws")}},
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", ".dws-operator", "config", "crd", "bases"),
+			filepath.Join("..", "vendor", "github.hpe.com", "hpe", "hpc-dpm-dws-operator", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.hpe.com", "hpe", "hpc-rabsw-lustre-fs-operator", "config", "crd", "bases"),
 		},
 		AttachControlPlaneOutput: true,

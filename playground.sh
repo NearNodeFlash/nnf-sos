@@ -23,7 +23,7 @@ install_cert_manager ()
 }
 
 SUB_PKGS=(
-    ".dws-operator"
+#    ".dws-operator"
     "."
 )
 

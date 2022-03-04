@@ -1,0 +1,150 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: clientmounts.dws.cray.hpe.com
+spec:
+  group: dws.cray.hpe.com
+  names:
+    kind: ClientMount
+    listKind: ClientMountList
+    plural: clientmounts
+    singular: clientmount
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClientMount is the Schema for the clientmounts API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClientMountSpec defines the desired state of ClientMount
+            properties:
+              desiredState:
+                description: Desired state of the mount point
+                enum:
+                - mounted
+                - unmounted
+                type: string
+              mounts:
+                description: List of mounts to create on this client
+                items:
+                  description: ClientMountInfo defines a single mount
+                  properties:
+                    compute:
+                      description: Compute is the name of the compute node which shares
+                        this mount if present. Empty if not shared.
+                      type: string
+                    device:
+                      description: Description of the device to mount
+                      properties:
+                        lustre:
+                          description: Lustre specific device information
+                          properties:
+                            fileSystemName:
+                              description: Lustre fsname
+                              type: string
+                            mgsAddresses:
+                              description: List of mgsAddresses of the form [address]@[lnet]
+                              items:
+                                type: string
+                              minItems: 1
+                              type: array
+                          required:
+                          - fileSystemName
+                          - mgsAddresses
+                          type: object
+                        nvmeNamespaceIds:
+                          description: NVMe specific device information
+                          items:
+                            type: string
+                          type: array
+                        type:
+                          enum:
+                          - lustre
+                          - nvme
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    mountPath:
+                      description: Client path for mount target
+                      type: string
+                    type:
+                      description: mount type
+                      enum:
+                      - lustre
+                      - xfs
+                      - gfs2
+                      type: string
+                  required:
+                  - device
+                  - mountPath
+                  - type
+                  type: object
+                minItems: 1
+                type: array
+              node:
+                description: Name of the client node that is targeted by this mount
+                type: string
+            required:
+            - desiredState
+            - mounts
+            - node
+            type: object
+          status:
+            description: ClientMountStatus defines the observed state of ClientMount
+            properties:
+              mounts:
+                description: List of mount statuses
+                items:
+                  description: ClientMountInfoStatus is the status for a single mount
+                    point
+                  properties:
+                    message:
+                      description: Error message of first error
+                      type: string
+                    ready:
+                      description: Ready indicates whether status.state has been achieved
+                      type: boolean
+                    state:
+                      description: Current state
+                      enum:
+                      - mounted
+                      - unmounted
+                      type: string
+                  required:
+                  - ready
+                  - state
+                  type: object
+                type: array
+            required:
+            - mounts
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

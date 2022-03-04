@@ -69,7 +69,6 @@ ENTRYPOINT ["/bin/sh"]
 FROM builder as testing
 WORKDIR /workspace
 
-COPY .dws-operator/ .dws-operator/
 COPY hack/ hack/
 COPY initiateContainerTest.sh .
 COPY Makefile .

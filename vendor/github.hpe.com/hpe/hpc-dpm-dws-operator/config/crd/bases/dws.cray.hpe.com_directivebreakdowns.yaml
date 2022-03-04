@@ -1,0 +1,216 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: directivebreakdowns.dws.cray.hpe.com
+spec:
+  group: dws.cray.hpe.com
+  names:
+    kind: DirectiveBreakdown
+    listKind: DirectiveBreakdownList
+    plural: directivebreakdowns
+    singular: directivebreakdown
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DirectiveBreakdown is the Schema for the directivebreakdown API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DirectiveBreakdownSpec defines the storage information WLM
+              needs to select NNF Nodes and request storage from the selected nodes
+            properties:
+              dwRecord:
+                description: DW is the Datawarp Directive Record
+                properties:
+                  dwDirective:
+                    description: 'DWDirective is a copy of the #DW for this breakdown'
+                    type: string
+                  dwDirectiveIndex:
+                    description: 'DWDirectiveIndex is the index of the #DW directive
+                      in the workflow'
+                    type: integer
+                required:
+                - dwDirective
+                - dwDirectiveIndex
+                type: object
+              lifetime:
+                description: Lifetime is the duration of the allocation
+                enum:
+                - job
+                - persistent
+                type: string
+              name:
+                description: Name is the identifier for this directive breakdown
+                type: string
+              type:
+                description: 'Type is the type specified in the #DW directive'
+                enum:
+                - raw
+                - xfs
+                - lustre
+                type: string
+            required:
+            - dwRecord
+            - lifetime
+            - name
+            - type
+            type: object
+          status:
+            description: DirectiveBreakdownStatus defines the storage information
+              WLM needs to select NNF Nodes and request storage from the selected
+              nodes
+            properties:
+              allocationSet:
+                description: 'AllocationSets lists the allocations required to fulfill
+                  the #DW Directive'
+                items:
+                  description: AllocationSetComponents define the details of the allocation
+                  properties:
+                    allocationStrategy:
+                      description: AllocationStrategy specifies the way to determine
+                        the number of allocations of the MinimumCapacity required
+                        for this AllocationSet.
+                      enum:
+                      - AllocatePerCompute
+                      - AllocateAcrossServers
+                      - AllocateSingleServer
+                      - AssignPerCompute
+                      - AssignAcrossServers
+                      type: string
+                    constraints:
+                      description: Constraint is an additional requirement pertaining
+                        to the suitability of Storage resources that may be used for
+                        this AllocationSet
+                      properties:
+                        colocation:
+                          description: Colocation is a list of constraints for which
+                            Storage resources to pick in relation to Storage resources
+                            for other allocation sets.
+                          items:
+                            description: AllocationSetColocationConstraint specifies
+                              how to colocate storage resources. A colocation constraint
+                              specifies how the location(s) of an allocation set should
+                              be selected with relation to other allocation sets.
+                              Locations for allocation sets with the same colocation
+                              key should be picked according to the colocation type.
+                            properties:
+                              key:
+                                description: Key shared by all the allocation sets
+                                  that have their location constrained in relation
+                                  to each other.
+                                type: string
+                              type:
+                                description: Type of colocation constraint
+                                enum:
+                                - exclusive
+                                type: string
+                            required:
+                            - key
+                            - type
+                            type: object
+                          type: array
+                        labels:
+                          description: Labels is a list of labels is used to filter
+                            the Storage resources
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    label:
+                      description: Label is an identifier used to communicate from
+                        the DWS interface to internal interfaces the filesystem use
+                        of this AllocationSet.
+                      enum:
+                      - raw
+                      - xfs
+                      - gfs2
+                      - mgt
+                      - mdt
+                      - ost
+                      type: string
+                    minimumCapacity:
+                      description: MinimumCapacity is the minumum number of bytes
+                        required to meet the needs of the filesystem that will use
+                        the storage.
+                      format: int64
+                      minimum: 1
+                      type: integer
+                  required:
+                  - allocationStrategy
+                  - label
+                  - minimumCapacity
+                  type: object
+                type: array
+              ready:
+                description: Ready indicates whether AllocationSets have been generated
+                  (true) or not (false)
+                type: boolean
+              servers:
+                description: Servers is a reference to the Server CR
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string should contain a valid JSON/Go
+                      field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like: "spec.containers{name}"
+                      (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with index 2 in this pod). This syntax is chosen
+                      only to have some well-defined way of referencing a part of
+                      an object. TODO: this design is not final and this field is
+                      subject to change in the future.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+            required:
+            - allocationSet
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
