@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -226,7 +227,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 
 	// Create a Storage Group if none is currently present. Recall that a Storage Group
 	// is a mapping from the Storage Pool to a Server Endpoint. Establishing a Storage
-	// Group makes block storage available on the server, which itself is a precursor to
+	// Group makes block storage available on the server, which itself is a prerequisite to
 	// any file system built on top of the block storage.
 	if len(allocationStatus.StorageGroup.ID) == 0 {
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
@@ -235,30 +236,58 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 		})
 	}
 
-	storageGroupID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, os.Getenv("RABBIT_NODE"))
-	if err != nil {
-		statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
-
-		return &ctrl.Result{Requeue: true}, nil
+	// Retrieve the collection of endpoints for us to map
+	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
+	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
+		log.Error(err, "Failed to retrieve Storage Service Endpoints")
+		return &ctrl.Result{}, err
 	}
 
-	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
-	if len(allocationStatus.StorageGroup.ID) == 0 {
-		log.Info("Created storage group", "Id", sg.Id)
+	// Iterate over the server endpoints to ensure we've reflected
+	// the status of each server (Compute & Rabbit)
+	for idx := range serverEndpointCollection.Members {
+
+		serverEndpoint := serverEndpointCollection.Members[idx]
+		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
+		endPoint, err := r.getEndpoint(ss, id)
+		if err != nil {
+			log.Error(err, "Failed to get endpoint", "id", id)
+			continue // Check all endpoints
+		}
+
+		// Skip the endpoints that are not ready
+		if nnfv1alpha1.StaticResourceStatus(endPoint.Status) != nnfv1alpha1.ResourceReady {
+			continue
+		}
+
+		storageGroupID := fmt.Sprintf("%s-%s", nodeStorage.Name, id)
+
+		sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, id)
+		if err != nil {
+			statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
+
+			return &ctrl.Result{Requeue: true}, nil
+		}
+
+		log.Info("Created storage group", "Id", sg.Id, "storageGroupID", storageGroupID)
+
+		// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
+		if len(allocationStatus.StorageGroup.ID) == 0 {
+			statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+				allocationStatus.StorageGroup.ID = sg.Id
+				condition.LastTransitionTime = metav1.Now()
+				condition.Status = metav1.ConditionFalse // we are finished with this state
+				condition.Reason = nnfv1alpha1.ConditionSuccess
+				condition.Message = ""
+			})
+		}
+
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.StorageGroup.ID = sg.Id
-			condition.LastTransitionTime = metav1.Now()
-			condition.Status = metav1.ConditionFalse // we are finished with this state
-			condition.Reason = nnfv1alpha1.ConditionSuccess
-			condition.Message = ""
+			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
+			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
 		})
-	}
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
-		allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
-	})
+	}
 
 	return nil, nil
 }

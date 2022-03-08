@@ -180,11 +180,55 @@ metadata:
   name: nnf-node-map
   namespace: default
 data:
-  rabbit-node-0: rabbit-cn-00-01;np02;np03;np04;np05;np06;np07;np08;np09;np10;np11;np12;np13;np14;np15;np16
-  rabbit-node-1: np17;np18;np19;np20;np21;np22;np23;np24;np25;np26;np27;np28;np29;np30;np31;np32
+  rabbit-node-0: np01;np02;rabbit-compute-0;rabbit-compute-1;np05;np06;np07;np08;np09;np10;np11;np12;np13;np14;np15;np16
+  rabbit-node-1: np17;np18;rabbit-compute-2;rabbit-compute-3;np21;np22;np23;np24;np25;np26;np27;np28;np29;np30;np31;np32
 EOF
 
 fi
+
+# The following commands apply to initializing the current DP1 Bench Tester 2 environment
+if [[ "$CMD" == benchtester2-init ]]; then
+    WORKER_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'compute-5' | paste -d" " -s -)
+    RABBIT_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'node'   | grep -v master | paste -d" " -s -)
+    MASTER_NODES=$(kubectl get nodes --no-headers -o custom-columns=:metadata.name | grep -i 'compute-4' | paste -d" " -s -)
+
+    echo WORKER_NODES "$WORKER_NODES"
+    echo RABBIT_NODES "$RABBIT_NODES"
+    echo MASTER_NODES "$MASTER_NODES"
+
+    # Label the WORKER_NODES to allow them to handle wlm and nnf-sos
+    for NODE in $WORKER_NODES; do
+        # Label them for SLCMs.
+        kubectl label node "$NODE" cray.nnf.manager=true
+        kubectl label node "$NODE" cray.wlm.manager=true
+    done
+
+    for NODE in $RABBIT_NODES; do
+        # Taint the rabbit nodes for the NLCMs, to keep any
+        # non-NLCM pods off of them.
+        kubectl taint node "$NODE" cray.nnf.node=true:NoSchedule
+
+        # Label the rabbit nodes for the NLCMs.
+        kubectl label node "$NODE" cray.nnf.node=true
+        kubectl label node "$NODE" cray.nnf.x-name="$NODE"
+    done
+
+    #Required for webhooks
+    install_cert_manager
+
+    cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nnf-node-map
+  namespace: default
+data:
+  rabbit-node-2: rabbit-compute-4;rabbit-compute-5;np03;np04;np05;np06;np07;np08;np09;np10;np11;np12;np13;np14;np15;np16
+EOF
+
+fi
+
+
 
 if [[ "$CMD" == restart-pods ]]; then
     ./playground.sh pause all

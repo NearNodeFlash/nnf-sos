@@ -27,8 +27,9 @@ func NewDefaultStorageService() StorageServiceApi {
 }
 
 type StorageService struct {
-	id    string
-	state sf.ResourceState
+	id     string
+	state  sf.ResourceState
+	health sf.ResourceHealth
 
 	config                   *ConfigFile
 	store                    *kvstore.Store
@@ -474,6 +475,22 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		log.Infof("Storage Service: Event Received %+v", e)
 
 		s.state = sf.ENABLED_RST
+		s.health = sf.OK_RH
+
+		var fabricId string
+		if err := e.Args(&fabricId); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause("event parameters illformed")
+		}
+
+		f := &sf.FabricV120Fabric{}
+		if err := fabric.FabricIdGet(fabricId, f); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause("fabric not found")
+		}
+
+		if s.health == sf.OK_RH {
+			s.health = f.Status.Health
+		}
+
 		if err := s.store.Replay(); err != nil {
 			log.WithError(err).Errorf("Failed to replay storage database")
 			return err
@@ -523,8 +540,8 @@ func (*StorageService) StorageServiceIdGet(storageServiceId string, model *sf.St
 
 	model.Id = s.id
 
-	model.Status.State = sf.ENABLED_RST
-	model.Status.Health = sf.OK_RH
+	model.Status.State = s.state
+	model.Status.Health = s.health
 
 	model.StoragePools = s.OdataIdRef("/StoragePools")
 	model.StorageGroups = s.OdataIdRef("/StorageGroups")

@@ -28,6 +28,8 @@ type Fabric struct {
 	id     string
 	config *ConfigFile
 
+	status sf.ResourceStatus
+
 	switches       []Switch
 	endpoints      []Endpoint
 	endpointGroups []EndpointGroup
@@ -275,6 +277,25 @@ func (f *Fabric) findPortByType(portType sf.PortV130PortType, idx int) *Port {
 	return nil
 }
 
+func (f *Fabric) refreshStatus() {
+	f.status.Health = sf.OK_RH
+	f.status.State = sf.ENABLED_RST
+	
+	// Health goes critical if any single switch is down; and the state goes entirely offline if all switches are down.
+	areAllSwitchesDown := true
+	for _, s := range f.switches {
+		if s.isDown() {
+			f.status.Health = sf.CRITICAL_RH
+		} else {
+			areAllSwitchesDown = false
+		}
+	}
+
+	if areAllSwitchesDown {
+		f.status.State = sf.UNAVAILABLE_OFFLINE_RST
+	}
+}
+
 func (f *Fabric) isManagementEndpoint(endpointIndex int) bool {
 	return endpointIndex == 0
 }
@@ -451,7 +472,7 @@ StatusLoop:
 
 func (s *Switch) getStatus() (stat sf.ResourceStatus) {
 
-	if s.dev == nil {
+	if s.isDown() {
 		stat.State = sf.UNAVAILABLE_OFFLINE_RST
 	} else {
 		stat.Health = sf.OK_RH
@@ -785,7 +806,12 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 	manager = Fabric{
 		id:   FabricId,
 		ctrl: ctrl,
+		status: sf.ResourceStatus{
+			State:  sf.UNAVAILABLE_OFFLINE_RST,
+			Health: sf.CRITICAL_RH,
+		},
 	}
+
 	m := &manager
 
 	log.SetLevel(log.DebugLevel)
@@ -1005,8 +1031,10 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 
 // Start -
 func Start() error {
-	m := manager
+	m := &manager
 	log.Infof("Starting Fabric Manager %s", m.id)
+
+	m.status.State = sf.STARTING_RST
 
 	// Enumerate over the switch ports and report events to the event
 	// manager
@@ -1028,11 +1056,13 @@ func Start() error {
 		s.refreshPortStatus()
 	}
 
+	m.status.State = sf.ENABLED_RST
+
 	// Notify the event manager the fabric manager is ready
 	event.EventManager.Publish(msgreg.FabricReadyNnf(m.id))
 
 	// Run the Fabric Monitor in a background thread.
-	go NewFabricMonitor(&m).Run()
+	go NewFabricMonitor(m).Run()
 
 	return nil
 }
@@ -1087,6 +1117,10 @@ func FabricIdGet(fabricId string, model *sf.FabricV120Fabric) error {
 	if f == nil {
 		return ec.NewErrNotFound()
 	}
+
+	f.refreshStatus()
+
+	model.Status = f.status
 
 	model.FabricType = sf.PC_IE_PP
 	model.Switches.OdataId = f.fmt("/Switches")
@@ -1173,7 +1207,7 @@ func FabricIdSwitchesSwitchIdPortsPortIdGet(fabricId string, switchId string, po
 
 	model.Status = sf.ResourceStatus{
 		Health: p.getResourceHealth(),
-		State: p.getResourceState(),
+		State:  p.getResourceState(),
 	}
 
 	model.Links.AssociatedEndpointsodataCount = int64(len(p.endpoints))
@@ -1244,12 +1278,12 @@ func FabricIdEndpointsEndpointIdGet(fabricId string, endpointId string, model *s
 		if model.Status.State == sf.ENABLED_RST {
 			model.Status.State = port.getResourceState()
 		}
-		
+
 		// Update the resource health with the health of the worst port associated with this endpoint
 		portHealth := port.getResourceHealth()
 		if (model.Status.Health == sf.OK_RH && portHealth != sf.OK_RH) ||
-		   (model.Status.Health == sf.WARNING_RH && portHealth == sf.CRITICAL_RH) ||
-		   (portHealth == sf.CRITICAL_RH) {
+			(model.Status.Health == sf.WARNING_RH && portHealth == sf.CRITICAL_RH) ||
+			(portHealth == sf.CRITICAL_RH) {
 			model.Status.Health = portHealth
 		}
 	}
