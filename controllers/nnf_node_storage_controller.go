@@ -581,6 +581,10 @@ func (r *NnfNodeStorageReconciler) createFileSystem(ss nnf.StorageServiceApi, id
 		return nil, err
 	}
 
+	if oem.Name == "" {
+		oem.Name = id
+	}
+
 	fs := &sf.FileSystemV122FileSystem{
 		Id: id,
 		Links: sf.FileSystemV122Links{
