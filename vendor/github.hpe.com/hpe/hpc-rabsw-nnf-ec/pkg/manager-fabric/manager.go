@@ -280,7 +280,7 @@ func (f *Fabric) findPortByType(portType sf.PortV130PortType, idx int) *Port {
 func (f *Fabric) refreshStatus() {
 	f.status.Health = sf.OK_RH
 	f.status.State = sf.ENABLED_RST
-	
+
 	// Health goes critical if any single switch is down; and the state goes entirely offline if all switches are down.
 	areAllSwitchesDown := true
 	for _, s := range f.switches {
@@ -557,17 +557,17 @@ func (p *Port) findEndpoint(functionId string) *Endpoint {
 }
 
 func (p *Port) getResourceHealth() sf.ResourceHealth {
-	if p.linkStatus == sf.LINK_DOWN_PV130LS {
+	if p.linkStatus != sf.LINK_UP_PV130LS {
 		return sf.CRITICAL_RH
 	}
-	if p.negLinkWidth < p.cfgLinkWidth {
+	if p.negLinkWidth < p.cfgLinkWidth || p.curLinkRateGBps < p.maxLinkRateGBps {
 		return sf.WARNING_RH
 	}
 	return sf.OK_RH
 }
 
 func (p *Port) getResourceState() sf.ResourceState {
-	if p.linkStatus == sf.LINK_DOWN_PV130LS {
+	if p.linkStatus != sf.LINK_UP_PV130LS {
 		return sf.UNAVAILABLE_OFFLINE_RST
 	}
 
@@ -1088,8 +1088,7 @@ func (m *Fabric) EventHandler(e event.Event) error {
 }
 
 // GetEndpoint - Returns the first endpoint for the given switch port. For USP, there will only ever be one ID. For DSP there will
-// be an endpoint for each Physical and Virtual Functions on the DSP, but the
-// first ID (corresponding to the PF) is what is returned.
+// be an endpoint for each Physical and Virtual Functions on the DSP, but the first ID (corresponding to the PF) is what is returned.
 func GetEndpoint(switchId, portId string) (*Endpoint, error) {
 	for _, s := range manager.switches {
 		for _, p := range s.ports {
