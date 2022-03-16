@@ -59,15 +59,16 @@ type NnfWorkflowReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/finalizers,verbs=update
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=directivebreakdowns/status,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementworkflows,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfjobstorageinstances,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfpersistentstorageinstances,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/finalizers,verbs=update
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -996,6 +997,30 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 			continue
 		}
 
+		// Create a companion NNF Data Movement Workflow resource that manages concurrent data movement
+		// that is started during the job by the compute resources. It is expected that the customer
+		// will clean-up data movement resources that it created, but this is implemented to ensure no
+		// resources are left behind by the job.
+		{
+			dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Name,
+					Namespace: workflow.Namespace,
+				},
+			}
+
+			result, err := ctrl.CreateOrUpdate(ctx, r.Client, dmw, func() error {
+				return ctrl.SetControllerReference(workflow, dmw, r.Scheme)
+			})
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
+			if result == controllerutil.OperationResultCreated {
+				log.Info("Created NnfDatamovementWorkflow", "name", dmw.Name)
+			}
+		}
+
 		// Parse the #DW line
 		args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 		if err != nil {
@@ -1159,6 +1184,25 @@ func (r *NnfWorkflowReconciler) handlePostRunState(ctx context.Context, workflow
 		// Only look for driver status for the NNF driver
 		if driverStatus.DriverID != driverID {
 			continue
+		}
+
+		// Delete the companion NNF Data Movement Workflow resource that manages concurrent data movement
+		// executed during the jobs run state by compute resources. It is expected that the customer
+		// will clean-up data movement resources that it created, but this is implemented to ensure no
+		// resource are left behind by the job.
+		{
+			dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Name,
+					Namespace: workflow.Namespace,
+				},
+			}
+
+			if err := r.Delete(ctx, dmw); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+			}
 		}
 
 		access := &nnfv1alpha1.NnfAccess{}

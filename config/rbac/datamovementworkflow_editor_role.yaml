@@ -1,0 +1,24 @@
+# permissions for end users to edit datamovementworkflows.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: datamovementworkflow-editor-role
+rules:
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - datamovementworkflows
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.com
+  resources:
+  - datamovementworkflows/status
+  verbs:
+  - get

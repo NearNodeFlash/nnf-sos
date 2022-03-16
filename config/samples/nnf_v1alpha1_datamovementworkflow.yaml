@@ -1,0 +1,6 @@
+apiVersion: nnf.cray.com/v1alpha1
+kind: DataMovementWorkflow
+metadata:
+  name: datamovementworkflow-sample
+spec:
+  # Add fields here
