@@ -197,7 +197,11 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 				nnfNodeStorage.Spec.LustreStorage.BackFs = allocationSet.BackFs
 
 				if allocationSet.TargetType == "MDT" || allocationSet.TargetType == "OST" {
-					nnfNodeStorage.Spec.LustreStorage.MgsNode = storage.Status.MgsNode
+					if len(allocationSet.ExternalMgsNid) > 0 {
+						nnfNodeStorage.Spec.LustreStorage.MgsNode = allocationSet.ExternalMgsNid
+					} else {
+						nnfNodeStorage.Spec.LustreStorage.MgsNode = storage.Status.MgsNode
+					}
 				}
 
 				return nil

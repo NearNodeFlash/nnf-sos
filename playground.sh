@@ -1,20 +1,6 @@
 #!/bin/bash
 CMD=$1
 
-reset_proxy ()
-{
-    # kill any running proxy
-    pkill -f 'kubectl proxy --port 8080'
-
-    # Nice article explaining the need for a proxy: <https://stackoverflow.com/questions/54332972/what-is-the-purpose-of-kubectl-proxy#54345488>
-    # Also: <https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/>
-    # Proxy port 8080 to allow direct REST access
-    kubectl proxy --port 8080 > /dev/null &
-
-    # give the proxy a chance to get started
-    sleep .1
-}
-
 install_cert_manager ()
 {
     certver="v1.7.0"
@@ -397,20 +383,17 @@ if [[ "$CMD" == "wfCreate" ]]; then
         NWF=$2
     fi
 
-    reset_proxy
     echo Creating "$NWF" workflows
     for ((i=0; i < NWF; ++i)) do
         # Create a new workflow
         echo w"$i"
-        sh ./config/samples/scripts/wfrLustre w"$i"
+        sh ./config/samples/scripts/wfrLustre -w w"$i"
     done
 
     kubectl get workflows.dws.cray.hpe.com -o yaml | grep ready; kubectl get workflows.dws.cray.hpe.com -o yaml | grep elaps
 fi
 
 if [[ "$CMD" == "wfDelete" ]]; then
-    reset_proxy
-
     workflows=$(kubectl get workflows -A --no-headers 2> /dev/null | awk '{print "ns="$1":res="$2}')
     echo "$workflows"
     [[ -z $workflows ]] && exit 0

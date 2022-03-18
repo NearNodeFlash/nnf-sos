@@ -61,6 +61,10 @@ spec:
                         among the available drives operating in the NNF Node.
                       format: int64
                       type: integer
+                    externalMgsNid:
+                      description: ExternalMgsNid is the NID of the MGS when a pre-existing
+                        MGS is provided by the DataWarp directive (#DW).
+                      type: string
                     fileSystemName:
                       description: FileSystemName is the fsname parameter for the
                         Lustre filesystem.

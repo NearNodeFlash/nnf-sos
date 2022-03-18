@@ -31,6 +31,10 @@ type NnfStorageLustreSpec struct {
 	// BackFs is the type of backing filesystem to use.
 	// +kubebuilder:validation:Enum=ldiskfs;zfs
 	BackFs string `json:"backFs,omitempty"`
+
+	// ExternalMgsNid is the NID of the MGS when a pre-existing MGS is
+	// provided by the DataWarp directive (#DW).
+	ExternalMgsNid string `json:"externalMgsNid,omitempty"`
 }
 
 // NnfStorageAllocationSetSpec defines the details for an allocation set

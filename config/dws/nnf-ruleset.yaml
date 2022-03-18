@@ -27,6 +27,11 @@ spec:
         type: "string"
         isRequired: false
         isValueRequired: true
+      - key: "external_mgs"
+        type: "string"
+        pattern: "^([A-Za-z][A-Za-z0-9\\-_]+|[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)@[A-Za-z][A-Za-z0-9]+$"
+        isRequired: false
+        isValueRequired: true
   - command: "create_persistent"
     watchStates: proposal,setup
     ruleDefs:
@@ -44,6 +49,11 @@ spec:
         type: "string"
         pattern: "^([A-Za-z0-9\\-_]+)$"
         isRequired: true
+        isValueRequired: true
+      - key: "external_mgs"
+        type: "string"
+        pattern: "^([A-Za-z][A-Za-z0-9\\-_]+|[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)@[A-Za-z][A-Za-z0-9]+$"
+        isRequired: false
         isValueRequired: true
   - command: "copy_in"
     watchStates: data_in

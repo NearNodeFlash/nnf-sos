@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -26,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	"github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse"
 )
 
 // Define condition values
@@ -138,21 +138,24 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, err
 }
 
+type lustreComponentType struct {
+	strategy      string
+	cap           int64
+	labelsStr     string
+	colocationKey string
+}
+
 func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, log logr.Logger) (breakdownPopulateResult, error) {
 
 	result := verified
-	cmdElements := strings.Fields(dbd.Spec.DW.DWDirective)
-
-	// Construct a map of the arguments within the directive
-	m := make(map[string]string)
-	for _, pair := range cmdElements[2:] {
-		if arg := strings.Split(pair, "="); len(arg) > 1 {
-			m[arg[0]] = arg[1]
-		}
+	argsMap, err := dwdparse.BuildArgsMap(dbd.Spec.DW.DWDirective)
+	if err != nil {
+		result = skipped
+		return result, err
 	}
 
-	filesystem := m["type"]
-	capacity := m["capacity"]
+	filesystem := argsMap["type"]
+	capacity := argsMap["capacity"]
 
 	breakdownCapacity, _ := getCapacityInBytes(capacity)
 
@@ -175,15 +178,14 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		mgtCapacity, _ := getCapacityInBytes("1GB")
 
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
-		var lustreComponents = []struct {
-			strategy      string
-			cap           int64
-			labelsStr     string
-			colocationKey string
-		}{
-			{"AllocateAcrossServers", breakdownCapacity, "ost", ""},
-			{"AllocateSingleServer", mdtCapacity, "mdt", ""},           // NOTE: hardcoded size
-			{"AllocateSingleServer", mgtCapacity, "mgt", "lustre-mgt"}, // NOTE: hardcoded size
+		var lustreComponents []lustreComponentType
+		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", ""})
+
+		if _, present := argsMap["external_mgs"]; present {
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
+		} else {
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mgtCapacity, "mgt", "lustre-mgt"})
 		}
 
 		for _, i := range lustreComponents {

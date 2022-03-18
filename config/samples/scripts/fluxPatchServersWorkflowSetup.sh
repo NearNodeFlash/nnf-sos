@@ -70,6 +70,20 @@ then
   IRABBITS=$(echo "$IRABBITS" | tr ',' '|')
 fi
 
+query_external_mgs()
+{
+  # Assume only one #DW line in this workflow.
+  if ! dwline=$(kubectl get workflow $WORKFLOW -o jsonpath='{.spec.dwDirectives[0]}{"\n"}')
+  then
+    echo "Unable to find workflow $WORKFLOW"
+    exit 2
+  fi
+  if echo "$dwline" | grep -q " external_mgs="
+  then
+    EXTERNAL_MGS=yes
+  fi
+}
+
 patch_workflow()
 {
   desiredState="setup"
@@ -203,17 +217,24 @@ name: $SERVERS
 apiVersion: dws.cray.hpe.com/v1alpha1
 spec:
   allocationSets:
-  - allocationSize: $MGT_SIZE_IN_BYTES
-    label: mgt
-    storage:
-    - allocationCount: 1
-      name: ${RABBIT_ARRAY[0]}
   - allocationSize: $MDT_SIZE_IN_BYTES
     label: mdt
     storage:
     - allocationCount: 1
       name: ${RABBIT_ARRAY[$MDT_IDX]}
 EOF
+
+  # Add an allocation for the MGT, unless the job is using an external MGS.
+  if [[ -z $EXTERNAL_MGS ]]
+  then
+cat >> $SERVERS_PATCH << EOF
+  - allocationSize: $MGT_SIZE_IN_BYTES
+    label: mgt
+    storage:
+    - allocationCount: 1
+      name: ${RABBIT_ARRAY[0]}
+EOF
+  fi
 
   case $RABBIT_COUNT in
   1)
@@ -254,6 +275,8 @@ EOF
   fi
   rm "$SERVERS_PATCH"
 }
+
+query_external_mgs
 
 query_rabbits
 

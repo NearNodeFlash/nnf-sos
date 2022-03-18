@@ -572,6 +572,11 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		},
 	}
 
+	dwArgs, err := dwdparse.BuildArgsMap(d.Spec.DW.DWDirective)
+	if err != nil {
+		return nnfStorage, err
+	}
+
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfStorage,
 		func() error {
 
@@ -598,6 +603,9 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 						charsWanted = len(d.Spec.Name)
 					}
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[:charsWanted]
+					if mgsNid, present := dwArgs["external_mgs"]; present {
+						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = mgsNid
+					}
 				}
 
 				// Create Nodes for this allocation set.
