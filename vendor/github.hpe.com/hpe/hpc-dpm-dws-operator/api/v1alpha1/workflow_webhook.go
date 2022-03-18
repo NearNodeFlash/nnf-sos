@@ -146,6 +146,10 @@ func validateWorkflowImmutable(a *Workflow, b *Workflow) error {
 		return fmt.Errorf("cannot change immutable field UserID")
 	}
 
+	if a.Spec.GroupID != b.Spec.GroupID {
+		return fmt.Errorf("cannot change immutable field GroupID")
+	}
+
 	if !reflect.DeepEqual(a.Spec.DWDirectives, b.Spec.DWDirectives) {
 		return fmt.Errorf("cannot change immutable field DWDirectives")
 	}

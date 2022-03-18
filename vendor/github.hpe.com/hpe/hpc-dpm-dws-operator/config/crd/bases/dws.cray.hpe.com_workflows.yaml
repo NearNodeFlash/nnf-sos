@@ -54,15 +54,28 @@ spec:
                 items:
                   type: string
                 type: array
+              groupID:
+                description: GroupID specifies the group ID for the workflow. The
+                  Group ID is used by the varios states in the workflow to ensure
+                  the group has permissions to perform certain actions. Used in conjuncton
+                  with User ID to run subtasks with UserID:GroupID credentials.
+                format: int32
+                type: integer
               jobID:
                 type: integer
               userID:
+                description: UserID specifies the user ID for the workflow. The User
+                  ID is used by the various states in the workflow to ensure the user
+                  has permissions to perform certain actions. Used in conjucntion
+                  with Group ID to run subtasks with UserID:GroupID credentials
+                format: int32
                 type: integer
               wlmID:
                 type: string
             required:
             - desiredState
             - dwDirectives
+            - groupID
             - jobID
             - userID
             - wlmID

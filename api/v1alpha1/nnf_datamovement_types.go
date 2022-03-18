@@ -22,6 +22,16 @@ type NnfDataMovementSpec struct {
 
 	// Destination describes the destination of the data movement operation
 	Destination NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
+
+	// User Id specifies the user ID for the data movement operation. This value is used
+	// in conjunction with the group ID to ensure the user has valid permissions to perform
+	// the data movement operation.
+	UserId uint32 `json:"userId,omitempty"`
+
+	// Group Id specifies the group ID for the data movement operation. This value is used
+	// in conjunction with the user ID to ensure the user has valid permissions to perform
+	// the data movement operation.
+	GroupId uint32 `json:"groupId,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement

@@ -710,6 +710,8 @@ github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1
 github.com/yuin/goldmark v1.4.0/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220310170116-0430d73bba18 h1:x03kViKh8mj9A0qZ/Omy4rTWvl/9HcvHio5M3HGIJl0=
 github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220310170116-0430d73bba18/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220318130952-4f68854f9c64 h1:nEjvWJmRcHp4gesqX0d6p5ejYDECn0eHBV/JGLfW+jg=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220318130952-4f68854f9c64/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
 github.hpe.com/hpe/hpc-rabsw-lustre-csi-driver v0.0.0-20211216142843-0b84f0d84e3f/go.mod h1:3VOepCJRh1UbeNCrCRWKpT/JjGXc4MQ2bseCBQ7WEn4=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7 h1:oKi+gp+Q9MzmrxuZHV8sknfWGCdhkoIik2CGONo/QLM=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=

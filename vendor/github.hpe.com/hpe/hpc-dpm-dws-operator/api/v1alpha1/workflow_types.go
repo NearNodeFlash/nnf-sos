@@ -67,7 +67,16 @@ type WorkflowSpec struct {
 	DesiredState string `json:"desiredState"`
 	WLMID        string `json:"wlmID"`
 	JobID        int    `json:"jobID"`
-	UserID       int    `json:"userID"`
+
+	// UserID specifies the user ID for the workflow. The User ID is used by the various states
+	// in the workflow to ensure the user has permissions to perform certain actions. Used in
+	// conjunction with Group ID to run subtasks with UserID:GroupID credentials
+	UserID uint32 `json:"userID"`
+
+	// GroupID specifies the group ID for the workflow. The Group ID is used by the various states
+	// in the workflow to ensure the group has permissions to perform certain actions. Used in
+	// conjunction with User ID to run subtasks with UserID:GroupID credentials.
+	GroupID uint32 `json:"groupID"`
 
 	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`

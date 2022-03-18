@@ -122,6 +122,13 @@ spec:
                         type: string
                     type: object
                 type: object
+              groupId:
+                description: Group Id specifies the group ID for the data movement
+                  operation. This value is used in conjunction with the user ID to
+                  ensure the user has valid permissions to perform the data movement
+                  operation.
+                format: int32
+                type: integer
               source:
                 description: Source describes the source of the data movement operation
                 properties:
@@ -207,6 +214,12 @@ spec:
                         type: string
                     type: object
                 type: object
+              userId:
+                description: User Id specifies the user ID for the data movement operation.
+                  This value is used in conjunction with the group ID to ensure the
+                  user has valid permissions to perform the data movement operation.
+                format: int32
+                type: integer
             type: object
           status:
             description: DataMovementStatus defines the observed state of DataMovement

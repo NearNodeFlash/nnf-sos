@@ -849,6 +849,8 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 			StorageInstance: destinationInstance,
 			Access:          accessToObjectReference(destinationAccess),
 		},
+		UserId:  workflow.Spec.UserID,
+		GroupId: workflow.Spec.GroupID,
 	}
 
 	if err := ctrl.SetControllerReference(workflow, dm, r.Scheme); err != nil {
