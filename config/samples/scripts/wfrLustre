@@ -68,6 +68,7 @@ spec:
   - '#DW jobdw type=lustre $OPTIONS capacity=5GB name=$WORKFLOW'
   jobID: 9000001
   userID: 1001
+  groupID: 1001
   wlmID: 5f239bd8-30db-450b-8c2c-a1a7c8631a1a
 EndOfYaml
 
