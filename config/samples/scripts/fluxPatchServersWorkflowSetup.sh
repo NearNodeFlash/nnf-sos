@@ -84,6 +84,20 @@ query_external_mgs()
   fi
 }
 
+query_combined_mgtmdt()
+{
+  # Assume only one #DW line in this workflow.
+  if ! dwline=$(kubectl get workflow $WORKFLOW -o jsonpath='{.spec.dwDirectives[0]}{"\n"}')
+  then
+    echo "Unable to find workflow $WORKFLOW"
+    exit 2
+  fi
+  if echo "$dwline" | grep -q " combined_mgtmdt"
+  then
+    COMBINED_MGTMDT=yes
+  fi
+}
+
 patch_workflow()
 {
   desiredState="setup"
@@ -217,15 +231,11 @@ name: $SERVERS
 apiVersion: dws.cray.hpe.com/v1alpha1
 spec:
   allocationSets:
-  - allocationSize: $MDT_SIZE_IN_BYTES
-    label: mdt
-    storage:
-    - allocationCount: 1
-      name: ${RABBIT_ARRAY[$MDT_IDX]}
 EOF
 
-  # Add an allocation for the MGT, unless the job is using an external MGS.
-  if [[ -z $EXTERNAL_MGS ]]
+  # Add an allocation for the MGT, unless the job is using an external MGS
+  # or a combined MGT/MDT device.
+  if [[ -z $EXTERNAL_MGS && -z $COMBINED_MGTMDT ]]
   then
 cat >> $SERVERS_PATCH << EOF
   - allocationSize: $MGT_SIZE_IN_BYTES
@@ -233,6 +243,28 @@ cat >> $SERVERS_PATCH << EOF
     storage:
     - allocationCount: 1
       name: ${RABBIT_ARRAY[0]}
+EOF
+  fi
+
+  # Add a standalone MDT device, unless the job is using a combined MGT/MDT
+  # device.
+  if [[ -z $COMBINED_MGTMDT ]]
+  then
+cat >> $SERVERS_PATCH << EOF
+  - allocationSize: $MDT_SIZE_IN_BYTES
+    label: mdt
+    storage:
+    - allocationCount: 1
+      name: ${RABBIT_ARRAY[$MDT_IDX]}
+EOF
+  else
+  # Add a combined MGT/MDT.
+cat >> $SERVERS_PATCH << EOF
+  - allocationSize: $MDT_SIZE_IN_BYTES
+    label: mgtmdt
+    storage:
+    - allocationCount: 1
+      name: ${RABBIT_ARRAY[$MDT_IDX]}
 EOF
   fi
 
@@ -277,6 +309,7 @@ EOF
 }
 
 query_external_mgs
+query_combined_mgtmdt
 
 query_rabbits
 

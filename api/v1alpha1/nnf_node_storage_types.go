@@ -41,7 +41,7 @@ type LustreStorageSpec struct {
 	FileSystemName string `json:"fileSystemName,omitempty"`
 
 	// TargetType is the type of Lustre target to be created.
-	// +kubebuilder:validation:Enum=MGT;MDT;OST
+	// +kubebuilder:validation:Enum=MGT;MDT;MGTMDT;OST
 	TargetType string `json:"targetType,omitempty"`
 
 	// StartIndex is used to order a series of MDTs or OSTs.  This is used only

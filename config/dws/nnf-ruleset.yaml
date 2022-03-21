@@ -23,10 +23,10 @@ spec:
         pattern: "^([A-Za-z0-9\\-_]+)$"
         isRequired: true
         isValueRequired: true
-      - key: "modifiers"
-        type: "string"
+      - key: "combined_mgtmdt"
+        type: "bool"
         isRequired: false
-        isValueRequired: true
+        isValueRequired: false
       - key: "external_mgs"
         type: "string"
         pattern: "^([A-Za-z][A-Za-z0-9\\-_]+|[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)@[A-Za-z][A-Za-z0-9]+$"
@@ -50,6 +50,10 @@ spec:
         pattern: "^([A-Za-z0-9\\-_]+)$"
         isRequired: true
         isValueRequired: true
+      - key: "combined_mgtmdt"
+        type: "bool"
+        isRequired: false
+        isValueRequired: false
       - key: "external_mgs"
         type: "string"
         pattern: "^([A-Za-z][A-Za-z0-9\\-_]+|[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)@[A-Za-z][A-Za-z0-9]+$"

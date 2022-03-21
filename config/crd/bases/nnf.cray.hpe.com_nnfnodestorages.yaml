@@ -92,6 +92,7 @@ spec:
                     enum:
                     - MGT
                     - MDT
+                    - MGTMDT
                     - OST
                     type: string
                 type: object

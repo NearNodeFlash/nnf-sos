@@ -470,7 +470,7 @@ func (r *NnfNodeStorageReconciler) isSpecComplete(nodeStorage *nnfv1alpha1.NnfNo
 		return true
 	}
 
-	if nodeStorage.Spec.LustreStorage.TargetType == "MGT" {
+	if nodeStorage.Spec.LustreStorage.TargetType == "MGT" || nodeStorage.Spec.LustreStorage.TargetType == "MGTMDT" {
 		return true
 	}
 

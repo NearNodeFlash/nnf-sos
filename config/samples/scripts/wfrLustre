@@ -8,21 +8,23 @@ OPTIONS=""
 
 printhelp()
 {
-  echo "Usage: $PROG -w workflow [-e EXTERNAL_MGS] [-n]"
+  echo "Usage: $PROG -w workflow [-e EXTERNAL_MGS] [-m] [-n]"
   echo
   echo "  -w WORKFLOW      Resource name of the workflow."
   echo "  -e EXTERNAL_MGS  External MGS to use."
+  echo "  -m               Combine MGT/MDT on same block device."
   echo "  -n               Dry run.  Print YAML and exit."
   echo
   exit 2
 }
 
 OPTIND=1
-while getopts ":hw:e:n" opt
+while getopts ":hw:e:mn" opt
 do
   case $opt in
   w) WORKFLOW=$OPTARG ;;
   e) EXTERNAL_MGS=$OPTARG ;;
+  m) COMBINED_MGTMDT=yes ;;
   n) DRYRUN=yes ;;
   *) printhelp ;;
   esac
@@ -35,15 +37,23 @@ then
   exit 2
 fi
 
+if [[ -n $EXTERNAL_MGS && -n $COMBINED_MGTMDT ]]
+then
+  echo "$PROG: specify only one of -e or -m"
+  exit 2
+fi
+
 if [[ -n $EXTERNAL_MGS ]]
 then
   OPTIONS="$OPTIONS external_mgs=$EXTERNAL_MGS"
 fi
+if [[ -n $COMBINED_MGTMDT ]]
+then
+  OPTIONS="$OPTIONS combined_mgtmdt"
+fi
 
 # Strip leading and trailing whitespace; add semicolon as separator.
 OPTIONS=$(echo "$OPTIONS" | sed -e 's/^ *//' -e 's/ *$//' -e 's/ /;/g')
-
-echo Attempting to create $WORKFLOW
 
 wfyaml=/tmp/wfyaml.$$
 cat > $wfyaml <<EndOfYaml
@@ -67,6 +77,8 @@ then
   rm -f $wfyaml
   exit 1
 fi
+
+echo Attempting to create $WORKFLOW
 
 kubectl apply -f $wfyaml
 retCode=$?

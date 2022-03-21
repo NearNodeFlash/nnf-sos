@@ -181,7 +181,9 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		var lustreComponents []lustreComponentType
 		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", ""})
 
-		if _, present := argsMap["external_mgs"]; present {
+		if _, present := argsMap["combined_mgtmdt"]; present {
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", "lustre-mgt"})
+		} else if _, present := argsMap["external_mgs"]; present {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
 		} else {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})

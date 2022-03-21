@@ -59,7 +59,7 @@ type AllocationSetComponents struct {
 
 	// Label is an identifier used to communicate from the DWS interface to internal interfaces
 	// the filesystem use of this AllocationSet.
-	// +kubebuilder:validation:Enum=raw;xfs;gfs2;mgt;mdt;ost;
+	// +kubebuilder:validation:Enum=raw;xfs;gfs2;mgt;mdt;mgtmdt;ost;
 	Label string `json:"label"`
 
 	// Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used

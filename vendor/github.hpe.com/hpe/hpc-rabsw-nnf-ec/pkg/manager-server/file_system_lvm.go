@@ -9,6 +9,8 @@ import (
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
+	lvName string
+	vgName string
 }
 
 func init() {
@@ -27,8 +29,17 @@ func (f *FileSystemLvm) Name() string { return f.name }
 
 func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
-	volumeGroup := f.volumeGroup()
-	logicalVolume := f.logicalVolume()
+	if _, exists := opts["volumeGroupName"]; exists {
+		f.vgName = opts["volumeGroupName"].(string)
+	} else {
+		f.vgName = fmt.Sprintf("%s_vg", f.Name())
+	}
+
+	if _, exists := opts["logicalVolumeName"]; exists {
+		f.lvName = opts["logicalVolumeName"].(string)
+	} else {
+		f.lvName = fmt.Sprintf("%s_lv", f.Name())
+	}
 
 	// TODO: Some sort of rollback mechanism on failure condition
 
@@ -39,10 +50,10 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", volumeGroup))
+	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", f.vgName))
 	if len(rsp) != 0 && !strings.Contains(string(rsp), "not found") {
 		// Volume Group is present, activate the volume
-		if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", volumeGroup)); err != nil {
+		if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", f.vgName)); err != nil {
 			return err
 		}
 
@@ -56,14 +67,7 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		}
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgcreate %s %s", volumeGroup, strings.Join(devices, " "))); err != nil {
-		return err
-	}
-
-	// Get the size and use this to program the maximum size for
-	// the logical volume.
-	size, err := f.run(fmt.Sprintf("vgdisplay %s | grep 'Total PE' | awk '{printf $3;}'", volumeGroup))
-	if err != nil {
+	if _, err := f.run(fmt.Sprintf("vgcreate %s %s", f.vgName, strings.Join(devices, " "))); err != nil {
 		return err
 	}
 
@@ -82,12 +86,12 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	// error is not enabled, the values read from a deallocated or unwritten block and its metadata (excluding protection information)
 	// shall be:
 	// • all bytes cleared to 0h if bits 2:0 in the DLFEAT field are set to 001b;
-	if _, err := f.run(fmt.Sprintf("lvcreate -Zn --size %s --stripes %d --stripesize=32KiB --name %s %s", size, len(devices), logicalVolume, volumeGroup)); err != nil {
+	if _, err := f.run(fmt.Sprintf("lvcreate -Zn -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", len(devices), f.lvName, f.vgName)); err != nil {
 		return err
 	}
 
 	// Activate the volume group.
-	if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", volumeGroup)); err != nil {
+	if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", f.vgName)); err != nil {
 		return err
 	}
 
@@ -99,7 +103,7 @@ func (f *FileSystemLvm) Delete() error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgremove --yes %s", f.volumeGroup())); err != nil {
+	if _, err := f.run(fmt.Sprintf("vgremove --yes %s", f.vgName)); err != nil {
 		return err
 	}
 
@@ -124,13 +128,5 @@ func (f *FileSystemLvm) Unmount() error {
 }
 
 func (f *FileSystemLvm) devPath() string {
-	return filepath.Join("/dev", f.volumeGroup(), f.logicalVolume())
-}
-
-func (f *FileSystemLvm) volumeGroup() string {
-	return fmt.Sprintf("%s_vg", f.Name())
-}
-
-func (f *FileSystemLvm) logicalVolume() string {
-	return fmt.Sprintf("%s_lv", f.Name())
+	return filepath.Join("/dev", f.vgName, f.lvName)
 }

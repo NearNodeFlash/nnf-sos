@@ -144,6 +144,7 @@ spec:
                       - gfs2
                       - mgt
                       - mdt
+                      - mgtmdt
                       - ost
                       type: string
                     minimumCapacity:

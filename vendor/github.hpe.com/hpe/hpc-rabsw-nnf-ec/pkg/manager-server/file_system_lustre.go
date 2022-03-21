@@ -11,15 +11,17 @@ import (
 type LustreTargetType string
 
 const (
-	TargetMGT LustreTargetType = "MGT"
-	TargetMDT LustreTargetType = "MDT"
-	TargetOST LustreTargetType = "OST"
+	TargetMGT    LustreTargetType = "MGT"
+	TargetMDT    LustreTargetType = "MDT"
+	TargetMGTMDT LustreTargetType = "MGTMDT"
+	TargetOST    LustreTargetType = "OST"
 )
 
 var targetTypes = map[string]LustreTargetType{
-	"MGT": TargetMGT,
-	"MDT": TargetMDT,
-	"OST": TargetOST,
+	"MGT":    TargetMGT,
+	"MDT":    TargetMDT,
+	"MGTMDT": TargetMGTMDT,
+	"OST":    TargetOST,
 }
 
 type LustreBackFsType string
@@ -86,6 +88,8 @@ func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) e
 		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s %s", backFs, f.devices[0]))
 	case TargetMDT:
 		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
+	case TargetMGTMDT:
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs --mdt --fsname=%s --index=%d %s %s", f.name, f.index, backFs, f.devices[0]))
 	case TargetOST:
 		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
 	}

@@ -424,7 +424,7 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess, clients []string, nnfStorage *nnfv1alpha1.NnfStorage, setIndex int) (map[string][]dwsv1alpha1.ClientMountInfo, error) {
 	allocationSet := nnfStorage.Spec.AllocationSets[setIndex]
 
-	if allocationSet.TargetType != "MGT" {
+	if allocationSet.TargetType != "MGT" && allocationSet.TargetType != "MGTMDT" {
 		return nil, nil
 	}
 

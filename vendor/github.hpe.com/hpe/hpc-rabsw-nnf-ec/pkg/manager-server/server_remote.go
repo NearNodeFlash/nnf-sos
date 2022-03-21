@@ -18,7 +18,7 @@ type StoragePoolOem struct {
 // Remote Server Controller defines a Server Controller API for a connected server
 // that is not local to the running process. This contains many "do nothing" methods
 // as management of storage, file systems, and related content is done "off-rabbit".
-type RemoteServerController struct {}
+type RemoteServerController struct{}
 
 func NewRemoteServerController(opts ServerControllerOptions) ServerControllerApi {
 	return &RemoteServerController{}

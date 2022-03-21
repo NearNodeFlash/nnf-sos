@@ -108,6 +108,7 @@ spec:
                       enum:
                       - MGT
                       - MDT
+                      - MGTMDT
                       - OST
                       type: string
                   required:

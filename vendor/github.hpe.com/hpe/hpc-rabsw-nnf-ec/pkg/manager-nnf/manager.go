@@ -1262,9 +1262,8 @@ refreshState:
 	sh := fs.createFileShare(model.Id, sg, model.FileSharePath)
 
 	updateFunc := func() error {
-		opts := server.FileSystemOptions{
-			"mountpoint": sh.mountRoot,
-		}
+		opts := model.Oem
+		opts["mountpoint"] = sh.mountRoot
 
 		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, opts); err != nil {
 			log.WithError(err).Errorf("Failed to initialize file share for path %s", model.FileSharePath)

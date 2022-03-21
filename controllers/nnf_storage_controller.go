@@ -268,7 +268,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			continue
 		}
 
-		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" {
+		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" || nnfNodeStorage.Spec.LustreStorage.TargetType == "MGTMDT" {
 			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
 				s.MgsNode = nnfNodeStorage.Status.LustreStorage.Nid
 			})
