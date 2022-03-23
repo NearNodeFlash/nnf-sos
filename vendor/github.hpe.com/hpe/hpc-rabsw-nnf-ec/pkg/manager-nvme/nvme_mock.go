@@ -112,7 +112,7 @@ type mockNamespace struct {
 	size                uint64
 	capacity            uint64
 	guid                [16]byte
-	attachedControllers [mockSecondaryControllerCount]*mockController
+	attachedControllers [1 + mockSecondaryControllerCount]*mockController // +1 for PF
 	metadata            []byte
 }
 

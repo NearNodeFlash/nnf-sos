@@ -14,8 +14,8 @@ func init() {
 	FileSystemRegistry.RegisterFileSystem(&FileSystemZfs{})
 }
 
-func (*FileSystemZfs) New(oem FileSystemOem) FileSystemApi {
-	return &FileSystemZfs{FileSystem: FileSystem{name: oem.Name}}
+func (*FileSystemZfs) New(oem FileSystemOem) (FileSystemApi, error) {
+	return &FileSystemZfs{FileSystem: FileSystem{name: oem.Name}}, nil
 }
 
 func (*FileSystemZfs) IsType(oem FileSystemOem) bool { return oem.Type == "zfs" }

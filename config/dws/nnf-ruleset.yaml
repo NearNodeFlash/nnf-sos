@@ -10,7 +10,7 @@ spec:
     ruleDefs:
       - key: "type"
         type: "string"
-        pattern: "^(raw|xfs|lustre)$"
+        pattern: "^(raw|xfs|gfs2|lustre)$"
         isRequired: true
         isValueRequired: true
       - key: "capacity"
@@ -37,7 +37,7 @@ spec:
     ruleDefs:
       - key: "type"
         type: "string"
-        pattern: "^(raw|xfs|lustre)$"
+        pattern: "^(raw|xfs|gfs2|lustre)$"
         isRequired: true
         isValueRequired: true
       - key: "capacity"

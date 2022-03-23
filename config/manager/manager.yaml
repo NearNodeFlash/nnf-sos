@@ -21,6 +21,9 @@ spec:
       labels:
         cray.nnf.node: "true"
     spec:
+      # Use the host’s pid namespace. This provides access to lvmlockd that is running
+      # as part of the rabbit cluster.
+      hostPID: true
       nodeSelector:
         cray.nnf.node: "true"
       tolerations:

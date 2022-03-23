@@ -50,17 +50,15 @@ type FileSystemLustre struct {
 	backFs     LustreBackFsType
 }
 
-func (*FileSystemLustre) New(oem FileSystemOem) FileSystemApi {
-	fs := &FileSystemLustre{
+func (*FileSystemLustre) New(oem FileSystemOem) (FileSystemApi, error) {
+	return &FileSystemLustre{
 		FileSystem: FileSystem{name: oem.Name},
 		mgsNode:    oem.MgsNode,
 		index:      oem.Index,
-		// TargetType and BackFs are already verified by IsType()
-		// below.
+		// TargetType and BackFs are already verified by IsType() below.
 		targetType: targetTypes[oem.TargetType],
 		backFs:     backFsTypes[oem.BackFs],
-	}
-	return fs
+	}, nil
 }
 
 func (*FileSystemLustre) IsType(oem FileSystemOem) bool {

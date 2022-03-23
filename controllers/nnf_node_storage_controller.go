@@ -6,6 +6,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"net/http"
 	"os"
@@ -338,6 +339,15 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		MgsNode:    nodeStorage.Spec.LustreStorage.MgsNode,
 		TargetType: nodeStorage.Spec.LustreStorage.TargetType,
 		BackFs:     nodeStorage.Spec.LustreStorage.BackFs,
+	}
+
+	if oem.Type == "gfs2" {
+		// GFS2 requires a maximum of 16 alphanumeric, hyphen, or underscore characters. Allow up to 99 storage indecies and
+		// generate a simple MD5SUM hash value from the node storage name for the tail end. Although not guaranteed, this
+		// should reduce the likelihood of conflicts to a diminishingly small value.
+		checksum := md5.Sum([]byte(nodeStorage.Name))
+		oem.Name = fmt.Sprintf("fs-%02d-%x", index, string(checksum[0:5]))
+		oem.ClusterName = nodeStorage.Name
 	}
 
 	fileSystemID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)

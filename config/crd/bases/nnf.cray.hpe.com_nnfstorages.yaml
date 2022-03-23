@@ -78,8 +78,9 @@ spec:
                       - raw
                       - lvm
                       - zfs
-                      - lustre
                       - xfs
+                      - gfs2
+                      - lustre
                       type: string
                     name:
                       description: Name is a human readable label for this set of

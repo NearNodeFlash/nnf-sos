@@ -11,7 +11,7 @@ import (
 )
 
 type FileSystemControllerApi interface {
-	NewFileSystem(oem FileSystemOem) FileSystemApi
+	NewFileSystem(oem FileSystemOem) (FileSystemApi, error)
 }
 
 func NewFileSystemController(config *ConfigFile) FileSystemControllerApi {
@@ -23,7 +23,7 @@ type fileSystemController struct {
 }
 
 // NewFileSystem -
-func (c *fileSystemController) NewFileSystem(oem FileSystemOem) FileSystemApi {
+func (c *fileSystemController) NewFileSystem(oem FileSystemOem) (FileSystemApi, error) {
 	return FileSystemRegistry.NewFileSystem(oem)
 }
 
@@ -49,7 +49,7 @@ type FileSystemOptions = map[string]interface{}
 // FileSystemApi - Defines the interface for interacting with various file systems
 // supported by the NNF element controller.
 type FileSystemApi interface {
-	New(oem FileSystemOem) FileSystemApi
+	New(oem FileSystemOem) (FileSystemApi, error)
 
 	IsType(oem FileSystemOem) bool // Returns true if the provided oem fields match the file system type, false otherwise
 	IsMockable() bool              // Returns true if the file system can be instantiated by the mock server, false otherwise
@@ -124,6 +124,8 @@ type FileSystemOem struct {
 	TargetType string `json:"TargetType,omitempty"`
 	Index      int    `json:"Index,omitempty"`
 	BackFs     string `json:"BackFs,omitempty"`
+	// The following is used by GFS2, ignored for others.
+	ClusterName string `json:"ClusterName,omitempty"`
 }
 
 // File System Registry - Maintains a list of eligible file systems registered in the system.
@@ -150,12 +152,12 @@ func (r *fileSystemRegistry) RegisterFileSystem(fileSystem FileSystemApi) {
 	*r = append(*r, fileSystem)
 }
 
-func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) FileSystemApi {
+func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) (FileSystemApi, error) {
 	for _, fs := range *r {
 		if fs.IsType(oem) {
 			return fs.New(oem)
 		}
 	}
 
-	return nil
+	return nil, nil
 }

@@ -11,14 +11,18 @@ type FileSystemLvm struct {
 	FileSystem
 	lvName string
 	vgName string
+	shared bool
 }
 
 func init() {
 	FileSystemRegistry.RegisterFileSystem(&FileSystemLvm{})
 }
 
-func (*FileSystemLvm) New(oem FileSystemOem) FileSystemApi {
-	return &FileSystemLvm{FileSystem: FileSystem{name: oem.Name}}
+func (*FileSystemLvm) New(oem FileSystemOem) (FileSystemApi, error) {
+	return &FileSystemLvm{
+		FileSystem: FileSystem{name: oem.Name},
+		shared:     false,
+	}, nil
 }
 
 func (*FileSystemLvm) IsType(oem FileSystemOem) bool { return oem.Type == "lvm" }
@@ -41,6 +45,10 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		f.lvName = fmt.Sprintf("%s_lv", f.Name())
 	}
 
+	if _, exists := opts["shared"]; exists {
+		f.shared = opts["shared"].(bool)
+	}
+
 	// TODO: Some sort of rollback mechanism on failure condition
 
 	// Ensure the existing volume groups are scanned. Use this information to determine
@@ -52,8 +60,19 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
 	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", f.vgName))
 	if len(rsp) != 0 && !strings.Contains(string(rsp), "not found") {
-		// Volume Group is present, activate the volume
-		if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", f.vgName)); err != nil {
+		// Volume Group is present, activate the volume. This is for the case where another
+		// node created the volume group and we just want to share it.
+		shared := ""
+		if f.shared {
+			// Activate the shared lock
+			if _, err := f.run(fmt.Sprintf("vgchange --lock-start %s", f.vgName)); err != nil {
+				return err
+			}
+
+			shared = "s" // activate with shared option
+		}
+
+		if _, err := f.run(fmt.Sprintf("vgchange --activate %sy %s", shared, f.vgName)); err != nil {
 			return err
 		}
 
@@ -67,7 +86,13 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		}
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgcreate %s %s", f.vgName, strings.Join(devices, " "))); err != nil {
+	// Check if we are creating a shared volume group and prepend the necessary flag
+	shared := ""
+	if f.shared {
+		shared = "--shared"
+	}
+
+	if _, err := f.run(fmt.Sprintf("vgcreate %s %s %s", shared, f.vgName, strings.Join(devices, " "))); err != nil {
 		return err
 	}
 
@@ -86,12 +111,18 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	// error is not enabled, the values read from a deallocated or unwritten block and its metadata (excluding protection information)
 	// shall be:
 	// • all bytes cleared to 0h if bits 2:0 in the DLFEAT field are set to 001b;
+
 	if _, err := f.run(fmt.Sprintf("lvcreate -Zn -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", len(devices), f.lvName, f.vgName)); err != nil {
 		return err
 	}
 
 	// Activate the volume group.
-	if _, err := f.run(fmt.Sprintf("vgchange --activate y %s", f.vgName)); err != nil {
+	shared = ""
+	if f.shared {
+		shared = "s"
+	}
+
+	if _, err := f.run(fmt.Sprintf("vgchange --activate %sy %s", shared, f.vgName)); err != nil {
 		return err
 	}
 

@@ -11,12 +11,12 @@ func init() {
 	FileSystemRegistry.RegisterFileSystem(&FileSystemXfs{})
 }
 
-func (*FileSystemXfs) New(oem FileSystemOem) FileSystemApi {
+func (*FileSystemXfs) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemXfs{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
 		},
-	}
+	}, nil
 }
 
 func (*FileSystemXfs) IsType(oem FileSystemOem) bool { return oem.Type == "xfs" }

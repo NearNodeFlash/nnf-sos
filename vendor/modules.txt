@@ -198,7 +198,7 @@ github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases
-# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220321161437-ef6d1f7988c7
+# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220323203832-2ee6dd6d9b78
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme

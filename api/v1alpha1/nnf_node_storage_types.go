@@ -25,7 +25,7 @@ type NnfNodeStorageSpec struct {
 
 	// FileSystemType defines the type of the desired filesystem, or raw
 	// block device.
-	// +kubebuilder:validation:Enum=raw;lvm;zfs;lustre;xfs
+	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre
 	// +kubebuilder:default:=raw
 	FileSystemType string `json:"fileSystemType"`
 

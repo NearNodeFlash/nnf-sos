@@ -1122,7 +1122,10 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 		return ec.NewErrBadRequest().WithResourceType(FileSystemOdataType).WithError(err).WithEvent(msgreg.MalformedJSONBase())
 	}
 
-	fsApi := server.FileSystemController.NewFileSystem(oem)
+	fsApi, err := server.FileSystemController.NewFileSystem(oem)
+	if err != nil {
+		return ec.NewErrNotAcceptable().WithResourceType(FileSystemOdataType).WithError(err).WithCause("File system '%s' failed to allocate").WithEvent(msgreg.InternalErrorBase())
+	}
 	if fsApi == nil {
 		return ec.NewErrNotAcceptable().WithResourceType(FileSystemOdataType).WithEvent(msgreg.PropertyValueNotInListBase(oem.Type, "Type"))
 	}
@@ -1263,6 +1266,9 @@ refreshState:
 
 	updateFunc := func() error {
 		opts := model.Oem
+		if opts == nil {
+			opts = server.FileSystemOptions{}
+		}
 		opts["mountpoint"] = sh.mountRoot
 
 		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, opts); err != nil {

@@ -57,8 +57,9 @@ spec:
                 - raw
                 - lvm
                 - zfs
-                - lustre
                 - xfs
+                - gfs2
+                - lustre
                 type: string
               lustreStorage:
                 description: LustreStorageSpec describes the Lustre target created
