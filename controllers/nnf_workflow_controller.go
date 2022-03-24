@@ -515,7 +515,7 @@ func (r *NnfWorkflowReconciler) createStorageInstance(ctx context.Context, workf
 	case "job": // TODO: "job" and "persistent" should move to const definitions
 		storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.Spec.Name,
+				Name:      fmt.Sprintf("%s-%d", workflow.Name, d.Spec.DW.DWDirectiveIndex),
 				Namespace: workflow.Namespace,
 			},
 		}
@@ -881,8 +881,9 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 }
 
 func (r *NnfWorkflowReconciler) findNnfJobStorageInstance(ctx context.Context, name string, workflow *dwsv1alpha1.Workflow) (*nnfv1alpha1.NnfJobStorageInstance, error) {
+	index := findDirectiveIndexByName(workflow, name)
 	jsi := &nnfv1alpha1.NnfJobStorageInstance{}
-	return jsi, r.Get(ctx, types.NamespacedName{Name: name, Namespace: workflow.Namespace}, jsi)
+	return jsi, r.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%d", workflow.Name, index), Namespace: workflow.Namespace}, jsi)
 }
 
 func (r *NnfWorkflowReconciler) findNnfPersistentStorageInstance(ctx context.Context, name string) (*nnfv1alpha1.NnfPersistentStorageInstance, error) {

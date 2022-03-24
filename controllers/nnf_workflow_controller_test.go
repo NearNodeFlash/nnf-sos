@@ -201,7 +201,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				By("creates valid job storage instance")
 				storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test",
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, 0),
 						Namespace: key.Namespace,
 					},
 				}
