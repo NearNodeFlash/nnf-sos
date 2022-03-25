@@ -266,7 +266,7 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		// Wait for all directiveBreakdowns to become ready
+		// Wait for the breakdown to be ready
 		if directiveBreakdown.Status.Ready != ConditionTrue {
 			return ctrl.Result{}, nil
 		}
@@ -458,6 +458,12 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 		if err != nil {
 			log.Error(err, "Unable to get servers", "servers", types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace})
 			return ctrl.Result{}, err
+		}
+
+		if _, present := os.LookupEnv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"); !present {
+			if len(dbd.Status.AllocationSet) != 0 && len(dbd.Status.AllocationSet) != len(s.Spec.AllocationSets) {
+				return r.failDriverState(ctx, workflow, driverID, fmt.Sprintf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.DW.DWDirective))
+			}
 		}
 
 		log.Info("Creating storage instance", "Directive", dbd.Spec.DW)

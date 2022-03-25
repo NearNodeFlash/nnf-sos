@@ -111,9 +111,10 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	sref := v1.ObjectReference{Name: servers.Name, Namespace: servers.Namespace}
-	if dbd.Status.Servers != sref {
-		dbd.Status.Servers = sref
+	dbd.Status.Servers = v1.ObjectReference{
+		Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+		Name:      servers.Name,
+		Namespace: servers.Namespace,
 	}
 
 	result, err := r.populateDirectiveBreakdown(ctx, dbd, log)

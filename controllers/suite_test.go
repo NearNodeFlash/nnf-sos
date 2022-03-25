@@ -56,6 +56,7 @@ var envVars = []envSetting{
 	{"ACK_GINKGO_DEPRECATIONS", "1.16.4"},
 	{"DWS_DRIVER_ID", "nnf"},
 	{"RABBIT_NODE", "0"},
+	{"RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", "true"},
 }
 
 func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha1.DWDirectiveRule, error) {
