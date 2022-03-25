@@ -482,17 +482,22 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 		for i := 0; i < nnfNodeStorage.Spec.Count; i++ {
 			mountInfo := dwsv1alpha1.ClientMountInfo{}
 
+			// Set the DeviceReference to the NnfNodeStorage allocation regardless of whether we're mounting on
+			// the Rabbit or the compute node. The compute node ClientMount device type will not be set to "reference",
+			// so clientmountd will not look at the DeviceReference struct. The DeviceReference information is used by
+			// the data movement code to match up mounts between the Rabbit and compute node.
+			mountInfo.Device.DeviceReference = &dwsv1alpha1.ClientMountDeviceReference{}
+			mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name()
+			mountInfo.Device.DeviceReference.ObjectReference.Name = nnfNodeStorage.Name
+			mountInfo.Device.DeviceReference.ObjectReference.Namespace = nnfNodeStorage.Namespace
+			mountInfo.Device.DeviceReference.Data = i
+
 			// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
 			// to the NnfNodeStorage resource so the client mounter can access the swordfish objects
 			if access.Spec.ClientReference == (corev1.ObjectReference{}) {
 				mountInfo.Type = allocationSet.FileSystemType
 				mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeReference
 				mountInfo.MountPath = filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(i))
-				mountInfo.Device.DeviceReference = &dwsv1alpha1.ClientMountDeviceReference{}
-				mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name()
-				mountInfo.Device.DeviceReference.ObjectReference.Name = nnfNodeStorage.Name
-				mountInfo.Device.DeviceReference.ObjectReference.Namespace = nnfNodeStorage.Namespace
-				mountInfo.Device.DeviceReference.Data = i
 			} else {
 				mountInfo.Type = allocationSet.FileSystemType
 				mountInfo.MountPath = access.Spec.MountPath
