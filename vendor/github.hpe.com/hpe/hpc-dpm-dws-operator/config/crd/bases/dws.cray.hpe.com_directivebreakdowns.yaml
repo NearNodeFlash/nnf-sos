@@ -65,6 +65,7 @@ spec:
                 enum:
                 - raw
                 - xfs
+                - gfs2
                 - lustre
                 type: string
             required:

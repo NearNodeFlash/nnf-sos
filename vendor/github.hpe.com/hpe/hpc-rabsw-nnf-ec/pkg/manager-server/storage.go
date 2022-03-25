@@ -64,6 +64,14 @@ func (s *Storage) DeleteFileSystem(fs FileSystemApi) error {
 	return s.ctrl.DeleteFileSystem(s)
 }
 
+func (s *Storage) MountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
+	return s.ctrl.MountFileSystem(s, opts)
+}
+
+func (s *Storage) UnmountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
+	return s.ctrl.UnmountFileSystem(s)
+}
+
 // Returns the list of devices for this pool.
 func (s *Storage) Devices() []string {
 	devices := make([]string, len(s.discoveredNamespaces))

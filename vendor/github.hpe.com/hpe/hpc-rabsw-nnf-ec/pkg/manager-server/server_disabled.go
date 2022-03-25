@@ -39,6 +39,14 @@ func (*DisabledServerController) CreateFileSystem(*Storage, FileSystemApi, FileS
 	return ErrServerControllerDisabled
 }
 
+func (*DisabledServerController) MountFileSystem(*Storage, FileSystemOptions) error {
+	return ErrServerControllerDisabled
+}
+
+func (*DisabledServerController) UnmountFileSystem(*Storage) error {
+	return ErrServerControllerDisabled
+}
+
 func (*DisabledServerController) DeleteFileSystem(*Storage) error {
 	return ErrServerControllerDisabled
 }

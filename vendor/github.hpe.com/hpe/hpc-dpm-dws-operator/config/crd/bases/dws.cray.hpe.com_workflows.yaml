@@ -56,8 +56,8 @@ spec:
                 type: array
               groupID:
                 description: GroupID specifies the group ID for the workflow. The
-                  Group ID is used by the varios states in the workflow to ensure
-                  the group has permissions to perform certain actions. Used in conjuncton
+                  Group ID is used by the various states in the workflow to ensure
+                  the group has permissions to perform certain actions. Used in conjunction
                   with User ID to run subtasks with UserID:GroupID credentials.
                 format: int32
                 type: integer
@@ -66,7 +66,7 @@ spec:
               userID:
                 description: UserID specifies the user ID for the workflow. The User
                   ID is used by the various states in the workflow to ensure the user
-                  has permissions to perform certain actions. Used in conjucntion
+                  has permissions to perform certain actions. Used in conjunction
                   with Group ID to run subtasks with UserID:GroupID credentials
                 format: int32
                 type: integer

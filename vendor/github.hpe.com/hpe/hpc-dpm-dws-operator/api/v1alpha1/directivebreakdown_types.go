@@ -76,7 +76,7 @@ type DirectiveBreakdownSpec struct {
 	Name string `json:"name"`
 
 	// Type is the type specified in the #DW directive
-	// +kubebuilder:validation:Enum=raw;xfs;lustre
+	// +kubebuilder:validation:Enum=raw;xfs;gfs2;lustre
 	Type string `json:"type"`
 
 	// Lifetime is the duration of the allocation

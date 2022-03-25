@@ -250,6 +250,12 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 
 		serverEndpoint := serverEndpointCollection.Members[idx]
 		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
+
+		// The kind environment doesn't support endpoints beyond the Rabbit
+		if os.Getenv("ENVIRONMENT") == "kind" && id != os.Getenv("RABBIT_NODE") {
+			continue
+		}
+
 		endPoint, err := r.getEndpoint(ss, id)
 		if err != nil {
 			log.Error(err, "Failed to get endpoint", "id", id)
@@ -261,7 +267,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 			continue
 		}
 
-		storageGroupID := fmt.Sprintf("%s-%s", nodeStorage.Name, id)
+		storageGroupID := fmt.Sprintf("%s-%d-%s", nodeStorage.Name, index, id)
 
 		sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, id)
 		if err != nil {
@@ -384,14 +390,19 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		})
 	}
 
+	fileShareID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
+
+	shareOptions := make(map[string]interface{})
 	mountPath := ""
 	if nodeStorage.Spec.FileSystemType == "lustre" {
 		targetIndex := nodeStorage.Spec.LustreStorage.StartIndex + index
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
+	} else {
+		shareOptions["volumeGroupName"] = volumeGroupName(fileShareID)
+		shareOptions["logicalVolumeName"] = logicalVolumeName(fileShareID)
 	}
 
-	fileShareID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
-	sh, err := r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath)
+	sh, err := r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
 
@@ -413,6 +424,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		log.Info("Created file share", "Id", sh.Id)
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			allocationStatus.FileShare.ID = sh.Id
+			allocationStatus.VolumeGroup = volumeGroupName(fileShareID)
+			allocationStatus.LogicalVolume = logicalVolumeName(fileShareID)
 			condition.LastTransitionTime = metav1.Now()
 			condition.Status = metav1.ConditionFalse
 			condition.Reason = nnfv1alpha1.ConditionSuccess
@@ -469,10 +482,20 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 		allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceDeleted
 		allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceDeleted
 		allocationStatus.FileShare.Status = nnfv1alpha1.ResourceDeleted
+		allocationStatus.VolumeGroup = ""
+		allocationStatus.LogicalVolume = ""
 		nodeStorage.Status.LustreStorage.Nid = ""
 	})
 
 	return &ctrl.Result{}, nil
+}
+
+func volumeGroupName(id string) string {
+	return fmt.Sprintf("%s_vg", id)
+}
+
+func logicalVolumeName(id string) string {
+	return fmt.Sprintf("%s_lv", id)
 }
 
 func (r *NnfNodeStorageReconciler) isSpecComplete(nodeStorage *nnfv1alpha1.NnfNodeStorage) bool {
@@ -572,7 +595,7 @@ func (r *NnfNodeStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi, id 
 	return sg, nil
 }
 
-func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, id string, fsID string, epID string, mountPath string) (*sf.FileShareV120FileShare, error) {
+func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, id string, fsID string, epID string, mountPath string, options map[string]interface{}) (*sf.FileShareV120FileShare, error) {
 	fs, err := r.getFileSystem(ss, fsID)
 	if err != nil {
 		return nil, err
@@ -586,6 +609,7 @@ func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, id 
 	sh := &sf.FileShareV120FileShare{
 		Id:            id,
 		FileSharePath: mountPath,
+		Oem:           options,
 		Links: sf.FileShareV120Links{
 			FileSystem: sf.OdataV4IdRef{OdataId: fs.OdataId},
 			Endpoint:   sf.OdataV4IdRef{OdataId: ep.OdataId},

@@ -90,20 +90,32 @@ func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, o
 		return err
 	}
 
+	return nil
+}
+
+func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
+	return s.fileSystem.Delete()
+}
+
+func (c *LocalServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
 	mountPoint := opts["mountpoint"].(string)
 	if mountPoint == "" {
 		return nil
 	}
 
-	return fs.Mount(mountPoint)
+	if err := s.fileSystem.Mount(mountPoint); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
+func (c *LocalServerController) UnmountFileSystem(s *Storage) error {
 	if err := s.fileSystem.Unmount(); err != nil {
 		return err
 	}
 
-	return s.fileSystem.Delete()
+	return nil
 }
 
 func (c *LocalServerController) Discover(s *Storage) error {

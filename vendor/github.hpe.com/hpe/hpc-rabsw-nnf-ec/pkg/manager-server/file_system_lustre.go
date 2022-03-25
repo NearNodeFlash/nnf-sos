@@ -170,6 +170,8 @@ func (f *FileSystemLustre) Unmount() error {
 			log.Info("Unable to remove mountpoint; continuing", "mountpoint", f.mountpoint, "err", err)
 		}
 	}
+	f.mountpoint = ""
+
 	return nil
 }
 

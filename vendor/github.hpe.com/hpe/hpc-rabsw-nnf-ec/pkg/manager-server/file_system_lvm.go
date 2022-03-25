@@ -155,6 +155,7 @@ func (f *FileSystemLvm) Mount(mountpoint string) error {
 
 func (f *FileSystemLvm) Unmount() error {
 	_, err := f.run(fmt.Sprintf("unlink %s", f.mountpoint))
+	f.mountpoint = ""
 	return err
 }
 

@@ -49,6 +49,14 @@ func (c *RemoteServerController) CreateFileSystem(s *Storage, f FileSystemApi, o
 	return fmt.Errorf("Cannot create file system on remote server")
 }
 
+func (r *RemoteServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
+	return nil
+}
+
+func (r *RemoteServerController) UnmountFileSystem(s *Storage) error {
+	return nil
+}
+
 func (r *RemoteServerController) DeleteFileSystem(s *Storage) error {
 	return nil
 }

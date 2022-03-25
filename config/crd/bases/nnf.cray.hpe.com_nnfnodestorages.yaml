@@ -248,6 +248,31 @@ spec:
                             the resource's status
                           type: string
                       type: object
+                    logicalVolume:
+                      description: Name of the LVM LV
+                      type: string
+                    nvmeList:
+                      description: List of NVMe namespaces used by this allocation
+                      items:
+                        description: NnfNodeStorageNVMeStatus provides a way to uniquely
+                          identify an NVMe namespace in the system
+                        properties:
+                          deviceSerial:
+                            description: Serial number of the base NVMe device
+                            type: string
+                          namespaceGUID:
+                            description: Globally unique namespace ID
+                            type: string
+                          namespaceID:
+                            description: Id of the Namespace on the NVMe device (e.g.,
+                              "2")
+                            type: string
+                        required:
+                        - deviceSerial
+                        - namespaceGUID
+                        - namespaceID
+                        type: object
+                      type: array
                     storageGroup:
                       description: Represents the storage group that is supporting
                         this server. A storage group is the mapping from a group of
@@ -292,6 +317,9 @@ spec:
                             the resource's status
                           type: string
                       type: object
+                    volumeGroup:
+                      description: Name of the LVM VG
+                      type: string
                   type: object
                 type: array
               lustreStorage:

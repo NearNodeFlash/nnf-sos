@@ -55,13 +55,31 @@ func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts
 		if err := fs.Create(s.Devices(), opts); err != nil {
 			return err
 		}
+	}
 
+	return nil
+}
+
+func (*MockServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
+	if s.fileSystem.IsMockable() {
 		mountPoint := opts["mountpoint"].(string)
 		if mountPoint == "" {
 			return nil
 		}
 
-		return fs.Mount(mountPoint)
+		if err := s.fileSystem.Mount(mountPoint); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (*MockServerController) UnmountFileSystem(s *Storage) error {
+	if s.fileSystem.IsMockable() {
+		if err := s.fileSystem.Unmount(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -69,10 +87,6 @@ func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts
 
 func (*MockServerController) DeleteFileSystem(s *Storage) error {
 	if s.fileSystem.IsMockable() {
-		if err := s.fileSystem.Unmount(); err != nil {
-			return err
-		}
-
 		return s.fileSystem.Delete()
 	}
 	return nil

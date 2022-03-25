@@ -44,6 +44,8 @@ const fileShareRegistryPrefix = "SH"
 const (
 	fileShareCreateStartLogEntryType = iota
 	fileShareCreateCompleteLogEntryType
+	fileShareUpdateStartLogEntryType
+	fileShareUpdateCompleteLogEntryType
 	fileShareDeleteStartLogEntryType
 	fileShareDeleteCompleteLogEntryType
 )
@@ -55,6 +57,10 @@ type fileSharePersistentMetadata struct {
 }
 
 type fileSharePersistentCreateCompleteLogEntry struct {
+	FileSharePath string `json:"FileSharePath"`
+}
+
+type fileSharePersistentUpdateCompleteLogEntry struct {
 	FileSharePath string `json:"FileSharePath"`
 }
 
@@ -79,6 +85,12 @@ func (sh *FileShare) GenerateStateData(state uint32) ([]byte, error) {
 	switch state {
 	case fileShareCreateCompleteLogEntryType:
 		entry := fileSharePersistentCreateCompleteLogEntry{
+			FileSharePath: sh.mountRoot,
+		}
+
+		return json.Marshal(entry)
+	case fileShareUpdateCompleteLogEntryType:
+		entry := fileSharePersistentUpdateCompleteLogEntry{
 			FileSharePath: sh.mountRoot,
 		}
 

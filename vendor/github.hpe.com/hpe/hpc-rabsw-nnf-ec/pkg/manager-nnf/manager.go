@@ -1243,7 +1243,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 
 	// Find the Storage Group Endpoint - There should be a Storage Group
 	// Endpoint that has an association to the fs.storagePool and endpoint.
-	// This represents the physical devices on the server that backs the
+	// This represents the physical devices on the server that back the
 	// File System and supports the Exported Share.
 	sg := sp.findStorageGroupByEndpoint(ep)
 	if sg == nil {
@@ -1272,7 +1272,12 @@ refreshState:
 		opts["mountpoint"] = sh.mountRoot
 
 		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, opts); err != nil {
-			log.WithError(err).Errorf("Failed to initialize file share for path %s", model.FileSharePath)
+			log.WithError(err).Errorf("Failed to create file share for path %s", model.FileSharePath)
+			return err
+		}
+
+		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
+			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
 			return err
 		}
 
@@ -1294,13 +1299,79 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 	if fs == nil {
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(FileShareOdataType, exportedShareId))
 	}
-	if sh != nil {
-		return s.StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, exportedShareId, model)
+	if sh == nil {
+		model.Id = exportedShareId
+
+		return s.StorageServiceIdFileSystemIdExportedSharesPost(storageServiceId, fileSystemId, model)
 	}
 
-	model.Id = exportedShareId
+	newPath := model.FileSharePath
+	if err := s.StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, exportedShareId, model); err != nil {
+		return err
+	}
 
-	return s.StorageServiceIdFileSystemIdExportedSharesPost(storageServiceId, fileSystemId, model)
+	if model.FileSharePath == newPath {
+		return nil
+	}
+
+	fields := strings.Split(model.Links.Endpoint.OdataId, "/")
+	if len(fields) != s.resourceIndex+1 {
+		return ec.NewErrNotAcceptable().WithResourceType(FileSystemOdataType).WithEvent(msgreg.InvalidURIBase(model.Links.Endpoint.OdataId))
+	}
+
+	endpointId := fields[s.resourceIndex]
+	ep := s.findEndpoint(endpointId)
+	if ep == nil {
+		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.ResourceNotFoundBase(EndpointOdataType, endpointId))
+
+	}
+
+	sp := s.findStoragePool(fs.storagePoolId)
+	if sp == nil {
+		return ec.NewErrInternalServerError().WithCause(fmt.Sprintf("Could not find storage pool for file system Storage Pool ID: %s", fs.storagePoolId))
+	}
+
+	// Find the Storage Group Endpoint - There should be a Storage Group
+	// Endpoint that has an association to the fs.storagePool and endpoint.
+	// This represents the physical devices on the server that back the
+	// File System and supports the Exported Share.
+	sg := sp.findStorageGroupByEndpoint(ep)
+	if sg == nil {
+		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StorageGroupOdataType, endpointId))
+	}
+
+	updateFunc := func() error {
+		opts := model.Oem
+		if opts == nil {
+			opts = server.FileSystemOptions{}
+		}
+		opts["mountpoint"] = newPath
+
+		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
+			log.WithError(err).Errorf("Failed to unmount file share for path %s", model.FileSharePath)
+			return err
+		}
+
+		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
+			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
+			return err
+		}
+
+		return nil
+	}
+
+	if err := UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update", sh.id))
+	}
+
+	if err := fs.updateFileShare(model.Id, newPath); err != nil {
+		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update object", sh.id))
+	}
+
+	event.EventManager.PublishResourceEvent(msgreg.ResourceChangedResourceEvent(), sh)
+
+	return s.StorageServiceIdFileSystemIdExportedShareIdGet(storageServiceId, fileSystemId, sh.id, model)
+
 }
 
 // StorageServiceIdFileSystemIdExportedShareIdGet -

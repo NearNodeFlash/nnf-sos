@@ -69,6 +69,19 @@ type NnfNodeStorageStatus struct {
 	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`
 }
 
+// NnfNodeStorageNVMeStatus provides a way to uniquely identify an NVMe namespace
+// in the system
+type NnfNodeStorageNVMeStatus struct {
+	// Serial number of the base NVMe device
+	DeviceSerial string `json:"deviceSerial"`
+
+	// Id of the Namespace on the NVMe device (e.g., "2")
+	NamespaceID string `json:"namespaceID"`
+
+	// Globally unique namespace ID
+	NamespaceGUID string `json:"namespaceGUID"`
+}
+
 // NnfNodeStorageAllocationStatus defines the allocation status for each allocation in the NnfNodeStorage
 type NnfNodeStorageAllocationStatus struct {
 	// Represents the time when the storage was created by the controller
@@ -90,6 +103,15 @@ type NnfNodeStorageAllocationStatus struct {
 	// the mapping from a group of drive namespaces to an individual server. This value
 	// can be safely ignored by the client.
 	StorageGroup NnfResourceStatus `json:"storageGroup,omitempty"`
+
+	// Name of the LVM VG
+	VolumeGroup string `json:"volumeGroup,omitempty"`
+
+	// Name of the LVM LV
+	LogicalVolume string `json:"logicalVolume,omitempty"`
+
+	// List of NVMe namespaces used by this allocation
+	NVMeList []NnfNodeStorageNVMeStatus `json:"nvmeList,omitempty"`
 
 	// Represents the file share that is supporting this server. A file share is the
 	// combination of a storage group and the associated file system parameters (type, mountpoint)

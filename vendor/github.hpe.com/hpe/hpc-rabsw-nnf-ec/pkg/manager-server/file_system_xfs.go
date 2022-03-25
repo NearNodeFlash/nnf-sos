@@ -61,5 +61,7 @@ func (f *FileSystemXfs) Unmount() error {
 	}
 
 	_, err := f.run(fmt.Sprintf("umount %s", f.mountpoint))
+	f.mountpoint = ""
+
 	return err
 }

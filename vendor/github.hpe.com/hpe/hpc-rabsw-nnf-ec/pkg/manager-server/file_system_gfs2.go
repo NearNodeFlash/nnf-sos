@@ -97,5 +97,8 @@ func (f *FileSystemGfs2) Unmount() error {
 	}
 
 	_, err := f.run(fmt.Sprintf("unmount %s", f.mountpoint))
+
+	f.mountpoint = ""
+
 	return err
 }
