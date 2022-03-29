@@ -19,6 +19,8 @@ spec:
           - mountPath: /dev
             name: dev-dir
             mountPropagation: HostToContainer
+          - mountPath: /run
+            name: run-dir
           - mountPath: /var/run/dbus
             name: dbus-dir
           - mountPath: /run/udev
@@ -37,6 +39,9 @@ spec:
         - name: dev-dir
           hostPath:
             path: /dev
+        - name: run-dir
+          hostPath:
+            path: /run
         - name: dbus-dir
           hostPath:
             path: /var/run/dbus
