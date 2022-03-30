@@ -353,7 +353,10 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		// should reduce the likelihood of conflicts to a diminishingly small value.
 		checksum := md5.Sum([]byte(nodeStorage.Name))
 		oem.Name = fmt.Sprintf("fs-%02d-%x", index, string(checksum[0:5]))
-		oem.ClusterName = nodeStorage.Name
+
+		// The cluster name is the "name" of the Rabbit, which is mapped to the node storage namespace (since NNF Node Storage
+		// is rabbit namespace scoped).
+		oem.ClusterName = nodeStorage.Namespace
 	}
 
 	fileSystemID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
