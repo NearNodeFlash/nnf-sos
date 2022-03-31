@@ -145,6 +145,13 @@ type WorkflowStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="DESIRED STATE",type="string",JSONPath=".spec.desiredState",description="Desired state"
+//+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
+//+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="JOBID",type="integer",JSONPath=".spec.jobID",description="Job ID",priority=1
+//+kubebuilder:printcolumn:name="DESIREDSTATECHANGE",type="date",JSONPath=".status.desiredStateChange",description="Time of most recent desiredState change",priority=1
+//+kubebuilder:printcolumn:name="ELAPSEDTIMELASTSTATE",type="string",JSONPath=".status.elapsedTimeLastState",description="Duration of last state change",priority=1
 
 // Workflow is the Schema for the workflows API
 type Workflow struct {

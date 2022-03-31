@@ -16,7 +16,38 @@ spec:
     singular: workflow
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Desired state
+      jsonPath: .spec.desiredState
+      name: DESIRED STATE
+      type: string
+    - description: Current state
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: True if current state is achieved
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - description: Job ID
+      jsonPath: .spec.jobID
+      name: JOBID
+      priority: 1
+      type: integer
+    - description: Time of most recent desiredState change
+      jsonPath: .status.desiredStateChange
+      name: DESIREDSTATECHANGE
+      priority: 1
+      type: date
+    - description: Duration of last state change
+      jsonPath: .status.elapsedTimeLastState
+      name: ELAPSEDTIMELASTSTATE
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Workflow is the Schema for the workflows API
@@ -265,6 +296,7 @@ spec:
         type: object
     served: true
     storage: true
+    subresources: {}
 status:
   acceptedNames:
     kind: ""

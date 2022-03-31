@@ -1410,6 +1410,12 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 	}
 
 	deleteFunc := func() error {
+		opts := server.FileSystemOptions{}
+
+		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
+			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' failed unmount", exportedShareId))
+		}
+
 		if err := sg.serverStorage.DeleteFileSystem(fs.fsApi); err != nil {
 			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' failed delete", exportedShareId))
 		}

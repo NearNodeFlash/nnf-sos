@@ -38,8 +38,7 @@ func (f *FileSystemZfs) Create(devices []string, options FileSystemOptions) erro
 func (f *FileSystemZfs) Delete() error { return nil }
 
 func (f *FileSystemZfs) Mount(mountpoint string) error {
-	_, err := f.run(fmt.Sprintf("zpool create -m %s %s %s",
-		f.mountpoint, f.name, strings.Join(f.devices, " ")))
+	_, err := f.run(fmt.Sprintf("zpool create -m %s %s %s", f.mountpoint, f.name, strings.Join(f.devices, " ")))
 
 	return err
 }

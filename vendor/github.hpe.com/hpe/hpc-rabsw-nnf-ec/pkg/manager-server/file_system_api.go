@@ -100,7 +100,7 @@ func (e *FileSystemError) Unwrap() error {
 func (*FileSystem) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
 
-		fsError := FileSystemError{}
+		fsError := FileSystemError{command: cmd}
 		shellCmd := exec.Command("bash", "-c", cmd)
 		shellCmd.Stdout = &fsError.stdout
 		shellCmd.Stderr = &fsError.stderr

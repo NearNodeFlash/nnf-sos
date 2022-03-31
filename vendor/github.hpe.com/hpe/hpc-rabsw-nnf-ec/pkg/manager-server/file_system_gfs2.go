@@ -96,9 +96,11 @@ func (f *FileSystemGfs2) Unmount() error {
 		return nil
 	}
 
-	_, err := f.run(fmt.Sprintf("unmount %s", f.mountpoint))
+	if _, err := f.run(fmt.Sprintf("umount %s", f.mountpoint)); err != nil {
+		return err
+	}
 
 	f.mountpoint = ""
 
-	return err
+	return nil
 }

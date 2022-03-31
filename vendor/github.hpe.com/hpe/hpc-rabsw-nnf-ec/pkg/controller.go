@@ -15,6 +15,7 @@ import (
 	"flag"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec"
 	event "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-event"
 	fabric "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-fabric"
@@ -76,6 +77,7 @@ func NewController(opts *Options) *ec.Controller {
 		nvmeCtrl = nvme.NewMockNvmeController()
 		if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 			// Keep the real NnfController.
+			log.Infof("NNF_SUPPLIED_DEVICES: %s", os.Getenv("NNF_SUPPLIED_DEVICES"))
 		} else {
 			nnfCtrl = nnf.NewMockNnfController()
 		}

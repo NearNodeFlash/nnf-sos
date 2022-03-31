@@ -167,9 +167,15 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 	storageServiceId := params["StorageServiceId"]
 	storagePoolId := params["StoragePoolId"]
 
+	model := sf.StoragePoolV150StoragePool{
+		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s", storageServiceId, storagePoolId),
+		OdataType: StoragePoolOdataType,
+		Name:      "Storage Pool",
+	}
+
 	err := s.ss.StorageServiceIdStoragePoolIdDelete(storageServiceId, storagePoolId)
 
-	EncodeResponse(nil, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdCapacitySourcesGet -
@@ -340,9 +346,15 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroup
 	storageServiceId := params["StorageServiceId"]
 	storageGroupId := params["StorageGroupId"]
 
+	model := sf.StorageGroupV150StorageGroup{
+		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StorageGroups/%s", storageServiceId, storageGroupId),
+		OdataType: StorageGroupOdataType,
+		Name:      "Storage Group",
+	}
+
 	err := s.ss.StorageServiceIdStorageGroupIdDelete(storageServiceId, storageGroupId)
 
-	EncodeResponse(nil, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // 	RedfishV1StorageServicesStorageServiceIdEndpointsGet -
@@ -458,9 +470,15 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 	storageServiceId := params["StorageServiceId"]
 	fileSystemId := params["FileSystemId"]
 
+	model := sf.FileSystemV122FileSystem{
+		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s", storageServiceId, fileSystemId),
+		OdataType: FileSystemOdataType,
+		Name:      "File System",
+	}
+
 	err := s.ss.StorageServiceIdFileSystemIdDelete(storageServiceId, fileSystemId)
 
-	EncodeResponse(nil, err, w)
+	EncodeResponse(model, err, w)
 }
 
 // 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesGet -
@@ -549,7 +567,13 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 	fileSystemId := params["FileSystemsId"]
 	exportedShareId := params["ExportedFileSharesId"]
 
+	model := sf.FileShareV120FileShare{
+		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/FileSystems/%s/ExportedShares/%s", storageServiceId, fileSystemId, exportedShareId),
+		OdataType: FileShareOdataType,
+		Name:      "Exported File Share",
+	}
+
 	err := s.ss.StorageServiceIdFileSystemIdExportedShareIdDelete(storageServiceId, fileSystemId, exportedShareId)
 
-	EncodeResponse(nil, err, w)
+	EncodeResponse(model, err, w)
 }
