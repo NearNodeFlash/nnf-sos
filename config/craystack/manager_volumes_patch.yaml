@@ -25,13 +25,25 @@ spec:
             name: dbus-dir
           - mountPath: /run/udev
             name: udev-dir
+          - mountPath: /lib/udev
+            name: libudev-dir
+          - mountPath: /usr/bin
+            name: ubin-dir
           - mountPath: /usr/sbin
             name: usbin-dir
+          - mountPath: /usr/lib
+            name: ulib-dir
           - mountPath: /usr/lib64
             name: lib64-dir
           - mountPath: /sys
             name: sys-dir
             mountPropagation: HostToContainer
+          - mountPath: /var/lib
+            name: varlib-dir
+          - mountPath: /usr/share # for /usr/share/hwdata/pci.ids file, used by nvme list
+            name: ushare-dir
+          - mountPath: /etc
+            name: etc-dir
       volumes:
         - name: mnt-dir
           hostPath:
@@ -45,16 +57,34 @@ spec:
         - name: dbus-dir
           hostPath:
             path: /var/run/dbus
+        - name: udev-dir
+          hostPath:
+            path: /run/udev
+        - name: libudev-dir
+          hostPath:
+            path: /lib/udev
+        - name: ubin-dir
+          hostPath:
+            path: /usr/bin
         - name: usbin-dir
           hostPath:
             path: /usr/sbin
+        - name: ulib-dir
+          hostPath:
+            path: /usr/lib
         - name: lib64-dir
           hostPath:
             path: /usr/lib64
         - name: sys-dir
           hostPath:
             path: /sys
-        - name: udev-dir
+        - name: varlib-dir
           hostPath:
-            path: /run/udev
+            path: /var/lib
+        - name: ushare-dir
+          hostPath:
+            path: /usr/share
+        - name: etc-dir
+          hostPath:
+            path: /etc
 

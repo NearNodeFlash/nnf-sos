@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -111,8 +112,13 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	// error is not enabled, the values read from a deallocated or unwritten block and its metadata (excluding protection information)
 	// shall be:
 	// • all bytes cleared to 0h if bits 2:0 in the DLFEAT field are set to 001b;
+	zeroOpt := "-Zn"
+	if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
+		// On non-NVMe, let the zeroing happen so devices can be reused.
+		zeroOpt = "--yes"
+	}
 
-	if _, err := f.run(fmt.Sprintf("lvcreate -Zn -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", len(devices), f.lvName, f.vgName)); err != nil {
+	if _, err := f.run(fmt.Sprintf("lvcreate %s -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", zeroOpt, len(devices), f.lvName, f.vgName)); err != nil {
 		return err
 	}
 

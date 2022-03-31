@@ -6,10 +6,9 @@ PROG=$(basename "$0")
 
 printhelp()
 {
-  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS | -i RABBITS] [-a ALLOCATION_COUNT] [-Y] [-X] [-C]"
+  echo "Usage: $PROG -w WORKFLOW [-c COUNT] [-x XRABBITS | -i RABBITS] [-a ALLOCATION_COUNT] [-X]"
   echo
   echo "  -w WORKFLOW  Resource name of the workflow."
-  echo "  -C           Colocate MDT and MGT on same rabbit (but separate devices)."
   echo "  -c COUNT     Number of rabbit nodes to use."
   echo "  -i RABBITS   Comma-separated list of rabbit nodes to use."
   echo "  -x XRABBITS  Comma-separated list of rabbit nodes to exclude."
@@ -21,12 +20,11 @@ printhelp()
 
 ALLOCATION_COUNT=1
 OPTIND=1
-while getopts ":hw:c:x:i:a:YXC" opt
+while getopts ":hw:c:x:i:a:X" opt
 do
   case $opt in
   w) WORKFLOW=$OPTARG ;;
   c) COUNT=$OPTARG ;;
-  C) COLOCATE_MDT_MGT=yes ;;
   i) IRABBITS=$OPTARG ;;
   x) XRABBITS=$OPTARG ;;
   a) ALLOCATION_COUNT=$OPTARG ;;

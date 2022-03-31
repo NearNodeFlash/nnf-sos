@@ -120,10 +120,13 @@ func (f *FileSystemLustre) Delete() error {
 		}
 	}
 
-	var devName string = f.devices[0]
-	err = runCmd(f, fmt.Sprintf("wipefs --all %s", devName))
-	if err != nil {
-		return err
+	if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
+		// On non-NVMe, wipe so devices can be reused.
+		var devName string = f.devices[0]
+		err = runCmd(f, fmt.Sprintf("wipefs --all %s", devName))
+		if err != nil {
+			return err
+		}
 	}
 	// Inform the OS of partition table changes.
 	err = runCmd(f, "partprobe")

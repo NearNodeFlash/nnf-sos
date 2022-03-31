@@ -713,8 +713,8 @@ github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220331142332-aa9d72a71f50/go.mo
 github.hpe.com/hpe/hpc-rabsw-lustre-csi-driver v0.0.0-20211216142843-0b84f0d84e3f/go.mod h1:3VOepCJRh1UbeNCrCRWKpT/JjGXc4MQ2bseCBQ7WEn4=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7 h1:oKi+gp+Q9MzmrxuZHV8sknfWGCdhkoIik2CGONo/QLM=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220331122222-9230e6e5bf6a h1:zg1unqrZi5wex0yAyRqlev2TGoce1Ygbc6wx5wuy0jw=
-github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220331122222-9230e6e5bf6a/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220331214018-81d132f61de8 h1:cYWmOysguoG9ajPHY8TPleDVQQT5gOvhNF0iZf3rOcQ=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220331214018-81d132f61de8/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29 h1:TgvWIQO0I0E7pKVLq/ARDhT2p2kHGKLtZhAN0EtUxiI=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29/go.mod h1:gk1qa1CBZAdya1PqugRJjkwk8LIymAoB5wf5UA7NrFk=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
