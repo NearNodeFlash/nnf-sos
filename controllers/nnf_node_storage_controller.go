@@ -307,6 +307,11 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 
 	// Raw storage doesn't need a file system
 	if nodeStorage.Spec.FileSystemType == "raw" {
+		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+			allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
+			allocationStatus.FileShare.Status = nnfv1alpha1.ResourceReady
+		})
+		
 		return nil, nil
 	}
 
