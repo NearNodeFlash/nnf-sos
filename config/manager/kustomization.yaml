@@ -16,5 +16,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: arti.dev.cray.com/rabsw-docker-unstable-local/cray-dp-nnf-sos
-  newTag: 0.0.1-20220325150635_d2d6b69
+  newName: arti.dev.cray.com/rabsw-docker-master-local/cray-dp-nnf-sos
+  newTag: 0.0.1

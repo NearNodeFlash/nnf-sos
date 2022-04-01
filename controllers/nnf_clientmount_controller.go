@@ -122,7 +122,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha1.ClientMount, state dwsv1alpha1.ClientMountState) error {
 	log := r.Log.WithValues("ClientMount", types.NamespacedName{Name: clientMount.Name, Namespace: clientMount.Namespace})
 
-	var firstError error = nil
+	var firstError error
 	for i, mount := range clientMount.Spec.Mounts {
 		var err error
 

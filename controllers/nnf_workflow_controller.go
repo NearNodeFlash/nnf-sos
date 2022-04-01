@@ -234,7 +234,10 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 			return ctrl.Result{}, err
 		}
 		if directiveBreakdown != nil {
-			dbList = append(dbList, v1.ObjectReference{Name: directiveBreakdown.Name, Namespace: directiveBreakdown.Namespace})
+			dbList = append(dbList, v1.ObjectReference{
+				Kind:      reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name(),
+				Name:      directiveBreakdown.Name,
+				Namespace: directiveBreakdown.Namespace})
 		}
 	}
 
@@ -538,6 +541,7 @@ func (r *NnfWorkflowReconciler) createStorageInstance(ctx context.Context, workf
 				Servers: d.Status.Servers,
 			}
 
+			// Delete this NnfJobStorageInstance when the workflow is deleted
 			return ctrl.SetControllerReference(workflow, storageInstance, r.Scheme)
 		}
 
