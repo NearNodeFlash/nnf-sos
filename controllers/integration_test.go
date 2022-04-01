@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -16,329 +17,188 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("Integration Test", func() {
-	const (
-		WorkflowNamespace = "default"
-		WorkflowID        = "test"
-		supported         = true
-		unsupported       = false
-	)
-	wfDirectives := []string{
-		"#DW jobdw name=%s type=%s capacity=1GiB",
-		"#DW jobdw name=%s type=%s capacity=1GiB",
-		"#DW jobdw name=%s type=%s capacity=1GiB",
-		"#DW jobdw name=%s type=%s capacity=1GiB", // Add more if you want more directivebreakdowns and servers
-	}
 
 	const timeout = time.Second * 10
 	const interval = time.Millisecond * 100
 
-	var savedWorkflow *dwsv1alpha1.Workflow
-
 	type fsToTest struct {
-		fsName        string
-		allocSetCount int
-		isSupported   bool
+		fsType                 string
+		expectedAllocationSets int
 	}
+
 	var filesystems = []fsToTest{
-		{"raw", 1, supported},
-		{"xfs", 1, supported},
-		{"lustre", 3, supported},
-
-		// The following are not yet supported
-		// {"lvm", 1, unsupported},
-		// {"gfs2", 1, unsupported},
+		{"raw", 1},
+		//{"lvm", 1},
+		{"xfs", 1},
+		{"gfs2", 1},
+		{"lustre", 3},
 	}
 
-	// Spin through the supported file systems
-	for index := range filesystems {
-		f := filesystems[index] // Ensure closure has the current value from the loop.
-		workflowName := f.fsName + "-" + uuid.NewString()
+	var workflow *dwsv1alpha1.Workflow
 
-		// Initialize dwDirectives to unique names and sizes
-		var dwDirectives []string
-		for i := range wfDirectives {
-			name := fmt.Sprintf("%d-%s", i, workflowName)
-			dwDirectives = append(dwDirectives, fmt.Sprintf(wfDirectives[i], name, f.fsName))
-		}
+	for idx := range filesystems {
+		fsType := filesystems[idx].fsType
+		expectedAllocationSets := filesystems[idx].expectedAllocationSets
+		wfid := uuid.NewString()[0:8]
 
-		Describe(fmt.Sprintf("Creating workflow %s for file system %s", workflowName, f.fsName), func() {
-			BeforeEach(func() {
-				if !f.isSupported {
-					Skip(fmt.Sprintf("File System %s Not Supported", f.fsName))
-				}
-			})
+		It(fmt.Sprintf("Testing file system '%s'", fsType), func() {
 
-			It("Should create successfully", func() {
-				workflow := &dwsv1alpha1.Workflow{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      workflowName,
-						Namespace: WorkflowNamespace,
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%s", fsType, wfid),
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal.String(),
+					JobID:        idx,
+					WLMID:        "Test WLMID",
+					DWDirectives: []string{
+						fmt.Sprintf("#DW jobdw name=%s type=%s capacity=1GiB", "test-0", fsType),
+						fmt.Sprintf("#DW jobdw name=%s type=%s capacity=1GiB", "test-1", fsType),
 					},
-					Spec: dwsv1alpha1.WorkflowSpec{
-						DesiredState: "proposal", // TODO: This should be defined somewhere
-						WLMID:        WorkflowID + f.fsName,
-						DWDirectives: dwDirectives,
-					},
-				}
-				Expect(k8sClient.Create(context.Background(), workflow)).Should(Succeed())
-			})
+				},
+			}
 
-			It("Should be in proposal state", func() {
-				wf := &dwsv1alpha1.Workflow{}
+			By("Creating the workflow")
+			Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+			By("Retrieving created workflow")
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+			}).Should(Succeed())
+
+			// Store ownership reference to workflow - this is checked for many of the created objects
+			controller := true
+			blockOwnerDeletion := true
+			ownerRef := metav1.OwnerReference{
+				Kind:               reflect.TypeOf(dwsv1alpha1.Workflow{}).Name(),
+				APIVersion:         dwsv1alpha1.GroupVersion.String(),
+				UID:                workflow.GetUID(),
+				Name:               workflow.GetName(),
+				Controller:         &controller,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			}
+
+			By("Checking proposal state and ready")
+			Eventually(func() bool {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.State == dwsv1alpha1.StateProposal.String() && workflow.Status.Ready
+			}).Should(BeTrue())
+
+			By("Checking for Computes resource")
+			computes := &dwsv1alpha1.Computes{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), computes)).To(Succeed())
+			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+
+			By("Checking various DW Directive Breakdowns")
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha1.DirectiveBreakdown{}
+				// TODO: Write up a bug and assign to Tony
+				//Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name()))
+
+				By("Checking DW Directive Breakdown")
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+				Expect(dbd.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+				Expect(dbd.Status.AllocationSet).To(HaveLen(expectedAllocationSets))
+
+				By("DW Directive Breakdown should go ready")
+				Eventually(func() bool {
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbd), dbd)).To(Succeed())
+					return dbd.Status.Ready
+				}).Should(BeTrue())
+
+				By("Checking DW Directive has Servers resource")
+				servers := &dwsv1alpha1.Servers{}
+				Expect(dbd.Status.Servers.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Servers{}).Name()))
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace}, servers)).To(Succeed())
+
+				By("Checking servers resource")
+				//Expect(servers.Spec.AllocationSets).To(HaveLen(len(dbd.Status.AllocationSet)))
+				// TODO: Check with Tony why this doesn't work
+				Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(metav1.OwnerReference{
+					Kind:               reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name(),
+					APIVersion:         dwsv1alpha1.GroupVersion.String(),
+					UID:                dbd.GetUID(),
+					Name:               dbd.GetName(),
+					Controller:         &controller,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				}))
+
+				By("Assigning storage")
+				// TODO
+
+			}
+
+			By("Assigning computes")
+			// TODO
+
+			advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState) {
+				By(fmt.Sprintf("Advancing to %s state", state))
 				Eventually(func() error {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					return err
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+					workflow.Spec.DesiredState = state.String()
+					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed())
 
-				// Save a copy of the workflow for use during deletion
-				savedWorkflow = wf
-
-				Eventually(func() (string, error) {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					if err != nil {
-						return "", err
-					}
-					return wf.Status.State, nil
-				}).Should(Equal("proposal"))
-			})
-
-			It("Should have a single Computes that is owned by the workflow", func() {
-				computes := &dwsv1alpha1.Computes{}
-				name := workflowName
-				namespace := WorkflowNamespace
-
-				Eventually(func() error {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, computes)
-					return err
-				}, timeout, interval).Should(Succeed())
-
-				// From https://book.kubebuilder.io/reference/envtest.html
-				// Unless you’re using an existing cluster, keep in mind that no built-in controllers
-				// are running in the test context. In some ways, the test control plane will behave
-				// differently from “real” clusters, and that might have an impact on how you write tests.
-				// One common example is garbage collection; because there are no controllers monitoring
-				// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
-				//
-				// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
-				t := true
-				expectedOwnerReference := metav1.OwnerReference{
-					APIVersion:         savedWorkflow.APIVersion,
-					Kind:               savedWorkflow.Kind,
-					Name:               savedWorkflow.Name,
-					UID:                savedWorkflow.UID,
-					Controller:         &t,
-					BlockOwnerDeletion: &t,
-				}
-
-				Expect(computes.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
-			})
-
-			It("Should have directiveBreakdown(s) owned by the workflow, 1 for each #DW", func() {
-				for i := 0; i < len(wfDirectives); i++ {
-					directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
-					name := workflowName + "-" + strconv.Itoa(i)
-					namespace := WorkflowNamespace
-
-					Eventually(func() error {
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
-						if err != nil {
-							return err
-						}
-
-						if directiveBreakdown.Status.Ready != true {
-							return fmt.Errorf("not ready")
-						}
-
-						return nil
-					}, timeout, interval).Should(Succeed())
-
-					// From https://book.kubebuilder.io/reference/envtest.html
-					// Unless you’re using an existing cluster, keep in mind that no built-in controllers
-					// are running in the test context. In some ways, the test control plane will behave
-					// differently from “real” clusters, and that might have an impact on how you write tests.
-					// One common example is garbage collection; because there are no controllers monitoring
-					// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
-					//
-					// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
-					t := true
-					expectedOwnerReference := metav1.OwnerReference{
-						APIVersion:         savedWorkflow.APIVersion,
-						Kind:               savedWorkflow.Kind,
-						Name:               savedWorkflow.Name,
-						UID:                savedWorkflow.UID,
-						Controller:         &t,
-						BlockOwnerDeletion: &t,
-					}
-
-					Expect(directiveBreakdown.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
-				}
-			})
-
-			It("Should have directiveBreakdown(s) that are ready, each referrring to an associated Servers", func() {
-				for i := 0; i < len(wfDirectives); i++ {
-					servers := &dwsv1alpha1.Servers{}
-					name := workflowName + "-" + strconv.Itoa(i)
-					namespace := WorkflowNamespace
-
-					Eventually(func() error {
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, servers)
-						return err
-					}, timeout, interval).Should(Succeed())
-
-					directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
-					Eventually(func() error {
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
-						return err
-					}, timeout, interval).Should(Succeed())
-
-					Expect(directiveBreakdown.Status.Servers.Name).Should(Equal(servers.Name))
-					Expect(directiveBreakdown.Status.Servers.Namespace).Should(Equal(servers.Namespace))
-					Expect(len(directiveBreakdown.Status.AllocationSet)).Should(BeNumerically("==", f.allocSetCount))
-
-					Expect(directiveBreakdown.Status.Ready).Should(BeTrue())
-
-					// From https://book.kubebuilder.io/reference/envtest.html
-					// Unless you’re using an existing cluster, keep in mind that no built-in controllers
-					// are running in the test context. In some ways, the test control plane will behave
-					// differently from “real” clusters, and that might have an impact on how you write tests.
-					// One common example is garbage collection; because there are no controllers monitoring
-					// built-in resources, objects do not get deleted, even if an OwnerReference is set up.
-					//
-					// To test that the deletion lifecycle works, test the ownership instead of asserting on existence.
-					t := true
-					expectedOwnerReference := metav1.OwnerReference{
-						APIVersion:         directiveBreakdown.APIVersion,
-						Kind:               directiveBreakdown.Kind,
-						Name:               directiveBreakdown.Name,
-						UID:                directiveBreakdown.UID,
-						Controller:         &t,
-						BlockOwnerDeletion: &t,
-					}
-
-					Expect(servers.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
-				}
-			})
-
-			// Once all of the objects above have been created, the workflow should achieve "proposal"
-			It("Should complete proposal state", func() {
-				wf := &dwsv1alpha1.Workflow{}
-				Eventually(func() (bool, error) {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					if err != nil {
-						return false, err
-					}
-					return wf.Status.Ready, nil
-				}, timeout, interval).Should(BeTrue())
-			})
-
-			// TODO: Insert Setup State checks
-
-			// Try moving the workflow through the unsupported states
-			It("It should complete each unsupported state", func() {
-				wf := &dwsv1alpha1.Workflow{}
-				Eventually(func() (bool, error) {
-					wf := wf
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					if err != nil {
-						return false, err
-					}
-					return wf.Status.Ready, nil
-				}, timeout, interval).Should(BeTrue())
-
-				unsupportedStates := []string{
-					dwsv1alpha1.StateSetup.String(), // TODO: Remove this when we transition to Setup on line 237.
-					dwsv1alpha1.StateDataIn.String(),
-					dwsv1alpha1.StatePreRun.String(),
-					dwsv1alpha1.StatePostRun.String(),
-					dwsv1alpha1.StateDataOut.String(),
-				}
-
-				// Iterate the unsupported states and ensure workflow completes them
-				for _, s := range unsupportedStates {
-					wf.Spec.DesiredState = s
-					Eventually(func() error {
-						wf := wf
-						err := k8sClient.Update(context.Background(), wf)
-						return err
-					}, timeout, interval).Should(BeNil(), fmt.Sprintf("Update desiredState: %s", s))
-
-					Eventually(func() bool {
-						err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-						if err != nil {
-							return false
-						}
-						Expect(err).Should(BeNil())
-
-						return wf.Status.State == s && wf.Status.Ready == true
-					}, timeout, interval).Should(BeTrue(), fmt.Sprintf("Waiting for ready state: %s", s))
-
-					Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), fmt.Sprintf("Status.State should equal Spec.DesiredState: %s", s))
-					Expect(wf.Status.Ready).Should(BeTrue())
-				}
-			})
-
-			It("Should accept change to teardown state", func() {
-				wf := &dwsv1alpha1.Workflow{}
-				Eventually(func() (bool, error) {
-					wf := wf
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					if err != nil {
-						return false, err
-					}
-					return wf.Status.Ready, nil
-				}, timeout, interval).Should(BeTrue())
-
-				wf.Spec.DesiredState = dwsv1alpha1.StateTeardown.String()
-				Eventually(func() error {
-					wf := wf
-					err := k8sClient.Update(context.Background(), wf)
-					return err
-				}).Should(BeNil())
-
+				By(fmt.Sprintf("Waiting on state %s and ready", state))
 				Eventually(func() bool {
-					err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-					if err != nil {
-						return false
-					}
-					Expect(err).Should(BeNil())
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+					return workflow.Status.State == state.String() && workflow.Status.Ready
+				}).Should(BeTrue())
+			}
 
-					return wf.Status.State == dwsv1alpha1.StateTeardown.String() && wf.Status.Ready == true
-				}, timeout, interval).Should(BeTrue())
+			/***************************** Setup *****************************/
 
-				Expect(wf.Status.State).Should(Equal(wf.Spec.DesiredState), fmt.Sprintf("Status.State should equal Spec.DesiredState: %s", dwsv1alpha1.StateTeardown.String()))
-				Expect(wf.Status.Ready).Should(BeTrue())
-			})
-		})
+			advanceStateAndCheckReady(dwsv1alpha1.StateSetup)
 
-		Describe(fmt.Sprintf("Deleting workflow %s for file system %s", workflowName, f.fsName), func() {
-			BeforeEach(func() {
-				if !f.isSupported {
-					Skip(fmt.Sprintf("File System %s Not Supported", f.fsName))
-				}
-			})
+			By("Checking Setup state")
+			// TODO
 
-			It("Should delete successfully", func() {
-				workflow := &dwsv1alpha1.Workflow{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      workflowName,
-						Namespace: WorkflowNamespace,
-					},
-				}
-				Expect(k8sClient.Delete(context.Background(), workflow)).Should(Succeed())
-			})
+			/**************************** Data In ****************************/
 
-			It("Should be deleted", func() {
-				wf := &dwsv1alpha1.Workflow{}
-				Eventually(func() error {
-					return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-				}, "3s", "1s").ShouldNot(Succeed())
-			})
-		})
-	}
+			advanceStateAndCheckReady(dwsv1alpha1.StateDataIn)
+
+			By("Checking Data In state")
+			// TODO
+
+			/**************************** Pre Run ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StatePreRun)
+
+			By("Checking Pre Run state")
+			// TODO
+
+			/*************************** Post Run ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StatePostRun)
+
+			By("Checking Post Run state")
+			// TODO
+
+			/**************************** Data Out ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StateDataOut)
+
+			By("Checking Data Out state")
+			// TODO
+
+			/**************************** Teardown ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown)
+
+			By("Checking Teardown state")
+			// TODO: Check that all the objects are deleted
+
+		}) // It(fmt.Sprintf("Testing file system '%s'", fsType)
+
+	} // for idx := range filesystems
+
 })
 
 var _ = Describe("Empty #DW List Test", func() {

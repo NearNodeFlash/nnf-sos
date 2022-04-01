@@ -80,7 +80,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		}).ShouldNot(Succeed())
 	})
 
-	When("Using bad copy_in directives", func() {
+	When("Using bad copy_in/copy_out directives", func() {
 
 		getErroredDriverStatus := func(workflow *dwsv1alpha1.Workflow) *dwsv1alpha1.WorkflowDriverStatus {
 			driverID := os.Getenv("DWS_DRIVER_ID")
