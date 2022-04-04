@@ -189,6 +189,7 @@ container-unit-test: ## Build docker image with the manager and execute unit tes
 	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 
 test: manifests generate fmt vet ## Run tests.
+	find controllers -name "*.db" -type d -exec rm -rf {} +
 	mkdir -p ${ENVTEST_ASSETS_DIR}
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./controllers/... ./api/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress

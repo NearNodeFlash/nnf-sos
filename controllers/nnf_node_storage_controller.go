@@ -311,7 +311,6 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 			allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
 			allocationStatus.FileShare.Status = nnfv1alpha1.ResourceReady
 		})
-		
 		return nil, nil
 	}
 

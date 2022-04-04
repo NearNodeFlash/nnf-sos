@@ -29,6 +29,8 @@ import (
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
+	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
+	"github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 
 	_ "github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases"
@@ -36,6 +38,7 @@ import (
 	_ "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases"
 
 	dwsctrls "github.hpe.com/hpe/hpc-dpm-dws-operator/controllers"
+	dwsctrls_daemon "github.hpe.com/hpe/hpc-dpm-dws-operator/mount-daemon/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -53,6 +56,8 @@ type envSetting struct {
 
 var envVars = []envSetting{
 	{"POD_NAMESPACE", "default"},
+	{"NNF_POD_IP", "172.0.0.1"},
+	{"NNF_NODE_NAME", "nnf-test-node"},
 	{"ACK_GINKGO_DEPRECATIONS", "1.16.4"},
 	{"DWS_DRIVER_ID", "nnf"},
 	{"RABBIT_NODE", "0"},
@@ -100,6 +105,12 @@ var _ = BeforeSuite(func() {
 		},
 		AttachControlPlaneOutput: true,
 	}
+
+	// Start and initialize the NNF Controller
+	controller := nnf.NewController(nnf.NewMockOptions())
+	Expect(controller.Init(ec.NewDefaultOptions())).NotTo(HaveOccurred())
+
+	go controller.Run()
 
 	var err error
 
@@ -186,6 +197,39 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
 		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&NnfNodeSLCReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeSLC"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&DWSServersReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Servers"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	/*
+		// This needs some work to be enabled yet; right now it will conflict
+		// with the DWS Client Mount Reconciler.
+		err = (&NnfClientMountReconciler{
+			Client: k8sManager.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+			Scheme: testEnv.Scheme,
+		}).SetupWithManager(k8sManager)
+		Expect(err).ToNot(HaveOccurred())
+	*/
+
+	err = (&dwsctrls_daemon.ClientMountReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
+		Scheme: testEnv.Scheme,
+		Mock:   true,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

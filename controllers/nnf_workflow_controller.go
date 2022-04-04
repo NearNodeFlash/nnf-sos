@@ -469,7 +469,6 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 			}
 		}
 
-		log.Info("Creating storage instance", "Directive", dbd.Spec.DW)
 		result, err := r.createStorageInstance(ctx, workflow, dbd, s, log)
 		if err != nil {
 			log.Error(err, "Failed to create nnf storage instance")
@@ -546,6 +545,9 @@ func (r *NnfWorkflowReconciler) createStorageInstance(ctx context.Context, workf
 		}
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, storageInstance, mutateFn)
+		if result == controllerutil.OperationResultCreated {
+			log.Info("Created storage instance", "Name", storageInstance.Name)
+		}
 		return ctrl.Result{Requeue: result != controllerutil.OperationResultNone}, err
 
 	case "persistent":
@@ -566,7 +568,11 @@ func (r *NnfWorkflowReconciler) createStorageInstance(ctx context.Context, workf
 			return nil
 		}
 
-		_, err := ctrl.CreateOrUpdate(ctx, r.Client, storageInstance, mutateFn)
+		result, err := ctrl.CreateOrUpdate(ctx, r.Client, storageInstance, mutateFn)
+		if result == controllerutil.OperationResultCreated {
+			log.Info("Created persistent instance", "Name", storageInstance.Name)
+		}
+
 		return ctrl.Result{}, err
 
 	default:

@@ -95,7 +95,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	configMap := &corev1.ConfigMap{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-node-map", Namespace: "default"}, configMap); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-node-map", Namespace: corev1.NamespaceDefault}, configMap); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	myerror "errors"
+	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -104,7 +105,11 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		// Ensure the computes reference is set
-		cref := v1.ObjectReference{Name: computes.Name, Namespace: computes.Namespace}
+		cref := v1.ObjectReference{
+			Kind: reflect.TypeOf(dwsv1alpha1.Computes{}).Name(),
+			Name: computes.Name, 
+			Namespace: computes.Namespace,
+		}
 		if workflow.Status.Computes != cref {
 			log.Info("Updating workflow with Computes")
 			workflow.Status.Computes = cref

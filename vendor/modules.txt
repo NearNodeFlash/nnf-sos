@@ -187,12 +187,13 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220331142332-aa9d72a71f50
+# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220404152714-5178ec548a32
 ## explicit
 github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases
 github.hpe.com/hpe/hpc-dpm-dws-operator/config/webhook
 github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
+github.hpe.com/hpe/hpc-dpm-dws-operator/mount-daemon/controllers
 github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
 # github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7
 ## explicit
