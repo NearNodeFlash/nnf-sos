@@ -326,7 +326,7 @@ if [[ "$CMD" == list ]]; then
          for x in $(echo "$kinds_dws_nnf" | grep ":$want_kind\." | awk -F: '{print $1}')
          do
              echo "=== $x"
-             kubectl get -A "$x"
+             kubectl get -A --sort-by=.metadata.namespace "$x"
              echo
          done
     done

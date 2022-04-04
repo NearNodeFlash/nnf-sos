@@ -16,7 +16,23 @@ spec:
     singular: nnfnode
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Current desired state
+      jsonPath: .spec.state
+      name: STATE
+      type: string
+    - description: Health of node
+      jsonPath: .status.health
+      name: HEALTH
+      type: string
+    - description: Current status of node
+      jsonPath: .status.status
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfNode is the Schema for the NnfNode API
