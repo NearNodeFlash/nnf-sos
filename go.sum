@@ -711,6 +711,8 @@ github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220404152714-5178ec548a32 h1:0A
 github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220404152714-5178ec548a32/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
 github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220405172254-9d3a24c47319 h1:Ai9VTVvpPUuKbwkc2XQS1gA/QJedVW1xDmCXu8Ts3JE=
 github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220405172254-9d3a24c47319/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220405201108-023e0e90a028 h1:idUOk6s07o00vQ2Iro5Adif96Q5lC/VKf9T9+MMOhDM=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220405201108-023e0e90a028/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
 github.hpe.com/hpe/hpc-rabsw-lustre-csi-driver v0.0.0-20211216142843-0b84f0d84e3f/go.mod h1:3VOepCJRh1UbeNCrCRWKpT/JjGXc4MQ2bseCBQ7WEn4=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7 h1:oKi+gp+Q9MzmrxuZHV8sknfWGCdhkoIik2CGONo/QLM=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=

@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ClientMountLustre defines the lustre device information for mounting
+// ClientMountDeviceLustre defines the lustre device information for mounting
 type ClientMountDeviceLustre struct {
 	// Lustre fsname
 	FileSystemName string `json:"fileSystemName"`
@@ -31,9 +31,11 @@ type ClientMountNVMeDesc struct {
 	NamespaceGUID string `json:"namespaceGUID"`
 }
 
+// ClientMountLVMDeviceType specifies the go type for LVMDeviceType
 type ClientMountLVMDeviceType string
 
 const (
+	// ClientMountLVMDeviceTypeNVMe specifies the NVMe constant device type
 	ClientMountLVMDeviceTypeNVMe ClientMountLVMDeviceType = "nvme"
 )
 
@@ -64,6 +66,7 @@ type ClientMountDeviceReference struct {
 	Data int `json:"data,omitempty"`
 }
 
+// ClientMountDeviceType specifies the go type for device type
 type ClientMountDeviceType string
 
 const (
@@ -109,6 +112,7 @@ type ClientMountInfo struct {
 	Compute string `json:"compute,omitempty"`
 }
 
+// ClientMountState specifies the go type for MountState
 type ClientMountState string
 
 const (
