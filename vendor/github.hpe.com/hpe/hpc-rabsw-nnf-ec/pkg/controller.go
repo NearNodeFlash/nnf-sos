@@ -32,16 +32,17 @@ const (
 )
 
 type Options struct {
-	mock bool // Enable mock interfaces for Switches, NVMe, and NNF
-	cli  bool // Enable CLI commands instead of binary
+	mock        bool // Enable mock interfaces for Switches, NVMe, and NNF
+	cli         bool // Enable CLI commands instead of binary
+	persistence bool // Enable persistent object storage; used during crash/reboot recovery
 }
 
 func newDefaultOptions() *Options {
-	return &Options{mock: false, cli: false}
+	return &Options{mock: false, cli: false, persistence: true}
 }
 
-func NewMockOptions() *Options {
-	return &Options{mock: true, cli: false}
+func NewMockOptions(persistence bool) *Options {
+	return &Options{mock: true, cli: false, persistence: persistence}
 }
 
 func BindFlags(fs *flag.FlagSet) *Options {
@@ -49,6 +50,7 @@ func BindFlags(fs *flag.FlagSet) *Options {
 
 	fs.BoolVar(&opts.mock, "mock", opts.mock, "Enable mock (simulated) environment.")
 	fs.BoolVar(&opts.cli, "cli", opts.cli, "Enable CLI interfaces with devices, instead of raw binary.")
+	fs.BoolVar(&opts.persistence, "persistence", opts.persistence, "Enable persistent object storage (used during crash/reboot recovery)")
 
 	nvme.BindFlags(fs)
 
@@ -58,14 +60,12 @@ func BindFlags(fs *flag.FlagSet) *Options {
 // NewController - Create a new NNF Element Controller with the desired mocking behavior
 func NewController(opts *Options) *ec.Controller {
 	if opts == nil {
-		// ajf - don't check this in, but I don't yet know how to provide options for unit tests
-		//		opts = newDefaultOptions()
-		opts = NewMockOptions()
+		return nil
 	}
 
 	switchCtrl := fabric.NewSwitchtecController()
 	nvmeCtrl := nvme.NewSwitchtecNvmeController()
-	nnfCtrl := nnf.NewNnfController()
+	nnfCtrl := nnf.NewNnfController(opts.persistence)
 
 	if opts.cli {
 		switchCtrl = fabric.NewSwitchtecCliController()
@@ -74,12 +74,12 @@ func NewController(opts *Options) *ec.Controller {
 
 	if opts.mock {
 		switchCtrl = fabric.NewMockSwitchtecController()
-		nvmeCtrl = nvme.NewMockNvmeController()
+		nvmeCtrl = nvme.NewMockNvmeController(opts.persistence)
 		if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 			// Keep the real NnfController.
 			log.Infof("NNF_SUPPLIED_DEVICES: %s", os.Getenv("NNF_SUPPLIED_DEVICES"))
 		} else {
-			nnfCtrl = nnf.NewMockNnfController()
+			nnfCtrl = nnf.NewMockNnfController(opts.persistence)
 		}
 	}
 

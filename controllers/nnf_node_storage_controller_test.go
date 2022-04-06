@@ -22,7 +22,8 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 	)
 
 	BeforeEach(func() {
-		c := nnf.NewController(nnf.NewMockOptions())
+		enablePersistence := false
+		c := nnf.NewController(nnf.NewMockOptions(enablePersistence))
 		Expect(c.Init(nil)).To(Succeed())
 
 		// TODO: Eventually the controller should go ready; convert this to a poll once the API is available

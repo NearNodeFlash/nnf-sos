@@ -75,6 +75,10 @@ func NewDefaultOptions() *Options {
 	return &Options{Http: true, Port: 8080, Log: false, Verbose: false}
 }
 
+func NewDefaultTestOptions() *Options {
+	return &Options{Http: false, Log: false, Verbose: false}
+}
+
 func BindFlags(fs *flag.FlagSet) *Options {
 	opts := NewDefaultOptions()
 	fs.BoolVar(&opts.Http, "http", opts.Http, "Setup element controller as standard http server")
@@ -142,7 +146,11 @@ type ControllerProcessor interface {
 }
 
 func NewControllerProcessor(http bool) ControllerProcessor {
-	return &HttpControllerProcessor{}
+	if http {
+		return &HttpControllerProcessor{}
+	}
+
+	return &DummyControllerProcessor{}
 }
 
 type HttpControllerProcessor struct {
@@ -223,6 +231,22 @@ func (p *HttpControllerProcessor) Close() {
 			panic(err)
 		}
 	}
+}
+
+// Dummy Controller Processor is one that does nothing, Use this processor type
+// when you have no desire to run a controller as GRPC or HTTP.
+type DummyControllerProcessor struct{}
+
+func (*DummyControllerProcessor) Run(c *Controller, options Options) error {
+	return nil
+}
+
+func (*DummyControllerProcessor) Send(c *Controller, w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func (*DummyControllerProcessor) Close() {
+	return
 }
 
 // HandlerFunc defines an http handler for a controller's routes. By default

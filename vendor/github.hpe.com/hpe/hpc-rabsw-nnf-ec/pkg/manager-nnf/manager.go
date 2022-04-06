@@ -34,6 +34,7 @@ type StorageService struct {
 	config                   *ConfigFile
 	store                    *kvstore.Store
 	serverControllerProvider server.ServerControllerProvider
+	persistentController     PersistentControllerApi
 
 	pools       []StoragePool
 	groups      []StorageGroup
@@ -337,9 +338,13 @@ func (s *StorageService) Id() string {
 func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 
 	storageService = StorageService{
-		id:                       DefaultStorageServiceId,
-		state:                    sf.STARTING_RST,
+		id:    DefaultStorageServiceId,
+		state: sf.STARTING_RST,
+
+		// Dynamic controllers for managing objects. These are typically programmed via command line arguments
+		// the the NNF Controller Interface is created
 		serverControllerProvider: ctrl.ServerControllerProvider(),
+		persistentController:     ctrl.PersistentControllerProvider(),
 
 		// Reserve space for the most common allocation types. 32 is the current
 		// limit for the number of supported namespaces.
@@ -645,7 +650,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		return nil
 	}
 
-	if err := NewPersistentObject(p, updateFunc, storagePoolStorageCreateStartLogEntryType, storagePoolStorageCreateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.CreatePersistentObject(p, updateFunc, storagePoolStorageCreateStartLogEntryType, storagePoolStorageCreateCompleteLogEntryType); err != nil {
 		log.WithError(err).Errorf("Failed to create volume from storage pool %s", p.id)
 		return ec.NewErrInternalServerError().WithResourceType(StorageServiceOdataType).WithError(err).WithCause("Failed to allocate storage volumes")
 	}
@@ -758,7 +763,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 		// log.
 	}
 
-	if err := DeletePersistentObject(p, deleteFunc, storagePoolStorageDeleteStartLogEntryType, storagePoolStorageDeleteCompleteLogEntryType); err != nil {
+	if err := s.persistentController.DeletePersistentObject(p, deleteFunc, storagePoolStorageDeleteStartLogEntryType, storagePoolStorageDeleteCompleteLogEntryType); err != nil {
 		log.WithError(err).Errorf("Failed to delete volume from storage pool %s", p.id)
 		return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause(fmt.Sprintf("Failed to delete volume"))
 	}
@@ -941,7 +946,7 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 		return nil
 	}
 
-	if err := NewPersistentObject(sg, updateFunc, storageGroupCreateStartLogEntryType, storageGroupCreateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.CreatePersistentObject(sg, updateFunc, storageGroupCreateStartLogEntryType, storageGroupCreateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause("failed to create storage group")
 	}
 
@@ -1036,7 +1041,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 		return nil
 	}
 
-	if err := DeletePersistentObject(sg, deleteFunc, storageGroupDeleteStartLogEntryType, storageGroupDeleteCompleteLogEntryType); err != nil {
+	if err := s.persistentController.DeletePersistentObject(sg, deleteFunc, storageGroupDeleteStartLogEntryType, storageGroupDeleteCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause("Failed to delete storage group")
 	}
 
@@ -1141,7 +1146,7 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 
 	fs := s.createFileSystem(model.Id, sp, fsApi)
 
-	if err := NewPersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.CreatePersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to create", fs.id))
 	}
 
@@ -1200,7 +1205,7 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 		}
 	}
 
-	if err := DeletePersistentObject(fs, func() error { return nil }, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
+	if err := s.persistentController.DeletePersistentObject(fs, func() error { return nil }, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause("Failed to delete file system")
 	}
 
@@ -1293,7 +1298,7 @@ refreshState:
 		return nil
 	}
 
-	if err := NewPersistentObject(sh, updateFunc, fileShareCreateStartLogEntryType, fileShareCreateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.CreatePersistentObject(sh, updateFunc, fileShareCreateStartLogEntryType, fileShareCreateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to create", sh.id))
 	}
 
@@ -1369,7 +1374,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 		return nil
 	}
 
-	if err := UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update", sh.id))
 	}
 
@@ -1432,7 +1437,7 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 		return nil
 	}
 
-	if err := DeletePersistentObject(sh, deleteFunc, fileShareDeleteStartLogEntryType, fileShareDeleteCompleteLogEntryType); err != nil {
+	if err := s.persistentController.DeletePersistentObject(sh, deleteFunc, fileShareDeleteStartLogEntryType, fileShareDeleteCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithError(err).WithResourceType(FileShareOdataType).WithCause("Failed to delete file share")
 	}
 

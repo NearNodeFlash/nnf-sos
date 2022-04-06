@@ -9,7 +9,6 @@ import (
 	"github.com/HewlettPackard/structex"
 )
 
-
 const (
 	dumpFabric = iota
 	dumpPaxAll

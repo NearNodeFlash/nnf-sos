@@ -79,8 +79,8 @@ func (c *commandController) Lock() {
 	if c.count == 1 {
 		// Note: Technically this is not needed since the inner-lock controls all the magic;
 		// but it also acts as a useful tool to validate the main recursive locking behavior.
-		c.mainLock.Lock() 
-		
+		c.mainLock.Lock()
+
 	}
 
 	c.innerLock.Unlock()

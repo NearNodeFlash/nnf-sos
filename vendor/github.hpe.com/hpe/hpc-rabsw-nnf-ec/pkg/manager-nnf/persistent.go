@@ -2,6 +2,19 @@ package nnf
 
 import "github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore"
 
+// Persistent Controller API provides an interface for creating, updating, and deleting persistent objects.
+type PersistentControllerApi interface {
+	CreatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error
+	UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error
+	DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error
+}
+
+type DefaultPersistentController struct{}
+
+func NewDefaultPersistentController() PersistentControllerApi {
+	return &DefaultPersistentController{}
+}
+
 type PersistentStoreProvider interface {
 	GetStore() *kvstore.Store
 }
@@ -16,16 +29,16 @@ type PersistentObjectApi interface {
 	GenerateMetadata() ([]byte, error)
 
 	// GenerateStateData is called when any transaction occurs on the persistent object. Usually this is for occurances
-	// of Entry State and Exit State, where upon a call to NewPersistentObject or UpdatePersistentObject, the object
+	// of Entry State and Exit State, where upon a call to CreatePersistentObject or UpdatePersistentObject, the object
 	// can store state data for either the Starting state or Ending state
 	GenerateStateData(state uint32) ([]byte, error)
 
-	// Rollback occurs when a call to NewPersistentObject or UpdatePersistentObject fails. We rollback to the
+	// Rollback occurs when a call to CreatePersistentObject or UpdatePersistentObject fails. We rollback to the
 	// starting state.
 	Rollback(startingState uint32) error
 }
 
-func NewPersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
+func (*DefaultPersistentController) CreatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
 	metadata, err := obj.GenerateMetadata()
 	if err != nil {
@@ -41,7 +54,7 @@ func NewPersistentObject(obj PersistentObjectApi, updateFunc func() error, start
 	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
 }
 
-func UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
+func (*DefaultPersistentController) UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
 	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), false)
 	if err != nil {
@@ -52,7 +65,7 @@ func UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, st
 	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
 }
 
-func DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error {
+func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error {
 
 	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), true)
 	if err != nil {
@@ -89,4 +102,22 @@ func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentOb
 	}
 
 	return nil
+}
+
+type MockPersistentController struct{}
+
+func NewMockPersistentController() PersistentControllerApi {
+	return &MockPersistentController{}
+}
+
+func (*MockPersistentController) CreatePersistentObject(obj PersistentObjectApi, createFunc func() error, startingState, endingState uint32) error {
+	return createFunc()
+}
+
+func (*MockPersistentController) UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
+	return updateFunc()
+}
+
+func (*MockPersistentController) DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error {
+	return deleteFunc()
 }

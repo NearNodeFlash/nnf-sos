@@ -11,6 +11,13 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+const (
+	// DirectiveLifetimeJob specifies storage allocated for the lifetime of the job
+	DirectiveLifetimeJob = "job"
+	// DirectiveLifetimePersistent specifies storage allocated an indefinite lifetime usually longer than a job
+	DirectiveLifetimePersistent = "persistent"
+)
+
 // The DWRecord contains the index of the Datawarp directive (#DW) within the workflow
 // along with a copy of the actual #DW
 type DWRecord struct {

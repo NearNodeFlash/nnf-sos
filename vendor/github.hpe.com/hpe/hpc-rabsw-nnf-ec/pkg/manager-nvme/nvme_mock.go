@@ -11,27 +11,38 @@ import (
 	"github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme"
 )
 
-type MockNvmeController struct{}
-
-func NewMockNvmeController() NvmeController {
-	return &MockNvmeController{}
+type MockNvmeController struct {
+	persistence bool
 }
 
-func (MockNvmeController) NewNvmeDeviceController() NvmeDeviceController {
-	return &MockNvmeDeviceController{}
+func NewMockNvmeController(persistence bool) NvmeController {
+	return &MockNvmeController{persistence: persistence}
+}
+
+func (ctrl MockNvmeController) NewNvmeDeviceController() NvmeDeviceController {
+	return &MockNvmeDeviceController{nvmeCtrl: ctrl}
 }
 
 type MockNvmeDeviceController struct {
+	nvmeCtrl               MockNvmeController
 	mockPersistenceManager *MockNvmePersistenceManager
 }
 
 func (ctrl *MockNvmeDeviceController) Initialize() error {
-	ctrl.mockPersistenceManager = &MockNvmePersistenceManager{}
-	return ctrl.mockPersistenceManager.initialize()
+	if ctrl.nvmeCtrl.persistence {
+		ctrl.mockPersistenceManager = &MockNvmePersistenceManager{}
+		return ctrl.mockPersistenceManager.initialize()
+	}
+
+	return nil
 }
 
 func (ctrl *MockNvmeDeviceController) Close() error {
-	return ctrl.mockPersistenceManager.close()
+	if ctrl.mockPersistenceManager != nil {
+		return ctrl.mockPersistenceManager.close()
+	}
+
+	return nil
 }
 
 func (ctrl MockNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {

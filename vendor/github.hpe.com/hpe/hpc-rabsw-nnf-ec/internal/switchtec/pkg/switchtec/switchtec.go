@@ -33,7 +33,7 @@ const (
 // API functions.
 func Open(path string) (*Device, error) {
 
-	fd, err := syscall.Open(path, os.O_RDWR | syscall.O_CLOEXEC, 0666)
+	fd, err := syscall.Open(path, os.O_RDWR|syscall.O_CLOEXEC, 0666)
 	if err != nil {
 		return nil, err
 	}

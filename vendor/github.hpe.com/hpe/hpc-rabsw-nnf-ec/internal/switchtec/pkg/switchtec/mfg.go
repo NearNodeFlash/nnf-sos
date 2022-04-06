@@ -20,4 +20,3 @@ func (dev *Device) GetSerialNumber() (uint32, error) {
 	err := dev.RunCommand(SerialNumberSecVersion, nil, rsp)
 	return rsp.ChipSerial, err
 }
-
