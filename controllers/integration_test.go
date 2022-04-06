@@ -16,20 +16,22 @@ import (
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+	. "github.com/onsi/gomega/gstruct"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
+	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
 var _ = Describe("Integration Test", func() {
 
-	const timeout = time.Second * 10
-	const interval = time.Millisecond * 100
+	const timeout = 10 * time.Second
+	const interval = 100 * time.Millisecond
 
 	type fsToTest struct {
 		fsType                 string
@@ -37,7 +39,7 @@ var _ = Describe("Integration Test", func() {
 	}
 
 	var filesystems = []fsToTest{
-		//{"raw", 1}, // RABSW-843: Raw device support. Matt's working on this and once resolve this test can be enableds
+		//{"raw", 1}, // RABSW-843: Raw device support. Matt's working on this and once resolved this test can be enabled
 		//{"lvm", 1},
 		{"xfs", 1},
 		{"gfs2", 1},
@@ -49,13 +51,38 @@ var _ = Describe("Integration Test", func() {
 	var nodeNames []string
 
 	var setup sync.Once
+
+	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState) {
+		By(fmt.Sprintf("Advancing to %s state", state))
+		Eventually(func() error {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+			workflow.Spec.DesiredState = state.String()
+			return k8sClient.Update(context.TODO(), workflow)
+		}).Should(Succeed(), fmt.Sprintf("Advancing to %s state", state))
+
+		By(fmt.Sprintf("Waiting on state %s", state))
+		Eventually(func() string {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+			return workflow.Status.State
+		}).WithTimeout(timeout).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
+
+		By("Waiting to go ready")
+		Eventually(func() bool {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+			return workflow.Status.Ready
+		}).WithTimeout(timeout).Should(BeTrue(), "Waiting on ready status")
+	}
+
 	BeforeEach(func() {
 
 		setup.Do(func() {
+
+			// Initialize node names - currently set to three to satisify the lustre requirement of single MDT, MGT, OST
+			// NOTE: Node names require the "rabbit" prefix to ensure client mounts occur on the correct controller
 			nodeNames = []string{
-				"test-node-0",
-				"test-node-1",
-				"test-node-2",
+				"rabbit-test-node-0",
+				"rabbit-test-node-1",
+				"rabbit-test-node-2",
 			}
 
 			// Build the config map that ties everything together; this also
@@ -145,12 +172,18 @@ var _ = Describe("Integration Test", func() {
 				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
 			}
-		})
-
+		}) // once
 	})
 
 	AfterEach(func() {
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+		Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
 
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+		}).WithTimeout(timeout).ShouldNot(Succeed())
+
+		workflow = nil
 	})
 
 	for idx := range filesystems {
@@ -177,7 +210,7 @@ var _ = Describe("Integration Test", func() {
 			}
 
 			By("Creating the workflow")
-			Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
 
 			By("Retrieving created workflow")
 			Eventually(func() error {
@@ -212,7 +245,7 @@ var _ = Describe("Integration Test", func() {
 				},
 			}
 			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Computes{}).Name()))
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), computes)).To(Succeed())
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
 			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 			By("Checking various DW Directive Breakdowns")
@@ -296,21 +329,6 @@ var _ = Describe("Integration Test", func() {
 			}
 			Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
 
-			advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState) {
-				By(fmt.Sprintf("Advancing to %s state", state))
-				Eventually(func() error {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-					workflow.Spec.DesiredState = state.String()
-					return k8sClient.Update(context.TODO(), workflow)
-				}).Should(Succeed())
-
-				By(fmt.Sprintf("Waiting on state %s and ready", state))
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-					return workflow.Status.State == state.String() && workflow.Status.Ready
-				}).WithTimeout(timeout).Should(BeTrue())
-			}
-
 			/***************************** Setup *****************************/
 
 			advanceStateAndCheckReady(dwsv1alpha1.StateSetup)
@@ -330,14 +348,129 @@ var _ = Describe("Integration Test", func() {
 			advanceStateAndCheckReady(dwsv1alpha1.StatePreRun)
 
 			By("Checking Pre Run state")
-			// TODO
+
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha1.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+				By("Check for an NNF Access describing the computes")
+				access := &nnfv1alpha1.NnfAccess{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, dbd.Spec.DW.DWDirectiveIndex, "computes"),
+						Namespace: workflow.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+				Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
+					"TeardownState": Equal(dwsv1alpha1.StatePostRun.String()),
+					"DesiredState":  Equal("mounted"),
+					"Target":        Equal("single"),
+				}))
+				Expect(access.Status.State).To(Equal("mounted"))
+				Expect(access.Status.Ready).To(BeTrue())
+
+				By("Checking NNF Access computes reference exists")
+				Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
+					"Name":      Equal(workflow.Name),
+					"Namespace": Equal(workflow.Namespace),
+					"Kind":      Equal(reflect.TypeOf(dwsv1alpha1.Computes{}).Name()),
+				}))
+				computes := &dwsv1alpha1.Computes{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      access.Spec.ClientReference.Name,
+						Namespace: access.Spec.ClientReference.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+
+				By("Checking NNF Access storage reference exists")
+				Expect(access.Spec.StorageReference).To(MatchFields(IgnoreExtras, Fields{
+					"Name":      Equal(dbd.Name),      // Servers is created from the DBD, and NNFStorage is created from servers
+					"Namespace": Equal(dbd.Namespace), // Servers is created from the DBD, and NNFStorage is created from servers
+					"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
+				}))
+				storage := &nnfv1alpha1.NnfStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      access.Spec.StorageReference.Name,
+						Namespace: access.Spec.StorageReference.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+
+				By("Checking for a Client Mount on each compute")
+				for _, compute := range computes.Data {
+					clientMount := &dwsv1alpha1.ClientMount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      clientMountName(access),
+							Namespace: compute.Name,
+						},
+					}
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
+					Expect(clientMount.Status.Mounts).To(HaveLen(1))
+					Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
+				}
+
+				// For shared file systems, there should also be a NNF Access for the Rabbit as well as corresponding Client Mounts per Rabbit
+				if fsType == "gfs2" {
+					By("Checking for an NNF Access describing the servers")
+					access := &nnfv1alpha1.NnfAccess{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, dbd.Spec.DW.DWDirectiveIndex, "servers"),
+							Namespace: workflow.Namespace,
+						},
+					}
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+					Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+
+					// CONTINUE HERE WITH CHECKS FOR storage, status
+
+					// CONTINUE HERE WITH CHECKS FOR Client Mounts on all the Rabbits
+				}
+			}
 
 			/*************************** Post Run ****************************/
 
 			advanceStateAndCheckReady(dwsv1alpha1.StatePostRun)
 
 			By("Checking Post Run state")
-			// TODO
+
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha1.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+				By("Check that NNF Access describing computes is not present")
+				access := &nnfv1alpha1.NnfAccess{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, dbd.Spec.DW.DWDirectiveIndex, "computes"),
+						Namespace: workflow.Namespace,
+					},
+				}
+				Eventually(func() error {
+					err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+					return client.IgnoreNotFound(err)
+				}).Should(Succeed())
+
+				By("Check that all Client Mounts for computes are removed")
+				// TODO
+
+				if fsType == "gfs2" {
+					By("Check that NNF Access describing computes is not present")
+					access := &nnfv1alpha1.NnfAccess{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, dbd.Spec.DW.DWDirectiveIndex, "servers"),
+							Namespace: workflow.Namespace,
+						},
+					}
+					Eventually(func() error {
+						err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+						return client.IgnoreNotFound(err)
+					}).Should(Succeed())
+
+					By("Check that all Client Mounts for servers are removed")
+					// TODO
+				}
+			}
 
 			/**************************** Data Out ****************************/
 
@@ -357,9 +490,238 @@ var _ = Describe("Integration Test", func() {
 
 	} // for idx := range filesystems
 
+	// Here we test the various data movement directives. This uses a workflow
+	// per test where the workflow is brought to data in stage. This is not
+	// expected to be a full workflow test; but singles out the data movement
+	// directives (copy_in and copy_out).
+	Describe("Test with data movement directives", func() {
+
+		// Setup a basic workflow; each test is expected to fill in the DWDirectives
+		// in its BeforeEach() clause.
+		BeforeEach(func() {
+			wfid := uuid.NewString()[0:8]
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("gfs2-%s", wfid),
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal.String(),
+					JobID:        -1,
+					WLMID:        "Test WLMID",
+				},
+			}
+		})
+
+		// Bring the workflow up to Data In; assign the necessary servers and computes
+		// resource. This isn't meant to be a vigorous test of the proposal and setup
+		// stages; that is provided by the topmost integration test.
+		JustBeforeEach(func() {
+			By("Create the workflow")
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+
+			By("Checking for workflow creation")
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+			}).WithTimeout(timeout).Should(Succeed())
+
+			/*************************** Proposal ****************************/
+
+			By("Checking for proposal state and ready")
+			Eventually(func() bool {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.State == dwsv1alpha1.StateProposal.String() && workflow.Status.Ready
+			}).Should(BeTrue())
+
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				By("Checking DW Directive Breakdown")
+				dbd := &dwsv1alpha1.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+				Expect(dbd.Status.AllocationSet).To(HaveLen(1))
+				allocSet := &dbd.Status.AllocationSet[0]
+
+				By("Assigning storage")
+				servers := &dwsv1alpha1.Servers{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace}, servers)).To(Succeed())
+
+				storage := make([]dwsv1alpha1.ServersSpecStorage, 0, len(nodeNames))
+				for _, nodeName := range nodeNames {
+					storage = append(storage, dwsv1alpha1.ServersSpecStorage{
+						AllocationCount: 1,
+						Name:            nodeName,
+					})
+				}
+
+				servers.Spec.AllocationSets = []dwsv1alpha1.ServersSpecAllocationSet{
+					{
+						AllocationSize: allocSet.MinimumCapacity,
+						Label:          allocSet.Label,
+						Storage:        storage,
+					},
+				}
+
+				Expect(k8sClient.Update(context.TODO(), servers)).To(Succeed())
+			} // for _, dbdRef := range workflow.Status.DirectiveBreakdowns
+
+			/***************************** Setup *****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StateSetup)
+
+			/**************************** Data In ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StateDataIn)
+		})
+
+		AfterEach(func() {
+
+			/**************************** Teardown ****************************/
+
+			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown)
+
+		})
+
+		var lustre *lusv1alpha1.LustreFileSystem
+
+		BeforeEach(func() {
+			lustre = &lusv1alpha1.LustreFileSystem{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "lustre-test",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: lusv1alpha1.LustreFileSystemSpec{
+					Name:      "lustre",
+					MgsNid:    "172.0.0.1@tcp",
+					MountRoot: "/lus/maui",
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+		})
+
+		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha1.WorkflowState) {
+			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
+
+			access := &nnfv1alpha1.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, 0, "servers"),
+					Namespace: workflow.Namespace,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+
+			By("Validate access specification is correct")
+			Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
+				"TeardownState": Equal(state.String()),
+				"DesiredState":  Equal("mounted"),
+				"Target":        Equal("all"),
+			}))
+
+			By("Validate access status is correct")
+			Expect(access.Status.State).To(Equal("mounted"))
+			Expect(access.Status.Ready).To(BeTrue())
+		}
+
+		validateNnfAccessIsNotFound := func() {
+			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
+			access := &nnfv1alpha1.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, 0, "servers"),
+					Namespace: workflow.Namespace,
+				},
+			}
+
+			Eventually(func() error {
+				err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+				return client.IgnoreNotFound(err)
+			}).Should(Succeed())
+		}
+
+		// If there is only a copy_in directive, then expect the lifetime of NNF Access setup
+		// in data_in and deleted in post-run.
+		Describe("Test with copy_in directive", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
+					"#DW copy_in source=/lus/maui/file destination=$JOB_DW_test-dm-0/file",
+				}
+			})
+
+			It("Validates Workflow", func() {
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha1.StateDataIn.String()))
+
+				By("Check that NNF Access is created, with deletion in post-run")
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StatePostRun)
+
+				By("Advancing to post run, ensure NNF Access is deleted")
+				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun)
+				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun)
+				validateNnfAccessIsNotFound()
+			})
+		})
+
+		// If there is only a copy_out directive, NNF Access is not needed until pre-run
+		// and should remain until post-run.
+		Describe("Test with copy_out directive", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
+					"#DW copy_out source=$JOB_DW_test-dm-0/file destination=/lus/maui/file",
+				}
+			})
+
+			It("Validates Workflow", func() {
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha1.StateDataIn.String()))
+
+				validateNnfAccessIsNotFound()
+				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun)
+
+				By("Validate NNF Access is created, with deletion in data-out")
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+
+				By("Advancing to post run, ensure NNF Access is still set for deletion in data-out")
+				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+
+				By("Advancing to data-out, ensure NNF Access is deleted")
+				advanceStateAndCheckReady(dwsv1alpha1.StateDataOut)
+				validateNnfAccessIsNotFound()
+			})
+		})
+
+		Describe("Test with copy_in and copy_out directives", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
+					"#DW copy_in source=/lus/maui/file destination=$JOB_DW_test-dm-0/file",
+					"#DW copy_out source=$JOB_DW_test-dm-0/file destination=/lus/maui/file",
+				}
+			})
+
+			It("Validates Workflow", func() {
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha1.StateDataIn.String()))
+
+				By("Validate NNF Access is created, with deletion in data-out")
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+
+				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun)
+				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun)
+
+				By("Advancing to data-out, ensure NNF Access is deleted")
+				advanceStateAndCheckReady(dwsv1alpha1.StateDataOut)
+				validateNnfAccessIsNotFound()
+			})
+
+		})
+
+	})
 })
 
-var _ = Describe("Empty #DW List Test", func() {
+var _ = Describe("Empty #DW List Test", func() { // TODO: Re-enable this
 	const (
 		WorkflowNamespace = "default"
 		WorkflowID        = "test"

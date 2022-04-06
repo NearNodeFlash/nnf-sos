@@ -62,6 +62,9 @@ var envVars = []envSetting{
 	{"DWS_DRIVER_ID", "nnf"},
 	{"RABBIT_NODE", "0"},
 	{"RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", "true"},
+
+	// Enable certain quirks necessary for test
+	{"NNF_TEST_ENVIRONMENT", "true"},
 }
 
 func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha1.DWDirectiveRule, error) {
@@ -214,16 +217,12 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	/*
-		// This needs some work to be enabled yet; right now it will conflict
-		// with the DWS Client Mount Reconciler.
-		err = (&NnfClientMountReconciler{
-			Client: k8sManager.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
-			Scheme: testEnv.Scheme,
-		}).SetupWithManager(k8sManager)
-		Expect(err).ToNot(HaveOccurred())
-	*/
+	err = (&NnfClientMountReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls_daemon.ClientMountReconciler{
 		Client: k8sManager.GetClient(),

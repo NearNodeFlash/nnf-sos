@@ -7,8 +7,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
 
@@ -240,11 +243,23 @@ func (c *clientMountStatusUpdater) close(ctx context.Context, r *NnfClientMountR
 	return nil
 }
 
+func filterByRabbitNamespacePrefixForTest() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return strings.HasPrefix(object.GetNamespace(), "rabbit")
+	})
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	maxReconciles := runtime.GOMAXPROCS(0)
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha1.ClientMount{}).
-		Complete(r)
+		For(&dwsv1alpha1.ClientMount{})
+
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		builder = builder.WithEventFilter(filterByRabbitNamespacePrefixForTest())
+	}
+
+	return builder.Complete(r)
 }

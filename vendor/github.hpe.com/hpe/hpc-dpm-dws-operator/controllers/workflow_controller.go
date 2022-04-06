@@ -106,8 +106,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		// Ensure the computes reference is set
 		cref := v1.ObjectReference{
-			Kind: reflect.TypeOf(dwsv1alpha1.Computes{}).Name(),
-			Name: computes.Name, 
+			Kind:      reflect.TypeOf(dwsv1alpha1.Computes{}).Name(),
+			Name:      computes.Name,
 			Namespace: computes.Namespace,
 		}
 		if workflow.Status.Computes != cref {

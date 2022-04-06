@@ -15,6 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -692,7 +693,7 @@ func (r *NnfWorkflowReconciler) handleDataInOutState(ctx context.Context, workfl
 				return ctrl.Result{}, err
 			} else {
 				if finished {
-					result, err := r.teardownDataMovementResource(ctx, dm)
+					result, err := r.teardownDataMovementResource(ctx, dm, workflow.Status.State)
 					if err != nil {
 						return ctrl.Result{}, err
 					} else if !result.IsZero() {
@@ -733,7 +734,7 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 	// 2. Lustre to PersistentStorageInstance                       #DW copy_in source=[path] destination=$PERSISTENT_DW_[name]/[path]
 	// 3. PersistentStorageInstance to JobStorageInstance           #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$JOB_DW_[name]/[path]
 	// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$PERSISTENT_DW_[name]/[path]
-	// copy_out is the same, but typically source and destination reversed
+	// copy_out is the same, but typically source and destination are reversed
 
 	// Prepare the provided staging parameter for data-movement. Param is the source/destination value from the #DW copy_in/copy_out directive; based
 	// on the param prefix we determine the storage instance and access requirements for data movement.
@@ -747,6 +748,8 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 		// require we setup an NNF Access for the data-movement resource to ensure the data is accessible on the NNF Server while data movement
 		// executes.
 		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
+			var result controllerutil.OperationResult
+			var fsType string
 
 			servers := &corev1.ObjectReference{}
 			if strings.HasPrefix(param, "$JOB_DW_") {
@@ -755,6 +758,8 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 				if err != nil {
 					return nil, nil, path, nil, err
 				}
+
+				fsType = storageInstance.Spec.FsType
 
 				servers = &storageInstance.Spec.Servers
 
@@ -770,6 +775,8 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 					return nil, nil, path, nil, err
 				}
 
+				fsType = storageInstance.Spec.FsType
+
 				servers = &storageInstance.Spec.Servers
 
 				storage = &corev1.ObjectReference{
@@ -781,8 +788,27 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 				return nil, nil, path, nil, fmt.Errorf("Unsupported parameter '%s'", param)
 			}
 
-			var result controllerutil.OperationResult
-			access, result, err = r.setupNnfAccessForServers(ctx, servers, workflow, name, dwIndex)
+			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
+			// when to teardown an NNF Access for the servers
+			teardownState := ""
+			if parameters["command"] == "copy_in" {
+				teardownState = dwsv1alpha1.StateDataIn.String()
+
+				if fsType == "gfs2" { // TODO: Should this include luster?
+					teardownState = dwsv1alpha1.StatePostRun.String()
+
+					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
+						teardownState = dwsv1alpha1.StateDataOut.String()
+					}
+				}
+			} else if parameters["command"] == "copy_out" {
+				teardownState = dwsv1alpha1.StateDataOut.String()
+			}
+
+			directiveIdx := findDirectiveIndexByName(workflow, name)
+
+			// Setup NNF Access for the NNF Servers so we can run data movement on them.
+			access, result, err = r.setupNnfAccessForServers(ctx, servers, workflow, directiveIdx, teardownState)
 			if err != nil {
 				return storage, access, path, nil, err
 			} else if result != controllerutil.OperationResultNone {
@@ -907,23 +933,16 @@ func (r *NnfWorkflowReconciler) findNnfPersistentStorageInstance(ctx context.Con
 	return psi, r.Get(ctx, types.NamespacedName{Name: name, Namespace: "nnf-system"}, psi)
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, serversReference *corev1.ObjectReference, workflow *dwsv1alpha1.Workflow, name string, directiveIndex int) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, serversReference *corev1.ObjectReference, workflow *dwsv1alpha1.Workflow, directiveIdx int, teardownState string) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
 
-	// NNF Storage is Namespaced Name to the servers object, make sure we can find it
-
-	servers := &dwsv1alpha1.Servers{}
-	if err := r.Get(ctx, types.NamespacedName{Name: serversReference.Name, Namespace: serversReference.Namespace}, servers); err != nil {
-		return nil, controllerutil.OperationResultNone, err
-	}
-
-	storage := &nnfv1alpha1.NnfStorage{}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(servers), storage); err != nil {
+	params, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[directiveIdx])
+	if err != nil {
 		return nil, controllerutil.OperationResultNone, err
 	}
 
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d", workflow.Name, directiveIndex),
+			Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, directiveIdx, "servers"),
 			Namespace: workflow.Namespace,
 		},
 	}
@@ -937,31 +956,31 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, se
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
 				DesiredState:    "mounted",
+				TeardownState:   teardownState,
 				Target:          "all",
-				MountPathPrefix: fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, name),
+				MountPathPrefix: fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, params["name"]),
+
+				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
-					Name:      storage.Name,
-					Namespace: storage.Namespace,
+					Name:      serversReference.Name,
+					Namespace: serversReference.Namespace,
 				},
 			}
 
 			return ctrl.SetControllerReference(workflow, access, r.Scheme)
 		})
 
-	if err != nil || result != controllerutil.OperationResultNone {
-		return nil, result, err
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-		return nil, result, err
-	}
-
-	return access, controllerutil.OperationResultNone, nil
+	return access, result, err
 }
 
 // Monitor a data movement resource for completion
 func (r *NnfWorkflowReconciler) monitorDataMovementResource(ctx context.Context, dm *nnfv1alpha1.NnfDataMovement) (bool, error) {
+
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		return true, nil
+	}
+
 	for _, condition := range dm.Status.Conditions {
 		if condition.Type == nnfv1alpha1.DataMovementConditionTypeFinished {
 			return true, nil
@@ -972,7 +991,7 @@ func (r *NnfWorkflowReconciler) monitorDataMovementResource(ctx context.Context,
 }
 
 // Teardown a data movement resource and its subresources. This prepares the resource for deletion but does not delete it.
-func (r *NnfWorkflowReconciler) teardownDataMovementResource(ctx context.Context, dm *nnfv1alpha1.NnfDataMovement) (*ctrl.Result, error) {
+func (r *NnfWorkflowReconciler) teardownDataMovementResource(ctx context.Context, dm *nnfv1alpha1.NnfDataMovement, workflowState string) (*ctrl.Result, error) {
 	unmountAccess := func(ref *corev1.ObjectReference) (*ctrl.Result, error) {
 		if ref == nil {
 			return nil, nil
@@ -981,6 +1000,10 @@ func (r *NnfWorkflowReconciler) teardownDataMovementResource(ctx context.Context
 		access := &nnfv1alpha1.NnfAccess{}
 		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}, access); err != nil {
 			return nil, err
+		}
+
+		if workflowState != access.Spec.TeardownState {
+			return nil, nil
 		}
 
 		if access.Spec.DesiredState != "unmounted" {
@@ -1056,7 +1079,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 
 		access := &nnfv1alpha1.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d", workflow.Name, driverStatus.DWDIndex),
+				Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, driverStatus.DWDIndex, "computes"),
 				Namespace: workflow.Namespace,
 			},
 		}
@@ -1070,6 +1093,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 					dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
 				}
 
+				access.Spec.TeardownState = dwsv1alpha1.StatePostRun.String()
 				access.Spec.DesiredState = "mounted"
 				access.Spec.Target = "single"
 				access.Spec.MountPath = mountPath
@@ -1079,9 +1103,10 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 					Kind:      "Computes",
 				}
 				access.Spec.StorageReference = corev1.ObjectReference{
-					Name:      access.Name,
-					Namespace: access.Namespace,
-					Kind:      "NnfStorage",
+					// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
+					Name:      workflow.Status.DirectiveBreakdowns[driverStatus.DWDIndex].Name,
+					Namespace: workflow.Status.DirectiveBreakdowns[driverStatus.DWDIndex].Namespace,
+					Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
 				}
 
 				return ctrl.SetControllerReference(workflow, access, r.Scheme)
@@ -1100,7 +1125,6 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 
 		if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
 			complete = false
-			continue
 		}
 
 		// Add an environment variable to the workflow status section for the location of the
@@ -1119,6 +1143,59 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 			return ctrl.Result{}, fmt.Errorf("Unexpected #DW command %s", args["command"])
 		}
 		workflow.Status.Env[envName] = mountPath
+
+		// Create an NnfAccess for the servers resources if necessary. Shared storage like
+		// that of GFS2 provides access to the Rabbit for the lifetime of the user's job.
+		// NnfAccess may already be present if a data_in directive was specified for the
+		// particular $JOB_DW_[name]; in this case we only don't need to recreate the
+		// resource.
+
+		if (args["command"] == "jobdw") || (args["command"] == "create_persistent") {
+			if args["type"] == "gfs2" { // TODO: Should this include Lustre?
+
+				// Find the storage instance for this command and locate the servers that maintain
+				// that storage.
+				servers := &corev1.ObjectReference{}
+				if args["command"] == "jobdw" {
+					storageInstance, err := r.findNnfJobStorageInstance(ctx, args["name"], workflow)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+
+					servers = &storageInstance.Spec.Servers
+
+				} else if args["command"] == "create_persistent" {
+					storageInstance, err := r.findNnfPersistentStorageInstance(ctx, args["name"])
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+
+					servers = &storageInstance.Spec.Servers
+				}
+
+				// Set the teardown state to post run. If there is a copy_out directive that uses
+				// this storage instance, set the teardown state so NNF Access is preserved through
+				// data_out.
+				teardownState := dwsv1alpha1.StatePostRun.String()
+				if findCopyOutDirectiveIndexByName(workflow, args["name"]) >= 0 {
+					teardownState = dwsv1alpha1.StateDataOut.String()
+				}
+
+				access, result, err := r.setupNnfAccessForServers(ctx, servers, workflow, driverStatus.DWDIndex, teardownState)
+				if err != nil {
+					return ctrl.Result{}, err
+				} else if result == controllerutil.OperationResultCreated {
+					log.Info("Created NnfAccess", "name", access.Name)
+				} else if result == controllerutil.OperationResultUpdated {
+					log.Info("Updated NnfAccess", "name", access.Name)
+				}
+
+				if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
+					complete = false
+				}
+			}
+
+		}
 	}
 
 	if complete == false {
@@ -1130,6 +1207,8 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 	return ctrl.Result{}, nil
 }
 
+// TODO: Can this function be changed to accept a workflow and directive index? That way it can be used
+// in the data movement code setupNnfAccessForServers()
 func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string) string {
 	switch command {
 	case "jobdw":
@@ -1144,48 +1223,33 @@ func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string)
 func (r *NnfWorkflowReconciler) deleteNnfAccesses(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (nnfResourceState, error) {
 	exists := resourceDeleted
 
-	for i := range workflow.Status.Drivers {
-		driverStatus := &workflow.Status.Drivers[i]
+	// NJR: I'm not sure why, but r.DeleteAllOf() doesn't seem to work, and that could be very useful here
 
-		// Check if the driver status is for the post_run state. NnfAccess deletion
-		// may happen in teardown state instead, but a post run driver status indicates
-		// that an NnfAccess was created.
-		if driverStatus.WatchState != dwsv1alpha1.StatePostRun.String() {
-			continue
-		}
+	accessList := &nnfv1alpha1.NnfAccessList{}
+	listOptions := []client.ListOption{
+		client.MatchingLabels(map[string]string{
+			dwsv1alpha1.WorkflowNameLabel:      workflow.Name,
+			dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
+		}),
+	}
 
-		// Only look for driver status for the NNF driver
-		if driverStatus.DriverID != driverID {
-			continue
-		}
+	if err := r.List(ctx, accessList, listOptions...); err != nil {
+		return resourceExist, err
+	}
 
-		access := &nnfv1alpha1.NnfAccess{}
-		namespacedName := types.NamespacedName{
-			Name:      fmt.Sprintf("%s-%d", workflow.Name, driverStatus.DWDIndex),
-			Namespace: workflow.Namespace,
-		}
+	for _, access := range accessList.Items {
 
-		err := r.Get(ctx, namespacedName, access)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return exists, err
-			}
-		} else {
-			exists = resourceExist
-			if !access.GetDeletionTimestamp().IsZero() {
+		// If it's not already marked for deletion, delete it; this may be a cached value
+		// so handle the case where the delete fails because it's not found.
+		if access.GetDeletionTimestamp().IsZero() {
+			if err := r.Delete(ctx, &access); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return resourceExist, err
+				}
+
 				continue
 			}
-		}
 
-		access.Name = namespacedName.Name
-		access.Namespace = namespacedName.Namespace
-
-		err = r.Delete(ctx, access)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return exists, err
-			}
-		} else {
 			exists = resourceExist
 		}
 	}
@@ -1197,84 +1261,74 @@ func (r *NnfWorkflowReconciler) handlePostRunState(ctx context.Context, workflow
 	log.Info(workflow.Status.State)
 	retry := false
 
-	// Set the desired state of NnfAccess to "unmounted" before deleting. This keeps
-	// the ClientMount resources around until post run is completed. That way the WLM can
-	// check which clients were successfully unmounted if some of the clients have errors
-	for i := range workflow.Status.Drivers {
-		driverStatus := &workflow.Status.Drivers[i]
-
-		// Check if the driver status is for the post_run state
-		if driverStatus.WatchState != dwsv1alpha1.StatePostRun.String() {
-			continue
-		}
-
-		// Only look for driver status for the NNF driver
-		if driverStatus.DriverID != driverID {
-			continue
-		}
-
-		// Delete the companion NNF Data Movement Workflow resource that manages concurrent data movement
-		// executed during the jobs run state by compute resources. It is expected that the customer
-		// will clean-up data movement resources that it created, but this is implemented to ensure no
-		// resource are left behind by the job.
-		{
-			dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workflow.Name,
-					Namespace: workflow.Namespace,
-				},
-			}
-
-			if err := r.Delete(ctx, dmw); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return ctrl.Result{}, err
-				}
-			}
-		}
-
-		access := &nnfv1alpha1.NnfAccess{}
-		namespacedName := types.NamespacedName{
-			Name:      fmt.Sprintf("%s-%d", workflow.Name, driverStatus.DWDIndex),
+	// Delete the companion NNF Data Movement Workflow resource that manages concurrent data movement
+	// executed during the jobs run state by compute resources. It is expected that the customer
+	// will clean-up data movement resources that it created, but this is implemented to ensure no
+	// resource are left behind by the job.
+	dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      workflow.Name,
 			Namespace: workflow.Namespace,
-		}
+		},
+	}
 
-		err := r.Get(ctx, namespacedName, access)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
+	if err := r.Delete(ctx, dmw); err != nil {
+		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
+		}
+	}
 
+	// Retrieve the NNF Accesses for this workflow, unmount and delete them if necessary. Each
+	// access has a TeardownState defined in the specification that tells this logic when to
+	// teardown the NNF Access. Filter on NNF Accesses matching the target workflow and in the
+	// Post-Run teardown state.
+	accesses := &nnfv1alpha1.NnfAccessList{}
+	listOptions := []client.ListOption{
+		client.MatchingLabels{
+			dwsv1alpha1.WorkflowNameLabel:      workflow.Name,
+			dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
+		},
+		// NJR Would be really sweet if this worked!
+		//client.MatchingFields{
+		//	".spec.teardownState": dwsv1alpha1.StatePostRun.String(),
+		//},
+	}
+
+	if err := r.List(ctx, accesses, listOptions...); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	for _, access := range accesses.Items {
+
+		if access.Spec.TeardownState != dwsv1alpha1.StatePostRun.String() {
+			continue
 		}
 
 		if access.Status.State == "unmounted" {
 			if access.Status.Ready == false {
-
 				retry = true
+			} else {
+
+				if err := r.Delete(ctx, &access); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return ctrl.Result{}, err
+					}
+				}
+
 			}
-			continue
 		}
 
 		access.Spec.DesiredState = "unmounted"
-		err = r.Update(ctx, access)
-		if err != nil {
-			return ctrl.Result{}, err
+		if err := r.Update(ctx, &access); err != nil {
+			if !errors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
 		}
 
 		retry = true
 	}
 
 	if retry == true {
-		return ctrl.Result{}, nil
-	}
-
-	// Delete the NnfAccess before completing post run
-	exists, err := r.deleteNnfAccesses(ctx, workflow, driverID, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if exists == resourceExist {
 		return ctrl.Result{}, nil
 	}
 
@@ -1303,7 +1357,7 @@ func (r *NnfWorkflowReconciler) handleTeardownState(ctx context.Context, workflo
 	// Wait for all the nnfStorages to finish deleting before completing the
 	// teardown state.
 	if exists == resourceExist {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 
 	// Complete state in the drivers
@@ -1314,7 +1368,7 @@ func (r *NnfWorkflowReconciler) handleTeardownState(ctx context.Context, workflo
 // We may have created children that aren't in the cache
 func (r *NnfWorkflowReconciler) teardownStorage(ctx context.Context, wf *dwsv1alpha1.Workflow) (nnfResourceState, error) {
 	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace})
-	var firstErr error
+	var firstErr error = nil
 	state := resourceDeleted
 
 	// Iterate through the directive breakdowns to determine the names for the NnfStorage

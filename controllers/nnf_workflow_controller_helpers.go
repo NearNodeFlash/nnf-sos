@@ -18,6 +18,23 @@ func findDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
 	return -1
 }
 
+// Returns the directive index matching the copy_out directive whose source field references
+// the provided name argument, or -1 if not found.
+func findCopyOutDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
+	for idx, directive := range workflow.Spec.DWDirectives {
+		if strings.HasPrefix(directive, "#DW copy_out") {
+			parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
+
+			srcName, _ := splitStagingArgumentIntoNameAndPath(parameters["source"]) // i.e. source=$JOB_DW_[name]
+			if srcName == name {
+				return idx
+			}
+		}
+	}
+
+	return -1
+}
+
 // Returns a <name, path> pair for the given staging argument (typically source or destination)
 // i.e. $JOB_DW_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
 func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {

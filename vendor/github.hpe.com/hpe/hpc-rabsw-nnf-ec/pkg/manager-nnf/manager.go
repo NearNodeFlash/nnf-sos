@@ -735,10 +735,19 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 		}
 	}
 
-	for _, storageGroupId := range p.storageGroupIds {
+	// Make a copy of the storage groups to be deleted; We can't trust the storage pool's list as
+	// it is modified in place within the delete logic
+	storageGroupIds := make([]string, len(p.storageGroupIds))
+	copy(storageGroupIds, p.storageGroupIds)
+
+	for _, storageGroupId := range storageGroupIds {
 		if err := s.StorageServiceIdStorageGroupIdDelete(s.id, storageGroupId); err != nil {
 			return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause(fmt.Sprintf("Failed to delete storage group '%s'", storageGroupId))
 		}
+	}
+
+	if len(p.storageGroupIds) != 0 {
+		panic("Storage groups not deleted")
 	}
 
 	deleteFunc := func() error {

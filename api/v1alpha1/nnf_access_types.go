@@ -15,6 +15,11 @@ type NnfAccessSpec struct {
 	// +kubebuilder:validation:Enum=mounted;unmounted
 	DesiredState string `json:"desiredState"`
 
+	// TeardownState is the desired state of the workflow for this NNF Access resource to
+	// be torn down and deleted.
+	// +kubebuilder:validation:Enum=data_in;pre_run;post_run;data_out
+	TeardownState string `json:"teardownState"`
+
 	// Target specifies which storage targets the client should mount
 	// - single: Only one of the storage the client can access
 	// - all: All of the storage the client can access

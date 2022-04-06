@@ -131,10 +131,20 @@ spec:
                 - single
                 - all
                 type: string
+              teardownState:
+                description: TeardownState is the desired state of the workflow for
+                  this NNF Access resource to be torn down and deleted.
+                enum:
+                - data_in
+                - pre_run
+                - post_run
+                - data_out
+                type: string
             required:
             - desiredState
             - storageReference
             - target
+            - teardownState
             type: object
           status:
             description: NnfAccessStatus defines the observed state of NnfAccess

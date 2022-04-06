@@ -98,6 +98,10 @@ type DirectiveBreakdownStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="LIFETIME",type="string",JSONPath=".spec.lifetime",description="Duration of the allocation"
+//+kubebuilder:printcolumn:name="TYPE",type="string",JSONPath=".spec.type",description="Type of storage"
+//+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if allocation sets have been generated"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // DirectiveBreakdown is the Schema for the directivebreakdown API
 type DirectiveBreakdown struct {

@@ -7,6 +7,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -20,6 +21,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 )
@@ -363,9 +365,20 @@ func (c *clientMountStatusUpdater) close(ctx context.Context, r *ClientMountReco
 	return nil
 }
 
+func filterByNonRabbitNamespacePrefixForTest() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return !strings.HasPrefix(object.GetNamespace(), "rabbit")
+	})
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&dwsv1alpha1.ClientMount{}).
-		Complete(r)
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&dwsv1alpha1.ClientMount{})
+
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		builder = builder.WithEventFilter(filterByNonRabbitNamespacePrefixForTest())
+	}
+
+	return builder.Complete(r)
 }
