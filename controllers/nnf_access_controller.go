@@ -40,7 +40,7 @@ type NnfAccessReconciler struct {
 
 const (
 	// finalizerNnfAccess defines the key used for the finalizer
-	finalizerNnfAccess = "nnf.cray.hpe.com/nnf_storage"
+	finalizerNnfAccess = "nnf.cray.hpe.com/nnf_access"
 
 	// NnfAccessAnnotation is an annotation applied to the NnfStorage object used to
 	// prevent multiple accesses to a non-clustered file system
@@ -87,9 +87,32 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}()
 
+	// Create a list of names of the client nodes. This is pulled from either
+	// the Computes resource specified in the ClientReference or the NnfStorage
+	// resource when no ClientReference is provided. These correspond to mounting
+	// the compute nodes during pre_run and mounting the rabbit nodes for data
+	// movement.
+	clientList, err := r.getClientList(ctx, access)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Pick one or more devices for each client to mount. Each client gets one device
+	// when access.spec.target=single (used for computes), and each client gets as many
+	// devices as it has access to when access.spec.target=all (used for rabbits).
+	storageMapping, err := r.mapClientStorage(ctx, access, clientList)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if !access.GetDeletionTimestamp().IsZero() {
 		if !controllerutil.ContainsFinalizer(access, finalizerNnfAccess) {
 			return ctrl.Result{}, nil
+		}
+
+		err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 
 		// Remove all the child ClientMount resources and wait for their
@@ -147,15 +170,8 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	// Create a list of names of the client nodes. This is pulled from either
-	// the Computes resource or the NnfStorage resource
-	clientList, err := r.getClientList(ctx, access)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Pick one or more devices for each client to mount
-	storageMapping, err := r.mapClientStorage(ctx, access, clientList)
+	// Create the ClientMount resources. One ClientMount resource is created per client
+	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -577,23 +593,148 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 	return storageMapping, nil
 }
 
+type mountReference struct {
+	client          string
+	allocationIndex int
+}
+
+// addNodeStorageEndpoints adds the compute node information to the NnfNodeStorage resource
+// so it can make the NVMe namespaces accessible on the compute node. This is done on the rabbit
+// by creating StorageGroup resources through swordfish for the correct endpoint.
+func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+	// NnfNodeStorage clientReferences only need to be added for compute nodes. If
+	// this nnfAccess is not for compute nodes, then there's no work to do.
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil
+	}
+
+	nodeStorageMap := make(map[corev1.ObjectReference][]mountReference)
+
+	// Make a map of NnfNodeStorage references that holds a list of which compute nodes
+	// access which allocation index.
+	for client, storageList := range storageMapping {
+		for _, mount := range storageList {
+			if mount.Device.DeviceReference == nil {
+				continue
+			}
+
+			mountRef := mountReference{
+				client:          client,
+				allocationIndex: mount.Device.DeviceReference.Data,
+			}
+
+			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = append(nodeStorageMap[mount.Device.DeviceReference.ObjectReference], mountRef)
+		}
+	}
+
+	// Loop through the NnfNodeStorages and add clientEndpoint information for each of the
+	// computes that need access to an allocation.
+	for nodeStorageReference, mountRefList := range nodeStorageMap {
+		namespacedName := types.NamespacedName{
+			Name:      nodeStorageReference.Name,
+			Namespace: nodeStorageReference.Namespace,
+		}
+
+		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
+		err := r.Get(ctx, namespacedName, nnfNodeStorage)
+		if err != nil {
+			return err
+		}
+
+		oldNnfNodeStorage := *nnfNodeStorage.DeepCopy()
+
+		// The clientEndpoints field is an array of each of the allocations on the Rabbit
+		// node that holds a list of the endpoints to expose the allocation to. The endpoints
+		// are the swordfish endpoints, so 0 is the rabbit, and 1-16 are the computes. Start out
+		// by clearing all compute node endpoints from the allocations.
+		for i := range nnfNodeStorage.Spec.ClientEndpoints {
+			nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames = nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames[:1]
+		}
+
+		// Add compute node endpoints for each of the allocations. Increment the compute node
+		// index found from the "storage" resource to account for the 0 index being the rabbit
+		// in swordfish.
+		for _, mountRef := range mountRefList {
+			clientEndpoints := &nnfNodeStorage.Spec.ClientEndpoints[mountRef.allocationIndex].NodeNames
+			*clientEndpoints = append(*clientEndpoints, mountRef.client)
+		}
+
+		if reflect.DeepEqual(oldNnfNodeStorage, *nnfNodeStorage) {
+			continue
+		}
+
+		err = r.Update(ctx, nnfNodeStorage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// removeNodeStorageEndpoints modifies the NnfNodeStorage resources to remove the client endpoints for the
+// compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
+// those compute nodes and remove access to the NVMe namespaces from the computes.
+func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+	// NnfNodeStorage clientReferences only need to be removed for compute nodes. If
+	// this nnfAccess is not for compute nodes, then there's no work to do.
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil
+	}
+
+	nodeStorageMap := make(map[corev1.ObjectReference]bool)
+
+	// Make a map of NnfNodeStorage references that were mounted by this
+	// nnfAccess
+	for _, storageList := range storageMapping {
+		for _, mount := range storageList {
+			if mount.Device.DeviceReference == nil {
+				continue
+			}
+
+			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = true
+		}
+	}
+
+	// Update each of the NnfNodeStorage resources to remove the clientEndpoints that
+	// were added earlier. Leave the first endpoint since that corresponds to the
+	// rabbit node.
+	for nodeStorageReference := range nodeStorageMap {
+		namespacedName := types.NamespacedName{
+			Name:      nodeStorageReference.Name,
+			Namespace: nodeStorageReference.Namespace,
+		}
+
+		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
+		err := r.Get(ctx, namespacedName, nnfNodeStorage)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+
+		oldNnfNodeStorage := *nnfNodeStorage.DeepCopy()
+
+		for i := range nnfNodeStorage.Spec.ClientEndpoints {
+			nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames = nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames[:1]
+		}
+
+		if reflect.DeepEqual(oldNnfNodeStorage, *nnfNodeStorage) {
+			continue
+		}
+
+		err = r.Update(ctx, nnfNodeStorage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // createClientMounts creates the ClientMount resources based on the information in the storageMapping map.
 func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
-	storage := &nnfv1alpha1.NnfStorage{}
-
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
-		return fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
-	}
-
-	namespacedName := types.NamespacedName{
-		Name:      access.Spec.StorageReference.Name,
-		Namespace: access.Spec.StorageReference.Namespace,
-	}
-
-	if err := r.Get(ctx, namespacedName, storage); err != nil {
-		return err
-	}
-
 	for client, storageList := range storageMapping {
 		clientMount := &dwsv1alpha1.ClientMount{
 			ObjectMeta: metav1.ObjectMeta{

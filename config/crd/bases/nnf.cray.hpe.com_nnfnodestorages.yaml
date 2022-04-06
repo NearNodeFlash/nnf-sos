@@ -44,6 +44,26 @@ spec:
                   available drives operating in the NNF Node.
                 format: int64
                 type: integer
+              clientEndpoints:
+                description: ClientEndpoints sets which endpoints should have access
+                  to an allocation.
+                items:
+                  description: ClientEndpointsSpec contains information about which
+                    nodes a storage allocation should be visible to
+                  properties:
+                    allocationIndex:
+                      description: Index of the allocation in the NnfNodeStorage
+                      type: integer
+                    nodeNames:
+                      description: List of nodes that should see the allocation
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - allocationIndex
+                  - nodeNames
+                  type: object
+                type: array
               count:
                 description: Count is the number of allocations to make on this node.
                   All of the allocations will be created with the same parameters
@@ -98,6 +118,7 @@ spec:
                     type: string
                 type: object
             required:
+            - clientEndpoints
             - count
             - fileSystemType
             type: object

@@ -187,7 +187,13 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeStorage,
 			func() error {
-				nnfNodeStorage.SetAnnotations(map[string]string{ownerAnnotation: storage.Name + "/" + storage.Namespace})
+				annotations := nnfNodeStorage.GetAnnotations()
+				if annotations == nil {
+					annotations = make(map[string]string)
+				}
+				annotations[ownerAnnotation] = storage.Name + "/" + storage.Namespace
+				nnfNodeStorage.SetAnnotations(annotations)
+
 				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.Count = node.Count
 				nnfNodeStorage.Spec.FileSystemType = allocationSet.FileSystemType
@@ -195,6 +201,16 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 				nnfNodeStorage.Spec.LustreStorage.FileSystemName = allocationSet.FileSystemName
 				nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
 				nnfNodeStorage.Spec.LustreStorage.BackFs = allocationSet.BackFs
+
+				// Create the list of client endpoints for each allocation and initialize it with
+				// the rabbit node endpoint
+				if len(nnfNodeStorage.Spec.ClientEndpoints) == 0 {
+					nnfNodeStorage.Spec.ClientEndpoints = make([]nnfv1alpha1.ClientEndpointsSpec, node.Count)
+					for k := range nnfNodeStorage.Spec.ClientEndpoints {
+						nnfNodeStorage.Spec.ClientEndpoints[k].AllocationIndex = k
+						nnfNodeStorage.Spec.ClientEndpoints[k].NodeNames = append(nnfNodeStorage.Spec.ClientEndpoints[k].NodeNames, node.Name)
+					}
+				}
 
 				if allocationSet.TargetType == "MDT" || allocationSet.TargetType == "OST" {
 					if len(allocationSet.ExternalMgsNid) > 0 {

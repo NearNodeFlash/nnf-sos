@@ -20,6 +20,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -109,15 +110,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "6cf68fa5.cray.com",
-		Namespace:              nnfCtrl.GetNamespace(),
-	})
+	}
+
+	nnfCtrl.SetNamespaces(&options)
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -150,7 +154,7 @@ func main() {
 // NNF Controller types.
 type nnfControllerInitializer interface {
 	GetType() string
-	GetNamespace() string
+	SetNamespaces(*ctrl.Options)
 	Start(*nnf.Options) error
 	SetupReconciler(manager.Manager) error
 }
@@ -169,8 +173,12 @@ func newNnfControllerInitializer(typ string) nnfControllerInitializer {
 // Type NodeLocalController defines initializer for the per NNF Node Controller
 type nodeLocalController struct{}
 
-func (*nodeLocalController) GetType() string      { return NodeLocalController }
-func (*nodeLocalController) GetNamespace() string { return os.Getenv("NNF_NODE_NAME") }
+func (*nodeLocalController) GetType() string { return NodeLocalController }
+func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
+	namespaces := []string{"default", os.Getenv("NNF_NODE_NAME")}
+
+	options.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
+}
 
 func (*nodeLocalController) Start(opts *nnf.Options) error {
 	c := nnf.NewController(opts)
@@ -193,7 +201,7 @@ func (c *nodeLocalController) SetupReconciler(mgr manager.Manager) error {
 		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:         mgr.GetScheme(),
-		NamespacedName: types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: c.GetNamespace()},
+		NamespacedName: types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -218,9 +226,9 @@ func (c *nodeLocalController) SetupReconciler(mgr manager.Manager) error {
 // Type StorageController defines the initializer for the NNF Storage Controller
 type storageController struct{}
 
-func (*storageController) GetType() string          { return StorageController }
-func (*storageController) GetNamespace() string     { return "" }
-func (*storageController) Start(*nnf.Options) error { return nil }
+func (*storageController) GetType() string                     { return StorageController }
+func (*storageController) SetNamespaces(options *ctrl.Options) { options.Namespace = "" }
+func (*storageController) Start(*nnf.Options) error            { return nil }
 
 func (c *storageController) SetupReconciler(mgr manager.Manager) error {
 	if err := (&controllers.NnfNodeSLCReconciler{

@@ -31,6 +31,7 @@ import (
 	openapi "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 
+	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
@@ -156,7 +157,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Create a block device in /dev that is accessible on the Rabbit node
-		result, err = r.createBlockDevice(statusUpdater, nodeStorage, i)
+		result, err = r.createBlockDevice(ctx, statusUpdater, nodeStorage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -219,7 +220,7 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 	ss := nnf.NewDefaultStorageService()
 
@@ -244,56 +245,99 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(statusUpdater *nodeStorageS
 		return &ctrl.Result{}, err
 	}
 
-	// Iterate over the server endpoints to ensure we've reflected
-	// the status of each server (Compute & Rabbit)
-	for idx := range serverEndpointCollection.Members {
+	// Get the Storage resource to map between compute node name and
+	// endpoint index.
+	namespacedName := types.NamespacedName{
+		Name:      nodeStorage.Namespace,
+		Namespace: "default",
+	}
 
-		serverEndpoint := serverEndpointCollection.Members[idx]
-		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
+	storage := &dwsv1alpha1.Storage{}
+	err := r.Get(ctx, namespacedName, storage)
+	if err != nil {
+		log.Error(err, "Could not read storage", "namespacedName", namespacedName)
+		return &ctrl.Result{}, err
+	}
 
-		// The kind environment doesn't support endpoints beyond the Rabbit
-		if os.Getenv("ENVIRONMENT") == "kind" && id != os.Getenv("RABBIT_NODE") {
-			continue
+	// Build a list of all nodes with access to the storage
+	clients := []string{}
+	for _, server := range storage.Data.Access.Servers {
+		clients = append(clients, server.Name)
+	}
+
+	for _, compute := range storage.Data.Access.Computes {
+		clients = append(clients, compute.Name)
+	}
+
+	// Make a list of all the endpoints and set whether they need a storage group based
+	// on the list of clients specified in the ClientEndpoints array
+	accessList := make([]bool, len(serverEndpointCollection.Members))
+	for _, nodeName := range nodeStorage.Spec.ClientEndpoints[index].NodeNames {
+		for i, clientName := range clients {
+			if nodeName == clientName {
+				accessList[i] = true
+			}
 		}
+	}
 
-		endPoint, err := r.getEndpoint(ss, id)
-		if err != nil {
-			log.Error(err, "Failed to get endpoint", "id", id)
-			continue // Check all endpoints
-		}
+	// Loop through the list of endpoints and delete the StorageGroup for endpoints where
+	// access==false, and create the StorageGroup for endpoints where access==true
+	for clientIndex, access := range accessList {
+		endpointRef := serverEndpointCollection.Members[clientIndex]
+		endpointID := endpointRef.OdataId[strings.LastIndex(endpointRef.OdataId, "/")+1:]
+		storageGroupID := fmt.Sprintf("%s-%d-%s", nodeStorage.Name, index, endpointID)
 
-		// Skip the endpoints that are not ready
-		if nnfv1alpha1.StaticResourceStatus(endPoint.Status) != nnfv1alpha1.ResourceReady {
-			continue
-		}
+		// If the endpoint doesn't need a storage group, remove one if it exists
+		if access == false {
+			if _, err := r.getStorageGroup(ss, storageGroupID); err != nil {
+				continue
+			}
 
-		storageGroupID := fmt.Sprintf("%s-%d-%s", nodeStorage.Name, index, id)
+			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
+				return &ctrl.Result{}, err
+			}
 
-		sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, id)
-		if err != nil {
-			statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
+			log.Info("Deleted storage group", "storageGroupID", storageGroupID)
+		} else {
+			// The kind environment doesn't support endpoints beyond the Rabbit
+			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
+				continue
+			}
 
-			return &ctrl.Result{Requeue: true}, nil
-		}
+			endPoint, err := r.getEndpoint(ss, endpointID)
+			if err != nil {
+				return &ctrl.Result{}, err
+			}
 
-		log.Info("Created storage group", "Id", sg.Id, "storageGroupID", storageGroupID)
+			// Skip the endpoints that are not ready
+			if nnfv1alpha1.StaticResourceStatus(endPoint.Status) != nnfv1alpha1.ResourceReady {
+				continue
+			}
 
-		// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
-		if len(allocationStatus.StorageGroup.ID) == 0 {
+			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
+			if err != nil {
+				statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
+
+				return &ctrl.Result{Requeue: true}, nil
+			}
+
+			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
+			if len(allocationStatus.StorageGroup.ID) == 0 {
+				log.Info("Created storage group", "storageGroupID", storageGroupID)
+				statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
+					allocationStatus.StorageGroup.ID = sg.Id
+					condition.LastTransitionTime = metav1.Now()
+					condition.Status = metav1.ConditionFalse // we are finished with this state
+					condition.Reason = nnfv1alpha1.ConditionSuccess
+					condition.Message = ""
+				})
+			}
+
 			statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-				allocationStatus.StorageGroup.ID = sg.Id
-				condition.LastTransitionTime = metav1.Now()
-				condition.Status = metav1.ConditionFalse // we are finished with this state
-				condition.Reason = nnfv1alpha1.ConditionSuccess
-				condition.Message = ""
+				allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
+				allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
 			})
 		}
-
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
-			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
-		})
-
 	}
 
 	return nil, nil
@@ -311,6 +355,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 			allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
 			allocationStatus.FileShare.Status = nnfv1alpha1.ResourceReady
 		})
+
 		return nil, nil
 	}
 
@@ -600,6 +645,10 @@ func (r *NnfNodeStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi, id 
 	}
 
 	return sg, nil
+}
+
+func (r *NnfNodeStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) error {
+	return ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
 }
 
 func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, id string, fsID string, epID string, mountPath string, options map[string]interface{}) (*sf.FileShareV120FileShare, error) {

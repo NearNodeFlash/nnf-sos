@@ -32,6 +32,19 @@ type NnfNodeStorageSpec struct {
 	// LustreStorageSpec describes the Lustre target created here, if
 	// FileSystemType specifies a Lustre target.
 	LustreStorage LustreStorageSpec `json:"lustreStorage,omitempty"`
+
+	// ClientEndpoints sets which endpoints should have access to an allocation.
+	ClientEndpoints []ClientEndpointsSpec `json:"clientEndpoints"`
+}
+
+// ClientEndpointsSpec contains information about which nodes a storage allocation
+// should be visible to
+type ClientEndpointsSpec struct {
+	// Index of the allocation in the NnfNodeStorage
+	AllocationIndex int `json:"allocationIndex"`
+
+	// List of nodes that should see the allocation
+	NodeNames []string `json:"nodeNames"`
 }
 
 // LustreStorageSpec describes the Lustre target to be created here.
