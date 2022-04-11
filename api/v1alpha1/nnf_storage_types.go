@@ -46,12 +46,6 @@ type NnfStorageAllocationSetSpec struct {
 	// may split the storage among the available drives operating in the NNF Node.
 	Capacity int64 `json:"capacity"`
 
-	// FileSystemType defines the type of the desired filesystem, or raw
-	// block device.
-	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre
-	// +kubebuilder:default:=raw
-	FileSystemType string `json:"fileSystemType"`
-
 	// Lustre specific configuration
 	NnfStorageLustreSpec `json:",inline"`
 
@@ -63,6 +57,13 @@ type NnfStorageAllocationSetSpec struct {
 // of available NNF Nodes. This object is related to a #DW for NNF Storage, with the WLM
 // making the determination for which NNF Nodes it wants to utilize.
 type NnfStorageSpec struct {
+
+	// FileSystemType defines the type of the desired filesystem, or raw
+	// block device.
+	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre
+	// +kubebuilder:default:=raw
+	FileSystemType string `json:"fileSystemType"`
+
 	// AllocationSets is a list of different types of storage allocations to make. Each
 	// AllocationSet describes an entire allocation spanning multiple Rabbits. For example,
 	// an AllocationSet could be all of the OSTs in a Lustre filesystem, or all of the raw

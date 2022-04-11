@@ -40,10 +40,9 @@ type NnfDataMovementSpecSourceDestination struct {
 	// Path describes the location of the user data relative to the storage instance
 	Path string `json:"path,omitempty"`
 
-	// Storage Instance describes the storage instance backing this specification; The storage
-	// instance describes the type of storage as well as other attributes like its location
-	// within the kubernetes cluster
-	StorageInstance *corev1.ObjectReference `json:"storageInstance,omitempty"`
+	// Storage describes the storage backing this data movement specification; Storage can reference
+	// either NNF storage or global Lustre storage depending on the object references Kind field.
+	Storage *corev1.ObjectReference `json:"storageInstance,omitempty"`
 
 	// Access references the NNF Access element that is needed to perform data movement. This provides
 	// details as to the mount path and backing storage across NNF Nodes.

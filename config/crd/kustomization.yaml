@@ -5,10 +5,8 @@ resources:
 - bases/nnf.cray.hpe.com_nnfnodes.yaml
 - bases/nnf.cray.hpe.com_nnfnodestorages.yaml
 - bases/nnf.cray.hpe.com_nnfstorages.yaml
-- bases/nnf.cray.hpe.com_nnfjobstorageinstances.yaml
 - bases/nnf.cray.hpe.com_nnfdatamovements.yaml
 - bases/nnf.cray.hpe.com_nnfaccesses.yaml
-- bases/nnf.cray.hpe.com_nnfpersistentstorageinstances.yaml
 - bases/nnf.cray.hpe.com_nnfdatamovementworkflows.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
@@ -18,10 +16,8 @@ patchesStrategicMerge:
 #- patches/webhook_in_nodes.yaml
 #- patches/webhook_in_nodestorages.yaml
 #- patches/webhook_in_storages.yaml
-#- patches/webhook_in_nnfjobstorageinstances.yaml
 #- patches/webhook_in_datamovements.yaml
 #- patches/webhook_in_nnfaccesses.yaml
-#- patches/webhook_in_nnfpersistentstorageinstances.yaml
 #- patches/webhook_in_datamovementworkflows.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
@@ -30,10 +26,8 @@ patchesStrategicMerge:
 #- patches/cainjection_in_nodes.yaml
 #- patches/cainjection_in_nodestorages.yaml
 #- patches/cainjection_in_storages.yaml
-#- patches/cainjection_in_nnfjobstorageinstances.yaml
 #- patches/cainjection_in_datamovements.yaml
 #- patches/cainjection_in_nnfaccesses.yaml
-#- patches/cainjection_in_nnfpersistentstorageinstances.yaml
 #- patches/cainjection_in_datamovementworkflows.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 

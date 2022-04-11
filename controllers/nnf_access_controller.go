@@ -207,7 +207,6 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 // This acts as a lock to prevent multiple NnfAccess resources from mounting the same file system. This is only necessary
 // for non-clustered file systems
 func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess) (bool, error) {
-	nnfStorage := &nnfv1alpha1.NnfStorage{}
 
 	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
 		return false, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
@@ -218,20 +217,15 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
+	nnfStorage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return false, err
 	}
 
 	// Clustered file systems don't need to add the annotation
-	for _, allocationSet := range nnfStorage.Spec.AllocationSets {
-		switch allocationSet.FileSystemType {
-		case "lustre":
-			return false, nil
-		case "gfs2":
-			return false, nil
-		default:
-			break
-		}
+	fileSystemType := nnfStorage.Spec.FileSystemType
+	if fileSystemType == "lustre" || fileSystemType == "gfs2" {
+		return false, nil
 	}
 
 	// Read the current annotations and make an empty map if necessary
@@ -415,11 +409,11 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 	}
 
 	// Call a helper function depending on the storage type
-	for i, allocationSet := range nnfStorage.Spec.AllocationSets {
+	for i := range nnfStorage.Spec.AllocationSets {
 		var storageMapping map[string][]dwsv1alpha1.ClientMountInfo
 		var err error
 
-		if allocationSet.FileSystemType == "lustre" {
+		if nnfStorage.Spec.FileSystemType == "lustre" {
 			storageMapping, err = r.mapClientNetworkStorage(ctx, access, clients, nnfStorage, i)
 		} else {
 			storageMapping, err = r.mapClientLocalStorage(ctx, access, clients, nnfStorage, i)
@@ -450,7 +444,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 
 	for _, client := range clients {
 		mountInfo := dwsv1alpha1.ClientMountInfo{}
-		mountInfo.Type = allocationSet.FileSystemType
+		mountInfo.Type = nnfStorage.Spec.FileSystemType
 		mountInfo.MountPath = access.Spec.MountPath
 		mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeLustre
 		mountInfo.Device.Lustre = &dwsv1alpha1.ClientMountDeviceLustre{}
@@ -466,7 +460,6 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 // mapClientLocalStorage picks storage device(s) for each client to access based on locality information
 // from the (DWS) Storage resources.
 func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess, clients []string, nnfStorage *nnfv1alpha1.NnfStorage, setIndex int) (map[string][]dwsv1alpha1.ClientMountInfo, error) {
-	allocationSet := nnfStorage.Spec.AllocationSets[setIndex]
 	allocationSetStatus := nnfStorage.Status.AllocationSets[setIndex]
 
 	// existingStorage is a map of Rabbits nodes and which storage they have
@@ -511,11 +504,11 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
 			// to the NnfNodeStorage resource so the client mounter can access the swordfish objects
 			if access.Spec.ClientReference == (corev1.ObjectReference{}) {
-				mountInfo.Type = allocationSet.FileSystemType
+				mountInfo.Type = nnfStorage.Spec.FileSystemType
 				mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeReference
 				mountInfo.MountPath = filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(i))
 			} else {
-				mountInfo.Type = allocationSet.FileSystemType
+				mountInfo.Type = nnfStorage.Spec.FileSystemType
 				mountInfo.MountPath = access.Spec.MountPath
 				mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeLVM
 				mountInfo.Device.LVM = &dwsv1alpha1.ClientMountDeviceLVM{}

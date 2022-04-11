@@ -83,10 +83,9 @@ spec:
                       to the storage instance
                     type: string
                   storageInstance:
-                    description: Storage Instance describes the storage instance backing
-                      this specification; The storage instance describes the type
-                      of storage as well as other attributes like its location within
-                      the kubernetes cluster
+                    description: Storage describes the storage backing this data movement
+                      specification; Storage can reference either NNF storage or global
+                      Lustre storage depending on the object references Kind field.
                     properties:
                       apiVersion:
                         description: API version of the referent.
@@ -175,10 +174,9 @@ spec:
                       to the storage instance
                     type: string
                   storageInstance:
-                    description: Storage Instance describes the storage instance backing
-                      this specification; The storage instance describes the type
-                      of storage as well as other attributes like its location within
-                      the kubernetes cluster
+                    description: Storage describes the storage backing this data movement
+                      specification; Storage can reference either NNF storage or global
+                      Lustre storage depending on the object references Kind field.
                     properties:
                       apiVersion:
                         description: API version of the referent.

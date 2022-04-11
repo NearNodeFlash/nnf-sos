@@ -66,8 +66,6 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementworkflows,verbs=get;create;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfjobstorageinstances,verbs=get;create;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfpersistentstorageinstances,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
@@ -470,14 +468,6 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 			}
 		}
 
-		result, err := r.createStorageInstance(ctx, workflow, dbd, s, log)
-		if err != nil {
-			log.Error(err, "Failed to create nnf storage instance")
-			return ctrl.Result{}, err
-		} else if result.Requeue {
-			return result, nil
-		}
-
 		nnfStorage, err := r.createNnfStorage(ctx, workflow, dbd, s, log)
 		if err != nil {
 			if apierrors.IsConflict(err) {
@@ -515,72 +505,6 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-// Create the storage instance for the provided directive breakdown. A Storage Instance represents the storage for a
-// particular breakdown and has either a job or persistent lifetime. Storage Instances are provided to data movement
-// API so it is aware of the file system type and other attributes used in data movement.
-func (r *NnfWorkflowReconciler) createStorageInstance(ctx context.Context, workflow *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (ctrl.Result, error) {
-
-	switch d.Spec.Lifetime {
-	case "job": // TODO: "job" and "persistent" should move to const definitions
-		storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d", workflow.Name, d.Spec.DW.DWDirectiveIndex),
-				Namespace: workflow.Namespace,
-			},
-		}
-
-		mutateFn := func() error {
-			storageInstance.Labels = map[string]string{
-				dwsv1alpha1.WorkflowNameLabel:      workflow.Name,
-				dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
-			}
-
-			storageInstance.Spec = nnfv1alpha1.NnfJobStorageInstanceSpec{
-				Name:    d.Spec.Name,
-				FsType:  d.Spec.Type,
-				Servers: d.Status.Servers,
-			}
-
-			// Delete this NnfJobStorageInstance when the workflow is deleted
-			return ctrl.SetControllerReference(workflow, storageInstance, r.Scheme)
-		}
-
-		result, err := ctrl.CreateOrUpdate(ctx, r.Client, storageInstance, mutateFn)
-		if result == controllerutil.OperationResultCreated {
-			log.Info("Created storage instance", "Name", storageInstance.Name)
-		}
-		return ctrl.Result{Requeue: result != controllerutil.OperationResultNone}, err
-
-	case "persistent":
-		storageInstance := &nnfv1alpha1.NnfPersistentStorageInstance{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.Spec.Name,
-				Namespace: "nnf-system",
-			},
-		}
-
-		mutateFn := func() error {
-			storageInstance.Spec = nnfv1alpha1.NnfPersistentStorageInstanceSpec{
-				Name:    d.Spec.Name,
-				FsType:  d.Spec.Type,
-				Servers: d.Status.Servers,
-			}
-
-			return nil
-		}
-
-		result, err := ctrl.CreateOrUpdate(ctx, r.Client, storageInstance, mutateFn)
-		if result == controllerutil.OperationResultCreated {
-			log.Info("Created persistent instance", "Name", storageInstance.Name)
-		}
-
-		return ctrl.Result{}, err
-
-	default:
-		return ctrl.Result{}, fmt.Errorf("unsupported directive lifetime '%s'", d.Spec.Lifetime)
-	}
-}
-
 func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *dwsv1alpha1.Workflow, d *dwsv1alpha1.DirectiveBreakdown, s *dwsv1alpha1.Servers, log logr.Logger) (*nnfv1alpha1.NnfStorage, error) {
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -602,6 +526,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
 			}
 
+			nnfStorage.Spec.FileSystemType = d.Spec.Type
+
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
@@ -610,9 +536,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				nnfAllocSet := nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
-				nnfAllocSet.FileSystemType = d.Spec.Type // DirectiveBreakdown contains the filesystem type (lustre, xfs, etc)
 				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
-				if nnfAllocSet.FileSystemType == "lustre" {
+				if d.Spec.Type == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					charsWanted := 8
@@ -739,54 +664,40 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 	// Prepare the provided staging parameter for data-movement. Param is the source/destination value from the #DW copy_in/copy_out directive; based
 	// on the param prefix we determine the storage instance and access requirements for data movement.
 	prepareStagingArgumentFn := func(param string) (*corev1.ObjectReference, *nnfv1alpha1.NnfAccess, string, *ctrl.Result, error) {
-		var storage *corev1.ObjectReference
-		var access *nnfv1alpha1.NnfAccess
+		var storageReference *corev1.ObjectReference = nil
+		var access *nnfv1alpha1.NnfAccess = nil
 
 		name, path := splitStagingArgumentIntoNameAndPath(param)
 
-		// Job or Persistent DWs will have a corresponding NNF Job Storage Instance or NNF Persistent Storage Instance, respectively. Both
-		// require we setup an NNF Access for the data-movement resource to ensure the data is accessible on the NNF Server while data movement
-		// executes.
+		// If param refers to a Job or Persistent storage type, find the NNF Storage that is backing
+		// this directive line.
 		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
 			var result controllerutil.OperationResult
 			var fsType string
 
-			servers := &corev1.ObjectReference{}
-			if strings.HasPrefix(param, "$JOB_DW_") {
-
-				storageInstance, err := r.findNnfJobStorageInstance(ctx, name, workflow)
-				if err != nil {
-					return nil, nil, path, nil, err
-				}
-
-				fsType = storageInstance.Spec.FsType
-
-				servers = &storageInstance.Spec.Servers
-
-				storage = &corev1.ObjectReference{
-					Kind:      reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name(),
-					Name:      storageInstance.Name,
-					Namespace: storageInstance.Namespace,
-				}
-			} else if strings.HasPrefix(param, "$PERSISTENT_DW_") {
-
-				storageInstance, err := r.findNnfPersistentStorageInstance(ctx, name)
-				if err != nil {
-					return nil, nil, path, nil, err
-				}
-
-				fsType = storageInstance.Spec.FsType
-
-				servers = &storageInstance.Spec.Servers
-
-				storage = &corev1.ObjectReference{
-					Kind:      reflect.TypeOf(nnfv1alpha1.NnfPersistentStorageInstance{}).Name(),
-					Name:      storageInstance.Name,
-					Namespace: storageInstance.Namespace,
-				}
-			} else {
-				return nil, nil, path, nil, fmt.Errorf("Unsupported parameter '%s'", param)
+			directiveIdx := findDirectiveIndexByName(workflow, name)
+			if directiveIdx < 0 {
+				return nil, nil, "", nil, fmt.Errorf("No directive matching '%s' found in workflow", name)
 			}
+
+			storage := &nnfv1alpha1.NnfStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d", workflow.Name, directiveIdx), // TODO: Need a name conversion strategy
+					Namespace: workflow.Namespace,
+				},
+			}
+
+			if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+				return nil, nil, "", nil, err
+			}
+
+			storageReference = &corev1.ObjectReference{
+				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
+				Name:      storage.Name,
+				Namespace: storage.Namespace,
+			}
+
+			fsType = storage.Spec.FileSystemType
 
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
@@ -805,18 +716,16 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 				teardownState = dwsv1alpha1.StateDataOut.String()
 			}
 
-			directiveIdx := findDirectiveIndexByName(workflow, name)
-
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
-			access, result, err = r.setupNnfAccessForServers(ctx, servers, workflow, directiveIdx, teardownState)
+			access, result, err = r.setupNnfAccessForServers(ctx, storage, workflow, directiveIdx, teardownState)
 			if err != nil {
-				return storage, access, path, nil, err
+				return storageReference, access, path, nil, err
 			} else if result != controllerutil.OperationResultNone {
-				return storage, access, path, &ctrl.Result{Requeue: true}, nil
+				return storageReference, access, path, &ctrl.Result{Requeue: true}, nil
 			}
 
 		} else if lustre := r.findLustreFileSystemForPath(ctx, param, r.Log); lustre != nil {
-			storage = &corev1.ObjectReference{
+			storageReference = &corev1.ObjectReference{
 				Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
 				Name:      lustre.Name,
 				Namespace: lustre.Namespace,
@@ -825,17 +734,17 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 			return nil, nil, "", nil, fmt.Errorf("Parameter '%s' invalid", param)
 		}
 
-		return storage, access, path, nil, nil
+		return storageReference, access, path, nil, nil
 	}
 
-	sourceInstance, sourceAccess, sourcePath, result, err := prepareStagingArgumentFn(parameters["source"])
+	sourceStorage, sourceAccess, sourcePath, result, err := prepareStagingArgumentFn(parameters["source"])
 	if err != nil {
 		return ctrl.Result{}, err
 	} else if result != nil {
 		return *result, nil
 	}
 
-	destinationInstance, destinationAccess, destinationPath, result, err := prepareStagingArgumentFn(parameters["destination"])
+	destinationStorage, destinationAccess, destinationPath, result, err := prepareStagingArgumentFn(parameters["destination"])
 	if err != nil {
 		return ctrl.Result{}, err
 	} else if result != nil {
@@ -882,14 +791,14 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 
 	dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
 		Source: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-			Path:            sourcePath,
-			StorageInstance: sourceInstance,
-			Access:          accessToObjectReference(sourceAccess),
+			Path:    sourcePath,
+			Storage: sourceStorage,
+			Access:  accessToObjectReference(sourceAccess),
 		},
 		Destination: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-			Path:            destinationPath,
-			StorageInstance: destinationInstance,
-			Access:          accessToObjectReference(destinationAccess),
+			Path:    destinationPath,
+			Storage: destinationStorage,
+			Access:  accessToObjectReference(destinationAccess),
 		},
 		UserId:  workflow.Spec.UserID,
 		GroupId: workflow.Spec.GroupID,
@@ -922,18 +831,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) findNnfJobStorageInstance(ctx context.Context, name string, workflow *dwsv1alpha1.Workflow) (*nnfv1alpha1.NnfJobStorageInstance, error) {
-	index := findDirectiveIndexByName(workflow, name)
-	jsi := &nnfv1alpha1.NnfJobStorageInstance{}
-	return jsi, r.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-%d", workflow.Name, index), Namespace: workflow.Namespace}, jsi)
-}
-
-func (r *NnfWorkflowReconciler) findNnfPersistentStorageInstance(ctx context.Context, name string) (*nnfv1alpha1.NnfPersistentStorageInstance, error) {
-	psi := &nnfv1alpha1.NnfPersistentStorageInstance{}
-	return psi, r.Get(ctx, types.NamespacedName{Name: name, Namespace: "nnf-system"}, psi)
-}
-
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, serversReference *corev1.ObjectReference, workflow *dwsv1alpha1.Workflow, directiveIdx int, teardownState string) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, directiveIdx int, teardownState string) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
 
 	params, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[directiveIdx])
 	if err != nil {
@@ -963,8 +861,8 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, se
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
-					Name:      serversReference.Name,
-					Namespace: serversReference.Namespace,
+					Name:      storage.Name,
+					Namespace: storage.Namespace,
 				},
 			}
 
@@ -1153,24 +1051,11 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 		if (args["command"] == "jobdw") || (args["command"] == "create_persistent") {
 			if args["type"] == "gfs2" { // TODO: Should this include Lustre?
 
-				// Find the storage instance for this command and locate the servers that maintain
-				// that storage.
-				servers := &corev1.ObjectReference{}
-				if args["command"] == "jobdw" {
-					storageInstance, err := r.findNnfJobStorageInstance(ctx, args["name"], workflow)
-					if err != nil {
-						return ctrl.Result{}, err
-					}
-
-					servers = &storageInstance.Spec.Servers
-
-				} else if args["command"] == "create_persistent" {
-					storageInstance, err := r.findNnfPersistentStorageInstance(ctx, args["name"])
-					if err != nil {
-						return ctrl.Result{}, err
-					}
-
-					servers = &storageInstance.Spec.Servers
+				storage := &nnfv1alpha1.NnfStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%d", workflow.Name, driverStatus.DWDIndex),
+						Namespace: workflow.Namespace,
+					},
 				}
 
 				// Set the teardown state to post run. If there is a copy_out directive that uses
@@ -1181,7 +1066,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 					teardownState = dwsv1alpha1.StateDataOut.String()
 				}
 
-				access, result, err := r.setupNnfAccessForServers(ctx, servers, workflow, driverStatus.DWDIndex, teardownState)
+				access, result, err := r.setupNnfAccessForServers(ctx, storage, workflow, driverStatus.DWDIndex, teardownState)
 				if err != nil {
 					return ctrl.Result{}, err
 				} else if result == controllerutil.OperationResultCreated {
@@ -1427,7 +1312,6 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&nnfv1alpha1.NnfStorage{}).
 		Owns(&nnfv1alpha1.NnfAccess{}).
 		Owns(&nnfv1alpha1.NnfDataMovement{}).
-		Owns(&nnfv1alpha1.NnfJobStorageInstance{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
 		Complete(r)
 }

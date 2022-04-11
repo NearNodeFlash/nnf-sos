@@ -70,18 +70,6 @@ spec:
                         Lustre filesystem.
                       maxLength: 8
                       type: string
-                    fileSystemType:
-                      default: raw
-                      description: FileSystemType defines the type of the desired
-                        filesystem, or raw block device.
-                      enum:
-                      - raw
-                      - lvm
-                      - zfs
-                      - xfs
-                      - gfs2
-                      - lustre
-                      type: string
                     name:
                       description: Name is a human readable label for this set of
                         allocations (e.g., xfs)
@@ -114,13 +102,25 @@ spec:
                       type: string
                   required:
                   - capacity
-                  - fileSystemType
                   - name
                   - nodes
                   type: object
                 type: array
+              fileSystemType:
+                default: raw
+                description: FileSystemType defines the type of the desired filesystem,
+                  or raw block device.
+                enum:
+                - raw
+                - lvm
+                - zfs
+                - xfs
+                - gfs2
+                - lustre
+                type: string
             required:
             - allocationSets
+            - fileSystemType
             type: object
           status:
             description: NnfStorageStatus defines the observed status of NNF Storage.

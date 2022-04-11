@@ -198,18 +198,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			It("transition to data movement", func() {
 
-				By("creates valid job storage instance")
-				storageInstance := &nnfv1alpha1.NnfJobStorageInstance{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-%d", workflow.Name, 0),
-						Namespace: key.Namespace,
-					},
-				}
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageInstance), storageInstance)
-				}, "3s").Should(Succeed(), "get job storage instance")
-
 				// Expect the workflow has owner reference to the job storage instance; this verifies the garbage collection
 				// chain is set up, but recall that GC is not running in the testenv so we can't prove it is deleted on teardown.
 				// See https://book.kubebuilder.io/reference/envtest.html#testing-considerations
@@ -223,8 +211,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Controller:         &controller,
 					BlockOwnerDeletion: &blockOwnerDeletion,
 				}
-
-				Expect(storageInstance.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 				By("transition to data in state")
 				Eventually(func() error {
@@ -248,8 +234,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.StorageInstance).ToNot(BeNil())
-				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
+				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
@@ -257,12 +243,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
-				Expect(dm.Spec.Destination.StorageInstance).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
+				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfJobStorageInstance{}).Name()),
-						"Name":      Equal(storageInstance.Name),
-						"Namespace": Equal(storageInstance.Namespace),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
+						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
+						"Namespace": Equal(workflow.Namespace),
 					}))
 
 				By("expect NnfAccess to be ready")
@@ -298,16 +284,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 
 			It("transitions to data movement", func() {
-				storageInstance := &nnfv1alpha1.NnfPersistentStorageInstance{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-persistent-storage",
-						Namespace: "nnf-system",
-					},
-				}
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageInstance), storageInstance)
-				}).Should(Succeed(), "get persistent storage instance")
 
 				Eventually(func() error {
 					Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
@@ -327,8 +303,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(Succeed(), "data movement resource created")
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.StorageInstance).ToNot(BeNil())
-				Expect(*dm.Spec.Source.StorageInstance).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
+				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
@@ -336,12 +312,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-persistent-file.out"))
-				Expect(dm.Spec.Destination.StorageInstance).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.StorageInstance).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
+				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfPersistentStorageInstance{}).Name()),
-						"Name":      Equal(storageInstance.Name),
-						"Namespace": Equal(storageInstance.Namespace),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
+						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
+						"Namespace": Equal(workflow.Namespace),
 					}))
 
 				By("expect NnfAccess to be ready")

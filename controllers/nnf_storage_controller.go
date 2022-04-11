@@ -196,7 +196,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.Count = node.Count
-				nnfNodeStorage.Spec.FileSystemType = allocationSet.FileSystemType
+				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
 				nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
 				nnfNodeStorage.Spec.LustreStorage.FileSystemName = allocationSet.FileSystemName
 				nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
