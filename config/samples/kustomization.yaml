@@ -5,9 +5,7 @@ resources:
 - nnf_v1alpha1_nodestorage.yaml
 - dws_v1alpha1_workflow.yaml
 - nnf_v1alpha1_directivebreakdown.yaml
-- nnf_v1alpha1_nnfjobstorageinstance.yaml
 - nnf_v1alpha1_datamovement.yaml
 - nnf_v1alpha1_nnfaccess.yaml
-- nnf_v1alpha1_nnfpersistentstorageinstance.yaml
 - nnf_v1alpha1_datamovementworkflow.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
