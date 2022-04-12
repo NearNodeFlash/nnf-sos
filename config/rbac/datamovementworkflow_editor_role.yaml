@@ -5,7 +5,7 @@ metadata:
   name: datamovementworkflow-editor-role
 rules:
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - datamovementworkflows
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - nnf.cray.com
+  - nnf.cray.hpe.com
   resources:
   - datamovementworkflows/status
   verbs:

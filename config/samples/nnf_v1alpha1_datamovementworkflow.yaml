@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.com/v1alpha1
+apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: DataMovementWorkflow
 metadata:
   name: datamovementworkflow-sample

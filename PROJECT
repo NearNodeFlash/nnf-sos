@@ -1,4 +1,4 @@
-domain: cray.com
+domain: cray.hpe.com
 layout:
 - go.kubebuilder.io/v3
 plugins:
@@ -11,7 +11,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfNode
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
@@ -20,7 +20,7 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfStorage
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
@@ -29,25 +29,25 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfNodeStorage
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
   version: v1alpha1
 - controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: dws
   kind: Workflow
   version: v1alpha1
 - controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: DirectiveBreakdown
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfJobStorageInstance
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
@@ -55,7 +55,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovement
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
@@ -64,14 +64,14 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfAccess
   version: ""
 - api:
     crdVersion: v1
     namespaced: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfPersistentStorageInstance
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
@@ -79,7 +79,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
-  domain: cray.com
+  domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovementWorkflow
   path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1

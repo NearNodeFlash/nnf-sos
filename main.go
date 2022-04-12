@@ -116,7 +116,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "6cf68fa5.cray.com",
+		LeaderElectionID:       "6cf68fa5.cray.hpe.com",
 	}
 
 	nnfCtrl.SetNamespaces(&options)
