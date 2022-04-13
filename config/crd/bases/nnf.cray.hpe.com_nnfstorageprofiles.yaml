@@ -1,0 +1,101 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: nnfstorageprofiles.nnf.cray.hpe.com
+spec:
+  group: nnf.cray.hpe.com
+  names:
+    kind: NnfStorageProfile
+    listKind: NnfStorageProfileList
+    plural: nnfstorageprofiles
+    singular: nnfstorageprofile
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: True if this is the default instance
+      jsonPath: .data.default
+      name: DEFAULT
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: NnfStorageProfile is the Schema for the nnfstorageprofiles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          data:
+            description: NnfStorageProfileData defines the desired state of NnfStorageProfile
+            properties:
+              default:
+                default: false
+                description: Default is true if this instance is the default resource
+                  to use
+                type: boolean
+              gfs2Storage:
+                description: GFS2Storage defines the GFS2-specific configuration
+                properties:
+                  placeholder:
+                    default: false
+                    description: Placeholder
+                    type: boolean
+                type: object
+              lustreStorage:
+                description: LustreStorage defines the Lustre-specific configuration
+                properties:
+                  combinedMgtMdt:
+                    default: false
+                    description: CombinedMGTMDT indicates whether the MGT and MDT
+                      should be created on the same target device
+                    type: boolean
+                  externalMgs:
+                    description: ExternalMGS contains the NIDs of a pre-existing MGS
+                      that should be used
+                    items:
+                      type: string
+                    type: array
+                type: object
+              rawStorage:
+                description: RawStorage defines the Raw-specific configuration
+                properties:
+                  placeholder:
+                    default: false
+                    description: Placeholder
+                    type: boolean
+                type: object
+              xfsStorage:
+                description: XFSStorage defines the XFS-specific configuration
+                properties:
+                  placeholder:
+                    default: false
+                    description: Placeholder
+                    type: boolean
+                type: object
+            type: object
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -23,6 +23,11 @@ spec:
         pattern: "^([A-Za-z0-9\\-_]+)$"
         isRequired: true
         isValueRequired: true
+      - key: "profile"
+        type: "string"
+        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        isRequired: false
+        isValueRequired: true
       - key: "combined_mgtmdt"
         type: "bool"
         isRequired: false
@@ -49,6 +54,11 @@ spec:
         type: "string"
         pattern: "^([A-Za-z0-9\\-_]+)$"
         isRequired: true
+        isValueRequired: true
+      - key: "profile"
+        type: "string"
+        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        isRequired: false
         isValueRequired: true
       - key: "combined_mgtmdt"
         type: "bool"

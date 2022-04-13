@@ -1,0 +1,21 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: durable
+  namespace: nnf-system
+data:
+  default: true
+  lustreStorage:
+    externalMgs:
+      - "10.0.0.1@tcp"
+---
+
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: performance
+  namespace: nnf-system
+data:
+  lustreStorage:
+    combinedMgtMdt: true
+
