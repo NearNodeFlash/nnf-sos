@@ -128,6 +128,13 @@ spec:
                   operation.
                 format: int32
                 type: integer
+              monitor:
+                default: false
+                description: Monitor refers to the monitoring state of the resource.
+                  When "true", the data movement resource is placed in a mode where
+                  it monitors subresources continuously. When "false" a data movement
+                  resource is allowed to finish once all subresources finish.
+                type: boolean
               source:
                 description: Source describes the source of the data movement operation
                 properties:

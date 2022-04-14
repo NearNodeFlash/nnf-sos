@@ -18,10 +18,10 @@ type NnfDataMovementSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Source describes the source of the data movement operation
-	Source NnfDataMovementSpecSourceDestination `json:"source,omitempty"`
+	Source *NnfDataMovementSpecSourceDestination `json:"source,omitempty"`
 
 	// Destination describes the destination of the data movement operation
-	Destination NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
+	Destination *NnfDataMovementSpecSourceDestination `json:"destination,omitempty"`
 
 	// User Id specifies the user ID for the data movement operation. This value is used
 	// in conjunction with the group ID to ensure the user has valid permissions to perform
@@ -32,6 +32,12 @@ type NnfDataMovementSpec struct {
 	// in conjunction with the user ID to ensure the user has valid permissions to perform
 	// the data movement operation.
 	GroupId uint32 `json:"groupId,omitempty"`
+
+	// Monitor refers to the monitoring state of the resource. When "true", the data movement
+	// resource is placed in a mode where it monitors subresources continuously. When "false"
+	// a data movement resource is allowed to finish once all subresources finish.
+	// +kubebuilder:default:=false
+	Monitor bool `json:"monitor,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement

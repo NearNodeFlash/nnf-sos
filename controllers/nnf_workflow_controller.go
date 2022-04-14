@@ -594,7 +594,16 @@ func (r *NnfWorkflowReconciler) handleDataInOutState(ctx context.Context, workfl
 	hasCopyInOutDirective := false
 	copyInDirectivesFinished := true
 	for directiveIdx, directive := range workflow.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW copy_in") || strings.HasPrefix(directive, "#DW copy_out") {
+
+		shouldProcessDirective := false
+		if workflow.Status.State == dwsv1alpha1.StateDataIn.String() && strings.HasPrefix(directive, "#DW copy_in") {
+			shouldProcessDirective = true
+		}
+		if workflow.Status.State == dwsv1alpha1.StateDataOut.String() && strings.HasPrefix(directive, "#DW copy_out") {
+			shouldProcessDirective = true
+		}
+
+		if shouldProcessDirective {
 			hasCopyInOutDirective = true
 
 			name := fmt.Sprintf("%s-%d", workflow.Name, directiveIdx) // TODO: Should this move to a MakeName()?
@@ -790,12 +799,12 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 	}
 
 	dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
-		Source: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
+		Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
 			Path:    sourcePath,
 			Storage: sourceStorage,
 			Access:  accessToObjectReference(sourceAccess),
 		},
-		Destination: nnfv1alpha1.NnfDataMovementSpecSourceDestination{
+		Destination: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
 			Path:    destinationPath,
 			Storage: destinationStorage,
 			Access:  accessToObjectReference(destinationAccess),
@@ -875,10 +884,6 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 // Monitor a data movement resource for completion
 func (r *NnfWorkflowReconciler) monitorDataMovementResource(ctx context.Context, dm *nnfv1alpha1.NnfDataMovement) (bool, error) {
 
-	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
-		return true, nil
-	}
-
 	for _, condition := range dm.Status.Conditions {
 		if condition.Type == nnfv1alpha1.DataMovementConditionTypeFinished {
 			return true, nil
@@ -945,28 +950,34 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 			continue
 		}
 
-		// Create a companion NNF Data Movement Workflow resource that manages concurrent data movement
-		// that is started during the job by the compute resources. It is expected that the customer
-		// will clean-up data movement resources that it created, but this is implemented to ensure no
-		// resources are left behind by the job.
-		{
-			dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workflow.Name,
-					Namespace: workflow.Namespace,
-				},
+		// Create a companion NNF Data Movement resource that manages concurrent data movement started
+		// during the job by the compute resources. It is expected that the customer will clean-up data
+		// movement resources that it created, but this is implemented to ensure no resources are left
+		// behind by the job and we report all errors that might have been missed.
+
+		dm := &nnfv1alpha1.NnfDataMovement{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      workflow.Name,
+				Namespace: workflow.Namespace,
+			},
+		}
+
+		result, err := ctrl.CreateOrUpdate(ctx, r.Client, dm, func() error {
+			dm.Labels = map[string]string{
+				dwsv1alpha1.WorkflowNameLabel:      workflow.Name,
+				dwsv1alpha1.WorkflowNamespaceLabel: workflow.Namespace,
 			}
 
-			result, err := ctrl.CreateOrUpdate(ctx, r.Client, dmw, func() error {
-				return ctrl.SetControllerReference(workflow, dmw, r.Scheme)
-			})
-			if err != nil {
-				return ctrl.Result{}, err
-			}
+			dm.Spec.Monitor = true
 
-			if result == controllerutil.OperationResultCreated {
-				log.Info("Created NnfDatamovementWorkflow", "name", dmw.Name)
-			}
+			return ctrl.SetControllerReference(workflow, dm, r.Scheme)
+		})
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if result == controllerutil.OperationResultCreated {
+			log.Info("Created NnfDatamovement", "name", dm.Name)
 		}
 
 		// Parse the #DW line
@@ -984,7 +995,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 
 		// Create an NNFAccess for the compute clients
 		mountPath := buildMountPath(workflow, args["name"], args["command"])
-		result, err := ctrl.CreateOrUpdate(ctx, r.Client, access,
+		result, err = ctrl.CreateOrUpdate(ctx, r.Client, access,
 			func() error {
 				access.Labels = map[string]string{
 					dwsv1alpha1.WorkflowNameLabel:      workflow.Name,
@@ -1147,20 +1158,64 @@ func (r *NnfWorkflowReconciler) handlePostRunState(ctx context.Context, workflow
 	retry := false
 
 	// Delete the companion NNF Data Movement Workflow resource that manages concurrent data movement
-	// executed during the jobs run state by compute resources. It is expected that the customer
-	// will clean-up data movement resources that it created, but this is implemented to ensure no
-	// resource are left behind by the job.
-	dmw := &nnfv1alpha1.NnfDataMovementWorkflow{
+	// executed during the jobs run state by compute resources. It is expected that the customer will
+	// clean-up data movement resources that they created, but this is implemented to ensure no resource
+	// are left behind by the job and that the rsync status is known to the workflow on failure
+	dm := &nnfv1alpha1.NnfDataMovement{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workflow.Name,
 			Namespace: workflow.Namespace,
 		},
 	}
 
-	if err := r.Delete(ctx, dmw); err != nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(dm), dm); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
+
+		// Other logic in this state might have requeued while the data movement resource was
+		// successfully deleted. In this case, clear the pointer so it is not processed further.
+		dm = nil
+	}
+
+	if dm != nil {
+
+		// Stop the data movement resource from monitoring subresources. This will permit the
+		// data movement resource to reach a finished state where the status fields are valid.
+		if dm.Spec.Monitor == true {
+			dm.Spec.Monitor = false
+			if err := r.Update(ctx, dm); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		finished, err := r.monitorDataMovementResource(ctx, dm)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if finished && dm.DeletionTimestamp.IsZero() {
+
+			if len(dm.Status.Conditions) != 0 {
+				condition := &dm.Status.Conditions[len(dm.Status.Conditions)-1]
+				if condition.Reason == nnfv1alpha1.DataMovementConditionReasonFailed {
+					return r.failDriverState(ctx, workflow, driverID, condition.Message)
+				}
+			}
+
+			if err := r.Delete(ctx, dm); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+			}
+
+		}
+
+		// Data movement is still in progress; return here so the NnfAccess is not destroyed
+		// until after all data movement resources are finished.
+		return ctrl.Result{}, nil
 	}
 
 	// Retrieve the NNF Accesses for this workflow, unmount and delete them if necessary. Each
