@@ -66,6 +66,7 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementworkflows,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
@@ -223,6 +224,7 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 	log.Info(workflow.Status.State)
 
 	if err := r.validateWorkflow(ctx, workflow); err != nil {
+		log.Error(err, "Unable to validate workflow")
 		return r.failDriverState(ctx, workflow, driverID, err.Error())
 	}
 
@@ -287,12 +289,17 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 				return err
 			}
 		}
+		if strings.HasPrefix(directive, "#DW jobdw") || strings.HasPrefix(directive, "#DW create_persistent") {
+			if err := r.validateStorageCreationDirective(ctx, wf, directive); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-// Validate staging directives copy_in/copy_out directives
+// validateStagingDirective validates the staging copy_in/copy_out directives.
 func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	// Validate staging directive of the form...
 	//   #DW copy_in source=[SOURCE] destination=[DESTINATION]
@@ -334,6 +341,69 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	if err := validateStagingArgument(args["destination"]); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// findProfileToUse verifies a profile named in the directive or verifies that a default can be found.
+func (r *NnfWorkflowReconciler) findProfileToUse(ctx context.Context, directive string) (string, error) {
+	var profileName string
+
+	args, err := dwdparse.BuildArgsMap(directive)
+	if err != nil {
+		return "", err
+	}
+
+	// If a profile is named then verify that it exists.  Otherwise, verify
+	// that a default profile can be found.
+	profileName, present := args["profile"]
+	if present {
+		nnfStorageProfile := &nnfv1alpha1.NnfStorageProfile{}
+		profileNamespace := "nnf-system"
+		if _, present := os.LookupEnv("NNF_TEST_ENVIRONMENT"); present {
+			profileNamespace = "default"
+		}
+		err := r.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, nnfStorageProfile)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		nnfStorageProfiles := &nnfv1alpha1.NnfStorageProfileList{}
+		if err := r.List(ctx, nnfStorageProfiles); err != nil {
+			return "", err
+		}
+		numDefaults := 0
+		for _, profile := range nnfStorageProfiles.Items {
+			if profile.Data.Default {
+				objkey := client.ObjectKeyFromObject(&profile)
+				profileName = objkey.Name
+				numDefaults++
+			}
+		}
+		// Require that there be one and only one default.
+		if numDefaults == 0 {
+			return "", fmt.Errorf("Unable to find a default NnfStorageProfile to use")
+		} else if numDefaults > 1 {
+			return "", fmt.Errorf("More than one default NnfStorageProfile found; unable to pick one")
+		}
+	}
+	if len(profileName) == 0 {
+		return "", fmt.Errorf("Unable to find a NnfStorageProfile name")
+	}
+	return profileName, nil
+}
+
+// validateStorageCreationDirective validates the jobdw/create_persistent directive.
+func (r *NnfWorkflowReconciler) validateStorageCreationDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
+	// Validate jobdw/create_persistent directive of the form...
+	//   #DW jobdw ... profile=SomeName ...
+
+	_, err := r.findProfileToUse(ctx, directive)
+	if err != nil {
+		return err
+	}
+
+	// Validate other parts...
 
 	return nil
 }

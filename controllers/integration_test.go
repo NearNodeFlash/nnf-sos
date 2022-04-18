@@ -47,11 +47,12 @@ var _ = Describe("Integration Test", func() {
 		{"lustre", 3},
 	}
 
-	var workflow *dwsv1alpha1.Workflow
-
-	var nodeNames []string
-
-	var setup sync.Once
+	var (
+		workflow       *dwsv1alpha1.Workflow
+		nodeNames      []string
+		setup          sync.Once
+		storageProfile *nnfv1alpha1.NnfStorageProfile
+	)
 
 	advanceState := func(state dwsv1alpha1.WorkflowState) {
 		By(fmt.Sprintf("Advancing to %s state", state))
@@ -239,6 +240,9 @@ var _ = Describe("Integration Test", func() {
 
 			}
 		}) // once
+
+		// Create a default NnfStorageProfile for the unit tests.
+		storageProfile = createBasicDefaultNnfStorageProfile()
 	})
 
 	AfterEach(func() {
@@ -250,6 +254,8 @@ var _ = Describe("Integration Test", func() {
 		}).WithTimeout(timeout).ShouldNot(Succeed())
 
 		workflow = nil
+
+		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
 	})
 
 	for idx := range filesystems {
@@ -846,7 +852,19 @@ var _ = Describe("Empty #DW List Test", func() { // TODO: Re-enable this
 	const interval = time.Millisecond * 100
 	const workflowName = "no-storage"
 
-	var savedWorkflow *dwsv1alpha1.Workflow
+	var (
+		savedWorkflow  *dwsv1alpha1.Workflow
+		storageProfile *nnfv1alpha1.NnfStorageProfile
+	)
+
+	BeforeEach(func() {
+		// Create a default NnfStorageProfile for the unit tests.
+		storageProfile = createBasicDefaultNnfStorageProfile()
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
+	})
 
 	Describe(fmt.Sprintf("Creating workflow %s with no #DWs", workflowName), func() {
 

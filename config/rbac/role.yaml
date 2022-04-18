@@ -306,6 +306,14 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfstorageprofiles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
   - nnfstorages
   verbs:
   - create

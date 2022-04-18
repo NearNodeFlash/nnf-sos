@@ -250,6 +250,15 @@ if [[ "$CMD" == "deploy" ]]; then
 	        ( cd "$PKG" && make "$CMD" "$2")
 	fi
     done
+    cat <<EOF | kubectl apply -f -
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: placeholder
+  namespace: nnf-system
+data:
+  default: true
+EOF
 fi
 
 if [[ "$CMD" == "undeploy" ]]; then
@@ -257,6 +266,9 @@ if [[ "$CMD" == "undeploy" ]]; then
     for NAMESPACE in $(kubectl get nnfnodes -A -o custom-columns=":metadata.namespace" --no-headers); do
         kubectl delete nnfnode -n "$NAMESPACE" nnf-nlc
     done
+
+    # Remove the placeholder NnfStorageProfile
+    kubectl delete nnfstorageprofile -n nnf-system placeholder
 
     # Reverse the list.
     for PKG in $(echo "${SUB_PKGS[@]}" | tr ' ' '\n' | tac); do

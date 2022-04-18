@@ -29,8 +29,9 @@ import (
 var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	var (
-		key      types.NamespacedName
-		workflow *dwsv1alpha1.Workflow
+		key            types.NamespacedName
+		workflow       *dwsv1alpha1.Workflow
+		storageProfile *nnfv1alpha1.NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -53,6 +54,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		expected := &dwsv1alpha1.Workflow{}
 		Expect(k8sClient.Get(context.TODO(), key, expected)).ToNot(Succeed())
+
+		// Create a default NnfStorageProfile for the unit tests.
+		storageProfile = createBasicDefaultNnfStorageProfile()
 	})
 
 	AfterEach(func() {
@@ -78,21 +82,169 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), key, expected)
 		}).ShouldNot(Succeed())
+
+		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
+	})
+
+	getErroredDriverStatus := func(workflow *dwsv1alpha1.Workflow) *dwsv1alpha1.WorkflowDriverStatus {
+		driverID := os.Getenv("DWS_DRIVER_ID")
+		for _, driver := range workflow.Status.Drivers {
+			if driver.DriverID == driverID {
+				if driver.Reason == "error" {
+					return &driver
+				}
+			}
+		}
+		return nil
+	}
+
+	When("Negative tests for storage profiles", func() {
+		It("Fails to achieve proposal state when the named profile cannot be found", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test profile=noneSuch type=lustre capacity=1GiB",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+				expected := &dwsv1alpha1.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
+		})
+
+		It("Fails to achieve proposal state when a default profile cannot be found", func() {
+			storageProfile.Data.Default = false
+			Expect(k8sClient.Update(context.TODO(), storageProfile)).To(Succeed(), "remove default flag")
+
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+				expected := &dwsv1alpha1.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
+		})
+
+		When("More than one default profile", func() {
+
+			var storageProfile2 *nnfv1alpha1.NnfStorageProfile
+
+			BeforeEach(func() {
+				// The second profile will get a different name via the call to uuid.
+				// Then we'll have two that are default.
+				storageProfile2 = createBasicDefaultNnfStorageProfile()
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Delete(context.TODO(), storageProfile2)).To(Succeed())
+			})
+
+			It("Fails to achieve proposal state when more than one default profile exists", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test type=lustre capacity=1GiB",
+				}
+
+				Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+				Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {
+					expected := &dwsv1alpha1.Workflow{}
+					k8sClient.Get(context.TODO(), key, expected)
+					return getErroredDriverStatus(expected)
+				}).ShouldNot(BeNil(), "have an error present")
+			})
+		})
+	})
+
+	When("Positive tests for storage profiles", func() {
+
+		profiles := []*nnfv1alpha1.NnfStorageProfile{}
+		profNames := []string{}
+
+		BeforeEach(func() {
+			// Keep the underlying array memory, so the captures in AfterEach() and It() see the new values.
+			profNames = profNames[:0]
+			// Names to use for a batch of profiles.
+			profNames = append(profNames,
+				"test-"+uuid.NewString()[:8],
+				"test-"+uuid.NewString()[:8],
+				"test-"+uuid.NewString()[:8],
+			)
+
+			// Keep the underlying array memory, so the captures in AfterEach() and It() see the new values.
+			profiles = profiles[:0]
+			// Create a batch of profiles.
+			for _, pn := range profNames {
+				prof := basicNnfStorageProfile(pn)
+				prof = createNnfStorageProfile(prof)
+				profiles = append(profiles, prof)
+			}
+
+		})
+
+		AfterEach(func() {
+			for _, prof := range profiles {
+				Expect(k8sClient.Delete(context.TODO(), prof)).To(Succeed())
+			}
+		})
+
+		It("Implicit use of default profile", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func(g Gomega) error {
+				expected := &dwsv1alpha1.Workflow{}
+				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
+				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
+					return nil
+				}
+				return fmt.Errorf("ready state not achieved")
+			}).Should(Succeed(), "achieve ready state")
+		})
+
+		It("Named profile, which happens to also be the default", func() {
+			workflow.Spec.DWDirectives = []string{
+				fmt.Sprintf("#DW jobdw name=test profile=%s type=lustre capacity=1GiB", storageProfile.GetName()),
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func(g Gomega) error {
+				expected := &dwsv1alpha1.Workflow{}
+				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
+				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
+					return nil
+				}
+				return fmt.Errorf("ready state not achieved")
+			}).Should(Succeed(), "achieve ready state")
+		})
+
+		It("Named profile", func() {
+			workflow.Spec.DWDirectives = []string{
+				fmt.Sprintf("#DW jobdw name=test profile=%s type=lustre capacity=1GiB", profNames[0]),
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func(g Gomega) error {
+				expected := &dwsv1alpha1.Workflow{}
+				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
+				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
+					return nil
+				}
+				return fmt.Errorf("ready state not achieved")
+			}).Should(Succeed(), "achieve ready state")
+		})
 	})
 
 	When("Using bad copy_in/copy_out directives", func() {
-
-		getErroredDriverStatus := func(workflow *dwsv1alpha1.Workflow) *dwsv1alpha1.WorkflowDriverStatus {
-			driverID := os.Getenv("DWS_DRIVER_ID")
-			for _, driver := range workflow.Status.Drivers {
-				if driver.DriverID == driverID {
-					if driver.Reason == "error" {
-						return &driver
-					}
-				}
-			}
-			return nil
-		}
 
 		It("Fails missing or malformed job-dw reference", func() {
 			workflow.Spec.DWDirectives = []string{
