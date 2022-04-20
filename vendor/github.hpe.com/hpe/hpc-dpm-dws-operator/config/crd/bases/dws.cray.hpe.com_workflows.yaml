@@ -19,7 +19,7 @@ spec:
   - additionalPrinterColumns:
     - description: Desired state
       jsonPath: .spec.desiredState
-      name: DESIRED STATE
+      name: DESIREDSTATE
       type: string
     - description: Current state
       jsonPath: .status.state

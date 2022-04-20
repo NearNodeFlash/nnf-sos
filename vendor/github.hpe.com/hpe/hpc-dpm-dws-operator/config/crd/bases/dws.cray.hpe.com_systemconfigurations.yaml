@@ -1,0 +1,121 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: systemconfigurations.dws.cray.hpe.com
+spec:
+  group: dws.cray.hpe.com
+  names:
+    kind: SystemConfiguration
+    listKind: SystemConfigurationList
+    plural: systemconfigurations
+    singular: systemconfiguration
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: True if SystemConfiguration is reconciled
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SystemConfiguration is the Schema for the systemconfigurations
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SystemConfigurationSpec describes the node layout of the
+              system. This is filled in by an administrator at software installation
+              time.
+            properties:
+              computeNodes:
+                description: ComputeNodes is the list of compute nodes on the system
+                items:
+                  description: SystemConfigurationComputeNode describes a compute
+                    node in the system
+                  properties:
+                    name:
+                      description: Name of the compute node
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              storageNodes:
+                description: StorageNodes is the list of storage nodes on the system
+                items:
+                  description: SystemConfigurationStorageNode describes a storage
+                    node in the system
+                  properties:
+                    computesAccess:
+                      description: ComputesAccess is the list of compute nodes that
+                        can use the server
+                      items:
+                        description: SystemConfigurationComputeNodeReference describes
+                          a compute node that has access to a server.
+                        properties:
+                          index:
+                            description: Index of the compute node from the server
+                            type: integer
+                          name:
+                            description: Name of the compute node
+                            type: string
+                        required:
+                        - index
+                        - name
+                        type: object
+                      type: array
+                    name:
+                      description: Name of the server node
+                      type: string
+                    type:
+                      description: Type is the type of server
+                      enum:
+                      - Rabbit
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+            type: object
+          status:
+            description: SystemConfigurationStatus defines the status of SystemConfiguration
+            properties:
+              ready:
+                description: Ready indicates when the SystemConfiguration has been
+                  reconciled
+                type: boolean
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

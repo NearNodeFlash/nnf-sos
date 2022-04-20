@@ -46,6 +46,8 @@ type NnfNodeStatus struct {
 
 // NnfServerStatus defines the observed status of servers connected to this NNF Node
 type NnfServerStatus struct {
+	Hostname string `json:"hostname,omitempty"`
+
 	NnfResourceStatus `json:",inline"`
 }
 

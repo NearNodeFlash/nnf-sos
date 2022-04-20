@@ -111,6 +111,8 @@ spec:
                       description: NnfResourceHealthType defines the health of an
                         NNF resource.
                       type: string
+                    hostname:
+                      type: string
                     id:
                       description: ID reflects the NNF Node unique identifier for
                         this NNF Server resource.

@@ -145,7 +145,7 @@ type WorkflowStatus struct {
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:printcolumn:name="DESIRED STATE",type="string",JSONPath=".spec.desiredState",description="Desired state"
+//+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="Desired state"
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

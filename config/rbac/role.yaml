@@ -188,6 +188,14 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
+  - systemconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
   - workflows
   verbs:
   - get

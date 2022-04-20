@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -21,11 +22,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
 	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
 	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 
+	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
 
@@ -43,6 +48,7 @@ type NnfNodeReconciler struct {
 	types.NamespacedName
 }
 
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/finalizers,verbs=update
@@ -149,7 +155,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		}
 	}()
 
-	// Access the the default storage service running in the NNF Element
+	// Access the default storage service running in the NNF Element
 	// Controller. Check for any State/Health change.
 	ss := nnf.NewDefaultStorageService()
 
@@ -219,6 +225,48 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(serverEndpoint.Status)
 				s.Servers[idx].Health = nnfv1alpha1.ResourceHealth(serverEndpoint.Status)
 			})
+		}
+	}
+
+	systemConfig := &dwsv1alpha1.SystemConfiguration{}
+	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
+		log.Info("Could not get system configuration")
+		return ctrl.Result{}, nil
+	}
+
+	// Look at the storage nodes in the system config and find the
+	// one corresponding to this Rabbit. Add the hostnames to the NnfNode
+	// resource for the Rabbit and compute nodes.
+	for _, storageNode := range systemConfig.Spec.StorageNodes {
+		if storageNode.Name != req.NamespacedName.Namespace {
+			continue
+		}
+
+		if storageNode.Type != "Rabbit" {
+			continue
+		}
+
+		// For each of the servers in the NnfNode resource, find the
+		// corresponding entry in the storage node section of the SystemConfiguration
+		// resource and get the hostname.
+		for i := range node.Status.Servers {
+			server := &node.Status.Servers[i]
+			if server.ID == "0" {
+				statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+					s.Servers[i].Hostname = storageNode.Name
+				})
+				continue
+			}
+
+			for _, compute := range storageNode.ComputesAccess {
+				if server.ID != strconv.Itoa(compute.Index+1) {
+					continue
+				}
+
+				statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+					s.Servers[i].Hostname = compute.Name
+				})
+			}
 		}
 	}
 
@@ -353,6 +401,17 @@ func (s *statusUpdater) Close(ctx context.Context, r *NnfNodeReconciler) error {
 	return nil
 }
 
+// If the SystemConfiguration resource changes, generate a reconcile.Request
+// for the NnfNode resource that this pod created.
+func systemConfigurationMapFunc(o client.Object) []reconcile.Request {
+	return []reconcile.Request{
+		{NamespacedName: types.NamespacedName{
+			Name:      NnfNlcResourceName,
+			Namespace: os.Getenv("NNF_NODE_NAME"),
+		}},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Causes NnfNodeReconciler.Start() to be called.
@@ -367,5 +426,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
 		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
 		Owns(&corev1.Endpoints{}).
+		Watches(&source.Kind{Type: &dwsv1alpha1.SystemConfiguration{}}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		Complete(r)
 }

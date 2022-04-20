@@ -6,9 +6,7 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"runtime"
-	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -94,11 +92,6 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	configMap := &corev1.ConfigMap{}
-	if err := r.Get(ctx, types.NamespacedName{Name: "nnf-node-map", Namespace: corev1.NamespaceDefault}, configMap); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
 	// The kubelet has a heartbeat mechanism, so we can determine node failures from this resource.
 	node := &corev1.Node{}
@@ -162,15 +155,13 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			computes := []dwsv1alpha1.Node{}
-			data, exists := configMap.Data[nnfNode.Namespace]
-			if exists == false {
-				return fmt.Errorf("Could not find compute mapping for Rabbit %s", nnfNode.Namespace)
-			}
+			for _, c := range nnfNode.Status.Servers[1:] {
+				if c.Hostname == "" {
+					continue
+				}
 
-			computeNames := strings.Split(data, ";")
-			for i, c := range nnfNode.Status.Servers[1:] {
 				compute := dwsv1alpha1.Node{
-					Name:   computeNames[i],
+					Name:   c.Hostname,
 					Status: string(c.Status),
 				}
 				computes = append(computes, compute)

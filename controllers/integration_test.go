@@ -155,10 +155,10 @@ var _ = Describe("Integration Test", func() {
 			// Build the config map that ties everything together; this also
 			// creates a namespace for each compute node which is required for
 			// client mount.
-			computeNameGeneratorFunc := func() func() string {
+			computeNameGeneratorFunc := func() func() []dwsv1alpha1.SystemConfigurationComputeNodeReference {
 				nextComputeIndex := 0
-				return func() string {
-					names := make([]string, 0, 16)
+				return func() []dwsv1alpha1.SystemConfigurationComputeNodeReference {
+					computes := make([]dwsv1alpha1.SystemConfigurationComputeNodeReference, 16)
 					for i := 0; i < 16; i++ {
 						name := fmt.Sprintf("compute%d", i+nextComputeIndex)
 
@@ -169,25 +169,31 @@ var _ = Describe("Integration Test", func() {
 						}
 						Expect(k8sClient.Create(context.TODO(), namespace)).To(Succeed())
 
-						names = append(names, name)
+						computes[i].Name = name
+						computes[i].Index = i
 					}
 					nextComputeIndex += 16
-					return strings.Join(names, ";")
+					return computes
 				}
 			}
 
 			generator := computeNameGeneratorFunc()
-			configData := make(map[string]string)
+			configSpec := dwsv1alpha1.SystemConfigurationSpec{}
 			for _, nodeName := range nodeNames {
-				configData[nodeName] = generator()
+				storageNode := dwsv1alpha1.SystemConfigurationStorageNode{
+					Type: "Rabbit",
+					Name: nodeName,
+				}
+				storageNode.ComputesAccess = generator()
+				configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
 			}
 
-			config := &corev1.ConfigMap{
+			config := &dwsv1alpha1.SystemConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nnf-node-map",
+					Name:      "default",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Data: configData,
+				Spec: configSpec,
 			}
 
 			Expect(k8sClient.Create(context.TODO(), config)).To(Succeed())
@@ -238,6 +244,20 @@ var _ = Describe("Integration Test", func() {
 
 				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
+				storage := &dwsv1alpha1.Storage{}
+				namespacedName := types.NamespacedName{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				}
+
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), namespacedName, storage)
+				}).Should(Succeed())
+
+				Eventually(func() bool {
+					Expect(k8sClient.Get(context.TODO(), namespacedName, storage)).To(Succeed())
+					return len(storage.Data.Access.Computes) == 16
+				}).Should(BeTrue())
 			}
 		}) // once
 

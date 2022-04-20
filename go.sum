@@ -708,8 +708,12 @@ github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.0/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220406202940-035cce64a49c h1:iNAqF32XuTFhD4/BU1ShSUnZd9jjCugl54j1LzaPNOU=
-github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220406202940-035cce64a49c/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220419154358-d267b9530cb5 h1:jJCNXzxtnqOKsYGzw5zIsDQkc/Vmcn6LNei1Sl31ccI=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220419154358-d267b9530cb5/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220420145538-0b204e5f43bf h1:mz6wdOGfbqrZyjihSg0Xs9H8IZ2ld6NYpqkKW22OdJU=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220420145538-0b204e5f43bf/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220420160934-ece64af91353 h1:7SMtDshT8hV6tPVqZjlo9ZIis7HviIl3luRkO6rzwr8=
+github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220420160934-ece64af91353/go.mod h1:BXuQrz+QB4+47RGk9t4u0YuesFdKbO2/Glp4bqBbRKo=
 github.hpe.com/hpe/hpc-rabsw-lustre-csi-driver v0.0.0-20211216142843-0b84f0d84e3f/go.mod h1:3VOepCJRh1UbeNCrCRWKpT/JjGXc4MQ2bseCBQ7WEn4=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7 h1:oKi+gp+Q9MzmrxuZHV8sknfWGCdhkoIik2CGONo/QLM=
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220214205302-00d98e6cd7b7/go.mod h1:i/FqqzQrmhg7iF4FgAZFG/ANyLuhZ4zgjzbMUbW/JbM=
