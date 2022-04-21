@@ -100,7 +100,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Look through the node conditions to determine if the node is up
-	nodeStatus := "NotReady"
+	nodeStatus := "Offline"
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == "Ready" && condition.Status == "True" {
 			nodeStatus = "Ready"
@@ -112,7 +112,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage := &dwsv1alpha1.Storage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfNode.Namespace,
-			Namespace: "default",
+			Namespace: corev1.NamespaceDefault,
 		},
 	}
 
