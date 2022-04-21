@@ -1,0 +1,7 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: placeholder
+  namespace: nnf-system
+data:
+  default: true
