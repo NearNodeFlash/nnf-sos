@@ -25,6 +25,9 @@ spec:
       jsonPath: .spec.mgsNid
       name: MgsNID
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
     - description: Mount path used to mount filesystem
       jsonPath: .spec.mountRoot
       name: MountRoot
@@ -69,6 +72,7 @@ spec:
               name:
                 description: Name is the name of the Lustre file system.
                 maxLength: 8
+                minLength: 1
                 type: string
               storageClassName:
                 default: nnf-lustre-fs

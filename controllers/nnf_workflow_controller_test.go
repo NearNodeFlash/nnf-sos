@@ -328,6 +328,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: lusv1alpha1.LustreFileSystemSpec{
+					Name:      "maui",
 					MountRoot: "/lus/maui",
 				},
 			}

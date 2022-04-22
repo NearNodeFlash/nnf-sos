@@ -1,23 +1,25 @@
 /*
-Copyright 2021.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package v1alpha1
 
 import (
-	"fmt"
 	"net"
 	"net/url"
 	"path/filepath"
@@ -91,17 +93,13 @@ func (r *LustreFileSystem) validateMgsNid() *field.Error {
 
 	hostname := strings.SplitN(nid, "@", 2)[0]
 	if net.ParseIP(hostname) != nil {
+		// Valid IP
 		return nil
 	}
 
-	parsedUrl, err := url.Parse(hostname)
+	_, err := url.Parse(hostname)
 	if err != nil {
 		return field.Invalid(f, nid, "invalid hostname format")
-	}
-
-	hostname = parsedUrl.Hostname()
-	if len(hostname) == 0 {
-		return field.Invalid(f, nid, fmt.Sprintf("hostname '%s' invalid", hostname))
 	}
 
 	return nil
