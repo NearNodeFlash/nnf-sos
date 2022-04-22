@@ -1,3 +1,22 @@
+/*
+ * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nvme
 
 import (
@@ -42,18 +61,20 @@ func (cliNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) 
 	}
 
 	return &cliDevice{
-		path:  *spath,
-		pdfid: pdfid,
+		path:    fmt.Sprintf("%#04x@%s", pdfid, *spath),
+		command: "switchtec-nvme",
+		pdfid:   pdfid,
 	}, nil
 }
 
 type cliDevice struct {
-	path  string // Path to switchtec device managing this device
-	pdfid uint16 // PDFID of the device
+	path    string // Path to device
+	command string // Command to manage the device at path
+	pdfid   uint16 // PDFID of the device, or zero if none
 }
 
 func (d *cliDevice) dev() string {
-	return fmt.Sprintf("%#04x@%s", d.pdfid, d.path)
+	return d.path
 }
 
 // IdentifyController -
@@ -62,7 +83,7 @@ func (d *cliDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, error
 		panic("Identify Controller: non-zero controller ID not yet supported")
 	}
 
-	rsp, err := d.command(fmt.Sprintf("id-ctrl %s --output-format=binary", d.dev()))
+	rsp, err := d.run(fmt.Sprintf("id-ctrl %s --output-format=binary", d.dev()))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +102,7 @@ func (d *cliDevice) IdentifyNamespace(namespaceId nvme.NamespaceIdentifier) (*nv
 		opts = "--force"
 	}
 
-	rsp, err := d.command(fmt.Sprintf("id-ns %s --namespace-id=%d %s --output-format=binary", d.dev(), namespaceId, opts))
+	rsp, err := d.run(fmt.Sprintf("id-ns %s --namespace-id=%d %s --output-format=binary", d.dev(), namespaceId, opts))
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +115,7 @@ func (d *cliDevice) IdentifyNamespace(namespaceId nvme.NamespaceIdentifier) (*nv
 }
 
 func (d *cliDevice) ListSecondary() (*nvme.SecondaryControllerList, error) {
-	rsp, err := d.command(fmt.Sprintf("list-secondary %s --output-format=binary", d.dev()))
+	rsp, err := d.run(fmt.Sprintf("list-secondary %s --output-format=binary", d.dev()))
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +129,7 @@ func (d *cliDevice) ListSecondary() (*nvme.SecondaryControllerList, error) {
 
 func (d *cliDevice) AssignControllerResources(controllerId uint16, resourceType SecondaryControllerResourceType, numResources uint32) error {
 	rt := map[SecondaryControllerResourceType]int{VQResourceType: 0, VIResourceType: 1}[resourceType]
-	rsp, err := d.command(fmt.Sprintf("virt-mgmt %s --cntlid=%d --rt=%d --nr=%d --act=8", d.dev(), controllerId, rt, numResources))
+	rsp, err := d.run(fmt.Sprintf("virt-mgmt %s --cntlid=%d --rt=%d --nr=%d --act=8", d.dev(), controllerId, rt, numResources))
 	if err != nil {
 		return err
 	}
@@ -121,7 +142,7 @@ func (d *cliDevice) AssignControllerResources(controllerId uint16, resourceType 
 }
 
 func (d *cliDevice) OnlineController(controllerId uint16) error {
-	rsp, err := d.command(fmt.Sprintf("virt-mgmt %s --cntlid=%d --act=9", d.dev(), controllerId))
+	rsp, err := d.run(fmt.Sprintf("virt-mgmt %s --cntlid=%d --act=9", d.dev(), controllerId))
 	if err != nil {
 		return err
 	}
@@ -137,7 +158,7 @@ func (d *cliDevice) ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdentif
 		panic("List Namespaces: non-zero controller ID not yet supported")
 	}
 
-	rsp, err := d.command(fmt.Sprintf("list-ns %s --all", d.dev()))
+	rsp, err := d.run(fmt.Sprintf("list-ns %s --all", d.dev()))
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +192,7 @@ func (d *cliDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier
 	// NOTE: Binary format would be create here as it returns an nvme.CtrlList; but this format is missing
 	//       from the latest nvme-cli
 
-	rsp, err := d.command(fmt.Sprintf("list-ctrl %s --namespace-id=%d", d.dev(), namespaceId))
+	rsp, err := d.run(fmt.Sprintf("list-ctrl %s --namespace-id=%d", d.dev(), namespaceId))
 	if err != nil {
 		return nil, err
 	}
@@ -219,11 +240,10 @@ func (*cliDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) ([]b
 	return nil, nil
 }
 
-func (*cliDevice) command(cmd string) (string, error) {
-	cmd = fmt.Sprintf("switchtec-nvme %s", cmd)
+func (d *cliDevice) run(cmd string) (string, error) {
 
 	rsp, err := logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
-		return exec.Command("bash", "-c", fmt.Sprintf("/usr/sbin/%s", cmd)).Output()
+		return exec.Command("bash", "-c", fmt.Sprintf("/usr/sbin/%s %s", d.command, cmd)).Output()
 	})
 
 	return string(rsp), err

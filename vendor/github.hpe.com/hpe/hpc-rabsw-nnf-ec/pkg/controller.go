@@ -1,4 +1,23 @@
 /*
+ * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
  * Near Node Flash
  *
  * This file contains the declaration of the Near-Node Flash
@@ -6,7 +25,6 @@
  *
  * Author: Nate Roiger
  *
- * Copyright 2020 Hewlett Packard Enterprise Development LP
  */
 
 package nnf
@@ -35,6 +53,8 @@ type Options struct {
 	mock        bool // Enable mock interfaces for Switches, NVMe, and NNF
 	cli         bool // Enable CLI commands instead of binary
 	persistence bool // Enable persistent object storage; used during crash/reboot recovery
+
+	direct string // Enable direct management of NVMe devices matching this regexp pattern
 }
 
 func newDefaultOptions() *Options {
@@ -51,6 +71,7 @@ func BindFlags(fs *flag.FlagSet) *Options {
 	fs.BoolVar(&opts.mock, "mock", opts.mock, "Enable mock (simulated) environment.")
 	fs.BoolVar(&opts.cli, "cli", opts.cli, "Enable CLI interfaces with devices, instead of raw binary.")
 	fs.BoolVar(&opts.persistence, "persistence", opts.persistence, "Enable persistent object storage (used during crash/reboot recovery)")
+	fs.StringVar(&opts.direct, "direct", opts.direct, "Enable direct management of NVMe block devices matching this regexp pattern. Implies Mock.")
 
 	nvme.BindFlags(fs)
 
@@ -72,15 +93,20 @@ func NewController(opts *Options) *ec.Controller {
 		nvmeCtrl = nvme.NewCliNvmeController()
 	}
 
-	if opts.mock {
+	if len(opts.direct) != 0 {
+		switchCtrl = fabric.NewMockSwitchtecController()
+		nvmeCtrl = nvme.NewDirectDeviceNvmeController(opts.direct)
+	} else if opts.mock {
 		switchCtrl = fabric.NewMockSwitchtecController()
 		nvmeCtrl = nvme.NewMockNvmeController(opts.persistence)
+
 		if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 			// Keep the real NnfController.
 			log.Infof("NNF_SUPPLIED_DEVICES: %s", os.Getenv("NNF_SUPPLIED_DEVICES"))
 		} else {
 			nnfCtrl = nnf.NewMockNnfController(opts.persistence)
 		}
+
 	}
 
 	return &ec.Controller{
