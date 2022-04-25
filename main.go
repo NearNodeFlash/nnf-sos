@@ -246,6 +246,14 @@ func (*storageController) SetNamespaces(options *ctrl.Options) { options.Namespa
 func (*storageController) Start(*nnf.Options) error            { return nil }
 
 func (c *storageController) SetupReconciler(mgr manager.Manager) error {
+	if err := (&controllers.NnfSystemConfigurationReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemConfiguration"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	if err := (&controllers.NnfNodeSLCReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),

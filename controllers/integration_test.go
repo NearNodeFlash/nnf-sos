@@ -177,13 +177,6 @@ var _ = Describe("Integration Test", func() {
 					for i := 0; i < 16; i++ {
 						name := fmt.Sprintf("compute%d", i+nextComputeIndex)
 
-						namespace := &corev1.Namespace{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: name,
-							},
-						}
-						Expect(k8sClient.Create(context.TODO(), namespace)).To(Succeed())
-
 						computes[i].Name = name
 						computes[i].Index = i
 					}
@@ -199,8 +192,13 @@ var _ = Describe("Integration Test", func() {
 					Type: "Rabbit",
 					Name: nodeName,
 				}
+
 				storageNode.ComputesAccess = generator()
 				configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
+				for _, computeAccess := range storageNode.ComputesAccess {
+					compute := dwsv1alpha1.SystemConfigurationComputeNode{Name: computeAccess.Name}
+					configSpec.ComputeNodes = append(configSpec.ComputeNodes, compute)
+				}
 			}
 
 			config := &dwsv1alpha1.SystemConfiguration{
@@ -259,6 +257,7 @@ var _ = Describe("Integration Test", func() {
 
 				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
+				// Check that the DWS storage resource was updated with the compute node information
 				storage := &dwsv1alpha1.Storage{}
 				namespacedName := types.NamespacedName{
 					Name:      nodeName,
@@ -273,6 +272,14 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), namespacedName, storage)).To(Succeed())
 					return len(storage.Data.Access.Computes) == 16
 				}).Should(BeTrue())
+
+				// Check that a namespace was created for each compute node
+				for i := 0; i < len(nodeNames)*16; i++ {
+					namespace := &corev1.Namespace{}
+					Eventually(func() error {
+						return k8sClient.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("compute%d", i)}, namespace)
+					}).Should(Succeed())
+				}
 			}
 		}) // once
 

@@ -32,8 +32,10 @@ rules:
   - namespaces
   verbs:
   - create
+  - delete
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - ""
@@ -192,7 +194,22 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - systemconfigurations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - systemconfigurations/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - dws.cray.hpe.com
   resources:
