@@ -24,6 +24,14 @@ type StorageControllerV100NvMeControllerProperties struct {
 
 	NVMeSMARTCriticalWarnings StorageControllerV100NvMeSmartCriticalWarnings `json:"NVMeSMARTCriticalWarnings,omitempty"`
 
+	// Contains a vendor specific estimate of the percentage of NVM subsystem life used based on the actual usage and
+	// the manufacturer’s prediction of NVM life. A value of 100 indicates that the estimated endurance of the NVM in
+	// the NVM subsystem has been consumed, but may not indicate an NVM subsystem failure. The value is allowed to
+	// exceed 100. Percentages greater than 254 shall be represented as 255. This value shall be updated once per
+	// power-on hour (when the controller is not in a sleep state).
+	// Refer to the JEDEC JESD218A standard for SSD device life and endurance measurement techniques.
+	NVMeSMARTPercentageUsage uint8 `json:"NVMeSMARTPercentageUsage,omitempty"`
+
 	// The version of the NVMe Base Specification supported.
 	NVMeVersion string `json:"NVMeVersion,omitempty"`
 }

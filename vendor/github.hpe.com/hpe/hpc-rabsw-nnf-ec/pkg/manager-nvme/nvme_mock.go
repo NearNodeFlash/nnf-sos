@@ -188,6 +188,9 @@ func (d *mockDevice) generateControllerAttributes(ctrl *nvme.IdCtrl) error {
 	return nil
 }
 
+// IsDirectDevice -
+func (d *mockDevice) IsDirectDevice() bool { return false }
+
 // IdentifyController -
 func (d *mockDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, error) {
 	ctrl := new(nvme.IdCtrl)
@@ -430,6 +433,10 @@ func (d *mockDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) (
 	}
 
 	return ns.metadata, nil
+}
+
+func (*mockDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
+	return 0, nil
 }
 
 func (d *mockDevice) findNamespace(namespaceId nvme.NamespaceIdentifier) *mockNamespace {

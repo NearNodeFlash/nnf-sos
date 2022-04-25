@@ -35,8 +35,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	)
 
 	BeforeEach(func() {
+		wfid := uuid.NewString()[0:8]
+
 		key = types.NamespacedName{
-			Name:      "nnf-workflow-" + uuid.NewString(),
+			Name:      "nnf-workflow-" + wfid,
 			Namespace: corev1.NamespaceDefault,
 		}
 
@@ -246,7 +248,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	When("Using bad copy_in/copy_out directives", func() {
 
-		It("Fails missing or malformed job-dw reference", func() {
+		It("Fails missing or malformed jobdw reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW jobdw name=test type=lustre capacity=1GiB",
 				"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_INCORRECT/my-file.out",
@@ -262,7 +264,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		})
 
-		It("Fails missing or malformed persistent-dw reference", func() {
+		It("Fails missing or malformed persistentdw reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW create_persistent name=test type=lustre capacity=1GiB",
 				"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_INCORRECT/my-file.out",
@@ -301,7 +303,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			// Kubernetes isn't always returning the object right away; we don't fully understand why at this point; need to wait until it responds with a valid object
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), key, workflow)
-			}, "3s", "1s").Should(Succeed(), "wait for create to occurr")
+			}, "3s", "1s").Should(Succeed(), "wait for create to occur")
 
 			Eventually(func() bool {
 				Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
@@ -413,10 +415,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		When("using $PERSISTENT_DW_ references", func() {
+			persistentStorageName := "my-persistent-storage"
+
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
-					"#DW create_persistent type=lustre capacity=1TiB name=my-persistent-storage",
-					"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_my-persistent-storage/my-persistent-file.out",
+					fmt.Sprintf("#DW create_persistent type=lustre capacity=1TiB name=%s", persistentStorageName),
+					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_%s/my-persistent-file.out", persistentStorageName),
 				}
 			})
 
@@ -469,7 +473,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
-						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
+						"Name":      Equal(persistentStorageName),
 						"Namespace": Equal(workflow.Namespace),
 					}))
 

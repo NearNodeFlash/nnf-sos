@@ -36,6 +36,8 @@ type NvmeDeviceController interface {
 
 // NvmeDeviceApi -
 type NvmeDeviceApi interface {
+	IsDirectDevice() bool
+
 	IdentifyController(controllerId uint16) (*nvme.IdCtrl, error)
 	IdentifyNamespace(namespaceId nvme.NamespaceIdentifier) (*nvme.IdNs, error)
 
@@ -59,6 +61,8 @@ type NvmeDeviceApi interface {
 
 	SetNamespaceFeature(namespaceId nvme.NamespaceIdentifier, data []byte) error
 	GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) ([]byte, error)
+
+	GetWearLevelAsPercentageUsed() (uint8, error)
 }
 
 // SecondaryControllersInitFunc -

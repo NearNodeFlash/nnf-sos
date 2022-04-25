@@ -72,6 +72,9 @@ func newNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	return &nvmeDevice{dev: dev, pdfid: pdfid}, nil
 }
 
+// IsDirectDevice -
+func (d *nvmeDevice) IsDirectDevice() bool { return false }
+
 // IdentifyController -
 func (d *nvmeDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, error) {
 	return d.dev.IdentifyController()
@@ -243,4 +246,14 @@ func (d *nvmeDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) (
 	}
 
 	return buf, nil
+}
+
+func (d *nvmeDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
+
+	log, err := d.dev.GetSmartLog()
+	if err != nil {
+		return 0, err
+	}
+
+	return log.PercentageUsed, nil
 }

@@ -84,6 +84,8 @@ type nvmeDirectDevice struct {
 	cliDevice
 }
 
+func (d *nvmeDirectDevice) IsDirectDevice() bool { return true }
+
 func (d *nvmeDirectDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, error) {
 	return d.cliDevice.IdentifyController(controllerId)
 }
@@ -113,19 +115,19 @@ func (d *nvmeDirectDevice) ListAttachedControllers(namespaceId nvme.NamespaceIde
 }
 
 func (d *nvmeDirectDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
-	panic("unimplemented")
-}
-
-func (d *nvmeDirectDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
-	panic("unimplemented")
+	return d.cliDevice.CreateNamespace(capacityBytes, sectorSizeBytes, sectorSizeIndex)
 }
 
 func (d *nvmeDirectDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error {
-	panic("unimplemented")
+	return d.cliDevice.DeleteNamespace(namespaceId)
+}
+
+func (d *nvmeDirectDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
+	return d.cliDevice.AttachNamespace(namespaceId, controllers)
 }
 
 func (d *nvmeDirectDevice) DetachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
-	panic("unimplemented")
+	return d.cliDevice.DetachNamespace(namespaceId, controllers)
 }
 
 func (d *nvmeDirectDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) ([]byte, error) {
@@ -134,4 +136,8 @@ func (d *nvmeDirectDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentif
 
 func (*nvmeDirectDevice) SetNamespaceFeature(namespaceId nvme.NamespaceIdentifier, data []byte) error {
 	panic("unimplemented")
+}
+
+func (d *nvmeDirectDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
+	return d.cliDevice.GetWearLevelAsPercentageUsed()
 }

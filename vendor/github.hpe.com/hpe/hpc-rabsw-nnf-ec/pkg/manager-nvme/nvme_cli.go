@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -76,6 +77,9 @@ type cliDevice struct {
 func (d *cliDevice) dev() string {
 	return d.path
 }
+
+// IsDirectDevice -
+func (d *cliDevice) IsDirectDevice() bool { return false }
 
 // IdentifyController -
 func (d *cliDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, error) {
@@ -217,18 +221,122 @@ func (d *cliDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier
 }
 
 func (d *cliDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
-	return ^nvme.NamespaceIdentifier(0), nvme.NamespaceGloballyUniqueIdentifier{}, nil
+	// Example Command
+	//    # nvme create-ns /dev/nvme2 --nsze=468843606 --ncap=468843606 --nmic=1 --block-size=4096
+	//    create-ns: Success, created nsid:1
+
+	sizeInSectors := capacityBytes / sectorSizeBytes
+	rsp, err := d.run(fmt.Sprintf("create-ns %s --nsze=%d --ncap=%d --block-size=%d --nmic=1", d.dev(), sizeInSectors, sizeInSectors, sectorSizeBytes))
+	if err != nil {
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, err
+	}
+
+	regex := regexp.MustCompile(`^create-ns: Success, created nsid:(?P<NSID>\d+)\n`)
+	substrings := regex.FindStringSubmatch(rsp)
+	if len(substrings) != 2 {
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("NSID not found in response output '%s'", rsp)
+	}
+
+	nsid, err := strconv.Atoi(substrings[1])
+	if err != nil {
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, err
+	}
+
+	ns, err := d.IdentifyNamespace(nvme.NamespaceIdentifier(nsid))
+	if err != nil {
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, err
+	}
+
+	return nvme.NamespaceIdentifier(nsid), ns.GloballyUniqueIdentifier, nil
 }
 
 func (d *cliDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error {
+	// Example Command
+	//    # nvme delete-ns --namespace-id=1 /dev/nvme2
+	//    delete-ns: Success, deleted nsid:1
+
+	rsp, err := d.run(fmt.Sprintf("delete-ns %s --namespace-id=%d", d.dev(), namespaceId))
+	if err != nil {
+		return err
+	}
+
+	regex := regexp.MustCompile(`^delete-ns: Success, deleted nsid:(?P<NSID>\d+)\n`)
+	substrings := regex.FindStringSubmatch(rsp)
+	if len(substrings) != 2 {
+		return fmt.Errorf("NSID not found in response output '%s'", rsp)
+	}
+
+	nsid, err := strconv.Atoi(substrings[1])
+	if err != nil {
+		return err
+	}
+
+	if namespaceId != nvme.NamespaceIdentifier(nsid) {
+		return fmt.Errorf("Deleted NSID (%d) does not match expected NSID (%d)", nsid, namespaceId)
+	}
+
 	return nil
 }
 
 func (d *cliDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
+	// Example Command
+	//    # nvme attach-ns /dev/nvme2 --namespace-id=1 --controllers=0x41
+	//    attach-ns: Success, nsid:1
+	if len(controllers) != 1 {
+		panic("Only a single controller can be attached at a time by the CLI Device Driver")
+	}
+
+	rsp, err := d.run(fmt.Sprintf("attach-ns %s --namespace-id=%d --controllers=%d", d.dev(), namespaceId, controllers[0]))
+	if err != nil {
+		return err
+	}
+
+	regex := regexp.MustCompile(`^attach-ns: Success, nsid:(?P<NSID>\d+)\n`)
+	substrings := regex.FindStringSubmatch(rsp)
+	if len(substrings) != 2 {
+		return fmt.Errorf("NSID not found in response output '%s'", rsp)
+	}
+
+	nsid, err := strconv.Atoi(substrings[1])
+	if err != nil {
+		return err
+	}
+
+	if namespaceId != nvme.NamespaceIdentifier(nsid) {
+		return fmt.Errorf("Attached NSID (%d) does not match expected NSID (%d)", nsid, namespaceId)
+	}
+
 	return nil
 }
 
-func (*cliDevice) DetachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
+func (d *cliDevice) DetachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
+	// Example Command
+	//    # nvme attach-ns /dev/nvme2 --namespace-id=1 --controllers=0x41
+	//    attach-ns: Success, nsid:1
+	if len(controllers) != 1 {
+		panic("Only a single controller can be detached at a time by the CLI Device Driver")
+	}
+
+	rsp, err := d.run(fmt.Sprintf("detach-ns %s --namespace-id=%d --controllers=%d", d.dev(), namespaceId, controllers[0]))
+	if err != nil {
+		return err
+	}
+
+	regex := regexp.MustCompile(`^detach-ns: Success, nsid:(?P<NSID>\d+)\n`)
+	substrings := regex.FindStringSubmatch(rsp)
+	if len(substrings) != 2 {
+		return fmt.Errorf("NSID not found in response output '%s'", rsp)
+	}
+
+	nsid, err := strconv.Atoi(substrings[1])
+	if err != nil {
+		return err
+	}
+
+	if namespaceId != nvme.NamespaceIdentifier(nsid) {
+		return fmt.Errorf("Detached NSID (%d) does not match expected NSID (%d)", nsid, namespaceId)
+	}
+
 	return nil
 }
 
@@ -238,6 +346,19 @@ func (*cliDevice) SetNamespaceFeature(namespaceId nvme.NamespaceIdentifier, data
 
 func (*cliDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) ([]byte, error) {
 	return nil, nil
+}
+
+func (d *cliDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
+	rsp, err := d.run(fmt.Sprintf("smart-log %s --output-format=binary", d.dev()))
+	if err != nil {
+		return 0, err
+	}
+
+	log := new(nvme.SmartLog)
+
+	err = structex.DecodeByteBuffer(bytes.NewBuffer([]byte(rsp)), log)
+
+	return log.PercentageUsed, err
 }
 
 func (d *cliDevice) run(cmd string) (string, error) {

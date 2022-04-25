@@ -139,7 +139,7 @@ func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context,
 		return err
 	}
 
-	var firstError error = nil
+	var firstError error
 	for _, namespace := range namespaces.Items {
 		if _, ok := validNamespaces[namespace.Name]; ok {
 			continue

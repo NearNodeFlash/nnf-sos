@@ -9,8 +9,8 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220422161013-5b41c4cc5d48
-	github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220420215105-3626a64b230b
-	github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220421203431-de8207e808b5
+	github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220427151838-130563a0e57b
+	github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220427151848-e522d459124c
 	go.uber.org/zap v1.21.0
 	k8s.io/api v0.23.6
 	k8s.io/apimachinery v0.23.6

@@ -126,8 +126,8 @@ var _ = BeforeSuite(func() {
 	}
 
 	// Start and initialize the NNF Controller
-	persistence := false
-	controller := nnf.NewController(nnf.NewMockOptions(persistence))
+	enablePersistence := false
+	controller := nnf.NewController(nnf.NewMockOptions(enablePersistence))
 	Expect(controller.Init(ec.NewDefaultTestOptions())).NotTo(HaveOccurred())
 
 	go controller.Run()

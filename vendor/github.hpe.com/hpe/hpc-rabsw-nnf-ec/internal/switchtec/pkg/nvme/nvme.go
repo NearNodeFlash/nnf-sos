@@ -87,7 +87,8 @@ type AdminCommandOpCode uint8
 
 // Admin Command Op Codes. These are from the NVMe Specification
 const (
-	IdentifyOpCode            AdminCommandOpCode = 0x6
+	GetLogPage                AdminCommandOpCode = 0x02
+	IdentifyOpCode            AdminCommandOpCode = 0x06
 	SetFeatures               AdminCommandOpCode = 0x09
 	GetFeatures               AdminCommandOpCode = 0x0A
 	NamespaceManagementOpCode AdminCommandOpCode = 0x0D
@@ -851,4 +852,127 @@ func (builder *MiMeatadataFeatureBuilder) AddElement(typ uint8, rev uint8, data 
 
 func (builder *MiMeatadataFeatureBuilder) Bytes() []byte {
 	return builder.data[:builder.offset]
+}
+
+// Get Log Page - SMART / Health Information Log
+// Figure 196 from NVM-Express 1_4a-2020.03.09-Ratified specification
+type SmartLog struct {
+	CriticalWarning struct {
+		SpareCapacity                  uint8 `bitfield:"1"` // Bit 0: If set to ‘1’, then the available spare capacity has fallen below the threshold.
+		Temperature                    uint8 `bitfield:"1"` // Bit 1: If set to ‘1’, then a temperature is: a) greater than or equal to an over temerature threshold; or b) less than or equal to an under temperature threshold
+		Degraded                       uint8 `bitfield:"1"` // Bit 2: If set to ‘1’, then the NVM subsystem reliability has been degraded due to significant media related errors or any internal error that degrades NVM subsystem reliability.
+		ReadOnly                       uint8 `bitfield:"1"` // Bit 3: If set to ‘1’, then the media has been placed in read only mode.
+		BackupFailed                   uint8 `bitfield:"1"` // Bit 4: If set to ‘1’, then the volatile memory backup device has failed.
+		PersistentMemoryRegionReadOnly uint8 `bitfield:"1"` // If set to ‘1’, then the Persistent Memory Region has become read-only or unreliable
+		Reserved                       uint8 `bitfield:"2"`
+	}
+	CompositeTemperature                         uint16 // Contains a value corresponding to a temperature in degrees Kelvin that represents the current composite temperature of the controller and namespace(s) associated with that controller.
+	AvailableSpare                               uint8  // Contains a normalized percentage (0% to 100%) of the remaining spare capacity available.
+	AvailableSpareThreshold                      uint8  // When the Available Spare falls below the threshold indicated in this field, an asynchronous event completion may occur. The value is indicated as a normalized percentage (0% to 100%). The values 101 to 255 are reserved.
+	PercentageUsed                               uint8  // Contains a vendor specific estimate of the percentage of NVM subsystem life used based on the actual usage and the manufacturer’s prediction of NVM life.
+	EnduranceGroupCriticalWarningSummary         uint8  // This field indicates critical warnings for the state of Endurance Groups.
+	Reserved7                                    [25]uint8
+	DataUnitsReadLo                              uint64
+	DataUnitsReadHi                              uint64
+	DataUnitsWrittenLo                           uint64
+	DataUnitsWrittenHi                           uint64
+	HostReadsLo                                  uint64
+	HistReadsHi                                  uint64
+	HostWritesLo                                 uint64
+	HostWritesHi                                 uint64
+	ControllerBusyTimeLo                         uint64
+	ControllerBusyTimeHi                         uint64
+	PowerCyclesLo                                uint64
+	PowerCyclesHi                                uint64
+	PowerOnHoursLo                               uint64
+	PowerOnHoursHi                               uint64
+	UnsafeShutdownsLo                            uint64
+	UnsafeShutdownsHi                            uint64
+	MediaErrorsLo                                uint64
+	MediaErrorsHi                                uint64
+	NumberErrorLogEntriesLo                      uint64
+	NumberErrorLogEntriesHi                      uint64
+	WarningCompositeTemperatureTime              uint32
+	CriticalCompositeTemperatureTime             uint32
+	TemperatureSensor                            [8]uint16
+	ThermalManagementTemperature1TransitionCount uint32
+	ThermalManagementTemperature2TransitionCount uint32
+	TotalTimeForThermalManagementTemperature1    uint32
+	TotalTimeForThermalManagementTemperature2    uint32
+	Reserved232                                  [280]uint8
+}
+
+func (dev *Device) GetSmartLog() (*SmartLog, error) {
+
+	log := new(SmartLog)
+
+	buf := structex.NewBuffer(log)
+	if buf == nil {
+		return nil, fmt.Errorf("Cannot allocate buffer")
+	}
+
+	if err := dev.getNsidLog(2, 0, 0xFFFFFFFF, buf.Bytes()); err != nil {
+		return nil, err
+	}
+
+	if err := structex.Decode(buf, log); err != nil {
+		return nil, err
+	}
+
+	return log, nil
+}
+
+const (
+	LogCdw10LogPageIdentiferMask         = 0xFF
+	LogCdw10LogPageIdentiferShift        = 0
+	LogCdw10LogSpecificFieldMask         = 0x0f
+	LogCdw10LogSpecificFieldShift        = 8
+	LogCdw10RetainAsynchronousEventMask  = 0x1
+	LogCdw10RetainAsynchronousEventShift = 15
+	LogCdw10NumberOfDwordsLowerMask      = 0xFFFF
+	LogCdw10NumberOfDwordsLowerShift     = 16
+
+	LogCdw11NumberOfDwordsUpperMask    = 0xFFFF
+	LogCdw11NumberOfDwordsUpperShift   = 0
+	LogCdw11LogSpecificIdentifierMask  = 0xFF
+	LogCdw11LogSpecificIdentifierShift = 16
+
+	LogCdw14UuidMask  = 0x7F
+	LogCdw14UuidShift = 0
+)
+
+func (dev *Device) getNsidLog(logPageIdentifier uint8, retainAsynchronousEvent uint8, nsid uint32, buf []byte) error {
+	return dev.getLog(logPageIdentifier, 0, 0, nsid, 0, buf)
+}
+
+func (dev *Device) getLog(logPageIdentifier uint8, logSpecificField uint8, retainAsynchronousEvent uint8, nsid uint32, logPageOffset uint64, buf []byte) error {
+
+	var numberDwords uint32 = uint32(len(buf)>>2) - 1
+
+	// Get Log Page - Command Dword 10
+	var cdw10 uint32 = (((uint32(logPageIdentifier) & LogCdw10LogPageIdentiferMask) << LogCdw10LogPageIdentiferShift) |
+		((uint32(logSpecificField) & LogCdw10LogSpecificFieldMask) << LogCdw10LogSpecificFieldShift) |
+		((uint32(retainAsynchronousEvent) & LogCdw10RetainAsynchronousEventMask) << LogCdw10RetainAsynchronousEventShift) |
+		((uint32(numberDwords) & LogCdw10NumberOfDwordsLowerMask) << LogCdw10NumberOfDwordsLowerShift))
+
+	var cdw11 uint32 = ((((numberDwords >> 16) & LogCdw11NumberOfDwordsUpperMask) << LogCdw11NumberOfDwordsUpperShift) |
+		((0 /* Not Supported */ & LogCdw11LogSpecificIdentifierMask) << LogCdw11LogSpecificIdentifierShift))
+
+	var cdw12 uint32 = uint32(logPageOffset & 0xFFFFFFFF)
+	var cdw13 uint32 = uint32(logPageOffset >> 32)
+
+	cmd := AdminCmd{
+		Opcode:  uint8(GetLogPage),
+		NSID:    nsid,
+		Cdw10:   cdw10,
+		Cdw11:   cdw11,
+		Cdw12:   cdw12,
+		Cdw13:   cdw13,
+		Cdw14:   0, /* Not Supported */
+		Addr:    uint64(uintptr(unsafe.Pointer(&buf[0]))),
+		DataLen: uint32(len(buf)),
+	}
+
+	return dev.ops.submitAdminPassthru(dev, &cmd, buf)
+
 }
