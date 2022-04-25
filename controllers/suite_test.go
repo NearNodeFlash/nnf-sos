@@ -71,6 +71,7 @@ type envSetting struct {
 
 var envVars = []envSetting{
 	{"POD_NAMESPACE", "default"},
+	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
 	{"NNF_POD_IP", "172.0.0.1"},
 	{"NNF_NODE_NAME", "nnf-test-node"},
 	{"ACK_GINKGO_DEPRECATIONS", "1.16.4"},

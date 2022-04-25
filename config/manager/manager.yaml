@@ -111,6 +111,8 @@ spec:
         env:
           - name: SERVERS_BATCH_TIME_MSEC
             value: "2000"
+          - name: NNF_STORAGE_PROFILE_NAMESPACE
+            value: nnf-system
         ports:
           - containerPort: 50057
             name: nnf-ec

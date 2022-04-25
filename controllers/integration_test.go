@@ -85,6 +85,7 @@ var _ = Describe("Integration Test", func() {
 	}
 
 	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState) {
+		By("advanceStateAndCheckReady: advance workflow state")
 
 		advanceState(state)
 
@@ -882,6 +883,236 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 
+	})
+
+	Describe("Test NnfStorageProfile Lustre profile merge with DW directives", func() {
+
+		var (
+			intendedDirective     string
+			profileExternalMGS    *nnfv1alpha1.NnfStorageProfile
+			profileCombinedMGTMDT *nnfv1alpha1.NnfStorageProfile
+
+			directiveMgsNid string
+			profileMgsNid   string
+
+			dbd       *dwsv1alpha1.DirectiveBreakdown
+			dbdServer *dwsv1alpha1.Servers
+
+			externalMgsProfileName    string
+			combinedMgtMdtProfileName string
+		)
+
+		BeforeEach(func() {
+			directiveMgsNid = "directive-mgs@tcp"
+			profileMgsNid = "profile-mgs@tcp"
+
+			dbd = &dwsv1alpha1.DirectiveBreakdown{}
+			dbdServer = &dwsv1alpha1.Servers{}
+
+			externalMgsProfileName = "has-external-mgs"
+			combinedMgtMdtProfileName = "has-combined-mgtmdt"
+		})
+
+		// Create some custom storage profiles.
+		BeforeEach(func() {
+			By("BeforeEach create some custom storage profiles")
+			profileExternalMGS = basicNnfStorageProfile(externalMgsProfileName)
+			profileExternalMGS.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
+				ExternalMGS: []string{
+					profileMgsNid,
+				},
+			}
+			profileCombinedMGTMDT = basicNnfStorageProfile(combinedMgtMdtProfileName)
+			profileCombinedMGTMDT.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
+				CombinedMGTMDT: true,
+			}
+
+			createNnfStorageProfile(profileExternalMGS)
+			createNnfStorageProfile(profileCombinedMGTMDT)
+		})
+
+		// Destroy the custom storage profiles.
+		AfterEach(func() {
+			By("AfterEach destroy the custom storage profiles")
+			Expect(k8sClient.Delete(context.TODO(), profileExternalMGS)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), profileCombinedMGTMDT)).To(Succeed())
+
+		})
+
+		// Setup a basic workflow; each test is expected to fill in the
+		// DWDirectives in its BeforeEach() clause.
+		BeforeEach(func() {
+			By("BeforeEach setup a basic workflow resource")
+			wfid := uuid.NewString()[0:8]
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("profile-%s", wfid),
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal.String(),
+					JobID:        0,
+					WLMID:        "Test WLMID",
+				},
+			}
+		})
+
+		AfterEach(func() {
+			By("AfterEach advance the workflow state to teardown")
+			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown)
+		})
+
+		// Create the workflow for the Ginkgo specs.
+		JustBeforeEach(func() {
+			By("JustBeforeEach create the workflow")
+			workflow.Spec.DWDirectives = []string{
+				intendedDirective,
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				if (workflow.Status.Ready == true) && (workflow.Status.State == dwsv1alpha1.StateProposal.String()) {
+					return nil
+				}
+				return fmt.Errorf("ready state not achieved")
+			}).Should(Succeed(), "achieved ready state")
+
+			By("Verify that one DirectiveBreakdown was created")
+			Expect(len(workflow.Status.DirectiveBreakdowns)).To(Equal(1))
+			By("Get the DirectiveBreakdown resource")
+			dbdRef := workflow.Status.DirectiveBreakdowns[0]
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+			By("Get the Servers resource")
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace}, dbdServer)).To(Succeed())
+		})
+
+		assignStorageForMDTOST := func() {
+			dbdServer.Spec.AllocationSets = []dwsv1alpha1.ServersSpecAllocationSet{
+				{
+					AllocationSize: 1,
+					Label:          "mdt",
+					Storage: []dwsv1alpha1.ServersSpecStorage{
+						{AllocationCount: 1,
+							Name: "rabbit-test-node-0"},
+					},
+				},
+				{
+					AllocationSize: 1,
+					Label:          "ost",
+					Storage: []dwsv1alpha1.ServersSpecStorage{
+						{AllocationCount: 1,
+							Name: "rabbit-test-node-1"},
+					},
+				},
+			}
+		}
+
+		// verifyExternalMgsNid checks that an external MGS NID is used.
+		verifyExternalMgsNid := func(getNidVia, desiredNid string) {
+			Expect(dbd.Spec.DW.DWDirective).To(Equal(intendedDirective))
+
+			By("Verify that it does not allocate an MGT device")
+			Expect(dbd.Status.AllocationSet).To(HaveLen(2))
+			for _, comp := range dbd.Status.AllocationSet {
+				Expect(comp.Label).To(Or(Equal("mdt"), Equal("ost")))
+			}
+
+			// Go to 'setup' state and verify the MGS NID is
+			// propagated to the NnfStorage resource.
+			By("Assign storage")
+			assignStorageForMDTOST()
+			Expect(k8sClient.Update(context.TODO(), dbdServer)).To(Succeed())
+			By(fmt.Sprintf("Verify that the MGS NID %s is used by the filesystem", getNidVia))
+			advanceStateAndCheckReady(dwsv1alpha1.StateSetup)
+			// The NnfStorage's name matches the Server resource's name.
+			nnfstorage := &nnfv1alpha1.NnfStorage{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbdServer), nnfstorage)).To(Succeed())
+			for _, comp := range nnfstorage.Spec.AllocationSets {
+				Expect(comp.ExternalMgsNid).To(Equal(desiredNid))
+			}
+		}
+
+		// verifyCombinedMgtMdt checks that a single device is used for the MGT and MDT.
+		verifyCombinedMgtMdt := func() {
+			Expect(dbd.Spec.DW.DWDirective).To(Equal(intendedDirective))
+
+			By("Verify that it allocates an MGTMDT device rather than an MGT device")
+			Expect(dbd.Status.AllocationSet).To(HaveLen(2))
+			for _, comp := range dbd.Status.AllocationSet {
+				Expect(comp.Label).To(Or(Equal("mgtmdt"), Equal("ost")))
+			}
+		}
+
+		When("using external_mgs in directive", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre external_mgs=%s capacity=5GB name=directive-mgs", directiveMgsNid)
+			})
+
+			It("Uses external_mgs via the directive", func() {
+				verifyExternalMgsNid("via directive", directiveMgsNid)
+			})
+		})
+
+		When("using external_mgs in profile", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s capacity=5GB name=profile-mgs", externalMgsProfileName)
+			})
+
+			It("Uses external_mgs via the profile", func() {
+				verifyExternalMgsNid("via profile", profileMgsNid)
+			})
+		})
+
+		When("using external_mgs in directive and profile", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s external_mgs=%s capacity=5GB name=both-mgs", externalMgsProfileName, directiveMgsNid)
+			})
+
+			It("Uses external_mgs via the directive", func() {
+				verifyExternalMgsNid("via directive", directiveMgsNid)
+			})
+		})
+
+		When("using combined_mgtmdt in directive", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre combined_mgtmdt capacity=5GB name=directive-mgtmdt")
+			})
+
+			It("Uses combined_mgtmdt via the directive", func() {
+				verifyCombinedMgtMdt()
+			})
+		})
+
+		When("using combined_mgtmdt in profile", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s capacity=5GB name=profile-mgtmdt", combinedMgtMdtProfileName)
+			})
+
+			It("Uses combined_mgtmdt via the profile", func() {
+				verifyCombinedMgtMdt()
+			})
+		})
+
+		When("using combined_mgtmdt from directive when external_mgs is in profile", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s combined_mgtmdt capacity=5GB name=profile-mgtmdt", externalMgsProfileName)
+			})
+
+			It("Uses combined_mgtmdt via the directive", func() {
+				verifyCombinedMgtMdt()
+			})
+		})
+
+		When("using external_mgs from directive when combined_mgtmdt is in profile", func() {
+			BeforeEach(func() {
+				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s external_mgs=%s capacity=5GB name=profile-mgtmdt", combinedMgtMdtProfileName, directiveMgsNid)
+			})
+
+			It("Uses external_mgs via the directive", func() {
+				verifyExternalMgsNid("via directive", directiveMgsNid)
+			})
+		})
 	})
 })
 

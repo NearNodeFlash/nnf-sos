@@ -360,61 +360,17 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	return nil
 }
 
-// findProfileToUse verifies a profile named in the directive or verifies that a default can be found.
-func (r *NnfWorkflowReconciler) findProfileToUse(ctx context.Context, directive string) (string, error) {
-	var profileName string
-
-	args, err := dwdparse.BuildArgsMap(directive)
-	if err != nil {
-		return "", err
-	}
-
-	// If a profile is named then verify that it exists.  Otherwise, verify
-	// that a default profile can be found.
-	profileName, present := args["profile"]
-	if present {
-		nnfStorageProfile := &nnfv1alpha1.NnfStorageProfile{}
-		profileNamespace := "nnf-system"
-		if _, present := os.LookupEnv("NNF_TEST_ENVIRONMENT"); present {
-			profileNamespace = "default"
-		}
-		err := r.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, nnfStorageProfile)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		nnfStorageProfiles := &nnfv1alpha1.NnfStorageProfileList{}
-		if err := r.List(ctx, nnfStorageProfiles); err != nil {
-			return "", err
-		}
-		numDefaults := 0
-		for _, profile := range nnfStorageProfiles.Items {
-			if profile.Data.Default {
-				objkey := client.ObjectKeyFromObject(&profile)
-				profileName = objkey.Name
-				numDefaults++
-			}
-		}
-		// Require that there be one and only one default.
-		if numDefaults == 0 {
-			return "", fmt.Errorf("Unable to find a default NnfStorageProfile to use")
-		} else if numDefaults > 1 {
-			return "", fmt.Errorf("More than one default NnfStorageProfile found; unable to pick one")
-		}
-	}
-	if len(profileName) == 0 {
-		return "", fmt.Errorf("Unable to find a NnfStorageProfile name")
-	}
-	return profileName, nil
-}
-
 // validateStorageCreationDirective validates the jobdw/create_persistent directive.
 func (r *NnfWorkflowReconciler) validateStorageCreationDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	// Validate jobdw/create_persistent directive of the form...
 	//   #DW jobdw ... profile=SomeName ...
 
-	_, err := r.findProfileToUse(ctx, directive)
+	args, err := dwdparse.BuildArgsMap(directive)
 	if err != nil {
+		return err
+	}
+
+	if _, err := findProfileToUse(ctx, r.Client, args); err != nil {
 		return err
 	}
 
@@ -600,7 +556,12 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 	dwArgs, err := dwdparse.BuildArgsMap(d.Spec.DW.DWDirective)
 	if err != nil {
-		return nnfStorage, err
+		return nil, err
+	}
+
+	nnfStorageProfile, err := findProfileToUse(ctx, r.Client, dwArgs)
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfStorage,
@@ -630,8 +591,9 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 						charsWanted = len(d.Spec.Name)
 					}
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[:charsWanted]
-					if mgsNid, present := dwArgs["external_mgs"]; present {
-						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = mgsNid
+					lustreData := mergeLustreStorageDirectiveAndProfile(dwArgs, nnfStorageProfile)
+					if len(lustreData.ExternalMGS) > 0 {
+						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = lustreData.ExternalMGS[0]
 					}
 				}
 

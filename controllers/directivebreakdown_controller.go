@@ -170,6 +170,12 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		return result, err
 	}
 
+	nnfStorageProfile, err := findProfileToUse(ctx, r.Client, argsMap)
+	if err != nil {
+		result = skipped
+		return result, err
+	}
+
 	filesystem := argsMap["type"]
 	capacity := argsMap["capacity"]
 
@@ -193,13 +199,15 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		mdtCapacity, _ := getCapacityInBytes("1TB")
 		mgtCapacity, _ := getCapacityInBytes("1GB")
 
+		lustreData := mergeLustreStorageDirectiveAndProfile(argsMap, nnfStorageProfile)
+
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
 		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", ""})
 
-		if _, present := argsMap["combined_mgtmdt"]; present {
+		if lustreData.CombinedMGTMDT {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", "lustre-mgt"})
-		} else if _, present := argsMap["external_mgs"]; present {
+		} else if len(lustreData.ExternalMGS) > 0 {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
 		} else {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
