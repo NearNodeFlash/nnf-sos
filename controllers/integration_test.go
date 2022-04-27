@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -394,9 +393,6 @@ var _ = Describe("Integration Test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-		// if storageDirective == "create_persistent" {
-		// 	checkPSIToServerMapping(psiNotownedByWorkflow, storageName)
-		// }
 		Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
 
 		Eventually(func() error {
@@ -824,6 +820,79 @@ var _ = Describe("Integration Test", func() {
 		}) // It(fmt.Sprintf("Testing file system '%s'", fsType)
 
 	} // for idx := range filesystems
+
+	Describe("Test workflow with no #DW directives", func() {
+		It("Testing Lifecycle of workflow with no #DW directives", func() {
+			const workflowName = "no-directives"
+
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflowName,
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal.String(),
+					WLMID:        "854973",
+					DWDirectives: []string{}, // Empty
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+			}).Should(Succeed())
+
+			/*************************** Proposal ****************************/
+			By("Checking proposal state and ready")
+			Eventually(func() bool {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.State == dwsv1alpha1.StateProposal.String() && workflow.Status.Ready
+			}).Should(BeTrue())
+
+			By("It should have no directiveBreakdowns")
+			directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).ShouldNot(Succeed())
+
+			By("Checking for no servers")
+			servers := &dwsv1alpha1.Servers{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).ShouldNot(Succeed())
+
+			// Store ownership reference to workflow - this is checked for many of the created objects
+			ownerRef := metav1.OwnerReference{
+				Kind:               reflect.TypeOf(dwsv1alpha1.Workflow{}).Name(),
+				APIVersion:         dwsv1alpha1.GroupVersion.String(),
+				UID:                workflow.GetUID(),
+				Name:               workflow.GetName(),
+				Controller:         &controller,
+				BlockOwnerDeletion: &blockOwnerDeletion,
+			}
+
+			By("Checking for Computes resource")
+			computes := &dwsv1alpha1.Computes{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Status.Computes.Name,
+					Namespace: workflow.Status.Computes.Namespace,
+				},
+			}
+			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Computes{}).Name()))
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+
+			By("Advance to teardown")
+			/***************************** Teardown *****************************/
+			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown, workflow)
+		})
+	})
 
 	// Here we test the various data movement directives. This uses a workflow
 	// per test where the workflow is brought to data_in stage. This is not
@@ -1332,139 +1401,6 @@ var _ = Describe("Integration Test", func() {
 			It("Uses external_mgs via the directive", func() {
 				verifyExternalMgsNid("via directive", directiveMgsNid)
 			})
-		})
-	})
-})
-
-var _ = Describe("Empty #DW List Test", func() {
-	const (
-		WorkflowNamespace = "default"
-		WorkflowID        = "test"
-	)
-	const timeout = time.Second * 10
-	const interval = time.Millisecond * 100
-	const workflowName = "no-storage"
-
-	var (
-		savedWorkflow  *dwsv1alpha1.Workflow
-		storageProfile *nnfv1alpha1.NnfStorageProfile
-	)
-
-	BeforeEach(func() {
-		// Create a default NnfStorageProfile for the unit tests.
-		storageProfile = createBasicDefaultNnfStorageProfile()
-	})
-
-	AfterEach(func() {
-		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-	})
-
-	Describe(fmt.Sprintf("Creating workflow %s with no #DWs", workflowName), func() {
-
-		It("Should create successfully", func() {
-			workflow := &dwsv1alpha1.Workflow{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workflowName,
-					Namespace: WorkflowNamespace,
-				},
-				Spec: dwsv1alpha1.WorkflowSpec{
-					DesiredState: "proposal", // TODO: This should be defined somewhere
-					WLMID:        WorkflowID,
-					DWDirectives: []string{}, // Empty
-				},
-			}
-			Expect(k8sClient.Create(context.Background(), workflow)).Should(Succeed())
-		})
-
-		It("Should be in proposal state", func() {
-			wf := &dwsv1alpha1.Workflow{}
-			Eventually(func() error {
-				err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-				return err
-			}).Should(Succeed())
-
-			Eventually(func() (string, error) {
-				err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-				if err != nil {
-					return "", err
-				}
-				return wf.Status.State, nil
-			}).Should(Equal("proposal"))
-
-			savedWorkflow = wf
-		})
-
-		It("Should have no directiveBreakdowns", func() {
-			directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{}
-			name := workflowName + "-" + strconv.Itoa(0)
-			namespace := WorkflowNamespace
-
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, directiveBreakdown)
-			}).ShouldNot(Succeed())
-		})
-
-		It("Should have a single Computes that is owned by the workflow", func() {
-			computes := &dwsv1alpha1.Computes{}
-			name := workflowName
-			namespace := WorkflowNamespace
-
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, computes)
-			}, timeout, interval).Should(Succeed())
-
-			t := true
-			expectedOwnerReference := metav1.OwnerReference{
-				APIVersion:         savedWorkflow.APIVersion,
-				Kind:               savedWorkflow.Kind,
-				Name:               savedWorkflow.Name,
-				UID:                savedWorkflow.UID,
-				Controller:         &t,
-				BlockOwnerDeletion: &t,
-			}
-
-			Expect(computes.ObjectMeta.OwnerReferences).Should(ContainElement(expectedOwnerReference))
-		})
-
-		It("Should have no Servers", func() {
-			servers := &dwsv1alpha1.Servers{}
-			name := workflowName + "-" + strconv.Itoa(0)
-			namespace := WorkflowNamespace
-
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), client.ObjectKey{Name: name, Namespace: namespace}, servers)
-			}, timeout, interval).ShouldNot(Succeed())
-		})
-
-		It("Should complete proposal state", func() {
-			wf := &dwsv1alpha1.Workflow{}
-			Eventually(func() (bool, error) {
-				err := k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-				if err != nil {
-					return false, err
-				}
-				return wf.Status.Ready, nil
-			}, timeout, interval).Should(BeTrue())
-		})
-	})
-
-	Describe(fmt.Sprintf("Deleting workflow %s", workflowName), func() {
-
-		It("Should delete successfully", func() {
-			workflow := &dwsv1alpha1.Workflow{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workflowName,
-					Namespace: WorkflowNamespace,
-				},
-			}
-			Expect(k8sClient.Delete(context.Background(), workflow)).Should(Succeed())
-		})
-
-		It("Should be deleted", func() {
-			wf := &dwsv1alpha1.Workflow{}
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), client.ObjectKey{Namespace: WorkflowNamespace, Name: workflowName}, wf)
-			}).ShouldNot(Succeed())
 		})
 	})
 })
