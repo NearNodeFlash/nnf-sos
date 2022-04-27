@@ -28,6 +28,7 @@ import (
 	"strconv"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/sync/errgroup"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -330,18 +331,21 @@ func (r *NnfAccessReconciler) deleteClientMounts(ctx context.Context, access *nn
 		return false, nil
 	}
 
+	g := new(errgroup.Group)
 	// Delete all the resources from the list
-	var firstError error
 	for _, clientMount := range clientMountList.Items {
-		err := r.Delete(ctx, &clientMount)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				firstError = err
-			}
-		}
+		clientMount := clientMount
+
+		// Start a goroutine for each ClientMount to delete
+		g.Go(func() error {
+			err := r.Delete(ctx, &clientMount)
+
+			return err
+		})
 	}
 
-	return true, firstError
+	// Wait for the goroutines to finish and return the first error
+	return true, g.Wait()
 }
 
 // getClientList returns the list of client node names from either the Computes resource of the NnfStorage resource
@@ -743,37 +747,43 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 
 // createClientMounts creates the ClientMount resources based on the information in the storageMapping map.
 func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+	g := new(errgroup.Group)
+
 	for client, storageList := range storageMapping {
-		clientMount := &dwsv1alpha1.ClientMount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      clientMountName(access),
-				Namespace: client,
-			},
-		}
+		client := client
+		storageList := storageList
 
-		_, err := ctrl.CreateOrUpdate(ctx, r.Client, clientMount,
-			func() error {
-				labels := access.GetLabels()
-				if labels == nil {
-					labels = make(map[string]string)
-				}
+		// Start a goroutine for each ClientMount to create
+		g.Go(func() error {
+			clientMount := &dwsv1alpha1.ClientMount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clientMountName(access),
+					Namespace: client,
+				},
+			}
+			_, err := ctrl.CreateOrUpdate(ctx, r.Client, clientMount,
+				func() error {
+					labels := clientMount.GetLabels()
+					if labels == nil {
+						labels = make(map[string]string)
+					}
 
-				labels[NnfOwnerNameLabel] = access.Name
-				labels[NnfOwnerNamespaceLabel] = access.Namespace
-				clientMount.SetLabels(labels)
+					labels[NnfOwnerNameLabel] = access.Name
+					labels[NnfOwnerNamespaceLabel] = access.Namespace
+					clientMount.SetLabels(labels)
 
-				clientMount.Spec.Node = client
-				clientMount.Spec.DesiredState = dwsv1alpha1.ClientMountState(access.Spec.DesiredState)
-				clientMount.Spec.Mounts = storageList
+					clientMount.Spec.Node = client
+					clientMount.Spec.DesiredState = dwsv1alpha1.ClientMountState(access.Spec.DesiredState)
+					clientMount.Spec.Mounts = storageList
 
-				return nil
-			})
-		if err != nil {
+					return nil
+				})
 			return err
-		}
+		})
 	}
 
-	return nil
+	// Wait for the goroutines to finish and return the first error
+	return g.Wait()
 }
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
