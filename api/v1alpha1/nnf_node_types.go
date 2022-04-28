@@ -68,6 +68,16 @@ type NnfServerStatus struct {
 
 // NnfDriveStatus defines the observe status of drives connected to this NNF Node
 type NnfDriveStatus struct {
+	// Model is the manufacturer information about the device
+	Model string `json:"model,omitempty"`
+
+	// Capacity in bytes of the device. The full capacity may not
+	// be usable depending on what the storage driver can provide.
+	Capacity int64 `json:"capacity,omitempty"`
+
+	// WearLevel in percent for SSDs
+	WearLevel int64 `json:"wearLevel,omitempty"`
+
 	NnfResourceStatus `json:",inline"`
 }
 

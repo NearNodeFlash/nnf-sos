@@ -43,6 +43,7 @@ import (
 
 	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
 	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
+	nvme "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nvme"
 	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
@@ -204,43 +205,12 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		})
 	}
 
-	// Update the server status' with the current values
-	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
-	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
-		log.Error(err, "Failed to retrieve Storage Service Endpoints")
+	if err := updateServers(node, statusUpdater, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if len(node.Status.Servers) < len(serverEndpointCollection.Members) {
-		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-			s.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
-		})
-	}
-
-	// Iterate over the server endpoints to ensure we've reflected
-	// the status of each server (Compute & Rabbit)
-	for idx, serverEndpoint := range serverEndpointCollection.Members {
-
-		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
-		serverEndpoint := &sf.EndpointV150Endpoint{}
-		if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), id, serverEndpoint); err != nil {
-			log.Error(err, fmt.Sprintf("Failed to retrieve Storage Service Endpoint %s", id))
-			return ctrl.Result{}, err
-		}
-
-		if node.Status.Servers[idx].ID != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
-			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].ID = serverEndpoint.Id
-				s.Servers[idx].Name = serverEndpoint.Name
-			})
-		}
-
-		if node.Status.Servers[idx].Status != nnfv1alpha1.ResourceStatus(serverEndpoint.Status) || node.Status.Servers[idx].Health != nnfv1alpha1.ResourceHealth(serverEndpoint.Status) {
-			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(serverEndpoint.Status)
-				s.Servers[idx].Health = nnfv1alpha1.ResourceHealth(serverEndpoint.Status)
-			})
-		}
+	if err := updateDrives(node, statusUpdater, log); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	systemConfig := &dwsv1alpha1.SystemConfiguration{}
@@ -389,6 +359,141 @@ func (r *NnfNodeReconciler) configureElementControllerService(ctx context.Contex
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// Update the Servers status of the NNF Node if necessary
+func updateServers(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log logr.Logger) error {
+
+	ss := nnf.NewDefaultStorageService()
+
+	// Update the server status' with the current values
+	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
+	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
+		log.Error(err, "Failed to retrieve Storage Service Endpoints")
+		return err
+	}
+
+	if len(node.Status.Servers) < len(serverEndpointCollection.Members) {
+		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+			s.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
+		})
+	}
+
+	// Iterate over the server endpoints to ensure we've reflected
+	// the status of each server (Compute & Rabbit)
+	for idx, serverEndpoint := range serverEndpointCollection.Members {
+
+		id := serverEndpoint.OdataId[strings.LastIndex(serverEndpoint.OdataId, "/")+1:]
+		serverEndpoint := &sf.EndpointV150Endpoint{}
+		if err := ss.StorageServiceIdEndpointIdGet(ss.Id(), id, serverEndpoint); err != nil {
+			log.Error(err, fmt.Sprintf("Failed to retrieve Storage Service Endpoint %s", id))
+			return err
+		}
+
+		if node.Status.Servers[idx].ID != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
+			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+				s.Servers[idx].ID = serverEndpoint.Id
+				s.Servers[idx].Name = serverEndpoint.Name
+			})
+		}
+
+		if node.Status.Servers[idx].Status != nnfv1alpha1.ResourceStatus(serverEndpoint.Status) || node.Status.Servers[idx].Health != nnfv1alpha1.ResourceHealth(serverEndpoint.Status) {
+			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(serverEndpoint.Status)
+				s.Servers[idx].Health = nnfv1alpha1.ResourceHealth(serverEndpoint.Status)
+			})
+		}
+	}
+
+	return nil
+}
+
+// Update the Drives status of the NNF Node if necessary
+func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log logr.Logger) error {
+	storageService := nvme.NewDefaultStorageService()
+
+	storageCollection := &sf.StorageCollectionStorageCollection{}
+	if err := storageService.Get(storageCollection); err != nil {
+		log.Error(err, "Failed to retrieve storage collection")
+		return err
+	}
+
+	if len(node.Status.Drives) < len(storageCollection.Members) {
+		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
+			s.Drives = make([]nnfv1alpha1.NnfDriveStatus, len(storageCollection.Members))
+		})
+	}
+
+	// Iterate over the storage devices and controllers to ensure we've reflected
+	// the status of each drive.
+	for idx, storageEndpoint := range storageCollection.Members {
+		drive := &node.Status.Drives[idx]
+
+		storageId := storageEndpoint.OdataId[strings.LastIndex(storageEndpoint.OdataId, "/")+1:]
+		storage := &sf.StorageV190Storage{}
+		if err := storageService.StorageIdGet(storageId, storage); err != nil {
+			log.Error(err, fmt.Sprintf("Failed to retrive Storage %s", storageId))
+			return err
+		}
+
+		if drive.ID != storage.Id || drive.Name != storage.Name {
+			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+				drive.ID = storage.Id
+				drive.Name = storage.Name
+			})
+		}
+
+		if node.Status.Drives[idx].Status != nnfv1alpha1.ResourceStatus(storage.Status) || node.Status.Drives[idx].Health != nnfv1alpha1.ResourceHealth(storage.Status) {
+			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+				drive.Status = nnfv1alpha1.ResourceStatus(storage.Status)
+				drive.Health = nnfv1alpha1.ResourceHealth(storage.Status)
+			})
+		}
+
+		if storage.Status.State == sf.ENABLED_RST {
+			// The Swordfish architecture keeps very little information in the Storage object, instead it is nested in
+			// the Storage Controllers. For our purposes, we only need to pull the information off one Storage Controller,
+			// since all the desired information is replicated amongst all Storage Controllers - so use the first one returned.
+			// This is only valid if the Storage object is Enabled.
+			storageControllers := &sf.StorageControllerCollectionStorageControllerCollection{}
+			if err := storageService.StorageIdControllersGet(storage.Id, storageControllers); err != nil {
+				log.Error(err, fmt.Sprintf("Storage %s: Failed to retrieve Storage Controllers", storage.Id))
+				return err
+			}
+
+			if len(storageControllers.Members) > 0 {
+				storageControllerId := storageControllers.Members[0].OdataId[strings.LastIndex(storageControllers.Members[0].OdataId, "/")+1:]
+				storageController := &sf.StorageControllerV100StorageController{}
+				if err := storageService.StorageIdControllersControllerIdGet(storage.Id, storageControllerId, storageController); err != nil {
+					log.Error(err, fmt.Sprintf("Storage %s: Failed to retrieve Storage Controller %s", storage.Id, storageControllerId))
+					return err
+				}
+
+				if drive.Model != storageController.Model || drive.WearLevel != int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage) {
+					statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+						drive.Model = storageController.Model
+						drive.WearLevel = int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage)
+					})
+				}
+			}
+
+			// The Swordfish architecture places capacity information in a Storage device's Storage Pools. For our implementation,
+			// we are guarenteed one Storage Pool per Storage device. This is only valid if the Storage object is Enabled.
+			storagePool := &sf.StoragePoolV150StoragePool{}
+			if err := storageService.StorageIdStoragePoolsStoragePoolIdGet(storage.Id, nvme.DefaultStoragePoolId, storagePool); err != nil {
+				log.Error(err, fmt.Sprintf("Storage %s: Failed to retrieve Storage Pool %s", storage.Id, nvme.DefaultStoragePoolId))
+				return err
+			}
+
+			if drive.Capacity != storagePool.CapacityBytes {
+				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
+					drive.Capacity = storagePool.CapacityBytes
+				})
+			}
+		}
+	}
+
+	return nil
 }
 
 type statusUpdater struct {

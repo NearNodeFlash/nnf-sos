@@ -81,6 +81,12 @@ spec:
                   description: NnfDriveStatus defines the observe status of drives
                     connected to this NNF Node
                   properties:
+                    capacity:
+                      description: Capacity in bytes of the device. The full capacity
+                        may not be usable depending on what the storage driver can
+                        provide.
+                      format: int64
+                      type: integer
                     health:
                       description: NnfResourceHealthType defines the health of an
                         NNF resource.
@@ -88,6 +94,10 @@ spec:
                     id:
                       description: ID reflects the NNF Node unique identifier for
                         this NNF Server resource.
+                      type: string
+                    model:
+                      description: Model is the manufacturer information about the
+                        device
                       type: string
                     name:
                       description: Name reflects the common name of this NNF Server
@@ -97,6 +107,10 @@ spec:
                       description: NnfResourceStatusType is the string that indicates
                         the resource's status
                       type: string
+                    wearLevel:
+                      description: WearLevel in percent for SSDs
+                      format: int64
+                      type: integer
                   type: object
                 type: array
               health:
