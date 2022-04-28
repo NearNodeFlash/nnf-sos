@@ -328,7 +328,7 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 
 	// For each copy_in/copy_out directive
 	//   Make sure all $JOB_DW_ references point to job storage instance names
-	//   Make sure all $PERSISTENT_DW references a new or existing create_persistent instance
+	//   Make sure all $PERSISTENT_DW references a new or existing persistentdw instance
 	//   Otherwise, make sure source/destination is prefixed with a valid global lustre file system
 	validateStagingArgument := func(arg string) error {
 		name, _ := splitStagingArgumentIntoNameAndPath(arg)
@@ -370,6 +370,7 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 func (r *NnfWorkflowReconciler) validateStorageCreationDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	// Validate jobdw/create_persistent directive of the form...
 	//   #DW jobdw ... profile=SomeName ...
+	//   #DW create_persistent ... profile=SomeName ...
 
 	args, err := dwdparse.BuildArgsMap(directive)
 	if err != nil {
@@ -499,15 +500,25 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
 
 		// Chain through the DirectiveBreakdown to the Servers object
-		dbd := &dwsv1alpha1.DirectiveBreakdown{}
-		err := r.Get(ctx, types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)
+		dbd := &dwsv1alpha1.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      dbdRef.Name,
+				Namespace: dbdRef.Namespace,
+			},
+		}
+		err := r.Get(ctx, client.ObjectKeyFromObject(dbd), dbd)
 		if err != nil {
 			log.Error(err, "Unable to get directiveBreakdown", "dbd", types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace})
 			return ctrl.Result{}, err
 		}
 
-		s := &dwsv1alpha1.Servers{}
-		err = r.Get(ctx, types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace}, s)
+		s := &dwsv1alpha1.Servers{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      dbd.Status.Servers.Name,
+				Namespace: dbd.Status.Servers.Namespace,
+			},
+		}
+		err = r.Get(ctx, client.ObjectKeyFromObject(s), s)
 		if err != nil {
 			log.Error(err, "Unable to get servers", "servers", types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace})
 			return ctrl.Result{}, err
@@ -533,6 +544,21 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 		if nnfStorage != nil {
 			nnfStorages = append(nnfStorages, *nnfStorage)
 		}
+	}
+
+	// Add any nnfStorages associated with 'persistentdw' directives, so they can be checked for READY as well
+	for _, directive := range workflow.Spec.DWDirectives {
+		if strings.HasPrefix(directive, "#DW persistentdw") {
+			p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives validated in proposal state
+			nnfStorage, err := r.findNnfStorageForPersistentDw(ctx, p["name"], workflow.Namespace, log)
+			if err != nil {
+				// Error has already been logged
+				return ctrl.Result{}, err
+			}
+
+			nnfStorages = append(nnfStorages, *nnfStorage)
+		}
+
 	}
 
 	// Walk the nnfStorages looking for them to be Ready. We exit the reconciler if
@@ -627,14 +653,33 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	}
 
 	if result == controllerutil.OperationResultCreated {
-		log.V(1).Info("Created nnfStorage", "name", nnfStorage.Name)
+		log.Info("Created nnfStorage", "name", nnfStorage.Name)
 	} else if result == controllerutil.OperationResultNone {
 		// no change
 	} else {
-		log.V(1).Info("Updated nnfStorage", "name", nnfStorage.Name)
+		log.Info("Updated nnfStorage", "name", nnfStorage.Name)
 	}
 
 	return nnfStorage, nil
+}
+
+// Returns an NnfStorage object matching #DW persistentdw <name>
+func (r *NnfWorkflowReconciler) findNnfStorageForPersistentDw(ctx context.Context, psiName string, psiNamespace string, log logr.Logger) (*nnfv1alpha1.NnfStorage, error) {
+
+	nnfStorage := &nnfv1alpha1.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      psiName,
+			Namespace: psiNamespace,
+		},
+	}
+
+	err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage)
+	if err != nil {
+		log.Error(err, "Unable to get nnfStorage", "nnfStorage", nnfStorage)
+		return nil, err
+	}
+
+	return nnfStorage, err
 }
 
 func (r *NnfWorkflowReconciler) handleDataInState(ctx context.Context, workflow *dwsv1alpha1.Workflow, driverID string, log logr.Logger) (ctrl.Result, error) {
@@ -1077,10 +1122,14 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 					Namespace: workflow.Namespace,
 					Kind:      "Computes",
 				}
+
+				// Determine the name/namespace to use based on the directive
+				name, namespace := getStorageReferenceName(workflow, driverStatus.DWDIndex)
+
 				access.Spec.StorageReference = corev1.ObjectReference{
 					// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
-					Name:      workflow.Status.DirectiveBreakdowns[driverStatus.DWDIndex].Name,
-					Namespace: workflow.Status.DirectiveBreakdowns[driverStatus.DWDIndex].Namespace,
+					Name:      name,
+					Namespace: namespace,
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
 				}
 
@@ -1112,7 +1161,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 		switch args["command"] {
 		case "jobdw":
 			envName = "DW_JOB_" + args["name"]
-		case "create_persistent":
+		case "persistentdw":
 			envName = "DW_PERSISTENT_" + args["name"]
 		default:
 			return ctrl.Result{}, fmt.Errorf("Unexpected #DW command %s", args["command"])
@@ -1125,7 +1174,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 		// particular $JOB_DW_[name]; in this case we only don't need to recreate the
 		// resource.
 
-		if (args["command"] == "jobdw") || (args["command"] == "create_persistent") {
+		if (args["command"] == "jobdw") || (args["command"] == "persistentdw") {
 			if args["type"] == "gfs2" { // TODO: Should this include Lustre?
 
 				storage := &nnfv1alpha1.NnfStorage{
@@ -1175,7 +1224,7 @@ func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string)
 	switch command {
 	case "jobdw":
 		return fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, name)
-	case "create_persistent":
+	case "persistentdw":
 		return fmt.Sprintf("/mnt/nnf/%d/persistent/%s", workflow.Spec.JobID, name)
 	default:
 	}

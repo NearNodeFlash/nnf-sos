@@ -296,6 +296,7 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		return result, err
 	}
 
+	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
 	filesystem := argsMap["type"]
 	capacity := argsMap["capacity"]
 

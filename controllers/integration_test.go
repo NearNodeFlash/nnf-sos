@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
+	dwparse "github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse"
 	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
 )
@@ -47,8 +48,6 @@ var _ = Describe("Integration Test", func() {
 
 	const timeout = 10 * time.Second
 	const interval = 100 * time.Millisecond
-	const psiName = "amdg"
-	const psiNamespace = "default"
 	const psiOwnedByWorkflow = true
 	const psiNotownedByWorkflow = false
 	const nnfStoragePresent = true
@@ -56,24 +55,6 @@ var _ = Describe("Integration Test", func() {
 
 	controller := true
 	blockOwnerDeletion := true
-
-	type wfTestConfiguration struct {
-		storageDirective       string
-		fsType                 string
-		expectedAllocationSets int
-	}
-
-	var wfTests = []wfTestConfiguration{
-		//{"jobdw", "raw", 1}, // RABSW-843: Raw device support. Matt's working on this and once resolved this test can be enabled
-		//{"jobdw", "lvm", 1},
-
-		{"jobdw", "xfs", 1},
-		{"jobdw", "gfs2", 1},
-		{"jobdw", "lustre", 3},
-		{"create_persistent", "xfs", 1},
-		{"create_persistent", "gfs2", 1},
-		{"create_persistent", "lustre", 3},
-	}
 
 	var (
 		workflow           *dwsv1alpha1.Workflow
@@ -83,25 +64,33 @@ var _ = Describe("Integration Test", func() {
 		storageProfile     *nnfv1alpha1.NnfStorageProfile
 	)
 
-	advanceState := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow) {
+	advanceState := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow, testStackOffset int) {
 		By(fmt.Sprintf("Advancing to %s state, wf %s", state, w.Name))
 		Eventually(func() error {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).To(Succeed())
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			w.Spec.DesiredState = state.String()
 			return k8sClient.Update(context.TODO(), w)
-		}).Should(Succeed(), fmt.Sprintf("Advancing to %s state", state))
+		}).WithOffset(testStackOffset).Should(Succeed(), fmt.Sprintf("Advancing to %s state", state))
 
 		By(fmt.Sprintf("Waiting on state %s", state))
 		Eventually(func() string {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).To(Succeed())
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.State
-		}).WithTimeout(timeout).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
+		}).WithTimeout(timeout).WithOffset(testStackOffset).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
 	}
 
 	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow) {
 		By("advanceStateAndCheckReady: advance workflow state")
 
-		advanceState(state, w)
+		// If this method fails, have the test results report where it was called from rather
+		// than where it fails in this method.
+		// If you'd rather see why this method is failing, set this to 0.
+		// If you'd rather see why advanceState() is failing, set this to -1.
+		testStackOffset := 1
+
+		// If advanceState fails, we are more interested in what the outer test method
+		// was doing as it tried to advanceState versus, why advanceState fails.
+		advanceState(state, w, testStackOffset+1)
 
 		// If we're currently in a staging state, ensure the data movement status is marked as finished so
 		// we can successfully transition out of that state.
@@ -158,10 +147,10 @@ var _ = Describe("Integration Test", func() {
 
 				Eventually(func() error {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
-				}).WithTimeout(timeout).Should(Succeed())
+				}).WithTimeout(timeout).WithOffset(testStackOffset).Should(Succeed())
 
 				Eventually(func() error {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).Should(Succeed())
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).WithOffset(testStackOffset).Should(Succeed())
 
 					dm.Status.Conditions = []metav1.Condition{
 						{
@@ -174,15 +163,15 @@ var _ = Describe("Integration Test", func() {
 					}
 
 					return k8sClient.Status().Update(context.TODO(), dm)
-				}).Should(Succeed())
+				}).WithOffset(testStackOffset).Should(Succeed())
 			}
 		}
 
 		By(fmt.Sprintf("Waiting to go ready, wf '%s'", w.Name))
 		Eventually(func() bool {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).To(Succeed())
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.Ready
-		}).WithTimeout(timeout).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
+		}).WithTimeout(timeout).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
 	} // advanceStateAndCheckReady(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow)
 
 	checkPSIToServerMapping := func(psiOwnedByWorkflow bool, storageName string, w *dwsv1alpha1.Workflow) {
@@ -198,7 +187,7 @@ var _ = Describe("Integration Test", func() {
 		persistentInstance = &dwsv1alpha1.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      storageName,
-				Namespace: psiNamespace,
+				Namespace: w.Namespace,
 			},
 		}
 
@@ -391,6 +380,7 @@ var _ = Describe("Integration Test", func() {
 	})
 
 	AfterEach(func() {
+		Expect(workflow).ToNot(BeNil(), "Did you comment out all wfTests below?")
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
 		Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
 
@@ -403,15 +393,55 @@ var _ = Describe("Integration Test", func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
 	})
 
-	for idx := range wfTests {
-		storageDirective := wfTests[idx].storageDirective
-		fsType := wfTests[idx].fsType
-		storageDirectiveName := strings.Replace(storageDirective, "_", "", 1) // Workflow names cannot include '_'
-		storageName := fmt.Sprintf("%s-%s", storageDirectiveName, fsType)
-		expectedAllocationSets := wfTests[idx].expectedAllocationSets
-		wfid := uuid.NewString()[0:8]
+	It("Testing DWS directives", func() {
+		type wfTestConfiguration struct {
+			directive                   string
+			expectedDirectiveBreakdowns int
+			expectedAllocationSets      int
+		}
 
-		It(fmt.Sprintf("Testing file system '%s', directive '%s'", fsType, storageDirective), func() {
+		var wfTests = []wfTestConfiguration{
+			//{"#DW jobdw name=jobdw-xfs    type=raw    capacity=1Gib", 1}, // RABSW-843: Raw device support. Matt's working on this and once resolved this test can be enabled
+
+			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, 1},
+			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, 1},
+			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, 3},
+
+			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, 1},
+			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, 1},
+			{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, 3},
+
+			{"#DW persistentdw name=createpersistent-xfs", 0, 0},
+			{"#DW persistentdw name=createpersistent-gfs2", 0, 0},
+			{"#DW persistentdw name=createpersistent-lustre", 0, 0},
+
+			{"#DW delete_persistent name=doesnotexist", 0, 0},
+			{"#DW delete_persistent name=createpersistent-xfs   ", 0, 0},
+			{"#DW delete_persistent name=createpersistent-gfs2  ", 0, 0},
+			{"#DW delete_persistent name=createpersistent-lustre", 0, 0},
+		}
+
+		for idx := range wfTests {
+			directive := wfTests[idx].directive
+
+			By("Parsing the #DW")
+			dwArgs, err := dwparse.BuildArgsMap(directive)
+			Expect(err).Should(BeNil())
+			storageDirective, ok := dwArgs["command"]
+			Expect(ok).To(BeTrue())
+
+			// For persistentdw, we don't care what the fsType is, there are no allocations required
+			fsType, ok := dwArgs["type"]
+			if !ok {
+				fsType = "unknown"
+			}
+
+			storageDirectiveName := strings.Replace(storageDirective, "_", "", 1) // Workflow names cannot include '_'
+			storageName := fmt.Sprintf("%s-%s", storageDirectiveName, fsType)
+			expectedAllocationSets := wfTests[idx].expectedAllocationSets
+			wfid := uuid.NewString()[0:8]
+
+			By(fmt.Sprintf("Testing directive '%s' filesystem '%s'", storageDirective, fsType))
 			workflow = &dwsv1alpha1.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%s-%s", storageDirectiveName, fsType, wfid),
@@ -422,12 +452,12 @@ var _ = Describe("Integration Test", func() {
 					JobID:        idx,
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
-						fmt.Sprintf("#DW %s name=%s type=%s capacity=1GiB", storageDirective, storageName, fsType),
+						directive,
 					},
 				},
 			}
 
-			By("Creating the workflow")
+			By(fmt.Sprintf("Creating workflow '%s'", workflow.Name))
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
 
 			By("Retrieving created workflow")
@@ -465,6 +495,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 			By("Checking various DW Directive Breakdowns")
+			Expect(wfTests[idx].expectedDirectiveBreakdowns == len(workflow.Status.DirectiveBreakdowns))
 			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
 				dbd := &dwsv1alpha1.DirectiveBreakdown{}
 				Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name()))
@@ -557,9 +588,9 @@ var _ = Describe("Integration Test", func() {
 
 			By("Checking Setup state")
 			switch storageDirective {
-			case "create_persistent":
-				checkServersToNnfStorageMapping(nnfStoragePresent)
+			case "jobdw":
 			default:
+				checkServersToNnfStorageMapping(nnfStoragePresent)
 			}
 
 			// TODO
@@ -753,73 +784,8 @@ var _ = Describe("Integration Test", func() {
 					}).ShouldNot(Succeed(), "NnfStorage should be deleted")
 				}
 			}
-
-			// TODO: Check that all the objects are deleted
-
-			{
-				// delete_persistent workflow
-				// Send a delete_persistent workflow which should either:
-				// - capture the persistentStorageInstance as it owner if it exists
-				//   OR
-				// - it should simply find nothing and be deleted.
-				By(fmt.Sprintf("Checking delete_persistent workflow for each create_persistent that completes, workflow '%s'", workflow.Name))
-				wfid := uuid.NewString()[0:8]
-				wf := &dwsv1alpha1.Workflow{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("delete-persistent-%s", wfid),
-						Namespace: corev1.NamespaceDefault,
-					},
-					Spec: dwsv1alpha1.WorkflowSpec{
-						DesiredState: dwsv1alpha1.StateProposal.String(),
-						JobID:        -1,
-						WLMID:        "Test WLMID",
-					},
-				}
-
-				wf.Spec.DWDirectives = []string{
-					fmt.Sprintf("#DW delete_persistent name=%s", storageName),
-				}
-
-				// Bring the workflow up to teardown, nothing should prevent the intervening states
-				Expect(k8sClient.Create(context.TODO(), wf)).To(Succeed(), "Workflow created")
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(wf), wf)
-				}).WithTimeout(timeout).Should(Succeed(), "Verify workflow created")
-
-				/*************************** Proposal ****************************/
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(wf), wf)).To(Succeed())
-					return wf.Status.State == dwsv1alpha1.StateProposal.String() && wf.Status.Ready
-				}).Should(BeTrue(), "Workflow achieved proposal")
-
-				Expect(len(wf.Status.DirectiveBreakdowns) == 0, "No DirectiveBreakdowns for delete_persistent directive")
-
-				advanceStateAndCheckReady(dwsv1alpha1.StateSetup, wf)
-				advanceStateAndCheckReady(dwsv1alpha1.StateDataIn, wf)
-				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun, wf)
-				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun, wf)
-				advanceStateAndCheckReady(dwsv1alpha1.StateDataOut, wf)
-
-				/**************************** Teardown ****************************/
-				advanceStateAndCheckReady(dwsv1alpha1.StateTeardown, wf)
-
-				By("If we expect a PSI")
-				if storageDirective == "create_persistent" {
-					By("Ensure PSI is owned by workflow so it will be deleted")
-					checkPSIToServerMapping(psiOwnedByWorkflow, storageName, wf)
-				}
-
-				Expect(k8sClient.Delete(context.TODO(), wf)).To(Succeed())
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(wf), wf)
-				}).WithTimeout(timeout).ShouldNot(Succeed())
-
-				wf = nil
-			}
-		}) // It(fmt.Sprintf("Testing file system '%s'", fsType)
-
-	} // for idx := range filesystems
+		} // for idx := range wfTests
+	}) // It(Testing DWS directives)
 
 	Describe("Test workflow with no #DW directives", func() {
 		It("Testing Lifecycle of workflow with no #DW directives", func() {
@@ -843,13 +809,13 @@ var _ = Describe("Integration Test", func() {
 			}).Should(Succeed())
 
 			/*************************** Proposal ****************************/
-			By("Checking proposal state and ready")
+			By("Verifying proposal state and ready")
 			Eventually(func() bool {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
 				return workflow.Status.State == dwsv1alpha1.StateProposal.String() && workflow.Status.Ready
 			}).Should(BeTrue())
 
-			By("It should have no directiveBreakdowns")
+			By("Verifying it has no directiveBreakdowns")
 			directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
@@ -858,7 +824,7 @@ var _ = Describe("Integration Test", func() {
 			}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).ShouldNot(Succeed())
 
-			By("Checking for no servers")
+			By("Verifying it has no servers")
 			servers := &dwsv1alpha1.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
@@ -877,7 +843,7 @@ var _ = Describe("Integration Test", func() {
 				BlockOwnerDeletion: &blockOwnerDeletion,
 			}
 
-			By("Checking for Computes resource")
+			By("Verifying it has Computes resource")
 			computes := &dwsv1alpha1.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workflow.Status.Computes.Name,
@@ -888,7 +854,6 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
 			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
-			By("Advance to teardown")
 			/***************************** Teardown *****************************/
 			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown, workflow)
 		})
@@ -1152,7 +1117,7 @@ var _ = Describe("Integration Test", func() {
 				Expect(k8sClient.Status().Update(context.TODO(), dm)).To(Succeed())
 
 				By("Advancing to post-run")
-				advanceState(dwsv1alpha1.StatePostRun, workflow)
+				advanceState(dwsv1alpha1.StatePostRun, workflow, 1)
 
 				By("Checking the driver has an error present")
 				Eventually(func() *dwsv1alpha1.WorkflowDriverStatus {

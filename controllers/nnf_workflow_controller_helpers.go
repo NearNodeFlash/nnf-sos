@@ -53,17 +53,22 @@ func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 }
 
-// Returns the name of the persistent storage instance specified in #DW
-// e.g. workflow.Spec.DWDirectives: #DW create_persistent name=my-persistent ... -> 'my-persistent'
-func findCreatePersistentName(workflow *dwsv1alpha1.Workflow) string {
-	for _, directive := range workflow.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW create_persistent") {
-			parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
-			if name, ok := parameters["name"]; ok {
-				return name
-			}
-		}
+// Returns the <name, namespace> pair for the #DW directive at the specified index
+func getStorageReferenceName(workflow *dwsv1alpha1.Workflow, dwdIndex int) (string, string) {
+
+	directive := workflow.Spec.DWDirectives[dwdIndex]
+	p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives were validated in proposal
+
+	var name, namespace string
+
+	switch p["command"] {
+	case "persistentdw":
+		name = p["name"]
+		namespace = workflow.Namespace
+	default:
+		name = workflow.Status.DirectiveBreakdowns[dwdIndex].Name
+		namespace = workflow.Status.DirectiveBreakdowns[dwdIndex].Namespace
 	}
 
-	return ""
+	return name, namespace
 }
