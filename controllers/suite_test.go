@@ -70,11 +70,6 @@ type envSetting struct {
 }
 
 var envVars = []envSetting{
-	// Lengthen the default Eventually timeout to try to account for CI/CD issues
-	// https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
-	{"GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT", "20s"},
-	{"GOMEGA_DEFAULT_EVENTUALLY_INTERVAL", "100ms"},
-
 	{"POD_NAMESPACE", "default"},
 	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
 	{"NNF_POD_IP", "172.0.0.1"},

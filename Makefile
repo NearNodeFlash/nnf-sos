@@ -205,6 +205,10 @@ container-unit-test: ## Build docker image with the manager and execute unit tes
 	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
 	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 
+# Lengthen the default Eventually timeout to try to account for CI/CD issues
+# https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
+EVENTUALLY_TIMEOUT ?= "20s"
+EVENTUALLY_INTERVAL ?= "100ms"
 TESTDIRS ?= controllers api
 FAILFAST ?= no
 test: manifests generate fmt vet ## Run tests.
@@ -216,8 +220,10 @@ test: manifests generate fmt vet ## Run tests.
 	fi; \
 	set -o errexit; \
 	for subdir in ${TESTDIRS}; do \
-	    source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
-        done
+		export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
+		export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
+		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
+    	done
 
 ##@ Build
 
