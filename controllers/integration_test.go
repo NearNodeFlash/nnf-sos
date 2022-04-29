@@ -78,7 +78,6 @@ var _ = Describe("Integration Test", func() {
 	var (
 		workflow           *dwsv1alpha1.Workflow
 		persistentInstance *dwsv1alpha1.PersistentStorageInstance
-		storageDirective   string
 		nodeNames          []string
 		setup              sync.Once
 		storageProfile     *nnfv1alpha1.NnfStorageProfile
@@ -405,7 +404,7 @@ var _ = Describe("Integration Test", func() {
 	})
 
 	for idx := range wfTests {
-		storageDirective = wfTests[idx].storageDirective
+		storageDirective := wfTests[idx].storageDirective
 		fsType := wfTests[idx].fsType
 		storageDirectiveName := strings.Replace(storageDirective, "_", "", 1) // Workflow names cannot include '_'
 		storageName := fmt.Sprintf("%s-%s", storageDirectiveName, fsType)
@@ -413,7 +412,6 @@ var _ = Describe("Integration Test", func() {
 		wfid := uuid.NewString()[0:8]
 
 		It(fmt.Sprintf("Testing file system '%s', directive '%s'", fsType, storageDirective), func() {
-
 			workflow = &dwsv1alpha1.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%s-%s", storageDirectiveName, fsType, wfid),
@@ -640,6 +638,8 @@ var _ = Describe("Integration Test", func() {
 						}
 						Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
 						Expect(clientMount.Status.Mounts).To(HaveLen(1))
+						Expect(clientMount.Labels["dws.cray.hpe.com/workflow.name"]).To(Equal(workflow.Name))
+						Expect(clientMount.Labels["dws.cray.hpe.com/workflow.namespace"]).To(Equal(workflow.Namespace))
 						Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
 					}
 

@@ -770,6 +770,13 @@ func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nn
 
 					labels[NnfOwnerNameLabel] = access.Name
 					labels[NnfOwnerNamespaceLabel] = access.Namespace
+
+					// Inherit labels from NnfAccess. The NnfAccess resource has labels for the workflow
+					// name/namespace that we want on the ClientMount
+					for k, v := range access.GetLabels() {
+						labels[k] = v
+					}
+
 					clientMount.SetLabels(labels)
 
 					clientMount.Spec.Node = client
