@@ -14,7 +14,7 @@ import (
 )
 
 // createNnfStorageProfile creates the given profile in the "default" namespace.
-func createNnfStorageProfile(storageProfile *nnfv1alpha1.NnfStorageProfile) *nnfv1alpha1.NnfStorageProfile {
+func createNnfStorageProfile(storageProfile *nnfv1alpha1.NnfStorageProfile, expectSuccess bool) *nnfv1alpha1.NnfStorageProfile {
 	// Place NnfStorageProfiles in "default" for the test environment.
 	storageProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
@@ -22,10 +22,16 @@ func createNnfStorageProfile(storageProfile *nnfv1alpha1.NnfStorageProfile) *nnf
 	profExpected := &nnfv1alpha1.NnfStorageProfile{}
 	Expect(k8sClient.Get(context.TODO(), profKey, profExpected)).ToNot(Succeed())
 
-	Expect(k8sClient.Create(context.TODO(), storageProfile)).To(Succeed(), "create nnfstorageprofile")
-	Eventually(func() error {
-		return k8sClient.Get(context.TODO(), profKey, profExpected)
-	}, "3s", "1s").Should(Succeed(), "wait for create of NnfStorageProfile")
+	if expectSuccess {
+		Expect(k8sClient.Create(context.TODO(), storageProfile)).To(Succeed(), "create nnfstorageprofile")
+		//err := k8sClient.Create(context.TODO(), storageProfile)
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(context.TODO(), profKey, profExpected)).To(Succeed())
+		}, "3s", "1s").Should(Succeed(), "wait for create of NnfStorageProfile")
+	} else {
+		Expect(k8sClient.Create(context.TODO(), storageProfile)).ToNot(Succeed(), "expect to fail to create nnfstorageprofile")
+		storageProfile = nil
+	}
 
 	return storageProfile
 }
@@ -44,5 +50,5 @@ func basicNnfStorageProfile(name string) *nnfv1alpha1.NnfStorageProfile {
 func createBasicDefaultNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
 	storageProfile := basicNnfStorageProfile("durable-" + uuid.NewString()[:8])
 	storageProfile.Data.Default = true
-	return createNnfStorageProfile(storageProfile)
+	return createNnfStorageProfile(storageProfile, true)
 }

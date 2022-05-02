@@ -115,7 +115,9 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: []string{
 			filepath.Join("..", "vendor", "github.hpe.com", "hpe", "hpc-dpm-dws-operator", "config", "webhook"),
-			filepath.Join("..", "config", "dws")}},
+			filepath.Join("..", "config", "dws"),
+			filepath.Join("..", "config", "webhook"),
+		}},
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
@@ -169,6 +171,9 @@ var _ = BeforeSuite(func() {
 		Start Everything
 	*/
 	err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls.WorkflowReconciler{

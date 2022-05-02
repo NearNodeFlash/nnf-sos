@@ -182,7 +182,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			// Create a batch of profiles.
 			for _, pn := range profNames {
 				prof := basicNnfStorageProfile(pn)
-				prof = createNnfStorageProfile(prof)
+				prof = createNnfStorageProfile(prof, true)
 				profiles = append(profiles, prof)
 			}
 
@@ -485,4 +485,20 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 	}) // When("Using copy_in directives", func()
+})
+
+var _ = Describe("NnfStorageProfile Webhook test", func() {
+	// The nnfstorageprofile_webhook_test.go covers testing of the webhook.
+	// This spec exists only to verify that the webhook is also running for
+	// the controller tests.
+	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfStorageProfile("an-invalid-profile")
+		profileInvalid.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
+			ExternalMGS: []string{
+				"10.0.0.1@tcp",
+			},
+			CombinedMGTMDT: true,
+		}
+		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())
+	})
 })

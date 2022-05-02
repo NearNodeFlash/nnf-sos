@@ -1216,8 +1216,8 @@ var _ = Describe("Integration Test", func() {
 				CombinedMGTMDT: true,
 			}
 
-			createNnfStorageProfile(profileExternalMGS)
-			createNnfStorageProfile(profileCombinedMGTMDT)
+			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
+			Expect(createNnfStorageProfile(profileCombinedMGTMDT, true)).ToNot(BeNil())
 		})
 
 		// Destroy the custom storage profiles.
