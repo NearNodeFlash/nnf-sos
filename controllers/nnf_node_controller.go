@@ -443,7 +443,7 @@ func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log l
 			})
 		}
 
-		if node.Status.Drives[idx].Status != nnfv1alpha1.ResourceStatus(storage.Status) || node.Status.Drives[idx].Health != nnfv1alpha1.ResourceHealth(storage.Status) {
+		if drive.Status != nnfv1alpha1.ResourceStatus(storage.Status) || drive.Health != nnfv1alpha1.ResourceHealth(storage.Status) {
 			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
 				drive.Status = nnfv1alpha1.ResourceStatus(storage.Status)
 				drive.Health = nnfv1alpha1.ResourceHealth(storage.Status)

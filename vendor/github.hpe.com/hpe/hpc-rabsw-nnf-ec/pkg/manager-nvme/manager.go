@@ -282,8 +282,9 @@ func (s *Storage) IsEnabled() bool          { return s.state == sf.ENABLED_RST }
 func (s *Storage) SerialNumber() string     { return s.serialNumber }
 
 func (s *Storage) IsKioxiaDualPortConfiguration() bool {
-	return strings.Contains(s.qualifiedName, "com.kioxia:KCM61RUL960G") ||
-		strings.Contains(s.qualifiedName, "com.kioxia:KCM61VUL1T60")
+	return false ||
+		strings.Contains(s.qualifiedName, "com.kioxia:KCM6") ||
+		strings.Contains(s.qualifiedName, "com.kioxia:KCD7")
 }
 
 func (s *Storage) FindVolume(id string) *Volume {
@@ -407,6 +408,7 @@ func (s *Storage) findController(controllerId string) *StorageController {
 func (s *Storage) getStatus() (stat sf.ResourceStatus) {
 	if len(s.controllers) == 0 {
 		stat.State = sf.UNAVAILABLE_OFFLINE_RST
+		stat.Health = sf.CRITICAL_RH
 	} else {
 		stat.Health = sf.OK_RH
 		stat.State = s.state

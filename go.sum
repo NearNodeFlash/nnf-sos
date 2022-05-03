@@ -715,6 +715,8 @@ github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220427151838-130563a0e5
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220427151838-130563a0e57b/go.mod h1:+zqLlSXsmnkxGoE4vxy79K00ErFTeC0q9zCQfLSz73c=
 github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220427151848-e522d459124c h1:uHF5PW1RAc1tPreF7VC8x2iuqT/H48ENinuoIisSV7Y=
 github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220427151848-e522d459124c/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220502210138-01707bf185a5 h1:nYclGuqvAM3AGSUA2kudjfNr3gYBFvcHVg6odvRI4aI=
+github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220502210138-01707bf185a5/go.mod h1:KTZsXDcX0VvrW79hC9eL3a3wTHfnnBD03X8IV/5+k0k=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29 h1:TgvWIQO0I0E7pKVLq/ARDhT2p2kHGKLtZhAN0EtUxiI=
 go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29/go.mod h1:gk1qa1CBZAdya1PqugRJjkwk8LIymAoB5wf5UA7NrFk=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
