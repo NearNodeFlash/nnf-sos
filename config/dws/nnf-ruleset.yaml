@@ -20,12 +20,12 @@ spec:
         isValueRequired: true
       - key: "name"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
       - key: "profile"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: false
         isValueRequired: true
       - key: "combined_mgtmdt"
@@ -52,12 +52,12 @@ spec:
         isValueRequired: true
       - key: "name"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
       - key: "profile"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: false
         isValueRequired: true
       - key: "combined_mgtmdt"
@@ -74,7 +74,7 @@ spec:
     ruleDefs:
       - key: "name"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
   - command: "persistentdw"
@@ -82,11 +82,11 @@ spec:
     ruleDefs:
       - key: "name"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9_-]+$"
+        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
   - command: "copy_in"
-    watchStates: data_in
+    watchStates: proposal,data_in
     ruleDefs:
       - key: "source"
         type: "string"
@@ -97,7 +97,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "copy_out"
-    watchStates: data_out
+    watchStates: proposal,data_out
     ruleDefs:
       - key: "source"
         type: "string"

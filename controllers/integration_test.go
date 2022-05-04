@@ -26,7 +26,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
@@ -46,12 +45,12 @@ import (
 
 var _ = Describe("Integration Test", func() {
 
-	const timeout = 10 * time.Second
-	const interval = 100 * time.Millisecond
-	const psiOwnedByWorkflow = true
-	const psiNotownedByWorkflow = false
-	const nnfStoragePresent = true
-	const nnfStorageDeleted = false
+	const (
+		psiOwnedByWorkflow    = true
+		psiNotownedByWorkflow = false
+		nnfStoragePresent     = true
+		nnfStorageDeleted     = false
+	)
 
 	controller := true
 	blockOwnerDeletion := true
@@ -76,7 +75,7 @@ var _ = Describe("Integration Test", func() {
 		Eventually(func() string {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.State
-		}).WithTimeout(timeout).WithOffset(testStackOffset).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
+		}).WithOffset(testStackOffset).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
 	}
 
 	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow) {
@@ -147,7 +146,7 @@ var _ = Describe("Integration Test", func() {
 
 				Eventually(func() error {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
-				}).WithTimeout(timeout).WithOffset(testStackOffset).Should(Succeed())
+				}).WithOffset(testStackOffset).Should(Succeed())
 
 				Eventually(func() error {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).WithOffset(testStackOffset).Should(Succeed())
@@ -171,7 +170,7 @@ var _ = Describe("Integration Test", func() {
 		Eventually(func() bool {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.Ready
-		}).WithTimeout(timeout).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
+		}).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
 	} // advanceStateAndCheckReady(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow)
 
 	checkPSIToServerMapping := func(psiOwnedByWorkflow bool, storageName string, w *dwsv1alpha1.Workflow) {
@@ -386,7 +385,7 @@ var _ = Describe("Integration Test", func() {
 
 		Eventually(func() error {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
-		}).WithTimeout(timeout).ShouldNot(Succeed())
+		}).ShouldNot(Succeed())
 
 		workflow = nil
 
@@ -892,7 +891,7 @@ var _ = Describe("Integration Test", func() {
 			By("Checking for workflow creation")
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
-			}).WithTimeout(timeout).Should(Succeed())
+			}).Should(Succeed())
 
 			/*************************** Proposal ****************************/
 
@@ -1133,7 +1132,7 @@ var _ = Describe("Integration Test", func() {
 					}
 
 					return nil
-				}).WithTimeout(timeout).ShouldNot(BeNil())
+				}).ShouldNot(BeNil())
 			})
 		})
 
@@ -1368,4 +1367,212 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 	})
+
+	Describe("Test failure cases for various directives", func() {
+
+		var (
+			directives []string
+		)
+
+		// Create a basic workflow; each test is expected to fill in the DWDirectives
+		// in its BeforeEach() clause.
+		BeforeEach(func() {
+			wfid := uuid.NewString()[0:8]
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("persistent-%s", wfid),
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal.String(),
+					JobID:        -1,
+					WLMID:        "Test WLMID",
+				},
+			}
+		})
+
+		AfterEach(func() {
+			By("AfterEach advance the workflow state to teardown")
+			advanceStateAndCheckReady(dwsv1alpha1.StateTeardown, workflow)
+		})
+
+		// Create the workflow for the Ginkgo specs.
+		JustBeforeEach(func() {
+			By("JustBeforeEach create the workflow")
+			workflow.Spec.DWDirectives = directives
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+		})
+
+		// verifyErrorIsPresent checks that the workflow has stopped due to a driver error
+		verifyErrorIsPresent := func() {
+			By("Checking the driver has an error present")
+			Eventually(func(g Gomega) *dwsv1alpha1.WorkflowDriverStatus {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				g.Expect(workflow.Status.Ready == false)
+				g.Expect(workflow.Status.State == dwsv1alpha1.StateProposal.String())
+
+				driverID := os.Getenv("DWS_DRIVER_ID")
+				for _, driver := range workflow.Status.Drivers {
+					if driver.DriverID == driverID {
+						if driver.Reason == "error" {
+							return &driver
+						}
+					}
+				}
+
+				return nil
+			}).ShouldNot(BeNil())
+		}
+
+		// TODO: Make this a table driven set of tests to easily allow more combinations
+		When("using jobdw and create_persistent", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW jobdw name=jobdw type=xfs capacity=1GiB",
+					"#DW create_persistent name=p2 type=xfs capacity=1GiB",
+				}
+			})
+
+			It("using jobdw and create_persistent", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using create_persistent with persistentdw", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW persistentdw name=jobdw",
+					"#DW create_persistent name=p2 type=xfs capacity=1GiB",
+				}
+			})
+
+			It("using persistentdw and create_persistent", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using more than one create_persistent directive in workflow", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW create_persistent name=p1 type=xfs capacity=1GiB",
+					"#DW create_persistent name=p2 type=xfs capacity=1GiB",
+				}
+			})
+
+			It("Fails with more than 1 create_persistent", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using more than one delete_persistent directive in workflow", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW delete_persistent name=p1",
+					"#DW delete_persistent name=p2",
+				}
+			})
+
+			It("Fails with more than 1 delete_persistent", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using 1 create_persistent and 1 delete_persistent directive in workflow", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW create_persistent name=p1 type=xfs capacity=1GiB",
+					"#DW delete_persistent name=p1",
+				}
+			})
+
+			It("Fails with 1 create_persistent and 1 delete_persistent", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using persistentdw for non-existent persistent storage", func() {
+			BeforeEach(func() {
+				directives = []string{
+					"#DW persistentdw name=p1",
+				}
+			})
+
+			It("Fails with persistentdw naming non-existent persistent storage", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using copy_in without jobdw", func() {
+			// Create a fake global lustre file system.
+			var (
+				lustre *lusv1alpha1.LustreFileSystem
+			)
+
+			BeforeEach(func() {
+				lustre = &lusv1alpha1.LustreFileSystem{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "maui",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: lusv1alpha1.LustreFileSystemSpec{
+						Name:      "maui",
+						MountRoot: "/lus/maui",
+					},
+				}
+				Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+			})
+			BeforeEach(func() {
+				directives = []string{
+					"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_notThere/my-file.out",
+				}
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
+				Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+			})
+
+			It("Fails with copy_in and no jobdw", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+		When("using copy_in without persistentdw", func() {
+			// Create a fake global lustre file system.
+			var (
+				lustre *lusv1alpha1.LustreFileSystem
+			)
+
+			BeforeEach(func() {
+				lustre = &lusv1alpha1.LustreFileSystem{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "maui",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: lusv1alpha1.LustreFileSystemSpec{
+						Name:      "maui",
+						MountRoot: "/lus/maui",
+					},
+				}
+				Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+			})
+
+			BeforeEach(func() {
+				directives = []string{
+					"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_mpi/my-persistent-file.out",
+				}
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
+				Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+			})
+
+			It("Fails with copy_in and no persistentdw", func() {
+				verifyErrorIsPresent()
+			})
+		})
+
+	})
+
 })

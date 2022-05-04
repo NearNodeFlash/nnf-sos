@@ -199,7 +199,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 #         If set, default reporter print out all specs as they begin.
 #
 #  To see the test results as they execute:
-# export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; go test -v -count=1 -cover ./controllers/... -args -ginkgo.v
+# export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; go test -v -count=1 -cover ./controllers/... -args -ginkgo.v -ginkgo.failFast -ginkgo.randomizeAllSpecs
 
 container-unit-test: ## Build docker image with the manager and execute unit tests.
 	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .

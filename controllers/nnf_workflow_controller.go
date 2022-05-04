@@ -304,16 +304,45 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
 
+	var createPersistentCount, deletePersistentCount, directiveCount int
 	for _, directive := range wf.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW copy_in") || strings.HasPrefix(directive, "#DW copy_out") {
-			if err := r.validateStagingDirective(ctx, wf, directive); err != nil {
-				return err
-			}
-		}
-		if strings.HasPrefix(directive, "#DW jobdw") || strings.HasPrefix(directive, "#DW create_persistent") {
+
+		directiveCount++
+		// The webhook validated directives, ignore errors
+		dwArgs, _ := dwdparse.BuildArgsMap(directive)
+		command := dwArgs["command"]
+
+		switch command {
+		case "jobdw":
 			if err := r.validateStorageCreationDirective(ctx, wf, directive); err != nil {
 				return err
 			}
+
+		case "copy_in", "copy_out":
+			if err := r.validateStagingDirective(ctx, wf, directive); err != nil {
+				return err
+			}
+
+		case "create_persistent":
+			createPersistentCount++
+			if err := r.validateStorageCreationDirective(ctx, wf, directive); err != nil {
+				return err
+			}
+
+		case "delete_persistent":
+			deletePersistentCount++
+
+		case "persistentdw":
+			if err := r.validatePersistentInstanceDirective(ctx, wf, directive); err != nil {
+				return err
+			}
+		}
+	}
+
+	if directiveCount > 1 {
+		// Ensure create_persistent or delete_persistent are singletons in the workflow
+		if createPersistentCount+deletePersistentCount > 0 {
+			return fmt.Errorf("a single create_persistent or delete_persistent directive allowed per workflow")
 		}
 	}
 
@@ -328,7 +357,7 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 
 	// For each copy_in/copy_out directive
 	//   Make sure all $JOB_DW_ references point to job storage instance names
-	//   Make sure all $PERSISTENT_DW references a new or existing persistentdw instance
+	//   Make sure all $PERSISTENT_DW references an existing persistentdw instance
 	//   Otherwise, make sure source/destination is prefixed with a valid global lustre file system
 	validateStagingArgument := func(arg string) error {
 		name, _ := splitStagingArgumentIntoNameAndPath(arg)
@@ -337,9 +366,11 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 				return fmt.Errorf("Job storage instance '%s' not found", name)
 			}
 		} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
-			if findDirectiveIndexByName(wf, name) == -1 {
+			if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
 				return fmt.Errorf("Persistent storage instance '%s' not found", name)
-				// TODO: This may be defined by another job; we need to query the list of NNF Persistent Storage Instances
+			}
+			if findDirectiveIndexByName(wf, name) == -1 {
+				return fmt.Errorf("persistentdw directive mentioning '%s' not found", name)
 			}
 		} else {
 			if r.findLustreFileSystemForPath(ctx, arg, r.Log) == nil {
@@ -384,6 +415,44 @@ func (r *NnfWorkflowReconciler) validateStorageCreationDirective(ctx context.Con
 	// Validate other parts...
 
 	return nil
+}
+
+// validatePersistentInstance validates the persistentdw directive.
+func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
+	// Validate that the persistent instance is available and not in the process of being deleted
+	args, err := dwdparse.BuildArgsMap(directive)
+	if err != nil {
+		return err
+	}
+
+	return r.validatePersistentInstanceByName(ctx, args["name"], wf.Namespace)
+}
+
+// validatePersistentInstance validates the persistentdw directive.
+func (r *NnfWorkflowReconciler) validatePersistentInstanceByName(ctx context.Context, name string, namespace string) error {
+	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
+	if err != nil {
+		return err
+	}
+
+	if !psi.DeletionTimestamp.IsZero() {
+		return fmt.Errorf("persistent storage instance '%s' is deleting", name)
+	}
+
+	return nil
+}
+
+// Retrieve the persistent storage instance with the specified name
+func (r *NnfWorkflowReconciler) getPersistentStorageInstance(ctx context.Context, name string, namespace string) (*dwsv1alpha1.PersistentStorageInstance, error) {
+	psi := &dwsv1alpha1.PersistentStorageInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+
+	err := r.Get(ctx, client.ObjectKeyFromObject(psi), psi)
+	return psi, err
 }
 
 // generateDirectiveBreakdown creates a DirectiveBreakdown for any #DW directive that causes storage to be allocated.
@@ -548,9 +617,11 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 
 	// Add any nnfStorages associated with 'persistentdw' directives, so they can be checked for READY as well
 	for _, directive := range workflow.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW persistentdw") {
-			p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives validated in proposal state
-			nnfStorage, err := r.findNnfStorageForPersistentDw(ctx, p["name"], workflow.Namespace, log)
+		dwArgs, _ := dwdparse.BuildArgsMap(directive)
+		command := dwArgs["command"]
+
+		if command == "persistentdw" {
+			nnfStorage, err := r.findNnfStorageForPersistentDw(ctx, dwArgs["name"], workflow.Namespace, log)
 			if err != nil {
 				// Error has already been logged
 				return ctrl.Result{}, err
@@ -558,7 +629,6 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 
 			nnfStorages = append(nnfStorages, *nnfStorage)
 		}
-
 	}
 
 	// Walk the nnfStorages looking for them to be Ready. We exit the reconciler if
@@ -1608,7 +1678,7 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 func (r *NnfWorkflowReconciler) assignWorkflowAsOwner(ctx context.Context, psi *dwsv1alpha1.PersistentStorageInstance, wf *dwsv1alpha1.Workflow) error {
 	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace}, "persistentInstance", types.NamespacedName{Name: psi.Name, Namespace: psi.Namespace})
 
-	if err := ctrl.SetControllerReference(wf, psi, r.Scheme); err != nil {
+	if err := controllerutil.SetOwnerReference(wf, psi, r.Scheme); err != nil {
 		log.Error(err, "Unable to assign workflow as owner of persistentInstance")
 		return err
 	}
