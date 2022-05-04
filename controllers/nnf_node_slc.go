@@ -183,6 +183,21 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 			storage.Data.Access.Computes = computes
 
+			devices := []dwsv1alpha1.StorageDevice{}
+			for _, d := range nnfNode.Status.Drives {
+				if d.Status == nnfv1alpha1.ResourceOffline {
+					continue
+				}
+
+				device := dwsv1alpha1.StorageDevice{
+					Model:    d.Model,
+					Capacity: d.Capacity,
+					Status:   string(d.Status),
+				}
+				devices = append(devices, device)
+			}
+			storage.Data.Devices = devices
+
 			return nil
 		})
 	if err != nil {

@@ -34,8 +34,8 @@ const (
 	StoragePoolLabelPrefix = "dws.cray.hpe.com/storage-pool-"
 )
 
-// StorageDevices contains the details of the storage hardware
-type StorageDevices struct {
+// StorageDevice contains the details of the storage hardware
+type StorageDevice struct {
 	// Model is the manufacturer information about the device
 	Model string `json:"model,omitempty"`
 
@@ -83,7 +83,7 @@ type StorageData struct {
 	Type string `json:"type,omitempty"`
 
 	// Devices is the list of physical devices that make up this storage
-	Devices []StorageDevices `json:"devices,omitempty"`
+	Devices []StorageDevice `json:"devices,omitempty"`
 
 	// Access contains the information about where the storage is accessible
 	Access StorageAccess `json:"access,omitempty"`

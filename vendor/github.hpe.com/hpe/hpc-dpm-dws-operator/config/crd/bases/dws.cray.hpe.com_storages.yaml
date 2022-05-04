@@ -93,8 +93,7 @@ spec:
                 description: Devices is the list of physical devices that make up
                   this storage
                 items:
-                  description: StorageDevices contains the details of the storage
-                    hardware
+                  description: StorageDevice contains the details of the storage hardware
                   properties:
                     capacity:
                       description: Capacity in bytes of the device. The full capacity
