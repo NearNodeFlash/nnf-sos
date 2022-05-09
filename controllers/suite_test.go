@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo"
@@ -38,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/ghodss/yaml"
 
@@ -108,7 +110,10 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	zaplogger := zapcr.New(zapcr.WriteTo(GinkgoWriter), zapcr.Encoder(encoder), zapcr.UseDevMode(true))
+	logf.SetLogger(zaplogger)
 
 	By("bootstrapping test environment")
 
