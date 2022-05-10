@@ -122,9 +122,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	// Default Servers name is the same as the DirectiveBreakdown
-	serversName := dbd.Name
-	serversNamespace := dbd.Namespace
+	commonResourceName, commonResourceNamespace := getStorageReferenceNameFromDBD(dbd)
 	var persistentInstance *dwsv1alpha1.PersistentStorageInstance
 	var serversOwner metav1.Object
 
@@ -133,11 +131,8 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// If the lifetime of the storage is persistent, create PersistentStorageInstance
 	if dbd.Spec.Lifetime == dwsv1alpha1.DirectiveLifetimePersistent {
-		// Servers, NnfStorage, and NnfNodeStorage resources will be named according to the PersistentStorageInstance
-		serversName = dbd.Spec.Name
-
 		var result controllerutil.OperationResult
-		result, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(ctx, dbd, dbd.Spec.Name, &dbd.Status.Servers, log)
+		result, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, &dbd.Status.Servers, log)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -152,7 +147,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// Create the corresponding Servers object
-	servers, err := r.createServers(ctx, serversName, serversNamespace, serversOwner, log)
+	servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, serversOwner, log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -166,7 +161,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		_, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(
 			ctx,
 			dbd,
-			dbd.Spec.Name,
+			commonResourceName,
 			&v1.ObjectReference{
 				Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
 				Name:      servers.Name,
@@ -181,9 +176,12 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		Namespace: servers.Namespace,
 	}
 
-	result, err := r.populateDirectiveBreakdown(ctx, dbd, log)
+	result, ctrlResult, err := r.populateDirectiveBreakdown(ctx, dbd, commonResourceName, log)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if !ctrlResult.IsZero() {
+		return ctrlResult, nil
 	}
 
 	if result == updated {
@@ -235,11 +233,11 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 
 	switch result {
 	case controllerutil.OperationResultCreated:
-		log.Info("Created persistentInstance", "name", psi.Name, "PIName", psi.Spec.Name)
+		log.Info("Created PersistentStorageInstance", "name", psi.Name, "PIName", psi.Spec.Name)
 	case controllerutil.OperationResultNone:
 		// Empty
 	case controllerutil.OperationResultUpdated:
-		log.Info("Updated persistentInstance", "name", psi.Name, "PIName", psi.Spec.Name)
+		log.Info("Updated PersistentStorageInstance", "name", psi.Name, "PIName", psi.Spec.Name)
 	}
 
 	return result, psi, err
@@ -270,30 +268,32 @@ func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, server
 
 	switch result {
 	case controllerutil.OperationResultCreated:
-		log.Info("Created server", "name", server.Name)
+		log.Info("Created Server", "name", server.Name)
 	case controllerutil.OperationResultNone:
 		// Empty
 	case controllerutil.OperationResultUpdated:
-		log.Info("Updated server", "name", server.Name)
+		log.Info("Updated Server", "name", server.Name)
 	}
 
 	return server, err
 }
 
 // populateDirectiveBreakdown parses the #DW to pull out the relevant information for the WLM to see.
-func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, log logr.Logger) (breakdownPopulateResult, error) {
+func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, commonResourceName string, log logr.Logger) (breakdownPopulateResult, ctrl.Result, error) {
 
+	ctrlResult := ctrl.Result{}
 	result := verified
 	argsMap, err := dwdparse.BuildArgsMap(dbd.Spec.DW.DWDirective)
 	if err != nil {
 		result = skipped
-		return result, err
+		return result, ctrlResult, err
 	}
 
-	nnfStorageProfile, err := findProfileToUse(ctx, r.Client, argsMap)
+	// The pinned profile will be named for the NnfStorage.
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, dbd.GetNamespace(), commonResourceName)
 	if err != nil {
-		result = skipped
-		return result, err
+		log.Error(err, "Unable to find pinned NnfStorageProfile", "name", commonResourceName)
+		return result, ctrlResult, err
 	}
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
@@ -347,7 +347,7 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		err := fmt.Errorf("failed to populate directiveBreakdown")
 		log.Error(err, "populate directiveBreakdown", "directiveBreakdown", dbd.Name, "filesystem", filesystem)
 		result = skipped
-		return result, err
+		return result, ctrlResult, err
 	}
 
 	// If the dbd is missing the correct allocation set, assign it.
@@ -362,7 +362,7 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		dbd.Status.Ready = ConditionTrue
 	}
 
-	return result, nil
+	return result, ctrlResult, nil
 }
 
 func getCapacityInBytes(capacity string) (int64, error) {

@@ -52,3 +52,14 @@ func createBasicDefaultNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
 	storageProfile.Data.Default = true
 	return createNnfStorageProfile(storageProfile, true)
 }
+
+func verifyPinnedProfile(ctx context.Context, clnt client.Client, namespace string, profileName string, expectedOwner metav1.Object) error {
+
+	nnfStorageProfile, err := findPinnedProfile(ctx, clnt, namespace, profileName)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	ExpectWithOffset(1, nnfStorageProfile.Data.Pinned).To(BeTrue())
+	refs := nnfStorageProfile.GetOwnerReferences()
+	ExpectWithOffset(1, refs).To(HaveLen(1))
+	ExpectWithOffset(1, refs[0].UID).To(Equal(expectedOwner.GetUID()))
+	return nil
+}

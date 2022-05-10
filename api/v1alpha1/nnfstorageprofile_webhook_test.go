@@ -21,10 +21,12 @@ package v1alpha1
 
 import (
 	"context"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // These tests are written in BDD-style using Ginkgo framework. Refer to
@@ -32,14 +34,16 @@ import (
 
 var _ = Describe("NnfStorageProfile Webhook", func() {
 	var (
-		nnfProfile *NnfStorageProfile = nil
+		namespaceName                         = os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
+		pinnedResourceName                    = "test-pinned"
+		nnfProfile         *NnfStorageProfile = nil
 	)
 
 	BeforeEach(func() {
 		nnfProfile = &NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
-				Namespace: metav1.NamespaceDefault,
+				Namespace: namespaceName,
 			},
 		}
 	})
@@ -47,6 +51,10 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 	AfterEach(func() {
 		if nnfProfile != nil {
 			Expect(k8sClient.Delete(context.TODO(), nnfProfile)).To(Succeed())
+			profExpected := &NnfStorageProfile{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), profExpected)
+			}).ShouldNot(Succeed())
 		}
 	})
 
@@ -90,4 +98,50 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
+	It("Should not allow a default resource to be pinned", func() {
+		nnfProfile.Data.Default = true
+		nnfProfile.Data.Pinned = true
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow modification of Data in a pinned resource", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Pinned = true
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
+		}).Should(Succeed())
+
+		newRev := &NnfStorageProfile{}
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newRev)).To(Succeed())
+		Expect(newRev.Data.Pinned).To(BeTrue())
+		newRev.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), newRev)).ToNot(Succeed())
+	})
+
+	It("Should allow modification of Meta in a pinned resource", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Pinned = true
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
+		}).Should(Succeed())
+
+		newRev := &NnfStorageProfile{}
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newRev)).To(Succeed())
+		Expect(newRev.Data.Pinned).To(BeTrue())
+		// A finalizer or ownerRef will interfere with deletion,
+		// so set a label, instead.
+		labels := newRev.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		labels["profile-label"] = "profile-label"
+		newRev.SetLabels(labels)
+		Expect(k8sClient.Update(context.TODO(), newRev)).To(Succeed())
+	})
 })

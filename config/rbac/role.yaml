@@ -356,8 +356,11 @@ rules:
   resources:
   - nnfstorageprofiles
   verbs:
+  - create
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - nnf.cray.hpe.com

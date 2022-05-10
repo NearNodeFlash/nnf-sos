@@ -65,6 +65,10 @@ spec:
                       type: string
                     type: array
                 type: object
+              pinned:
+                default: false
+                description: Pinned is true if this instance is an immutable copy
+                type: boolean
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:

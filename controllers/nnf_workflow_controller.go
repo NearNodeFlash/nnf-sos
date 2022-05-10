@@ -30,7 +30,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -84,7 +83,7 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementworkflows,verbs=get;create;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
@@ -247,6 +246,15 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 		return r.failDriverState(ctx, workflow, driverID, err.Error())
 	}
 
+	// For each directive breakdown that will require an NnfStorageProfile,
+	// create a pinned copy of the profile.
+	if pResult, err := r.generatePinnedStorageProfiles(ctx, workflow, log); err != nil {
+		log.Error(err, "Unable to generate pinned NnfStorageProfile resources for new DirectiveBreakdown resources")
+		return r.failDriverState(ctx, workflow, driverID, err.Error())
+	} else if pResult.Requeue {
+		return pResult, nil
+	}
+
 	// Generate a list of directive breakdowns from the #DWs present (if any)
 	var dbList []v1.ObjectReference
 	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
@@ -301,6 +309,33 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
+func (r *NnfWorkflowReconciler) generatePinnedStorageProfiles(ctx context.Context, workflow *dwsv1alpha1.Workflow, log logr.Logger) (ctrl.Result, error) {
+
+	result := ctrl.Result{}
+	for dwIndex, directive := range workflow.Spec.DWDirectives {
+		// The webhook validated directives, ignore errors
+		dwArgs, _ := dwdparse.BuildArgsMap(directive)
+		command := dwArgs["command"]
+
+		if command != "jobdw" && command != "create_persistent" {
+			continue
+		}
+
+		pinnedName, _ := getStorageReferenceNameFromWorkflowIntended(workflow, dwIndex)
+		opResult, err := pinProfile(ctx, r.Client, r.Scheme, dwArgs, workflow, pinnedName)
+		if err != nil {
+			log.Error(err, "Failed to pin NnfStorageProfile")
+			return result, err
+		}
+		if opResult != controllerutil.OperationResultNone {
+			// If we created one, then ask for a requeue.
+			log.Info("Created NnfStorageProfile", "name", pinnedName)
+			result.Requeue = true
+		}
+	}
+	return result, nil
+}
+
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
 
@@ -314,9 +349,6 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 
 		switch command {
 		case "jobdw":
-			if err := r.validateStorageCreationDirective(ctx, wf, directive); err != nil {
-				return err
-			}
 
 		case "copy_in", "copy_out":
 			if err := r.validateStagingDirective(ctx, wf, directive); err != nil {
@@ -325,9 +357,6 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 
 		case "create_persistent":
 			createPersistentCount++
-			if err := r.validateStorageCreationDirective(ctx, wf, directive); err != nil {
-				return err
-			}
 
 		case "delete_persistent":
 			deletePersistentCount++
@@ -393,26 +422,6 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	if err := validateStagingArgument(args["destination"]); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-// validateStorageCreationDirective validates the jobdw/create_persistent directive.
-func (r *NnfWorkflowReconciler) validateStorageCreationDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
-	// Validate jobdw/create_persistent directive of the form...
-	//   #DW jobdw ... profile=SomeName ...
-	//   #DW create_persistent ... profile=SomeName ...
-
-	args, err := dwdparse.BuildArgsMap(directive)
-	if err != nil {
-		return err
-	}
-
-	if _, err := findProfileToUse(ctx, r.Client, args); err != nil {
-		return err
-	}
-
-	// Validate other parts...
 
 	return nil
 }
@@ -484,7 +493,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 		if breakThisDown == cmdElements[1] {
 
 			lifetime := "job"
-			dwdName := fmt.Sprintf("%s-%d", workflow.Name, dwIndex)
+			dwdName := createDirectiveBreakdownName(workflow, dwIndex)
 			switch cmdElements[1] {
 			case "create_persistent":
 				lifetime = "persistent"
@@ -530,11 +539,11 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 			}
 
 			if result == controllerutil.OperationResultCreated {
-				log.Info("Created breakdown", "directiveBreakdown", directiveBreakdown.Spec.DW.DWDirective)
+				log.Info("Created DirectiveBreakdown", "name", directiveBreakdown.Name)
 			} else if result == controllerutil.OperationResultNone {
 				// no change
 			} else {
-				log.Info("Updated breakdown", "directiveBreakdown", directiveBreakdown.Spec.DW.DWDirective)
+				log.Info("Updated DirectiveBreakdown", "name", directiveBreakdown.Name)
 			}
 
 			// The directive's command has been matched, no need to look at the other breakDownCommands
@@ -665,8 +674,10 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		return nil, err
 	}
 
-	nnfStorageProfile, err := findProfileToUse(ctx, r.Client, dwArgs)
+	pinnedName, pinnedNamespace := getStorageReferenceNameFromDBD(d)
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {
+		log.Error(err, "Unable to find pinned NnfStorageProfile", "name", pinnedName)
 		return nil, err
 	}
 
@@ -723,11 +734,22 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	}
 
 	if result == controllerutil.OperationResultCreated {
-		log.Info("Created nnfStorage", "name", nnfStorage.Name)
+		log.Info("Created NnfStorage", "name", nnfStorage.Name)
 	} else if result == controllerutil.OperationResultNone {
 		// no change
 	} else {
-		log.Info("Updated nnfStorage", "name", nnfStorage.Name)
+		log.Info("Updated NnfStorage", "name", nnfStorage.Name)
+	}
+
+	// Let this NnfStorage have ownership over the NnfStorageProfile it is using.
+	result, err = setPinnedProfileOwnership(ctx, nnfStorage, r.Client, r.Scheme, nnfStorageProfile)
+	if err != nil {
+		if !apierrors.IsConflict(err) {
+			log.Error(err, "Unable to add new owner to NnfStorageProfile", "name", nnfStorageProfile.GetName())
+		}
+		return nil, err
+	} else if result != controllerutil.OperationResultNone {
+		log.Info("Updated NnfStorageProfile", "name", nnfStorageProfile.GetName())
 	}
 
 	return nnfStorage, nil
@@ -1194,7 +1216,7 @@ func (r *NnfWorkflowReconciler) handlePreRunState(ctx context.Context, workflow 
 				}
 
 				// Determine the name/namespace to use based on the directive
-				name, namespace := getStorageReferenceName(workflow, driverStatus.DWDIndex)
+				name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, driverStatus.DWDIndex)
 
 				access.Spec.StorageReference = corev1.ObjectReference{
 					// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
@@ -1445,7 +1467,7 @@ func (r *NnfWorkflowReconciler) handlePostRunState(ctx context.Context, workflow
 
 		access.Spec.DesiredState = "unmounted"
 		if err := r.Update(ctx, &access); err != nil {
-			if !errors.IsConflict(err) {
+			if !apierrors.IsConflict(err) {
 				return ctrl.Result{}, err
 			}
 		}

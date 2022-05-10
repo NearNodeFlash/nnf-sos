@@ -86,6 +86,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		}).ShouldNot(Succeed())
 
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
+		profExpected := &nnfv1alpha1.NnfStorageProfile{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
+		}).ShouldNot(Succeed())
 	})
 
 	getErroredDriverStatus := func(workflow *dwsv1alpha1.Workflow) *dwsv1alpha1.WorkflowDriverStatus {
@@ -144,6 +148,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			AfterEach(func() {
 				Expect(k8sClient.Delete(context.TODO(), storageProfile2)).To(Succeed())
+				profExpected := &nnfv1alpha1.NnfStorageProfile{}
+				Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile2), profExpected)
+				}).ShouldNot(Succeed())
 			})
 
 			It("Fails to achieve proposal state when more than one default profile exists", func() {
@@ -194,55 +202,44 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 		})
 
-		It("Implicit use of default profile", func() {
-			workflow.Spec.DWDirectives = []string{
-				"#DW jobdw name=test type=lustre capacity=1GiB",
-			}
+		JustAfterEach(func() {
+			By("Verify workflow achieves proposal state with pinned profile")
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
+			workflowAfter := &dwsv1alpha1.Workflow{}
 			Eventually(func(g Gomega) error {
-				expected := &dwsv1alpha1.Workflow{}
-				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
-				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
+				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(workflowAfter) == nil) {
 					return nil
 				}
 				return fmt.Errorf("ready state not achieved")
 			}).Should(Succeed(), "achieve ready state")
+
+			By("Verify that one DirectiveBreakdown was created")
+			Expect(workflowAfter.Status.DirectiveBreakdowns).To(HaveLen(1))
+			By("Verify its pinned profile")
+			pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflowAfter, 0)
+			// The profile begins life with the workflow as the owner.
+			Expect(verifyPinnedProfile(context.TODO(), k8sClient, pinnedNamespace, pinnedName, workflowAfter)).To(Succeed())
+		})
+
+		It("Implicit use of default profile", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+			}
 		})
 
 		It("Named profile, which happens to also be the default", func() {
 			workflow.Spec.DWDirectives = []string{
 				fmt.Sprintf("#DW jobdw name=test profile=%s type=lustre capacity=1GiB", storageProfile.GetName()),
 			}
-
-			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
-
-			Eventually(func(g Gomega) error {
-				expected := &dwsv1alpha1.Workflow{}
-				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
-				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
-					return nil
-				}
-				return fmt.Errorf("ready state not achieved")
-			}).Should(Succeed(), "achieve ready state")
 		})
 
 		It("Named profile", func() {
 			workflow.Spec.DWDirectives = []string{
 				fmt.Sprintf("#DW jobdw name=test profile=%s type=lustre capacity=1GiB", profNames[0]),
 			}
-
-			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
-
-			Eventually(func(g Gomega) error {
-				expected := &dwsv1alpha1.Workflow{}
-				g.Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
-				if (expected.Status.Ready == true) && (expected.Status.State == dwsv1alpha1.StateProposal.String()) && (getErroredDriverStatus(expected) == nil) {
-					return nil
-				}
-				return fmt.Errorf("ready state not achieved")
-			}).Should(Succeed(), "achieve ready state")
 		})
 	})
 

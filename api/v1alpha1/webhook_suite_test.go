@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -52,8 +53,22 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
+type envSetting struct {
+	envVar string
+	value  string
+}
+
+var envVars = []envSetting{
+	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
+}
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	// Setup environment variables for the test
+	for _, v := range envVars {
+		os.Setenv(v.envVar, v.value)
+	}
 
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Webhook Suite",

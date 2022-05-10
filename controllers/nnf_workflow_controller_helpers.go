@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"strings"
 
 	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
@@ -53,8 +54,13 @@ func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 }
 
+// createDirectiveBreakdownName returns a DBD name for the #DW directive at the specified index
+func createDirectiveBreakdownName(workflow *dwsv1alpha1.Workflow, dwIndex int) string {
+	return fmt.Sprintf("%s-%d", workflow.Name, dwIndex)
+}
+
 // Returns the <name, namespace> pair for the #DW directive at the specified index
-func getStorageReferenceName(workflow *dwsv1alpha1.Workflow, dwdIndex int) (string, string) {
+func getStorageReferenceNameFromWorkflowActual(workflow *dwsv1alpha1.Workflow, dwdIndex int) (string, string) {
 
 	directive := workflow.Spec.DWDirectives[dwdIndex]
 	p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives were validated in proposal
@@ -62,7 +68,7 @@ func getStorageReferenceName(workflow *dwsv1alpha1.Workflow, dwdIndex int) (stri
 	var name, namespace string
 
 	switch p["command"] {
-	case "persistentdw":
+	case "persistentdw", "create_persistent", "delete_persistent":
 		name = p["name"]
 		namespace = workflow.Namespace
 	default:
@@ -70,5 +76,36 @@ func getStorageReferenceName(workflow *dwsv1alpha1.Workflow, dwdIndex int) (stri
 		namespace = workflow.Status.DirectiveBreakdowns[dwdIndex].Namespace
 	}
 
+	return name, namespace
+}
+
+// Returns the intended <name, namespace> pair for the #DW directive at the specified index
+func getStorageReferenceNameFromWorkflowIntended(workflow *dwsv1alpha1.Workflow, dwdIndex int) (string, string) {
+
+	directive := workflow.Spec.DWDirectives[dwdIndex]
+	p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives were validated in proposal
+
+	var name string
+	namespace := workflow.Namespace
+	switch p["command"] {
+	case "persistentdw", "create_persistent", "delete_persistent":
+		name = p["name"]
+	default:
+		name = createDirectiveBreakdownName(workflow, dwdIndex)
+	}
+
+	return name, namespace
+}
+
+// Returns the <name, namespace> pair for the #DW directive in the given DirectiveBreakdown
+func getStorageReferenceNameFromDBD(dbd *dwsv1alpha1.DirectiveBreakdown) (string, string) {
+
+	var name string
+	namespace := dbd.Namespace
+	if dbd.Spec.Lifetime == dwsv1alpha1.DirectiveLifetimePersistent {
+		name = dbd.Spec.Name
+	} else {
+		name = dbd.Name
+	}
 	return name, namespace
 }

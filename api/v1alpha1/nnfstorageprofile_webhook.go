@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -57,6 +58,19 @@ func (r *NnfStorageProfile) ValidateCreate() error {
 func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) error {
 	nnfstorageprofilelog.V(1).Info("validate update", "name", r.Name)
 
+	obj := old.(*NnfStorageProfile)
+	if obj.Data.Pinned {
+		// Allow metadata to be updated, for things like finalizers,
+		// ownerReferences, and labels, but do not allow Data to be
+		// updated.
+		if !reflect.DeepEqual(r.Data, obj.Data) {
+			msg := "Update on pinned resource not allowed"
+			err := fmt.Errorf(msg)
+			nnfstorageprofilelog.Error(err, "invalid")
+			return err
+		}
+	}
+
 	if err := r.validateContent(); err != nil {
 		nnfstorageprofilelog.Error(err, "invalid NnfStorageProfile resource")
 		return err
@@ -74,6 +88,9 @@ func (r *NnfStorageProfile) ValidateDelete() error {
 
 func (r *NnfStorageProfile) validateContent() error {
 
+	if r.Data.Default && r.Data.Pinned {
+		return fmt.Errorf("The NnfStorageProfile cannot be both default and pinned.")
+	}
 	if err := r.validateContentLustre(); err != nil {
 		return err
 	}

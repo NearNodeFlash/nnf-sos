@@ -61,6 +61,10 @@ type NnfStorageProfileData struct {
 	// +kubebuilder:default:=false
 	Default bool `json:"default,omitempty"`
 
+	// Pinned is true if this instance is an immutable copy
+	// +kubebuilder:default:=false
+	Pinned bool `json:"pinned,omitempty"`
+
 	// LustreStorage defines the Lustre-specific configuration
 	LustreStorage *NnfStorageProfileLustreData `json:"lustreStorage,omitempty"`
 
