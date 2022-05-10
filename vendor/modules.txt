@@ -187,7 +187,7 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220503203036-2ccaae06833b
+# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220510143827-da96756d3b5a
 ## explicit
 github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases
@@ -199,7 +199,7 @@ github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1
 github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases
-# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220502210138-01707bf185a5
+# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220510143247-0c4cdb680dd4
 ## explicit
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore
 github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme

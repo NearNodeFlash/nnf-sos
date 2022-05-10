@@ -176,17 +176,29 @@ spec:
                     mountPath:
                       description: Client path for mount target
                       type: string
+                    options:
+                      description: Options for the file system mount
+                      type: string
+                    targetType:
+                      description: TargetType determines whether the mount target
+                        is a file or a directory
+                      enum:
+                      - file
+                      - directory
+                      type: string
                     type:
                       description: mount type
                       enum:
                       - lustre
                       - xfs
                       - gfs2
-                      - bind
+                      - none
                       type: string
                   required:
                   - device
                   - mountPath
+                  - options
+                  - targetType
                   - type
                   type: object
                 minItems: 1

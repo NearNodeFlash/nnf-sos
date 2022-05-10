@@ -419,7 +419,7 @@ var _ = Describe("Integration Test", func() {
 		}
 
 		var wfTests = []wfTestConfiguration{
-			//{"#DW jobdw name=jobdw-xfs    type=raw    capacity=1Gib", 1}, // RABSW-843: Raw device support. Matt's working on this and once resolved this test can be enabled
+			{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, 1},
 
 			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, 1},
 			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, 1},

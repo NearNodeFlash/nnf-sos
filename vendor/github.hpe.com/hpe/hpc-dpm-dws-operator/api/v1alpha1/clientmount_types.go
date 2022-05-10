@@ -116,12 +116,19 @@ type ClientMountInfo struct {
 	// Client path for mount target
 	MountPath string `json:"mountPath"`
 
+	// Options for the file system mount
+	Options string `json:"options"`
+
 	// Description of the device to mount
 	Device ClientMountDevice `json:"device"`
 
 	// mount type
-	// +kubebuilder:validation:Enum=lustre;xfs;gfs2;bind
+	// +kubebuilder:validation:Enum=lustre;xfs;gfs2;none
 	Type string `json:"type"`
+
+	// TargetType determines whether the mount target is a file or a directory
+	// +kubebuilder:validation:Enum=file;directory
+	TargetType string `json:"targetType"`
 
 	// Compute is the name of the compute node which shares this mount if present. Empty if not shared.
 	Compute string `json:"compute,omitempty"`

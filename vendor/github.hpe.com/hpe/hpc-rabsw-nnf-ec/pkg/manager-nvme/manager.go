@@ -319,10 +319,14 @@ func (s *Storage) initialize() error {
 
 	s.physicalFunctionControllerId = ctrl.ControllerId
 
-	s.serialNumber = string(ctrl.SerialNumber[:])
-	s.modelNumber = string(ctrl.ModelNumber[:])
-	s.firmwareRevision = string(ctrl.FirmwareRevision[:])
-	s.qualifiedName = string(ctrl.NVMSubsystemNVMeQualifiedName[:])
+	trimTrailingWhitespace := func(val []byte) string {
+		return strings.TrimRight(string(val), " ")
+	}
+
+	s.serialNumber = trimTrailingWhitespace(ctrl.SerialNumber[:])
+	s.modelNumber = trimTrailingWhitespace(ctrl.ModelNumber[:])
+	s.firmwareRevision = trimTrailingWhitespace(ctrl.FirmwareRevision[:])
+	s.qualifiedName = trimTrailingWhitespace(ctrl.NVMSubsystemNVMeQualifiedName[:])
 
 	capacityToUint64s := func(c [16]byte) (lo uint64, hi uint64) {
 		lo, hi = 0, 0

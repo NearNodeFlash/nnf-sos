@@ -223,16 +223,33 @@ func (r *ClientMountReconciler) mount(ctx context.Context, clientMountInfo dwsv1
 		return err
 	}
 
-	// Create the mount directory
-	output, err := r.run("mkdir -p " + clientMountInfo.MountPath)
-	if err != nil {
-		log.Error(err, "Could not create mount directory", "mount path", clientMountInfo.MountPath, "device", device, "Error output", output)
-		return err
+	// Create the mount file or directory
+	switch clientMountInfo.TargetType {
+	case "directory":
+		if err := r.mkdir(clientMountInfo.MountPath); err != nil {
+			log.Error(err, "Could not create mount directory", "mount path", clientMountInfo.MountPath, "device", device)
+			return err
+		}
+	case "file":
+		// Create the parent directory and then the file
+		if err := r.mkdir(filepath.Dir(clientMountInfo.MountPath)); err != nil {
+			log.Error(err, "Could not create mount parent directory", "mount path", clientMountInfo.MountPath, "device", device)
+			return err
+		}
+
+		if err := r.createFile(clientMountInfo.MountPath); err != nil {
+			log.Error(err, "Could not create mount file", "mount path", clientMountInfo.MountPath, "device", device)
+			return err
+		}
 	}
 
 	// Run the mount command
 	mountCmd := "mount -t " + clientMountInfo.Type + " " + device + " " + clientMountInfo.MountPath
-	output, err = r.run(mountCmd)
+	if clientMountInfo.Options != "" {
+		mountCmd = mountCmd + " -o " + clientMountInfo.Options
+	}
+
+	output, err := r.run(mountCmd)
 	if err != nil {
 		log.Info("Could not unmount file system", "mount path", clientMountInfo.MountPath, "device", device, "Error output", output)
 		return err
@@ -343,6 +360,24 @@ func (r *ClientMountReconciler) checkMount(mountPath string) (dwsv1alpha1.Client
 	}
 
 	return dwsv1alpha1.ClientMountStateUnmounted, nil
+}
+
+func (r *ClientMountReconciler) createFile(path string) error {
+	if r.Mock {
+		r.Log.Info("Touch file", "Path", path)
+		return nil
+	}
+
+	return os.WriteFile(path, []byte(""), 0644)
+}
+
+func (r *ClientMountReconciler) mkdir(path string) error {
+	if r.Mock {
+		r.Log.Info("Mkdir", "Path", path)
+		return nil
+	}
+
+	return os.MkdirAll(path, 0755)
 }
 
 // run runs a command on the host OS and returns the output as a string.

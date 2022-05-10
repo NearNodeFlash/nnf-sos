@@ -173,15 +173,34 @@ func (f *FileSystemLvm) Delete() error {
 }
 
 func (f *FileSystemLvm) Mount(mountpoint string) error {
+	if _, err := f.run(fmt.Sprintf("mkdir -p %s", filepath.Dir(mountpoint))); err != nil {
+		return err
+	}
+
+	if _, err := f.run(fmt.Sprintf("touch %s", mountpoint)); err != nil {
+		return err
+	}
+
+	if _, err := f.run(fmt.Sprintf("mount --bind %s %s", f.devPath(), mountpoint)); err != nil {
+		return err
+	}
+
 	f.mountpoint = mountpoint
-	_, err := f.run(fmt.Sprintf("ln -s %s %s", f.devPath(), mountpoint))
-	return err
+
+	return nil
 }
 
 func (f *FileSystemLvm) Unmount() error {
-	_, err := f.run(fmt.Sprintf("unlink %s", f.mountpoint))
+	if f.mountpoint == "" {
+		return nil
+	}
+
+	if _, err := f.run(fmt.Sprintf("umount %s", f.mountpoint)); err != nil {
+		return err
+	}
+
 	f.mountpoint = ""
-	return err
+	return nil
 }
 
 func (f *FileSystemLvm) devPath() string {

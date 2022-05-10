@@ -464,6 +464,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 	for _, client := range clients {
 		mountInfo := dwsv1alpha1.ClientMountInfo{}
 		mountInfo.Type = nnfStorage.Spec.FileSystemType
+		mountInfo.TargetType = "directory"
 		mountInfo.MountPath = access.Spec.MountPath
 		mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeLustre
 		mountInfo.Device.Lustre = &dwsv1alpha1.ClientMountDeviceLustre{}
@@ -520,14 +521,21 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			mountInfo.Device.DeviceReference.ObjectReference.Namespace = nnfNodeStorage.Namespace
 			mountInfo.Device.DeviceReference.Data = i
 
+			if nnfStorage.Spec.FileSystemType == "raw" {
+				mountInfo.Type = "none"
+				mountInfo.TargetType = "file"
+				mountInfo.Options = "bind"
+			} else {
+				mountInfo.TargetType = "directory"
+				mountInfo.Type = nnfStorage.Spec.FileSystemType
+			}
+
 			// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
 			// to the NnfNodeStorage resource so the client mounter can access the swordfish objects
 			if access.Spec.ClientReference == (corev1.ObjectReference{}) {
-				mountInfo.Type = nnfStorage.Spec.FileSystemType
 				mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeReference
 				mountInfo.MountPath = filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(i))
 			} else {
-				mountInfo.Type = nnfStorage.Spec.FileSystemType
 				mountInfo.MountPath = access.Spec.MountPath
 				mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeLVM
 				mountInfo.Device.LVM = &dwsv1alpha1.ClientMountDeviceLVM{}

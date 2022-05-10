@@ -364,16 +364,6 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 
 	allocationStatus := &nodeStorage.Status.Allocations[index]
 
-	// Raw storage doesn't need a file system
-	if nodeStorage.Spec.FileSystemType == "raw" {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
-			allocationStatus.FileShare.Status = nnfv1alpha1.ResourceReady
-		})
-
-		return nil, nil
-	}
-
 	// Check whether everything in the spec is filled in to make the FS. Lustre
 	// MDTs and OSTs won't have their MgsNode field filled in until after the MGT
 	// is created.
@@ -400,8 +390,14 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		})
 	}
 
+	var fsType string
+	if nodeStorage.Spec.FileSystemType == "raw" {
+		fsType = "lvm"
+	} else {
+		fsType = nodeStorage.Spec.FileSystemType
+	}
 	oem := nnfserver.FileSystemOem{
-		Type: nodeStorage.Spec.FileSystemType,
+		Type: fsType,
 
 		// If not lustre, then these will be appropriate zero values.
 		Name:       nodeStorage.Spec.LustreStorage.FileSystemName,
