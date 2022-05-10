@@ -7,7 +7,7 @@ import (
 	"reflect"
 
 	"github.com/google/uuid"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
@@ -329,6 +329,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Spec: lusv1alpha1.LustreFileSystemSpec{
 					Name:      "maui",
 					MountRoot: "/lus/maui",
+					MgsNids:   []string{"10.0.0.1@tcp"},
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())

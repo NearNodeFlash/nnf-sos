@@ -57,16 +57,9 @@ func (r *LustreFileSystem) ValidateCreate() error {
 	return r.validateLustreFileSystem()
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LustreFileSystem) ValidateUpdate(old runtime.Object) error {
-	lustrefilesystemlog.Info("validate update", "name", r.Name)
-
-	return r.validateLustreFileSystem()
-}
-
 func (r *LustreFileSystem) validateLustreFileSystem() error {
 	var errList field.ErrorList
-	if err := r.validateMgsNid(); err != nil {
+	if err := r.validateMgsNids(); err != nil {
 		errList = append(errList, err)
 	}
 	if err := r.validateMountRoot(); err != nil {
@@ -84,22 +77,24 @@ func (r *LustreFileSystem) validateLustreFileSystem() error {
 	return nil
 }
 
-func (r *LustreFileSystem) validateMgsNid() *field.Error {
-	f := field.NewPath("spec").Child("mgsNid")
-	nid := r.Spec.MgsNid
-	if !strings.Contains(nid, "@") {
-		return field.Invalid(f, nid, "must be valid mgsNid format [HOST]@[INTERFACE]")
-	}
+func (r *LustreFileSystem) validateMgsNids() *field.Error {
 
-	hostname := strings.SplitN(nid, "@", 2)[0]
-	if net.ParseIP(hostname) != nil {
-		// Valid IP
-		return nil
-	}
+	for index, nid := range r.Spec.MgsNids {
+		f := field.NewPath("spec").Child("mgsNids").Index(index)
+		if !strings.Contains(nid, "@") {
+			return field.Invalid(f, nid, "must be valid mgsNid format [HOST]@[INTERFACE]")
+		}
 
-	_, err := url.Parse(hostname)
-	if err != nil {
-		return field.Invalid(f, nid, "invalid hostname format")
+		hostname := strings.SplitN(nid, "@", 2)[0]
+		if net.ParseIP(hostname) != nil {
+			// Valid IP
+			return nil
+		}
+
+		_, err := url.Parse(hostname)
+		if err != nil {
+			return field.Invalid(f, nid, "invalid hostname format")
+		}
 	}
 
 	return nil
@@ -113,6 +108,13 @@ func (r *LustreFileSystem) validateMountRoot() *field.Error {
 	}
 
 	return nil
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+func (r *LustreFileSystem) ValidateUpdate(old runtime.Object) error {
+	lustrefilesystemlog.Info("validate update", "name", r.Name)
+
+	return field.Invalid(field.NewPath("spec"), r.Spec, "specification is immutable")
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
