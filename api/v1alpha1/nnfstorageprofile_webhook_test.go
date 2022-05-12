@@ -37,6 +37,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		namespaceName                         = os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
 		pinnedResourceName                    = "test-pinned"
 		nnfProfile         *NnfStorageProfile = nil
+		newProfile         *NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -46,6 +47,8 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 				Namespace: namespaceName,
 			},
 		}
+
+		newProfile = &NnfStorageProfile{}
 	})
 
 	AfterEach(func() {
@@ -61,12 +64,14 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 	It("should accept default=true", func() {
 		nnfProfile.Data.Default = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(nnfProfile.Data.Default).To(BeTrue())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Default).To(BeTrue())
 	})
 	It("should accept default=false", func() {
 		nnfProfile.Data.Default = false
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(nnfProfile.Data.Default).ToNot(BeTrue())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Default).ToNot(BeTrue())
 	})
 
 	It("should accept externalMgs", func() {
@@ -76,7 +81,8 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(nnfProfile.Data.Default).ToNot(BeTrue())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Default).ToNot(BeTrue())
 	})
 
 	It("should accept combinedMgtMdt", func() {
@@ -84,7 +90,8 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 			CombinedMGTMDT: true,
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(nnfProfile.Data.Default).ToNot(BeTrue())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Default).ToNot(BeTrue())
 	})
 
 	It("should not accept combinedMgtMdt with externalMgs", func() {
@@ -115,11 +122,10 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		newRev := &NnfStorageProfile{}
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newRev)).To(Succeed())
-		Expect(newRev.Data.Pinned).To(BeTrue())
-		newRev.Data.Pinned = false
-		Expect(k8sClient.Update(context.TODO(), newRev)).ToNot(Succeed())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Pinned).To(BeTrue())
+		newProfile.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
 	})
 
 	It("Should allow modification of Meta in a pinned resource", func() {
@@ -131,17 +137,16 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		newRev := &NnfStorageProfile{}
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newRev)).To(Succeed())
-		Expect(newRev.Data.Pinned).To(BeTrue())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+		Expect(newProfile.Data.Pinned).To(BeTrue())
 		// A finalizer or ownerRef will interfere with deletion,
 		// so set a label, instead.
-		labels := newRev.GetLabels()
+		labels := newProfile.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
 		labels["profile-label"] = "profile-label"
-		newRev.SetLabels(labels)
-		Expect(k8sClient.Update(context.TODO(), newRev)).To(Succeed())
+		newProfile.SetLabels(labels)
+		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
 	})
 })
