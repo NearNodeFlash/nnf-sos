@@ -1,7 +1,7 @@
 FROM golang:1.17 AS builder
 
 # Set Go environment
-ENV GOPRIVATE="github.hpe.com"
+ENV GOPRIVATE="github.com"
 
 WORKDIR /workspace
 
@@ -27,6 +27,8 @@ WORKDIR /workspace
 COPY hack/ hack/
 COPY initiateContainerTest.sh .
 COPY Makefile .
+
+RUN echo "building test target after copy" && pwd && ls -al
 
 RUN go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest && \
     make manifests && make generate && make fmt &&  make vet && \
