@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
+	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // NnfResourceHealthType defines the health of an NNF resource.

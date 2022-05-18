@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: nnf-sos
-repo: github.hpe.com/hpe/hpc-rabsw-nnf-sos
+repo: github.com/NearNodeFlash/nnf-sos
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNode
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfStorage
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -32,7 +32,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNodeStorage
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - controller: true
   domain: cray.hpe.com
@@ -50,7 +50,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfJobStorageInstance
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -58,7 +58,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovement
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -74,7 +74,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfPersistentStorageInstance
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -82,7 +82,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovementWorkflow
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -91,7 +91,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfStorageProfile
-  path: github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true

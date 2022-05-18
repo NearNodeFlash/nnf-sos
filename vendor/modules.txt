@@ -13,8 +13,40 @@ github.com/Azure/go-autorest/autorest/date
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
+# github.com/HewlettPackard/dws v0.0.0-20220516154556-7138ec9b96ba
+## explicit
+github.com/HewlettPackard/dws/api/v1alpha1
+github.com/HewlettPackard/dws/config/crd/bases
+github.com/HewlettPackard/dws/config/webhook
+github.com/HewlettPackard/dws/controllers
+github.com/HewlettPackard/dws/mount-daemon/controllers
+github.com/HewlettPackard/dws/utils/dwdparse
 # github.com/HewlettPackard/structex v1.0.2
 github.com/HewlettPackard/structex
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c
+## explicit
+github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1
+github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
+# github.com/NearNodeFlash/nnf-ec v0.0.0-20220518125038-17176c02ce3f
+## explicit
+github.com/NearNodeFlash/nnf-ec/internal/kvstore
+github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
+github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
+github.com/NearNodeFlash/nnf-ec/pkg
+github.com/NearNodeFlash/nnf-ec/pkg/api
+github.com/NearNodeFlash/nnf-ec/pkg/common
+github.com/NearNodeFlash/nnf-ec/pkg/ec
+github.com/NearNodeFlash/nnf-ec/pkg/logging
+github.com/NearNodeFlash/nnf-ec/pkg/manager-event
+github.com/NearNodeFlash/nnf-ec/pkg/manager-fabric
+github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry
+github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries
+github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf
+github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme
+github.com/NearNodeFlash/nnf-ec/pkg/manager-server
+github.com/NearNodeFlash/nnf-ec/pkg/manager-telemetry
+github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common
+github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash v1.1.0
@@ -171,38 +203,6 @@ github.com/sigurn/utils
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.hpe.com/hpe/hpc-dpm-dws-operator v0.0.0-20220510143827-da96756d3b5a
-## explicit
-github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1
-github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases
-github.hpe.com/hpe/hpc-dpm-dws-operator/config/webhook
-github.hpe.com/hpe/hpc-dpm-dws-operator/controllers
-github.hpe.com/hpe/hpc-dpm-dws-operator/mount-daemon/controllers
-github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse
-# github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator v0.0.0-20220509152545-29ee510a0c4f
-## explicit
-github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1
-github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases
-# github.hpe.com/hpe/hpc-rabsw-nnf-ec v1.0.6-0.20220510143247-0c4cdb680dd4
-## explicit
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/kvstore
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/nvme
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/internal/switchtec/pkg/switchtec
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/api
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/common
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/logging
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-event
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-fabric
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-message-registry
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-message-registry/registries
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nvme
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-server
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-telemetry
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/common
-github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models
 # go.chromium.org/luci v0.0.0-20210915061045-7722a2154c29
 go.chromium.org/luci/common/runtime/goroutine
 # go.opencensus.io v0.23.0

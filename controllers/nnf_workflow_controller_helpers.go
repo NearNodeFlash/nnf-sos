@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	"github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse"
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/dwdparse"
 )
 
 // Returns the directive index with the 'name' argument matching name, or -1 if not found

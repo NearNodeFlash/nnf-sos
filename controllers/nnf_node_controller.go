@@ -41,13 +41,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
-	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
-	nvme "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nvme"
-	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
+	ec "github.com/NearNodeFlash/nnf-ec/pkg"
+	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
+	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
+	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
 const (
