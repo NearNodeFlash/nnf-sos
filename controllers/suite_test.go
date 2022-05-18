@@ -44,18 +44,18 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	lusv1alpha1 "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/api/v1alpha1"
-	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg"
-	"github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec"
-	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
+	"github.com/NearNodeFlash/nnf-ec/pkg/ec"
+	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
-	_ "github.hpe.com/hpe/hpc-dpm-dws-operator/config/crd/bases"
-	_ "github.hpe.com/hpe/hpc-dpm-dws-operator/config/webhook"
-	_ "github.hpe.com/hpe/hpc-rabsw-lustre-fs-operator/config/crd/bases"
+	_ "github.com/HewlettPackard/dws/config/crd/bases"
+	_ "github.com/HewlettPackard/dws/config/webhook"
+	_ "github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases"
 
-	dwsctrls "github.hpe.com/hpe/hpc-dpm-dws-operator/controllers"
-	dwsctrls_daemon "github.hpe.com/hpe/hpc-dpm-dws-operator/mount-daemon/controllers"
+	dwsctrls "github.com/HewlettPackard/dws/controllers"
+	dwsctrls_daemon "github.com/HewlettPackard/dws/mount-daemon/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

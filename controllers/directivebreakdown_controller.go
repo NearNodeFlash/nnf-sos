@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	"github.hpe.com/hpe/hpc-dpm-dws-operator/utils/dwdparse"
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/dwdparse"
 )
 
 // Define condition values

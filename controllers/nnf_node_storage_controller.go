@@ -39,15 +39,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	ec "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/ec"
-	nnf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-nnf"
-	nnfserver "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/manager-server"
+	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
+	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
+	nnfserver "github.com/NearNodeFlash/nnf-ec/pkg/manager-server"
 
-	openapi "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/common"
-	sf "github.hpe.com/hpe/hpc-rabsw-nnf-ec/pkg/rfsf/pkg/models"
+	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
+	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha1 "github.hpe.com/hpe/hpc-dpm-dws-operator/api/v1alpha1"
-	nnfv1alpha1 "github.hpe.com/hpe/hpc-rabsw-nnf-sos/api/v1alpha1"
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
 const (
