@@ -17,22 +17,6 @@ $ git submodule status
 
 ***nnf-ec*** (NNF Element Controller) is a vendor-ed module within within ***nnf-sos*** that provides hardware access functions for the NNF hardware. In order for this code to function correctly within a k8s pod when it performs storage operations on Rabbit hardware, a set of base OS configuration operations is required. Those operations are encapsulated in the `/rabbit-os-mods/nnf-ec.sh` script. This script sets up various OS configuration files on Rabbit that are required for nnf-ec.
 
-### Clone
-
-To clone this project, use the additional `--recurse-submodules` option to retrieve its submodules:
-
-```bash
-git clone --recurse-submodules git@github.hpe.com:hpe/hpc-rabsw-nnf-sos.git
-```
-
-### Update submodules
-
-To update your submodules as external repos change run:
-
-```bash
-git submodule update --remote
-```
-
 ## Build
 
 ---
@@ -43,10 +27,11 @@ The makefile controls most functions within ***nnf-sos*** including: Development
 make help
 ```
 
-In your local machine's environment, `make` builds the executable. This is useful as a sanity check to verify that code compiles and it is much quicker than the docker builds.
+In your local machine's environment, `make` builds the executable. This is useful as a sanity check to verify that code compiles and it is much quicker than the docker builds. Similarly, `make test` runs the tests in your local OS rather than in the docker container.
 
 ```bash
 make
+make test
 ```
 
 ### Docker builds
@@ -137,7 +122,7 @@ make deploy
 
 ### Deploy to DP0/DP1a Cluster
 
-We don't have local container registries configured yet for our DPxx clusters. Therefore, we use artifactory to be the container registry. This means that in order to deploy to a DPxx cluster, you must push your branch to github.hpe.com to force `jenkins` to build it and save the resulting docker image in artifactory.
+We don't have local container registries configured yet for our DPxx clusters. Therefore, we use artifactory to be the container registry. This means that in order to deploy to a DPxx cluster, you must push your branch to github.com to force `jenkins` to build it and save the resulting docker image in artifactory.
 
 The artifactory path to the image is built into the makefile, but the version tag that `jenkins` applies to each docker image contains a timestamp which is impossible to reliably calculate. The `setDevVersion.sh` script instead queries artifactory to look for the tag that contains the `git SHA` of your local branch. If found, the `VERSION` and `IMAGE_TAG_BASE` environment variables are set such that each member of the cluster can `docker pull` the image form artifactory into its local docker cache.
 
