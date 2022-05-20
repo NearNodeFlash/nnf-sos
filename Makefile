@@ -54,7 +54,7 @@ GIT_TAG=$(shell git rev-parse --short HEAD)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # cray.com/nnf-sos-bundle:$VERSION and cray.com/nnf-sos-catalog:$VERSION.
-IMAGE_TAG_BASE ?= arti.dev.cray.com/rabsw-docker-master-local/cray-dp-nnf-sos
+IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/cray-dp-nnf-sos
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -234,7 +234,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	time ${DOCKER} build -t ${IMG} .
+	time ${DOCKER} build --build-arg FAILFAST -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
 	${DOCKER} push ${IMG}

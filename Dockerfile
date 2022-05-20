@@ -38,6 +38,7 @@ ENTRYPOINT ["/bin/sh"]
 FROM builder as testing
 WORKDIR /workspace
 
+ARG FAILFAST
 COPY hack/ hack/
 COPY initiateContainerTest.sh .
 COPY Makefile .
