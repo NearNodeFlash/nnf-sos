@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Important: Run "make" to regenerate code after modifying this file
@@ -58,9 +59,6 @@ type ServersSpec struct {
 
 // ServersStatusStorage is the status of the allocations on a storage
 type ServersStatusStorage struct {
-	// The name of the storage
-	Name string `json:"name"`
-
 	// Allocation size in bytes
 	AllocationSize int64 `json:"allocationSize"`
 }
@@ -71,7 +69,7 @@ type ServersStatusAllocationSet struct {
 	Label string `json:"label"`
 
 	// List of storage resources that have allocations
-	Storage []ServersStatusStorage `json:"storage"`
+	Storage map[string]ServersStatusStorage `json:"storage"`
 }
 
 // ServersStatus specifies whether the Servers has achieved the
@@ -102,6 +100,16 @@ type ServersList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Servers `json:"items"`
+}
+
+func (s *ServersList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range s.Items {
+		objectList = append(objectList, &s.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

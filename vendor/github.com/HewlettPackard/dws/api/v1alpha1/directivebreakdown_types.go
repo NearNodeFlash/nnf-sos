@@ -22,6 +22,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -141,6 +142,16 @@ type DirectiveBreakdownList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DirectiveBreakdown `json:"items"`
+}
+
+func (d *DirectiveBreakdownList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range d.Items {
+		objectList = append(objectList, &d.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

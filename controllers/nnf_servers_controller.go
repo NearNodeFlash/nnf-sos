@@ -137,14 +137,17 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// In the case where WLM has not filled in Servers Spec information generate a status update
 	// to initialize the LastUpdate timestamp but don't proceed to create the Status section
 	// since there is nothing to report status on.
-	if len(servers.Spec.AllocationSets) == 0 && servers.Status.LastUpdate == nil {
-		servers.Status.Ready = false
+	if len(servers.Spec.AllocationSets) == 0 {
+		if servers.Status.LastUpdate == nil {
+			servers.Status.Ready = false
+			return r.statusUpdate(ctx, servers, false)
+		}
 
-		return r.statusUpdate(ctx, servers, false)
+		return ctrl.Result{}, nil
 	}
 
 	// Initialize the status section if it isn't filled in
-	if len(servers.Status.AllocationSets) != len(servers.Spec.AllocationSets) {
+	if len(servers.Status.AllocationSets) == 0 {
 		servers.Status.Ready = false
 		return r.statusSetEmpty(ctx, servers)
 	}
@@ -212,29 +215,21 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
-		// the allocated size
-		for i, nnfNodeStorageRef := range allocationSet.NodeStorageReferences {
-			nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-			namespacedName := types.NamespacedName{
-				Name:      nnfNodeStorageRef.Name,
-				Namespace: nnfNodeStorageRef.Namespace,
-			}
+		listOptions := []client.ListOption{
+			dwsv1alpha1.MatchingOwner(nnfStorage),
+			client.MatchingLabels{nnfv1alpha1.AllocationSetLabel: label},
+		}
 
-			// Ignore any uninitialized references
-			if namespacedName.Name == "" {
-				ready = false
-				continue
-			}
+		nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
+		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+			return ctrl.Result{}, err
+		}
 
-			if err := r.Get(ctx, namespacedName, nnfNodeStorage); err != nil {
-				if apierrors.IsNotFound(err) {
-					servers.Status.AllocationSets[serversIndex].Storage[i].AllocationSize = 0
-					continue
-				}
+		if len(nnfNodeStorageList.Items) != len(nnfStorage.Spec.AllocationSets[storageIndex].Nodes) {
+			ready = false
+		}
 
-				return ctrl.Result{}, err
-			}
-
+		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 			// There can be multiple allocations per Rabbit. Add them all up and present a
 			// single size for the servers resource
 			var allocationSize int64
@@ -245,7 +240,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 				allocationSize += nnfNodeAllocation.CapacityAllocated
 			}
 
-			servers.Status.AllocationSets[serversIndex].Storage[i].AllocationSize = allocationSize
+			servers.Status.AllocationSets[serversIndex].Storage[nnfNodeStorage.Namespace] = dwsv1alpha1.ServersStatusStorage{AllocationSize: allocationSize}
 		}
 
 		for _, storageStatus := range servers.Status.AllocationSets[serversIndex].Storage {
@@ -286,8 +281,9 @@ func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv
 	for _, allocationSetSpec := range servers.Spec.AllocationSets {
 		allocationSetStatus := dwsv1alpha1.ServersStatusAllocationSet{}
 		allocationSetStatus.Label = allocationSetSpec.Label
+		allocationSetStatus.Storage = make(map[string]dwsv1alpha1.ServersStatusStorage)
 		for _, storage := range allocationSetSpec.Storage {
-			allocationSetStatus.Storage = append(allocationSetStatus.Storage, dwsv1alpha1.ServersStatusStorage{Name: storage.Name, AllocationSize: 0})
+			allocationSetStatus.Storage[storage.Name] = dwsv1alpha1.ServersStatusStorage{AllocationSize: 0}
 		}
 
 		servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)

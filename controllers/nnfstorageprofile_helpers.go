@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -107,7 +108,12 @@ func setPinnedProfileOwnership(ctx context.Context, newOwner metav1.Object, clnt
 	// Clear out the previous owner, then set the new owner.
 	newOwnerRefs := make([]metav1.OwnerReference, 0)
 	nnfStorageProfile.SetOwnerReferences(newOwnerRefs)
-	controllerutil.SetOwnerReference(newOwner, nnfStorageProfile, clntScheme)
+	controllerutil.SetControllerReference(newOwner, nnfStorageProfile, clntScheme)
+
+	// Add Owner labels for delete. This will clear the existing owner labels if
+	// there are any
+	dwsv1alpha1.AddOwnerLabels(nnfStorageProfile, newOwner)
+
 	err := clnt.Update(ctx, nnfStorageProfile)
 	if err != nil {
 		return result, err
@@ -147,7 +153,9 @@ func pinProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Sch
 	}
 	newProfile.Data.Pinned = true
 	newProfile.Data.Default = false
-	controllerutil.SetOwnerReference(owner, newProfile, clntScheme)
+	controllerutil.SetControllerReference(owner, newProfile, clntScheme)
+
+	dwsv1alpha1.AddOwnerLabels(newProfile, owner)
 	err = clnt.Create(ctx, newProfile)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {

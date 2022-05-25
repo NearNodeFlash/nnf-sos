@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ComputesData defines the compute nodes that are assigned to the workflow
@@ -46,6 +47,16 @@ type ComputesList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Computes `json:"items"`
+}
+
+func (c *ComputesList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range c.Items {
+		objectList = append(objectList, &c.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

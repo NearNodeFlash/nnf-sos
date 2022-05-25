@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // IMPORTANT: Run "make" to regenerate code after modifying this file
@@ -178,6 +179,16 @@ type NnfNodeStorageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NnfNodeStorage `json:"items"`
+}
+
+func (n *NnfNodeStorageList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range n.Items {
+		objectList = append(objectList, &n.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

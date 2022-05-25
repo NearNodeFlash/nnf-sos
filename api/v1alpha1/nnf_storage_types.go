@@ -20,8 +20,12 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	AllocationSetLabel = "nnf.cray.hpe.com/allocationset"
 )
 
 // NnfStorageAllocationNodes identifies the node and properties of the allocation to make on that node
@@ -100,9 +104,6 @@ type NnfStorageAllocationSetStatus struct {
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
-
-	// NodeStorageReferences is the list of object references to the child NnfNodeStorage resources
-	NodeStorageReferences []corev1.ObjectReference `json:"nodeStorageReferences"`
 }
 
 // NnfStorageStatus defines the observed status of NNF Storage.
@@ -138,6 +139,16 @@ type NnfStorageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NnfStorage `json:"items"`
+}
+
+func (n *NnfStorageList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range n.Items {
+		objectList = append(objectList, &n.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {
