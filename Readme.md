@@ -139,7 +139,7 @@ git checkout master
 git pull --recurse-submodules
 
 # set the environment variable to the pre-built docker image in
-# https://arti.dev.cray.com/artifactory/rabsw-docker-master-local/cray-dp-nnf-sos/
+# https://arti.dev.cray.com/artifactory/rabsw-docker-master-local/nnf-sos/
 source ./setDevVersion.sh
 
 # Deploy the latest master build

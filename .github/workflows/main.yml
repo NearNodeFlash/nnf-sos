@@ -1,11 +1,10 @@
 name: Docker build and push
 
 on:
- push:
-   branches: [ master ]
- pull_request:
-   branches: [ master ]
- workflow_dispatch:
+  push:
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
 
 env:
   # TEST_TARGET: Name of the testing target in the Dockerfile
