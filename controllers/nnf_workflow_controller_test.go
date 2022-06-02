@@ -403,12 +403,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
 						"Namespace": Equal(workflow.Namespace),
 					}))
-
-				By("expect NnfAccess to be ready")
-				access := &nnfv1alpha1.NnfAccess{}
-				Expect(dm.Spec.Destination.Access).ToNot(BeNil())
-				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dm.Spec.Destination.Access.Name, Namespace: dm.Spec.Destination.Access.Namespace}, access)).To(Succeed())
-				Expect(access.Status.Ready).To(BeTrue())
 			})
 		})
 
@@ -541,12 +535,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Name":      Equal(persistentStorageName),
 						"Namespace": Equal(workflow.Namespace),
 					}))
-
-				By("expect NnfAccess to be ready")
-				access := &nnfv1alpha1.NnfAccess{}
-				Expect(dm.Spec.Destination.Access).ToNot(BeNil())
-				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dm.Spec.Destination.Access.Name, Namespace: dm.Spec.Destination.Access.Namespace}, access)).To(Succeed())
-				Expect(access.Status.Ready).To(BeTrue())
 			})
 		})
 	}) // When("Using copy_in directives", func()

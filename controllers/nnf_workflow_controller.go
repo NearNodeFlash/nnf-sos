@@ -938,13 +938,17 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 
 			fsType = storage.Spec.FileSystemType
 
+			if fsType == "lustre" {
+				return storageReference, nil, path, nil, nil
+			}
+
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
 			teardownState := ""
 			if parameters["command"] == "copy_in" {
 				teardownState = dwsv1alpha1.StateDataIn.String()
 
-				if fsType == "gfs2" { // TODO: Should this include luster?
+				if fsType == "gfs2" {
 					teardownState = dwsv1alpha1.StatePostRun.String()
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
@@ -1120,26 +1124,22 @@ func (r *NnfWorkflowReconciler) monitorDataMovementResource(ctx context.Context,
 
 // Teardown a data movement resource and its subresources. This prepares the resource for deletion but does not delete it.
 func (r *NnfWorkflowReconciler) teardownDataMovementResource(ctx context.Context, dm *nnfv1alpha1.NnfDataMovement, workflowState string) (*ctrl.Result, error) {
-	unmountAccess := func(ref *corev1.ObjectReference) (*ctrl.Result, error) {
+	deleteAccess := func(ref *corev1.ObjectReference) (*ctrl.Result, error) {
 		if ref == nil {
 			return nil, nil
 		}
 
 		access := &nnfv1alpha1.NnfAccess{}
 		if err := r.Get(ctx, types.NamespacedName{Name: ref.Name, Namespace: ref.Namespace}, access); err != nil {
-			return nil, err
+			return nil, client.IgnoreNotFound(err)
 		}
 
 		if workflowState != access.Spec.TeardownState {
 			return nil, nil
 		}
 
-		if access.Spec.DesiredState != "unmounted" {
-			access.Spec.DesiredState = "unmounted"
-			if err := r.Update(ctx, access); err != nil {
-				if apierrors.IsConflict(err) {
-					return &ctrl.Result{Requeue: true}, nil
-				}
+		if err := r.Delete(ctx, access); err != nil {
+			if client.IgnoreNotFound(err) != nil {
 				return nil, err
 			}
 		}
@@ -1147,11 +1147,11 @@ func (r *NnfWorkflowReconciler) teardownDataMovementResource(ctx context.Context
 		return nil, nil
 	}
 
-	if result, err := unmountAccess(dm.Spec.Source.Access); !result.IsZero() || err != nil {
+	if result, err := deleteAccess(dm.Spec.Source.Access); !result.IsZero() || err != nil {
 		return result, err
 	}
 
-	if result, err := unmountAccess(dm.Spec.Destination.Access); !result.IsZero() || err != nil {
+	if result, err := deleteAccess(dm.Spec.Destination.Access); !result.IsZero() || err != nil {
 		return result, err
 	}
 
