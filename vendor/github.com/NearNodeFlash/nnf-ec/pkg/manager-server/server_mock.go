@@ -32,7 +32,7 @@ func NewMockServerController() ServerControllerApi {
 }
 
 type MockServerController struct {
-	storage []Storage
+	storage []*Storage
 }
 
 func (c *MockServerController) Connected() bool { return true }
@@ -44,12 +44,13 @@ func (m *MockServerController) GetServerInfo() ServerInfo {
 }
 
 func (c *MockServerController) NewStorage(pid uuid.UUID, expectedNamespaces []StorageNamespace) *Storage {
-	c.storage = append(c.storage, Storage{
+	storage := &Storage{
 		Id:                 pid,
 		expectedNamespaces: expectedNamespaces,
 		ctrl:               c,
-	})
-	return &c.storage[len(c.storage)-1]
+	}
+	c.storage = append(c.storage, storage)
+	return storage
 }
 
 func (c *MockServerController) Delete(s *Storage) error {

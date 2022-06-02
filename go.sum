@@ -102,6 +102,8 @@ github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c h
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c/go.mod h1:VeS+yILAhE2pDE9iIHwsco3UdAVsMLlQdg6L1aTLPOg=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220518125038-17176c02ce3f h1:z4yEuREovwyu7ijqu6MpkhIwOEyWkxnwl+bXwiCPZPQ=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220518125038-17176c02ce3f/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220601220718-94874456fa8e h1:z2ga1FHmlfK0hn7YMXK6crqBFIEIOfuRXMz4C3qi5Xo=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220601220718-94874456fa8e/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

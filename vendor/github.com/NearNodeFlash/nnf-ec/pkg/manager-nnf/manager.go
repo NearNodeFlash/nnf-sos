@@ -1218,9 +1218,16 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(FileSystemOdataType, fileSystemId))
 	}
 
-	for _, sh := range fs.shares {
-		if err := s.StorageServiceIdFileSystemIdExportedShareIdDelete(s.id, fs.id, sh.id); err != nil {
-			return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("Exported share '%s' failed delete", sh.id))
+	// Create a copy of file share IDs; The deletion of a share will modify the fs.shares[] so we cannot
+	// iterate on that array directly as it is editted in place.
+	shareIds := make([]string, len(fs.shares))
+	for idx, sh := range fs.shares {
+		shareIds[idx] = sh.id
+	}
+
+	for _, shid := range shareIds {
+		if err := s.StorageServiceIdFileSystemIdExportedShareIdDelete(s.id, fs.id, shid); err != nil {
+			return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("Exported share '%s' failed delete", shid))
 		}
 	}
 
