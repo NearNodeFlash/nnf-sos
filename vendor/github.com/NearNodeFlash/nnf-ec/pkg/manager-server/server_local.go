@@ -45,7 +45,7 @@ func (DefaultServerControllerProvider) NewServerController(opts ServerController
 }
 
 type LocalServerController struct {
-	storage []Storage
+	storage []*Storage
 }
 
 func (c *LocalServerController) Connected() bool { return true }
@@ -68,13 +68,16 @@ func (c *LocalServerController) GetServerInfo() ServerInfo {
 }
 
 func (c *LocalServerController) NewStorage(pid uuid.UUID, expectedNamespaces []StorageNamespace) *Storage {
-	c.storage = append(c.storage, Storage{
+
+	storage := &Storage{
 		Id:                   pid,
 		expectedNamespaces:   expectedNamespaces,
 		discoveredNamespaces: make([]StorageNamespace, 0),
 		ctrl:                 c,
-	})
-	return &c.storage[len(c.storage)-1]
+	}
+
+	c.storage = append(c.storage, storage)
+	return storage
 }
 
 func (c *LocalServerController) Delete(s *Storage) error {
@@ -220,9 +223,9 @@ func (c *LocalServerController) discoverViaNamespaces(s *Storage) error {
 }
 
 func (c *LocalServerController) findStorage(pid uuid.UUID) *Storage {
-	for idx, p := range c.storage {
-		if p.Id == pid {
-			return &c.storage[idx]
+	for idx, s := range c.storage {
+		if s.Id == pid {
+			return c.storage[idx]
 		}
 	}
 
