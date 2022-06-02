@@ -27,13 +27,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
@@ -44,9 +42,6 @@ const (
 	// uses on the SystemConfiguration resource. This prevents the SystemConfiguration resource
 	// from being fully deleted until this controller removes the finalizer.
 	finalizerNnfSystemConfiguration = "nnf.cray.hpe.com/nnf_systemconfiguration"
-
-	labelNnfSystemConfigurationName      = "nnf.cray.hpe.com/systemconfiguration.name"
-	labelNnfSystemConfigurationNamespace = "nnf.cray.hpe.com/systemconfiguration.namespace"
 )
 
 // NnfSystemConfigurationReconciler contains the pieces used by the reconciler
@@ -128,10 +123,7 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 // map. Only the first error encountered is returned.
 func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context, config *dwsv1alpha1.SystemConfiguration, validNamespaces map[string]struct{}) error {
 	listOptions := []client.ListOption{
-		client.MatchingLabels{
-			labelNnfSystemConfigurationName:      config.Name,
-			labelNnfSystemConfigurationNamespace: config.Namespace,
-		},
+		dwsv1alpha1.MatchingOwner(config),
 	}
 
 	namespaces := &corev1.NamespaceList{}
@@ -168,14 +160,7 @@ func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context,
 		}
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, namespace,
 			func() error {
-				labels := namespace.GetLabels()
-				if labels == nil {
-					labels = make(map[string]string)
-				}
-				labels[labelNnfSystemConfigurationName] = config.Name
-				labels[labelNnfSystemConfigurationNamespace] = config.Namespace
-				namespace.SetLabels(labels)
-
+				dwsv1alpha1.AddOwnerLabels(namespace, config)
 				return nil
 			})
 		if err != nil {
@@ -186,34 +171,12 @@ func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context,
 	return nil
 }
 
-// Map function to translate a namespace to a SystemConfiguration.
-func namespaceMapFunc(o client.Object) []reconcile.Request {
-	labels := o.GetLabels()
-
-	ownerName, exists := labels[labelNnfSystemConfigurationName]
-	if exists == false {
-		return []reconcile.Request{}
-	}
-
-	ownerNamespace, exists := labels[labelNnfSystemConfigurationNamespace]
-	if exists == false {
-		return []reconcile.Request{}
-	}
-
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      ownerName,
-			Namespace: ownerNamespace,
-		}},
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfSystemConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		Watches(&source.Kind{Type: &corev1.Namespace{}}, handler.EnqueueRequestsFromMapFunc(namespaceMapFunc)).
+		Watches(&source.Kind{Type: &corev1.Namespace{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		For(&dwsv1alpha1.SystemConfiguration{})
 
 	return builder.Complete(r)

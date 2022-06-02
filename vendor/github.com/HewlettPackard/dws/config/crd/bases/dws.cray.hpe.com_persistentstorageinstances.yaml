@@ -53,6 +53,15 @@ spec:
               name:
                 description: Name is the name given to this persistent storage instance.
                 type: string
+            required:
+            - dwDirective
+            - fsType
+            - name
+            type: object
+          status:
+            description: PersistentStorageInstanceStatus defines the observed state
+              of PersistentStorageInstance
+            properties:
               servers:
                 description: Servers refers to the Servers resource that provides
                   the backing storage for this storage instance
@@ -90,14 +99,6 @@ spec:
                     description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                     type: string
                 type: object
-            required:
-            - dwDirective
-            - fsType
-            - name
-            type: object
-          status:
-            description: PersistentStorageInstanceStatus defines the observed state
-              of PersistentStorageInstance
             type: object
         type: object
     served: true

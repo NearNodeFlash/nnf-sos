@@ -232,28 +232,28 @@ var _ = Describe("Integration Test", func() {
 		Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(psiOwnerRef), "Servers owned by PSI")
 
 		By("Checking PersistentStorageInstance has reference to its Servers resource now that DirectiveBreakdown controller has finished")
-		Expect(persistentInstance.Spec.Servers.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Servers{}).Name()))
-		Expect(persistentInstance.Spec.Servers.Name).To(Equal(persistentInstance.Name))
-		Expect(persistentInstance.Spec.Servers.Namespace).To(Equal(persistentInstance.Namespace))
+		Expect(persistentInstance.Status.Servers.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Servers{}).Name()))
+		Expect(persistentInstance.Status.Servers.Name).To(Equal(persistentInstance.Name))
+		Expect(persistentInstance.Status.Servers.Namespace).To(Equal(persistentInstance.Namespace))
 	}
 
 	checkServersToNnfStorageMapping := func(nnfStoragePresent bool) {
 		servers := &dwsv1alpha1.Servers{}
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), servers)).To(Succeed(), "Fetch Servers")
 
-		serversOwnerRef := metav1.OwnerReference{
-			Kind:               reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+		persistentStorageOwnerRef := metav1.OwnerReference{
+			Kind:               reflect.TypeOf(dwsv1alpha1.PersistentStorageInstance{}).Name(),
 			APIVersion:         dwsv1alpha1.GroupVersion.String(),
-			UID:                servers.GetUID(),
-			Name:               servers.GetName(),
+			UID:                persistentInstance.GetUID(),
+			Name:               persistentInstance.GetName(),
 			Controller:         &controller,
 			BlockOwnerDeletion: &blockOwnerDeletion,
 		}
 
 		nnfStorage := &nnfv1alpha1.NnfStorage{}
 		if nnfStoragePresent {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)).To(Succeed(), "Fetch NnfStorage matching Servers")
-			Expect(nnfStorage.ObjectMeta.OwnerReferences).To(ContainElement(serversOwnerRef), "NnfStorage owned by Servers")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), nnfStorage)).To(Succeed(), "Fetch NnfStorage matching PersistentStorageInstance")
+			Expect(nnfStorage.ObjectMeta.OwnerReferences).To(ContainElement(persistentStorageOwnerRef), "NnfStorage owned by PersistentStorageInstance")
 		} else {
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)

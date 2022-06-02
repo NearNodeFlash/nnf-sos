@@ -117,6 +117,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -142,10 +143,22 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
-  - persistentstorageinstance
+  - nnfstorage
+  verbs:
+  - delete
+  - deletecollection
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
+  - persistentstorageinstances
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -154,7 +167,7 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
-  - persistentstorageinstances
+  - persistentstorageinstances/status
   verbs:
   - create
   - get
@@ -264,6 +277,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -290,6 +304,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -302,6 +317,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -340,6 +356,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -357,6 +374,8 @@ rules:
   - nnfstorageprofiles
   verbs:
   - create
+  - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -369,6 +388,7 @@ rules:
   verbs:
   - create
   - delete
+  - deletecollection
   - get
   - list
   - patch

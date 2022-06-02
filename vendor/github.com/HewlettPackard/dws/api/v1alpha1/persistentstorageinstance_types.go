@@ -22,6 +22,15 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// PersistentStorageNameLabel is defined for resources that relate to the name of a DWS PersistentStorageInstance
+	PersistentStorageNameLabel = "dws.cray.hpe.com/persistentstorage.name"
+
+	// PersistentStorageNamespaceLabel is defined for resources that relate to the namespace of a DWS PersistentStorageInstance
+	PersistentStorageNamespaceLabel = "dws.cray.hpe.com/persistentstorage.namespace"
 )
 
 // PersistentStorageInstanceSpec defines the desired state of PersistentStorageInstance
@@ -35,13 +44,12 @@ type PersistentStorageInstanceSpec struct {
 
 	// DWDirective is a copy of the #DW for this instance
 	DWDirective string `json:"dwDirective"`
-
-	// Servers refers to the Servers resource that provides the backing storage for this storage instance
-	Servers corev1.ObjectReference `json:"servers,omitempty"`
 }
 
 // PersistentStorageInstanceStatus defines the observed state of PersistentStorageInstance
 type PersistentStorageInstanceStatus struct {
+	// Servers refers to the Servers resource that provides the backing storage for this storage instance
+	Servers corev1.ObjectReference `json:"servers,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -63,6 +71,16 @@ type PersistentStorageInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PersistentStorageInstance `json:"items"`
+}
+
+func (p *PersistentStorageInstanceList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range p.Items {
+		objectList = append(objectList, &p.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

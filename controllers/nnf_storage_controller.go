@@ -24,11 +24,9 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -38,17 +36,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
 // NnfStorageReconciler reconciles a Storage object
 type NnfStorageReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *kruntime.Scheme
+	Log          logr.Logger
+	Scheme       *kruntime.Scheme
+	ChildObjects []dwsv1alpha1.ObjectList
 }
 
 const (
@@ -73,6 +72,8 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/finalizers,verbs=update
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 
 // The Storage Controller will list and make modifications to individual NNF Nodes, so include the
 // RBAC policy for nnfnodes. This isn't strictly necessary since the same ClusterRole is shared for
@@ -120,7 +121,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Wait for all the nodeStorages to finish deleting before removing
 		// the finalizer.
 		if exists == nodeStoragesExist {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, nil
 		}
 
 		controllerutil.RemoveFinalizer(storage, finalizerNnfStorage)
@@ -147,7 +148,6 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		statusUpdater.update(func(*nnfv1alpha1.NnfStorageStatus) {
 			storage.Status.AllocationSets = make([]nnfv1alpha1.NnfStorageAllocationSetStatus, len(storage.Spec.AllocationSets))
 			for i := range storage.Status.AllocationSets {
-				storage.Status.AllocationSets[i].NodeStorageReferences = make([]corev1.ObjectReference, len(storage.Spec.AllocationSets[i].Nodes))
 				storage.Status.AllocationSets[i].Status = nnfv1alpha1.ResourceStarting
 			}
 		})
@@ -202,12 +202,12 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeStorage,
 			func() error {
-				annotations := nnfNodeStorage.GetAnnotations()
-				if annotations == nil {
-					annotations = make(map[string]string)
-				}
-				annotations[ownerAnnotation] = storage.Name + "/" + storage.Namespace
-				nnfNodeStorage.SetAnnotations(annotations)
+				dwsv1alpha1.InheritParentLabels(nnfNodeStorage, storage)
+				dwsv1alpha1.AddOwnerLabels(nnfNodeStorage, storage)
+
+				labels := nnfNodeStorage.GetLabels()
+				labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
+				nnfNodeStorage.SetLabels(labels)
 
 				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.Count = node.Count
@@ -254,17 +254,6 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 		} else {
 			log.Info("Updated NnfNodeStorage", "Name", nnfNodeStorage.Name, "Namespace", nnfNodeStorage.Namespace)
 		}
-
-		// Add an object reference to the storage resource
-		objectRef := corev1.ObjectReference{
-			Name:      nnfNodeStorage.Name,
-			Namespace: nnfNodeStorage.Namespace,
-			Kind:      nnfNodeStorage.Kind,
-		}
-
-		statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
-			storage.Status.AllocationSets[allocationSetIndex].NodeStorageReferences[i] = objectRef
-		})
 	}
 
 	return nil, nil
@@ -280,25 +269,17 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	allocationSet.AllocationCount = 0
 
-	for _, nodeStorageReference := range allocationSet.NodeStorageReferences {
-		namespacedName := types.NamespacedName{
-			Name:      nodeStorageReference.Name,
-			Namespace: nodeStorageReference.Namespace,
-		}
+	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
+	listOptions := []client.ListOption{
+		dwsv1alpha1.MatchingOwner(storage),
+		client.MatchingLabels{nnfv1alpha1.AllocationSetLabel: storage.Spec.AllocationSets[allocationSetIndex].Name},
+	}
 
-		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-		err := r.Get(ctx, namespacedName, nnfNodeStorage)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				statusUpdater.updateError(allocationSet, err)
-				return &ctrl.Result{Requeue: true}, nil
-			}
+	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+		return &ctrl.Result{Requeue: true}, nil
+	}
 
-			startingStatus := nnfv1alpha1.ResourceStarting
-			startingStatus.UpdateIfWorseThan(&status)
-			continue
-		}
-
+	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" || nnfNodeStorage.Spec.LustreStorage.TargetType == "MGTMDT" {
 			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
 				s.MgsNode = nnfNodeStorage.Status.LustreStorage.Nid
@@ -349,67 +330,25 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
-	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
-	var firstErr error
-
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
-	for i := range storage.Spec.AllocationSets {
+	for i := range storage.Status.AllocationSets {
 		_, err := r.aggregateNodeStorageStatus(ctx, statusUpdater, storage, i)
 		if err != nil {
 			return nodeStoragesExist, err
 		}
 	}
 
-	state := nodeStoragesDeleted
-
-	for allocationSetIndex, allocationSet := range storage.Spec.AllocationSets {
-		for i, node := range allocationSet.Nodes {
-			namespacedName := types.NamespacedName{
-				Name:      nnfNodeStorageName(storage, allocationSetIndex, i),
-				Namespace: node.Name,
-			}
-
-			// Do a Get on the nnfNodeStorage first to check if it's already been marked
-			// for deletion.
-			nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-			err := r.Get(ctx, namespacedName, nnfNodeStorage)
-			if err != nil {
-				if !apierrors.IsNotFound(err) {
-					if firstErr == nil {
-						firstErr = err
-					}
-					log.Info("Unable to get NnfNodeStorage", "Error", err, "NnfNodeStorage", namespacedName)
-				}
-			} else {
-				state = nodeStoragesExist
-				if !nnfNodeStorage.GetDeletionTimestamp().IsZero() {
-					continue
-				}
-			}
-
-			nnfNodeStorage = &nnfv1alpha1.NnfNodeStorage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      nnfNodeStorageName(storage, allocationSetIndex, i),
-					Namespace: node.Name,
-				},
-			}
-
-			err = r.Delete(ctx, nnfNodeStorage)
-			if err != nil {
-				if !apierrors.IsNotFound(err) {
-					if firstErr == nil {
-						firstErr = err
-					}
-					log.Info("Unable to delete NnfNodeStorage", "Error", err, "NnfNodeStorage", nnfNodeStorage)
-				}
-			} else {
-				state = nodeStoragesExist
-			}
-		}
+	deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
+	if err != nil {
+		return nodeStoragesExist, err
 	}
 
-	return state, firstErr
+	if deleteStatus == dwsv1alpha1.DeleteRetry {
+		return nodeStoragesExist, nil
+	}
+
+	return nodeStoragesDeleted, nil
 }
 
 // Build up the name of an NnfNodeStorage. This is a long name because:
@@ -452,33 +391,17 @@ func (s *storageStatusUpdater) close(ctx context.Context, r *NnfStorageReconcile
 	return false, nil
 }
 
-// Map function to translate an NnfNodeStorage to an NnfStorage. We can't use
-// EnqueueRequestForOwner() because the NnfNodeStorage resources are in a different
-// namespace than the NnfStorage resource, and owner references can't bridge namespaces.
-// The owner information is stored in an annotation.
-func nnfNodeStorageMapFunc(o client.Object) []reconcile.Request {
-	annotations := o.GetAnnotations()
-
-	owner, exists := annotations[ownerAnnotation]
-	if exists == false {
-		return []reconcile.Request{}
-	}
-
-	components := strings.Split(owner, "/")
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      components[0],
-			Namespace: components[1],
-		}},
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.ChildObjects = []dwsv1alpha1.ObjectList{
+		&nnfv1alpha1.NnfNodeStorageList{},
+		&nnfv1alpha1.NnfStorageProfileList{},
+	}
+
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfStorage{}).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfNodeStorageMapFunc)).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		Complete(r)
 }

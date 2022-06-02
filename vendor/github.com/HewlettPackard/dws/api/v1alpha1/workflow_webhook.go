@@ -103,8 +103,8 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 	}
 
 	// Initial setup of the Workflow by the dws controller requires setting the status
-	// state to proposal
-	if oldWorkflow.Status.State == "" && w.Status.State == "proposal" && w.Spec.DesiredState == "proposal" {
+	// state to proposal and adding a finalizer.
+	if oldWorkflow.Status.State == "" && w.Spec.DesiredState == "proposal" {
 		return nil
 	}
 

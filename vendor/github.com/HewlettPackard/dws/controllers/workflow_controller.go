@@ -39,6 +39,11 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 )
 
+const (
+	// finalizerDwsWorkflow is the finalizer string used by this controller
+	finalizerDwsWorkflow = "dws.cray.hpe.com/workflow"
+)
+
 // Define condition values
 const (
 	ConditionTrue  bool = true
@@ -48,8 +53,9 @@ const (
 // WorkflowReconciler reconciles a Workflow object
 type WorkflowReconciler struct {
 	client.Client
-	Scheme *kruntime.Scheme
-	Log    logr.Logger
+	Scheme       *kruntime.Scheme
+	Log          logr.Logger
+	ChildObjects []dwsv1alpha1.ObjectList
 }
 
 // checkDriverStatus returns true if all registered drivers for the current state completed successfully
@@ -72,7 +78,7 @@ func checkDriverStatus(instance *dwsv1alpha1.Workflow) (bool, error) {
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/finalizers,verbs=update
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -93,6 +99,45 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err := r.Get(ctx, req.NamespacedName, workflow)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Check if the object is being deleted
+	if !workflow.GetDeletionTimestamp().IsZero() {
+		if !controllerutil.ContainsFinalizer(workflow, finalizerDwsWorkflow) {
+			return ctrl.Result{}, nil
+		}
+
+		// Wait for all other finalizers to be removed
+		if len(workflow.GetFinalizers()) != 1 {
+			return ctrl.Result{}, nil
+		}
+
+		// Delete all the Computes resources owned by the workflow
+		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if deleteStatus == dwsv1alpha1.DeleteRetry {
+			return ctrl.Result{}, nil
+		}
+
+		controllerutil.RemoveFinalizer(workflow, finalizerDwsWorkflow)
+		if err := r.Update(ctx, workflow); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	// Add the finalizer if it doesn't exist
+	if !controllerutil.ContainsFinalizer(workflow, finalizerDwsWorkflow) {
+		controllerutil.AddFinalizer(workflow, finalizerDwsWorkflow)
+		if err := r.Update(ctx, workflow); err != nil {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	// Need to set Status.State first because the webhook validates this.
@@ -199,6 +244,9 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, computes,
 		func() error {
+			dwsv1alpha1.AddWorkflowLabels(computes, wf)
+			dwsv1alpha1.AddOwnerLabels(computes, wf)
+
 			// Link the Computes to the workflow
 			return ctrl.SetControllerReference(wf, computes, r.Scheme)
 		})
@@ -220,6 +268,10 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.ChildObjects = []dwsv1alpha1.ObjectList{
+		&dwsv1alpha1.ComputesList{},
+	}
+
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

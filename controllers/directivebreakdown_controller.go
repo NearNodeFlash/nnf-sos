@@ -83,7 +83,7 @@ type lustreComponentType struct {
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns/status,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns/finalizers,verbs=update
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstance,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the directiveBreakdown closer to the desired state.
@@ -124,15 +124,11 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	commonResourceName, commonResourceNamespace := getStorageReferenceNameFromDBD(dbd)
 	var persistentInstance *dwsv1alpha1.PersistentStorageInstance
-	var serversOwner metav1.Object
-
-	// Default owner for non-persistent storage is the DirectiveBreakdown
-	serversOwner = dbd
 
 	// If the lifetime of the storage is persistent, create PersistentStorageInstance
 	if dbd.Spec.Lifetime == dwsv1alpha1.DirectiveLifetimePersistent {
 		var result controllerutil.OperationResult
-		result, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, &dbd.Status.Servers, log)
+		result, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, log)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -142,38 +138,27 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		// Since this is a persistent instance, the persistentInstance becomes the owner of the server
-		serversOwner = persistentInstance
-	}
+		if persistentInstance.Status.Servers == (v1.ObjectReference{}) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 
-	// Create the corresponding Servers object
-	servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, serversOwner, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+		dbd.Status.Servers = persistentInstance.Status.Servers
+	} else {
+		// Create the corresponding Servers object
+		servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, dbd, log)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if servers == nil {
-		return ctrl.Result{Requeue: true}, nil
-	}
+		if servers == nil {
+			return ctrl.Result{Requeue: true}, nil
+		}
 
-	// Add Servers reference to persistentInstance
-	if persistentInstance != nil {
-		_, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(
-			ctx,
-			dbd,
-			commonResourceName,
-			&v1.ObjectReference{
-				Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
-				Name:      servers.Name,
-				Namespace: servers.Namespace,
-			},
-			log)
-	}
-
-	dbd.Status.Servers = v1.ObjectReference{
-		Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
-		Name:      servers.Name,
-		Namespace: servers.Namespace,
+		dbd.Status.Servers = v1.ObjectReference{
+			Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+			Name:      servers.Name,
+			Namespace: servers.Namespace,
+		}
 	}
 
 	result, ctrlResult, err := r.populateDirectiveBreakdown(ctx, dbd, commonResourceName, log)
@@ -201,7 +186,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, err
 }
 
-func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, serversRef *v1.ObjectReference, log logr.Logger) (controllerutil.OperationResult, *dwsv1alpha1.PersistentStorageInstance, error) {
+func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, log logr.Logger) (controllerutil.OperationResult, *dwsv1alpha1.PersistentStorageInstance, error) {
 
 	psi := &dwsv1alpha1.PersistentStorageInstance{
 		ObjectMeta: metav1.ObjectMeta{
@@ -216,9 +201,6 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 			psi.Spec.FsType = dbd.Spec.Type
 			psi.Spec.DWDirective = dbd.Spec.DW.DWDirective
 
-			if serversRef != nil {
-				psi.Spec.Servers = *serversRef
-			}
 			return nil
 		})
 
@@ -243,7 +225,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 	return result, psi, err
 }
 
-func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, serversOwner metav1.Object, log logr.Logger) (*dwsv1alpha1.Servers, error) {
+func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha1.DirectiveBreakdown, log logr.Logger) (*dwsv1alpha1.Servers, error) {
 
 	server := &dwsv1alpha1.Servers{
 		ObjectMeta: metav1.ObjectMeta{
@@ -254,7 +236,10 @@ func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, server
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, server,
 		func() error {
-			return ctrl.SetControllerReference(serversOwner, server, r.Scheme)
+			dwsv1alpha1.InheritParentLabels(server, dbd)
+			dwsv1alpha1.AddOwnerLabels(server, dbd)
+
+			return ctrl.SetControllerReference(dbd, server, r.Scheme)
 		})
 
 	if err != nil {

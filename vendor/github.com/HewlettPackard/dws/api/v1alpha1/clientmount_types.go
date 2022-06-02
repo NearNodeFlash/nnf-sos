@@ -22,6 +22,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ClientMountDeviceLustre defines the lustre device information for mounting
@@ -194,6 +195,16 @@ type ClientMountList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClientMount `json:"items"`
+}
+
+func (c *ClientMountList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range c.Items {
+		objectList = append(objectList, &c.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {

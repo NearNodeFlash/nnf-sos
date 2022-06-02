@@ -278,6 +278,14 @@ func (c *storageController) SetupReconciler(mgr manager.Manager) error {
 		return err
 	}
 
+	if err := (&controllers.PersistentStorageReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("PersistentStorage"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	if err := (&controllers.DWSServersReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Servers"),
