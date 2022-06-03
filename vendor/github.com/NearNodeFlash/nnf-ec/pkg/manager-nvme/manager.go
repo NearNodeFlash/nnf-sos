@@ -572,9 +572,22 @@ func (v *Volume) DetachController(controllerId uint16) error {
 
 	for _, ctrlId := range controllerIds {
 		if ctrlId == controllerId {
-			if err := v.detach([]uint16{controllerId}); err != nil {
-				return err
-			}
+			return v.detach([]uint16{controllerId})
+		}
+	}
+
+	return nil
+}
+
+func (v *Volume) AttachController(controllerId uint16) error {
+	controllerIds, err := v.storage.device.ListAttachedControllers(v.namespaceId)
+	if err != nil {
+		return err
+	}
+
+	for _, ctrlId := range controllerIds {
+		if ctrlId == controllerId {
+			return v.attach([]uint16{controllerId})
 		}
 	}
 

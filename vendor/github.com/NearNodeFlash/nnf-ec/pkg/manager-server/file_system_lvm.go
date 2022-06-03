@@ -141,12 +141,17 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	// Activate the volume group.
+	
 	shared = ""
 	if f.shared {
+		if _, err := f.run(fmt.Sprintf("vgchange --lockstart %s", f.vgName)); err != nil {
+			return err
+		}
+
 		shared = "s"
 	}
 
+	// Activate the volume group.
 	if _, err := f.run(fmt.Sprintf("vgchange --activate %sy %s", shared, f.vgName)); err != nil {
 		return err
 	}
@@ -155,6 +160,16 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 }
 
 func (f *FileSystemLvm) Delete() error {
+	if f.shared {
+		if _, err := f.run(fmt.Sprintf("vgchange --activate n %s", f.vgName)); err != nil {
+			return err
+		}
+
+		if _, err := f.run(fmt.Sprintf("vgchange --lockstop %s", f.vgName)); err != nil {
+			return err
+		}
+	}
+
 	if _, err := f.run(fmt.Sprintf("lvremove --yes %s", f.devPath())); err != nil {
 		return err
 	}

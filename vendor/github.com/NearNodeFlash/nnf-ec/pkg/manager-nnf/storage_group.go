@@ -131,7 +131,23 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 				return err
 			}
 		}
+
+	case storageGroupDeleteStartLogEntryType:
+		// Rollback to a state where all controllers are attached to the storage pool
+
+		sp := sg.storageService.findStoragePool(sg.storagePoolId)
+		if sp == nil {
+			return fmt.Errorf("Storage Pool %s not found", sg.storagePoolId)
+		}
+
+		for _, pv := range sp.providingVolumes {
+			if err := pv.storage.FindVolume(pv.volumeId).AttachController(sg.endpoint.controllerId); err != nil {
+				return err
+			}
+		}
 	}
+
+
 
 	return nil
 }
