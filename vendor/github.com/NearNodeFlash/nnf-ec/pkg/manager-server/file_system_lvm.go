@@ -116,6 +116,15 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
+	shared = ""
+	if f.shared {
+		if _, err := f.run(fmt.Sprintf("vgchange --lockstart %s", f.vgName)); err != nil {
+			return err
+		}
+
+		shared = "s"
+	}
+
 	// Create the logical volume
 	// -Zn - don't zero the volume, it will fail.
 	// We are depending on the drive behavior for newly allocated blocks to track
@@ -141,16 +150,6 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	
-	shared = ""
-	if f.shared {
-		if _, err := f.run(fmt.Sprintf("vgchange --lockstart %s", f.vgName)); err != nil {
-			return err
-		}
-
-		shared = "s"
-	}
-
 	// Activate the volume group.
 	if _, err := f.run(fmt.Sprintf("vgchange --activate %sy %s", shared, f.vgName)); err != nil {
 		return err
@@ -160,18 +159,19 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 }
 
 func (f *FileSystemLvm) Delete() error {
-	if f.shared {
-		if _, err := f.run(fmt.Sprintf("vgchange --activate n %s", f.vgName)); err != nil {
-			return err
-		}
-
-		if _, err := f.run(fmt.Sprintf("vgchange --lockstop %s", f.vgName)); err != nil {
-			return err
-		}
-	}
 
 	if _, err := f.run(fmt.Sprintf("lvremove --yes %s", f.devPath())); err != nil {
 		return err
+	}
+
+	if _, err := f.run(fmt.Sprintf("vgchange --activate n %s", f.vgName)); err != nil {
+		return err
+	}
+
+	if f.shared {
+		if _, err := f.run(fmt.Sprintf("vgchange --lockstop %s", f.vgName)); err != nil {
+			return err
+		}
 	}
 
 	if _, err := f.run(fmt.Sprintf("vgremove --yes %s", f.vgName)); err != nil {
