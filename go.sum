@@ -106,6 +106,8 @@ github.com/NearNodeFlash/nnf-ec v0.0.0-20220601220718-94874456fa8e h1:z2ga1FHmlf
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220601220718-94874456fa8e/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220603194641-9dfb388ee050 h1:cVIbwOMGYg8drkaUD30GbXiikHUjMRUu2qQefdqwyRc=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220603194641-9dfb388ee050/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220606150900-98f01bc403b3 h1:0pbgL6Y+z2Sd3qVSSYSRmWF08avRsoOjBOkOW/PBoaI=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220606150900-98f01bc403b3/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

@@ -168,12 +168,6 @@ func (f *FileSystemLvm) Delete() error {
 		return err
 	}
 
-	if f.shared {
-		if _, err := f.run(fmt.Sprintf("vgchange --lockstop %s", f.vgName)); err != nil {
-			return err
-		}
-	}
-
 	if _, err := f.run(fmt.Sprintf("vgremove --yes %s", f.vgName)); err != nil {
 		return err
 	}
