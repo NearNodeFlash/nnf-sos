@@ -68,7 +68,7 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses/finalizers,verbs=update
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts/status,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
