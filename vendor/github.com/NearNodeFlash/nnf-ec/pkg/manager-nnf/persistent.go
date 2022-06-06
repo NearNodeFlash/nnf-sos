@@ -90,9 +90,12 @@ func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectA
 	if err != nil {
 		return err
 	}
-	defer ledger.Close()
 
-	return executePersistentObjectTransaction(ledger, obj, deleteFunc, startingState, endingState)
+	if err := executePersistentObjectTransaction(ledger, obj, deleteFunc, startingState, endingState); err != nil {
+		return err
+	}
+
+	return ledger.Close()
 }
 
 func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
