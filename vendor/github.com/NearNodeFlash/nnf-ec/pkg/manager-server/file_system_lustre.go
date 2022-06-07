@@ -100,15 +100,20 @@ func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) e
 	if f.backFs == BackFsZfs {
 		backFs = fmt.Sprintf("--backfstype=%s %s", f.backFs, f.zfsVolName())
 	}
+	devsStr := strings.Join(devices, " ")
+	if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
+		// On non-NVMe.
+		devsStr = devices[0]
+	}
 	switch f.targetType {
 	case TargetMGT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s %s", backFs, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s %s", backFs, devsStr))
 	case TargetMDT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, devsStr))
 	case TargetMGTMDT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs --mdt --fsname=%s --index=%d %s %s", f.name, f.index, backFs, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs --mdt --fsname=%s --index=%d %s %s", f.name, f.index, backFs, devsStr))
 	case TargetOST:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, f.devices[0]))
+		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, devsStr))
 	}
 
 	return err
