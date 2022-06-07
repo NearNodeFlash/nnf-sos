@@ -455,8 +455,13 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 
 	fileShareID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
 
-	shareOptions := make(map[string]interface{})
 	mountPath := ""
+	sh, err := r.getFileShare(ss, fileShareID, allocationStatus.FileSystem.ID)
+	if err == nil {
+		mountPath = sh.FileSharePath
+	}
+
+	shareOptions := make(map[string]interface{})
 	if nodeStorage.Spec.FileSystemType == "lustre" {
 		targetIndex := nodeStorage.Spec.LustreStorage.StartIndex + index
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
@@ -465,7 +470,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		shareOptions["logicalVolumeName"] = logicalVolumeName(fileShareID)
 	}
 
-	sh, err := r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
+	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
 
@@ -690,7 +695,7 @@ func (r *NnfNodeStorageReconciler) createFileShare(ss nnf.StorageServiceApi, id 
 	return sh, nil
 }
 
-func (r *NnfNodeStorageReconciler) getFileShare(ss nnf.StorageServiceApi, fsID string, id string) (*sf.FileShareV120FileShare, error) {
+func (r *NnfNodeStorageReconciler) getFileShare(ss nnf.StorageServiceApi, id string, fsID string) (*sf.FileShareV120FileShare, error) {
 	fs, err := r.getFileSystem(ss, fsID)
 	if err != nil {
 		return nil, err
