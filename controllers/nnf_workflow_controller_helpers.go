@@ -102,9 +102,12 @@ func getStorageReferenceNameFromDBD(dbd *dwsv1alpha1.DirectiveBreakdown) (string
 
 	var name string
 	namespace := dbd.Namespace
-	if dbd.Spec.Lifetime == dwsv1alpha1.DirectiveLifetimePersistent {
-		name = dbd.Spec.Name
-	} else {
+
+	p, _ := dwdparse.BuildArgsMap(dbd.Spec.Directive) // ignore error, directives were validated in proposal
+	switch p["command"] {
+	case "persistentdw", "create_persistent", "delete_persistent":
+		name = p["name"]
+	default:
 		name = dbd.Name
 	}
 	return name, namespace

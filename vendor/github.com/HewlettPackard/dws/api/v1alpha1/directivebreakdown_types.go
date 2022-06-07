@@ -34,16 +34,6 @@ const (
 	DirectiveLifetimePersistent = "persistent"
 )
 
-// The DWRecord contains the index of the Datawarp directive (#DW) within the workflow
-// along with a copy of the actual #DW
-type DWRecord struct {
-	// DWDirectiveIndex is the index of the #DW directive in the workflow
-	DWDirectiveIndex int `json:"dwDirectiveIndex"`
-
-	// DWDirective is a copy of the #DW for this breakdown
-	DWDirective string `json:"dwDirective"`
-}
-
 // AllocationSetColocationConstraint specifies how to colocate storage resources.
 // A colocation constraint specifies how the location(s) of an allocation set should be
 // selected with relation to other allocation sets. Locations for allocation sets with the
@@ -69,8 +59,8 @@ type AllocationSetConstraints struct {
 	Colocation []AllocationSetColocationConstraint `json:"colocation,omitempty"`
 }
 
-// AllocationSetComponents define the details of the allocation
-type AllocationSetComponents struct {
+// StorageAllocationSet defines the details of an allocation set
+type StorageAllocationSet struct {
 	// AllocationStrategy specifies the way to determine the number of allocations of the MinimumCapacity required for this AllocationSet.
 	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocateAcrossServers;AllocateSingleServer;AssignPerCompute;AssignAcrossServers;
 	AllocationStrategy string `json:"allocationStrategy"`
@@ -90,30 +80,65 @@ type AllocationSetComponents struct {
 	Constraints AllocationSetConstraints `json:"constraints,omitempty"`
 }
 
-// DirectiveBreakdownSpec defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
-type DirectiveBreakdownSpec struct {
-	// DW is the Datawarp Directive Record
-	DW DWRecord `json:"dwRecord"`
+const (
+	StorageLifetimePersistent = "persistent"
+	StorageLifetimeJob        = "job"
+)
 
-	// Name is the identifier for this directive breakdown
-	Name string `json:"name"`
-
-	// Type is the type specified in the #DW directive
-	// +kubebuilder:validation:Enum=raw;xfs;gfs2;lustre
-	Type string `json:"type"`
-
+// StorageBreakdown describes the storage requirements of a directive
+type StorageBreakdown struct {
 	// Lifetime is the duration of the allocation
 	// +kubebuilder:validation:Enum=job;persistent
 	Lifetime string `json:"lifetime"`
+
+	// Reference is an ObjectReference to another resource
+	Reference corev1.ObjectReference `json:"reference,omitempty"`
+
+	// AllocationSets lists the allocations required to fulfill the #DW Directive
+	AllocationSets []StorageAllocationSet `json:"allocationSets,omitempty"`
+}
+
+const (
+	ComputeLocationNetwork  = "network"
+	ComputeLocationPhysical = "physical"
+)
+
+// ComputeLocationConstraint describes a constraints on which compute nodes can be used with
+// a directive based on their location
+type ComputeLocationConstraint struct {
+	// Type is the relationship between the compute nodes and the resource in the Reference
+	// +kubebuilder:validation:Enum=physical;network
+	Type string `json:"type"`
+
+	// Reference is an object reference to a resource that contains the location information
+	Reference corev1.ObjectReference `json:"reference"`
+}
+
+// ComputeConstraints describes the constraints to use when picking compute nodes
+type ComputeConstraints struct {
+	// Location is a list of location constraints
+	Location []ComputeLocationConstraint `json:"location,omitempty"`
+}
+
+// ComputeBreakdown describes the compute requirements of a directive
+type ComputeBreakdown struct {
+	// Constraints to use when picking compute nodes
+	Constraints ComputeConstraints `json:"constraints,omitempty"`
+}
+
+// DirectiveBreakdownSpec defines the directive string to breakdown
+type DirectiveBreakdownSpec struct {
+	// Directive is a copy of the #DW for this breakdown
+	Directive string `json:"directive"`
 }
 
 // DirectiveBreakdownStatus defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
 type DirectiveBreakdownStatus struct {
-	// Servers is a reference to the Server CR
-	Servers corev1.ObjectReference `json:"servers,omitempty"`
+	// Storage is the storage breakdown for the directive
+	Storage *StorageBreakdown `json:"storage,omitempty"`
 
-	// AllocationSets lists the allocations required to fulfill the #DW Directive
-	AllocationSet []AllocationSetComponents `json:"allocationSet"`
+	// Compute is the compute breakdown for the directive
+	Compute *ComputeBreakdown `json:"compute,omitempty"`
 
 	// Ready indicates whether AllocationSets have been generated (true) or not (false)
 	Ready bool `json:"ready"`
@@ -121,8 +146,6 @@ type DirectiveBreakdownStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="LIFETIME",type="string",JSONPath=".spec.lifetime",description="Duration of the allocation"
-//+kubebuilder:printcolumn:name="TYPE",type="string",JSONPath=".spec.type",description="Type of storage"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if allocation sets have been generated"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 

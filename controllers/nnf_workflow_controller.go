@@ -279,10 +279,20 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 		return pResult, nil
 	}
 
-	// Generate a list of directive breakdowns from the #DWs present (if any)
+	// Loop through the #DWs that registered for the proposal state
 	var dbList []v1.ObjectReference
-	for dwIndex, dwDirective := range workflow.Spec.DWDirectives {
-		_, directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, dwDirective, dwIndex, workflow, log)
+	for _, driverStatus := range workflow.Status.Drivers {
+		// Check if the driver status is for the proposal state
+		if driverStatus.WatchState != dwsv1alpha1.StateProposal.String() {
+			continue
+		}
+
+		// Only look for driver status for the NNF driver
+		if driverStatus.DriverID != driverID {
+			continue
+		}
+
+		directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, driverStatus.DWDIndex, workflow, log)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -488,8 +498,9 @@ func (r *NnfWorkflowReconciler) getPersistentStorageInstance(ctx context.Context
 	return psi, err
 }
 
-// generateDirectiveBreakdown creates a DirectiveBreakdown for any #DW directive that causes storage to be allocated.
-func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, directive string, dwIndex int, workflow *dwsv1alpha1.Workflow, log logr.Logger) (result controllerutil.OperationResult, directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
+// generateDirectiveBreakdown creates a DirectiveBreakdown for any #DW directive that needs to specify storage
+// or compute node information to the WLM (jobdw, create_persistent, persistentdw)
+func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, dwIndex int, workflow *dwsv1alpha1.Workflow, log logr.Logger) (directiveBreakdown *dwsv1alpha1.DirectiveBreakdown, err error) {
 
 	// DWDirectives that we need to generate directiveBreakdowns for look like this:
 	//  #DW command            arguments...
@@ -499,30 +510,27 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 	// "#DW jobdw              type=gfs2   capacity=9GB name=thisIsGfs2"
 	// "#DW jobdw              type=lustre capacity=9TB name=thisIsLustre"
 	// "#DW create_persistent  type=lustre capacity=9TB name=thisIsPersistent"
+	// "#DW persistentdw       name=thisIsPersistent"
 
-	// #DW commands that require a dwDirectiveBreakdown because they create storage
+	// #DW commands that require a dwDirectiveBreakdown
 	breakDownCommands := []string{
 		"jobdw",
 		"create_persistent",
+		"persistentdw",
 	}
 
 	// Initialize return parameters
 	directiveBreakdown = nil
-	result = controllerutil.OperationResultNone
 	err = nil
 
-	cmdElements := strings.Fields(directive)
+	directive := workflow.Spec.DWDirectives[dwIndex]
+	result := controllerutil.OperationResultNone
+
+	dwArgs, _ := dwdparse.BuildArgsMap(directive)
 	for _, breakThisDown := range breakDownCommands {
 		// We care about the commands that generate a breakdown
-		if breakThisDown == cmdElements[1] {
-
-			lifetime := "job"
+		if breakThisDown == dwArgs["command"] {
 			dwdName := createDirectiveBreakdownName(workflow, dwIndex)
-			switch cmdElements[1] {
-			case "create_persistent":
-				lifetime = "persistent"
-			}
-
 			directiveBreakdown = &dwsv1alpha1.DirectiveBreakdown{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      dwdName,
@@ -536,19 +544,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 					dwsv1alpha1.AddWorkflowLabels(directiveBreakdown, workflow)
 					dwsv1alpha1.AddOwnerLabels(directiveBreakdown, workflow)
 
-					// Construct a map of the arguments within the directive
-					m := make(map[string]string)
-					for _, pair := range cmdElements[2:] {
-						if arg := strings.Split(pair, "="); len(arg) > 1 {
-							m[arg[0]] = arg[1]
-						}
-					}
-
-					directiveBreakdown.Spec.DW.DWDirectiveIndex = dwIndex
-					directiveBreakdown.Spec.DW.DWDirective = directive
-					directiveBreakdown.Spec.Name = m["name"]
-					directiveBreakdown.Spec.Type = m["type"]
-					directiveBreakdown.Spec.Lifetime = lifetime
+					directiveBreakdown.Spec.Directive = directive
 
 					// Link the directive breakdown to the workflow
 					return ctrl.SetControllerReference(workflow, directiveBreakdown, r.Scheme)
@@ -595,37 +591,51 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 	// NnfStorage readiness.
 	var nnfStorages []nnfv1alpha1.NnfStorage
 
-	// Iterate through the DirectiveBreakdowns
-	for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+	for _, driverStatus := range workflow.Status.Drivers {
+		// Check if the driver status is for the setup state
+		if driverStatus.WatchState != dwsv1alpha1.StateSetup.String() {
+			continue
+		}
+
+		// Only look for driver status for the NNF driver
+		if driverStatus.DriverID != driverID {
+			continue
+		}
+
+		dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[driverStatus.DWDIndex])
+
+		if dwArgs["command"] == "persistentdw" {
+			continue
+		}
 
 		// Chain through the DirectiveBreakdown to the Servers object
 		dbd := &dwsv1alpha1.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      dbdRef.Name,
-				Namespace: dbdRef.Namespace,
+				Name:      createDirectiveBreakdownName(workflow, driverStatus.DWDIndex),
+				Namespace: workflow.Namespace,
 			},
 		}
 		err := r.Get(ctx, client.ObjectKeyFromObject(dbd), dbd)
 		if err != nil {
-			log.Error(err, "Unable to get directiveBreakdown", "dbd", types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace})
+			log.Error(err, "Unable to get directiveBreakdown", "dbd", client.ObjectKeyFromObject(dbd))
 			return ctrl.Result{}, err
 		}
 
 		s := &dwsv1alpha1.Servers{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      dbd.Status.Servers.Name,
-				Namespace: dbd.Status.Servers.Namespace,
+				Name:      dbd.Status.Storage.Reference.Name,
+				Namespace: dbd.Status.Storage.Reference.Namespace,
 			},
 		}
 		err = r.Get(ctx, client.ObjectKeyFromObject(s), s)
 		if err != nil {
-			log.Error(err, "Unable to get servers", "servers", types.NamespacedName{Name: dbd.Status.Servers.Name, Namespace: dbd.Status.Servers.Namespace})
+			log.Error(err, "Unable to get servers", "servers", client.ObjectKeyFromObject(s))
 			return ctrl.Result{}, err
 		}
 
 		if _, present := os.LookupEnv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"); !present {
-			if len(dbd.Status.AllocationSet) != 0 && len(dbd.Status.AllocationSet) != len(s.Spec.AllocationSets) {
-				return r.failDriverState(ctx, workflow, driverID, fmt.Sprintf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.DW.DWDirective))
+			if len(dbd.Status.Storage.AllocationSets) != 0 && len(dbd.Status.Storage.AllocationSets) != len(s.Spec.AllocationSets) {
+				return r.failDriverState(ctx, workflow, driverID, fmt.Sprintf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive))
 			}
 		}
 
@@ -678,6 +688,29 @@ func (r *NnfWorkflowReconciler) handleSetupState(ctx context.Context, workflow *
 		}
 	}
 
+	// Remove the owner reference from any persistentStorageInstances that were created from this
+	// workflow. Setup has completed, so they shouldn't be torn down when the workflow completes
+	for _, directive := range workflow.Spec.DWDirectives {
+		dwArgs, _ := dwdparse.BuildArgsMap(directive)
+		command := dwArgs["command"]
+
+		if command == "create_persistent" {
+			persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
+			persistentStorage.SetOwnerReferences([]metav1.OwnerReference{})
+			dwsv1alpha1.RemoveOwnerLabels(persistentStorage)
+
+			err = r.Update(ctx, persistentStorage)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			log.Info("Removed owner reference from persistent storage", "psi", persistentStorage)
+		}
+	}
+
 	// Complete state in the drivers
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
@@ -690,7 +723,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		},
 	}
 
-	dwArgs, err := dwdparse.BuildArgsMap(d.Spec.DW.DWDirective)
+	dwArgs, err := dwdparse.BuildArgsMap(d.Spec.Directive)
 	if err != nil {
 		return nil, err
 	}
@@ -716,7 +749,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		func() error {
 			dwsv1alpha1.InheritParentLabels(nnfStorage, owner)
 			dwsv1alpha1.AddOwnerLabels(nnfStorage, owner)
-			nnfStorage.Spec.FileSystemType = d.Spec.Type
+			nnfStorage.Spec.FileSystemType = dwArgs["type"]
 
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
@@ -727,14 +760,14 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
 				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
-				if d.Spec.Type == "lustre" {
+				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					charsWanted := 8
-					if len(d.Spec.Name) < charsWanted {
-						charsWanted = len(d.Spec.Name)
+					if len(dwArgs["name"]) < charsWanted {
+						charsWanted = len(dwArgs["name"])
 					}
-					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = d.Spec.Name[:charsWanted]
+					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = dwArgs["name"][:charsWanted]
 					lustreData := mergeLustreStorageDirectiveAndProfile(dwArgs, nnfStorageProfile)
 					if len(lustreData.ExternalMGS) > 0 {
 						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = lustreData.ExternalMGS[0]
