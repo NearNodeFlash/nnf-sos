@@ -1028,6 +1028,7 @@ func (r *NnfWorkflowReconciler) createDataMovementResource(ctx context.Context, 
 	}
 
 	dwsv1alpha1.AddWorkflowLabels(dm, workflow)
+	dwsv1alpha1.AddOwnerLabels(dm, workflow)
 
 	dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
 		Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
