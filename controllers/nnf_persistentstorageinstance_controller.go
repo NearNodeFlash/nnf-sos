@@ -54,7 +54,7 @@ type PersistentStorageReconciler struct {
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances/status,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;list;watch;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=nnfstorage,verbs=get;list;watch;update;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
