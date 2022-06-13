@@ -69,11 +69,11 @@ func (*DefaultPersistentController) CreatePersistentObject(obj PersistentObjectA
 		return err
 	}
 
-	createErr := executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
+	err = executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
 
-	if err := ledger.Close(createErr != nil); err != nil {
+	if closeErr := ledger.Close(err != nil); closeErr != nil {
 		// If the ledger fails to close we have lost the state of the resource and our only choice is to panic;
-		panic(err)
+		panic(closeErr)
 	}
 
 	return err
