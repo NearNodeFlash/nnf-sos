@@ -179,6 +179,19 @@ func (r *ClientMountReconciler) unmount(ctx context.Context, clientMountInfo dws
 		return err
 	}
 
+	if clientMountInfo.Device.Type == dwsv1alpha1.ClientMountDeviceTypeLVM {
+
+		if _, err := r.run(fmt.Sprintf("vgchange --activate n %s", clientMountInfo.Device.LVM.VolumeGroup)); err != nil {
+			return err
+		}
+
+		if clientMountInfo.Type == "gfs2" {
+			if _, err := r.run(fmt.Sprintf("vgchange --lockstop %s", clientMountInfo.Device.LVM.VolumeGroup)); err != nil {
+				return err
+			}
+		}
+	}
+
 	log.Info("Unmounted file system", "mount path", clientMountInfo.MountPath)
 	return nil
 }
@@ -251,7 +264,7 @@ func (r *ClientMountReconciler) mount(ctx context.Context, clientMountInfo dwsv1
 
 	output, err := r.run(mountCmd)
 	if err != nil {
-		log.Info("Could not unmount file system", "mount path", clientMountInfo.MountPath, "device", device, "Error output", output)
+		log.Info("Could not mount file system", "mount path", clientMountInfo.MountPath, "device", device, "Error output", output)
 		return err
 	}
 
@@ -319,7 +332,7 @@ func (r *ClientMountReconciler) verifyLVMDevice(lvm *dwsv1alpha1.ClientMountDevi
 			sharedOption := ""
 			// Start lock if needed
 			if shared {
-				if _, err := r.run(fmt.Sprintf("vgchange --lock-start %s", lvm.VolumeGroup)); err != nil {
+				if _, err := r.run(fmt.Sprintf("vgchange --lockstart %s", lvm.VolumeGroup)); err != nil {
 					return err
 				}
 

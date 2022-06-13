@@ -38,7 +38,7 @@ spec:
         isRequired: false
         isValueRequired: true
   - command: "create_persistent"
-    watchStates: proposal,setup
+    watchStates: proposal,setup,teardown
     ruleDefs:
       - key: "type"
         type: "string"
@@ -78,7 +78,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "persistentdw"
-    watchStates: proposal,setup,pre_run,post_run
+    watchStates: proposal,setup,pre_run,post_run,teardown
     ruleDefs:
       - key: "name"
         type: "string"
@@ -86,7 +86,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "copy_in"
-    watchStates: proposal,data_in
+    watchStates: proposal,data_in,teardown
     ruleDefs:
       - key: "source"
         type: "string"
@@ -97,7 +97,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "copy_out"
-    watchStates: proposal,data_out
+    watchStates: proposal,data_out,teardown
     ruleDefs:
       - key: "source"
         type: "string"

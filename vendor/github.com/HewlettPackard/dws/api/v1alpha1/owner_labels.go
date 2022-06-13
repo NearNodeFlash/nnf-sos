@@ -71,6 +71,19 @@ func MatchingOwner(owner metav1.Object) client.MatchingLabels {
 	})
 }
 
+func RemoveOwnerLabels(child metav1.Object) {
+	labels := child.GetLabels()
+	if labels == nil {
+		return
+	}
+
+	delete(labels, OwnerKindLabel)
+	delete(labels, OwnerNameLabel)
+	delete(labels, OwnerNamespaceLabel)
+
+	child.SetLabels(labels)
+}
+
 // AddWorkflowLabels adds labels to a resource to indicate which workflow it belongs to
 func AddWorkflowLabels(child metav1.Object, workflow *Workflow) {
 	labels := child.GetLabels()

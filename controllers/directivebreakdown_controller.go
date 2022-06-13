@@ -51,7 +51,7 @@ const (
 
 const (
 	// finalizerWorkflow defines the key used in identifying the
-	// storage object as being owned by this NNF Storage Reconciler. This
+	// storage object as being owned by this directive breakdown reconciler. This
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished in using the resource.
 	finalizerDirectiveBreakdown = "nnf.cray.hpe.com/directiveBreakdown"
@@ -90,14 +90,21 @@ type lustreComponentType struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
-func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("DirectiveBreakdown", req.NamespacedName)
 
 	dbd := &dwsv1alpha1.DirectiveBreakdown{}
-	err := r.Get(ctx, req.NamespacedName, dbd)
+	err = r.Get(ctx, req.NamespacedName, dbd)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	statusUpdater := newDirectiveBreakdownStatusUpdater(dbd)
+	defer func() {
+		if err == nil {
+			err = statusUpdater.close(ctx, r)
+		}
+	}()
 
 	// Check if the object is being deleted
 	if !dbd.GetDeletionTimestamp().IsZero() {
@@ -122,30 +129,75 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	commonResourceName, commonResourceNamespace := getStorageReferenceNameFromDBD(dbd)
-	var persistentInstance *dwsv1alpha1.PersistentStorageInstance
+	argsMap, err := dwdparse.BuildArgsMap(dbd.Spec.Directive)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// If the lifetime of the storage is persistent, create PersistentStorageInstance
-	if dbd.Spec.Lifetime == dwsv1alpha1.DirectiveLifetimePersistent {
+	commonResourceName, commonResourceNamespace := getStorageReferenceNameFromDBD(dbd)
+
+	switch argsMap["command"] {
+	case "create_persistent":
 		var result controllerutil.OperationResult
-		result, persistentInstance, err = r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, log)
+		result, persistentStorage, err := r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, argsMap)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		// If we failed to create the persistent instance or we created it this pass, requeue.
-		if persistentInstance == nil || result == controllerutil.OperationResultCreated {
-			return ctrl.Result{Requeue: true}, nil
+		if persistentStorage == nil || result == controllerutil.OperationResultCreated {
+			return ctrl.Result{}, nil
 		}
 
-		if persistentInstance.Status.Servers == (v1.ObjectReference{}) {
-			return ctrl.Result{Requeue: true}, nil
+		// Wait for the ObjectReference to the Servers resource to be filled in
+		if persistentStorage.Status.Servers == (v1.ObjectReference{}) {
+			return ctrl.Result{}, nil
 		}
 
-		dbd.Status.Servers = persistentInstance.Status.Servers
-	} else {
+		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{
+			Lifetime:  dwsv1alpha1.StorageLifetimePersistent,
+			Reference: persistentStorage.Status.Servers,
+		}
+
+		err = r.populateStorageBreakdown(ctx, dbd, commonResourceName, argsMap)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	case "persistentdw":
+		// Find the peristentStorageInstance that the persistentdw is referencing
+		persistentStorage := &dwsv1alpha1.PersistentStorageInstance{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      commonResourceName,
+				Namespace: commonResourceNamespace,
+			},
+		}
+
+		err := r.Get(ctx, client.ObjectKeyFromObject(persistentStorage), persistentStorage)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Create a location constraint for the compute nodes based on what type of file system
+		// the persistent storage is using. For Lustre, any compute node with network access to
+		// the storage is acceptable. All other file systems need a physical connection to the storage.
+		constraint := dwsv1alpha1.ComputeLocationConstraint{
+			Reference: persistentStorage.Status.Servers,
+		}
+
+		if persistentStorage.Spec.FsType == "lustre" {
+			constraint.Type = dwsv1alpha1.ComputeLocationNetwork
+		} else {
+			constraint.Type = dwsv1alpha1.ComputeLocationPhysical
+		}
+
+		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
+			Constraints: dwsv1alpha1.ComputeConstraints{
+				Location: []dwsv1alpha1.ComputeLocationConstraint{constraint},
+			},
+		}
+	case "jobdw":
 		// Create the corresponding Servers object
-		servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, dbd, log)
+		servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, dbd)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -154,39 +206,50 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		dbd.Status.Servers = v1.ObjectReference{
+		serversReference := v1.ObjectReference{
 			Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
 			Name:      servers.Name,
 			Namespace: servers.Namespace,
 		}
-	}
 
-	result, ctrlResult, err := r.populateDirectiveBreakdown(ctx, dbd, commonResourceName, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if !ctrlResult.IsZero() {
-		return ctrlResult, nil
-	}
-
-	if result == updated {
-		log.V(1).Info("Updated directiveBreakdown", "name", dbd.Name)
-
-		err = r.Status().Update(ctx, dbd)
-		if err != nil {
-			// Ignore conflict errors
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-
-			log.Error(err, "failed to update status")
+		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{
+			Lifetime:  dwsv1alpha1.StorageLifetimeJob,
+			Reference: serversReference,
 		}
+
+		// Create a location constraint for the compute nodes based on what type of file system
+		// will be created. For Lustre, any compute node with network access to the storage is
+		// acceptable. All other file systems need a physical connection to the storage.
+		constraint := dwsv1alpha1.ComputeLocationConstraint{
+			Reference: serversReference,
+		}
+
+		if argsMap["type"] == "lustre" {
+			constraint.Type = dwsv1alpha1.ComputeLocationNetwork
+		} else {
+			constraint.Type = dwsv1alpha1.ComputeLocationPhysical
+		}
+
+		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
+			Constraints: dwsv1alpha1.ComputeConstraints{
+				Location: []dwsv1alpha1.ComputeLocationConstraint{constraint},
+			},
+		}
+
+		err = r.populateStorageBreakdown(ctx, dbd, commonResourceName, argsMap)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	default:
 	}
 
-	return ctrl.Result{}, err
+	dbd.Status.Ready = ConditionTrue
+
+	return ctrl.Result{}, nil
 }
 
-func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, log logr.Logger) (controllerutil.OperationResult, *dwsv1alpha1.PersistentStorageInstance, error) {
+func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, argsMap map[string]string) (controllerutil.OperationResult, *dwsv1alpha1.PersistentStorageInstance, error) {
+	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
 	psi := &dwsv1alpha1.PersistentStorageInstance{
 		ObjectMeta: metav1.ObjectMeta{
@@ -197,9 +260,19 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, psi,
 		func() error {
-			psi.Spec.Name = dbd.Spec.Name
-			psi.Spec.FsType = dbd.Spec.Type
-			psi.Spec.DWDirective = dbd.Spec.DW.DWDirective
+			// Only set the owner references during the create. The workflow controller
+			// will remove the reference after setup phase has completed
+			if psi.Spec.Name == "" {
+				dwsv1alpha1.AddOwnerLabels(psi, dbd)
+				err := ctrl.SetControllerReference(dbd, psi, r.Scheme)
+				if err != nil {
+					return err
+				}
+			}
+
+			psi.Spec.Name = argsMap["name"]
+			psi.Spec.FsType = argsMap["type"]
+			psi.Spec.DWDirective = dbd.Spec.Directive
 
 			return nil
 		})
@@ -225,7 +298,8 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 	return result, psi, err
 }
 
-func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha1.DirectiveBreakdown, log logr.Logger) (*dwsv1alpha1.Servers, error) {
+func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha1.DirectiveBreakdown) (*dwsv1alpha1.Servers, error) {
+	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
 	server := &dwsv1alpha1.Servers{
 		ObjectMeta: metav1.ObjectMeta{
@@ -264,21 +338,14 @@ func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, server
 }
 
 // populateDirectiveBreakdown parses the #DW to pull out the relevant information for the WLM to see.
-func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, commonResourceName string, log logr.Logger) (breakdownPopulateResult, ctrl.Result, error) {
-
-	ctrlResult := ctrl.Result{}
-	result := verified
-	argsMap, err := dwdparse.BuildArgsMap(dbd.Spec.DW.DWDirective)
-	if err != nil {
-		result = skipped
-		return result, ctrlResult, err
-	}
+func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, commonResourceName string, argsMap map[string]string) error {
+	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
 	// The pinned profile will be named for the NnfStorage.
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, dbd.GetNamespace(), commonResourceName)
 	if err != nil {
 		log.Error(err, "Unable to find pinned NnfStorageProfile", "name", commonResourceName)
-		return result, ctrlResult, err
+		return err
 	}
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
@@ -287,20 +354,20 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 
 	breakdownCapacity, _ := getCapacityInBytes(capacity)
 
-	// allocationSet represents the result we need to produce.
+	// allocationSets represents the result we need to produce.
 	// We build it then check to see if the directiveBreakdown's
 	// AllocationSet matches. If so, we don't change it.
-	var allocationSet []dwsv1alpha1.AllocationSetComponents
+	var allocationSets []dwsv1alpha1.StorageAllocationSet
 
 	// Depending on the #DW's filesystem (#DW type=<>) , we have different work to do
 	switch filesystem {
 	case "raw", "xfs", "gfs2":
-		component := dwsv1alpha1.AllocationSetComponents{}
-		populateAllocationSetComponents(&component, "AllocatePerCompute", breakdownCapacity, filesystem, "")
+		component := dwsv1alpha1.StorageAllocationSet{}
+		populateStorageAllocationSet(&component, "AllocatePerCompute", breakdownCapacity, filesystem, "")
 
-		log.Info("allocationSet", "comp", component)
+		log.Info("allocationSets", "comp", component)
 
-		allocationSet = append(allocationSet, component)
+		allocationSets = append(allocationSets, component)
 
 	case "lustre":
 		mdtCapacity, _ := getCapacityInBytes("1TB")
@@ -322,32 +389,24 @@ func (r *DirectiveBreakdownReconciler) populateDirectiveBreakdown(ctx context.Co
 		}
 
 		for _, i := range lustreComponents {
-			component := dwsv1alpha1.AllocationSetComponents{}
-			populateAllocationSetComponents(&component, i.strategy, i.cap, i.labelsStr, i.colocationKey)
+			component := dwsv1alpha1.StorageAllocationSet{}
+			populateStorageAllocationSet(&component, i.strategy, i.cap, i.labelsStr, i.colocationKey)
 
-			allocationSet = append(allocationSet, component)
+			allocationSets = append(allocationSets, component)
 		}
 
 	default:
 		err := fmt.Errorf("failed to populate directiveBreakdown")
 		log.Error(err, "populate directiveBreakdown", "directiveBreakdown", dbd.Name, "filesystem", filesystem)
-		result = skipped
-		return result, ctrlResult, err
+		return err
 	}
 
-	// If the dbd is missing the correct allocation set, assign it.
-	if !reflect.DeepEqual(dbd.Status.AllocationSet, allocationSet) {
-		result = updated
-		dbd.Status.AllocationSet = allocationSet
-		dbd.Status.Ready = ConditionTrue
+	if dbd.Status.Storage == nil {
+		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{}
 	}
 
-	if dbd.Status.Ready != ConditionTrue {
-		result = updated
-		dbd.Status.Ready = ConditionTrue
-	}
-
-	return result, ctrlResult, nil
+	dbd.Status.Storage.AllocationSets = allocationSets
+	return nil
 }
 
 func getCapacityInBytes(capacity string) (int64, error) {
@@ -382,7 +441,7 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, strategy string, cap int64, labelStr string, constraintKey string) {
+func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy string, cap int64, labelStr string, constraintKey string) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
@@ -395,6 +454,29 @@ func populateAllocationSetComponents(a *dwsv1alpha1.AllocationSetComponents, str
 	}
 }
 
+type directiveBreakdownStatusUpdater struct {
+	directiveBreakdown *dwsv1alpha1.DirectiveBreakdown
+	existingStatus     dwsv1alpha1.DirectiveBreakdownStatus
+}
+
+func newDirectiveBreakdownStatusUpdater(d *dwsv1alpha1.DirectiveBreakdown) *directiveBreakdownStatusUpdater {
+	return &directiveBreakdownStatusUpdater{
+		directiveBreakdown: d,
+		existingStatus:     (*d.DeepCopy()).Status,
+	}
+}
+
+func (d *directiveBreakdownStatusUpdater) close(ctx context.Context, r *DirectiveBreakdownReconciler) error {
+	if !reflect.DeepEqual(d.directiveBreakdown.Status, d.existingStatus) {
+		err := r.Status().Update(ctx, d.directiveBreakdown)
+		if !apierrors.IsConflict(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
@@ -402,5 +484,6 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha1.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha1.Servers{}).
+		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
 		Complete(r)
 }
