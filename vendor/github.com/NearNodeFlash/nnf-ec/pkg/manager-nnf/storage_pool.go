@@ -297,14 +297,14 @@ func (rh *storagePoolRecoveryReplayHandler) Entry(typ uint32, data []byte) error
 	return nil
 }
 
-func (rh *storagePoolRecoveryReplayHandler) Done() error {
+func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 
 	switch rh.lastLogEntryType {
 	case storagePoolStorageCreateStartLogEntryType:
 		// In this case the storage pool started, but didn't finish. We may have outstanding namespaces
 		// that should be cleaned up. Since we don't know _which_ namespaces are unassigned at this
 		// point in time (as there may be other storage pools that will claim the namespaces), we will
-		// defer to the storage service to automatically cleans up abandoned namespaces after all
+		// defer to the storage service to automatically clean up abandoned namespaces after all
 		// storage pools have been initialized.
 
 	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
@@ -318,7 +318,7 @@ func (rh *storagePoolRecoveryReplayHandler) Done() error {
 
 		// Recover the namespaces that make up this storage pool
 		if err := rh.storagePool.recoverVolumes(rh.volumes, rh.lastLogEntryType == storagePoolStorageDeleteStartLogEntryType); err != nil {
-			return err
+			return false, err
 		}
 
 		rh.storageService.pools = append(rh.storageService.pools, rh.storagePool)
@@ -331,5 +331,5 @@ func (rh *storagePoolRecoveryReplayHandler) Done() error {
 		rh.storageService.pools = append(rh.storageService.pools, rh.storagePool)
 	}
 
-	return nil
+	return false, nil
 }

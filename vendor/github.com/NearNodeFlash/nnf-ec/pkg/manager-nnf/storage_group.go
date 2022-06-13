@@ -147,8 +147,6 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 	}
 
-
-
 	return nil
 }
 
@@ -201,11 +199,11 @@ func (rh *storageGroupRecoveryReplyHandler) Entry(typ uint32, data []byte) error
 	return nil
 }
 
-func (rh *storageGroupRecoveryReplyHandler) Done() error {
+func (rh *storageGroupRecoveryReplyHandler) Done() (bool, error) {
 
 	sg := rh.storageService.findStorageGroup(rh.id)
 	if sg == nil {
-		return fmt.Errorf("Storage Group Recovery: Storage Group %s not found", rh.id)
+		return true, fmt.Errorf("Storage Group Recovery: Storage Group %s not found", rh.id)
 	}
 
 	switch rh.lastLogEntryType {
@@ -217,11 +215,13 @@ func (rh *storageGroupRecoveryReplyHandler) Done() error {
 		sp := rh.storageService.findStoragePool(sg.storagePoolId)
 		for _, pv := range sp.providingVolumes {
 			if err := nvme.DetachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
-				return err
+				return false, err
 			}
 		}
 
-		// TODO: Delete the storage group from the storage service
+		sp.storageService.deleteStorageGroup(sg)
+
+		return true, nil
 
 	case storageGroupCreateCompleteLogEntryType:
 		// In this case we've created the storage group, and it exists without error. There is nothing to do
@@ -237,5 +237,5 @@ func (rh *storageGroupRecoveryReplyHandler) Done() error {
 		// the delete; they may try to delete it again and we should just ignore it.
 	}
 
-	return nil
+	return false, nil
 }

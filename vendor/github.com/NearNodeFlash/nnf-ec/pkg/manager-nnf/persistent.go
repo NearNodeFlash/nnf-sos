@@ -68,25 +68,31 @@ func (*DefaultPersistentController) CreatePersistentObject(obj PersistentObjectA
 	if err != nil {
 		return err
 	}
-	defer ledger.Close()
 
-	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
+	createErr := executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
+
+	if err := ledger.Close(createErr != nil); err != nil {
+		// If the ledger fails to close we have lost the state of the resource and our only choice is to panic;
+		panic(err)
+	}
+
+	return err
 }
 
 func (*DefaultPersistentController) UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
-	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), false)
+	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey())
 	if err != nil {
 		return err
 	}
-	defer ledger.Close()
+	defer ledger.Close(false)
 
 	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
 }
 
 func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error {
 
-	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), true)
+	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey())
 	if err != nil {
 		return err
 	}
@@ -95,7 +101,7 @@ func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectA
 		return err
 	}
 
-	return ledger.Close()
+	return ledger.Close(true)
 }
 
 func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {

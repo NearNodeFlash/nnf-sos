@@ -20,6 +20,7 @@
 package nvme
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -618,7 +619,14 @@ func (v *Volume) attach(controllerIds []uint16) error {
 	}
 
 	if err := v.storage.device.AttachNamespace(v.namespaceId, controllerIds); err != nil {
-		return err
+		var cmdErr *nvme.CommandError
+		if errors.As(err, &cmdErr) {
+			if cmdErr.StatusCode != nvme.NamespaceAlreadyAttached {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	for _, controllerId := range controllerIds {
@@ -650,7 +658,14 @@ func (v *Volume) detach(controllerIds []uint16) error {
 	}
 
 	if err := v.storage.device.DetachNamespace(v.namespaceId, controllerIds); err != nil {
-		return err
+		var cmdErr *nvme.CommandError
+		if errors.As(err, &cmdErr) {
+			if cmdErr.StatusCode != nvme.NamespaceNotAttached {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	for _, controllerId := range controllerIds {

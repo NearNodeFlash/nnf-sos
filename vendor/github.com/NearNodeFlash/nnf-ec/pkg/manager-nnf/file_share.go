@@ -183,6 +183,6 @@ func (rh *fileShareRecoveryReplayHandler) Entry(t uint32, data []byte) error {
 	return nil
 }
 
-func (rh *fileShareRecoveryReplayHandler) Done() error {
-	return nil
+func (rh *fileShareRecoveryReplayHandler) Done() (bool, error) {
+	return false, nil
 }

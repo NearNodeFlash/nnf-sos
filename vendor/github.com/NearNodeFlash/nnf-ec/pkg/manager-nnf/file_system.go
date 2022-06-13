@@ -201,6 +201,6 @@ func (rh *fileSystemRecoveryReplyHandler) Entry(t uint32, data []byte) error {
 	return nil
 }
 
-func (rh *fileSystemRecoveryReplyHandler) Done() error {
-	return nil
+func (rh *fileSystemRecoveryReplyHandler) Done() (bool, error) {
+	return false, nil
 }
