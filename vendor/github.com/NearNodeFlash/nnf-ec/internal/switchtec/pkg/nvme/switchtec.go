@@ -22,7 +22,6 @@ package nvme
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"unsafe"
 
 	"github.com/HewlettPackard/structex"
@@ -114,7 +113,7 @@ func (ops *switchOps) submitAdminPassthru(dev *Device, cmd *AdminCmd, data []byt
 
 	status := (0xfffe0000 & rsp.Cqe[3]) >> 17
 	if status != 0 {
-		return fmt.Errorf("Admin Passthru: Return status non-zero %d", status)
+		return NewCommandError(status)
 	}
 
 	cmd.Result = rsp.Cqe[0]
