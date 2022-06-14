@@ -19,7 +19,10 @@
 
 package nnf
 
-import "github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+import (
+	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	log "github.com/sirupsen/logrus"
+)
 
 // Persistent Controller API provides an interface for creating, updating, and deleting persistent objects.
 type PersistentControllerApi interface {
@@ -108,24 +111,33 @@ func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentOb
 
 	data, err := obj.GenerateStateData(startingState)
 	if err != nil {
+		log.WithError(err).Warnf("Object %s failed to generate starting state %d data", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := ledger.Log(startingState, data); err != nil {
+		log.WithError(err).Warnf("Object %s failed to log starting state %d", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := updateFunc(); err != nil {
-		obj.Rollback(startingState)
+		log.WithError(err).Warnf("Object %s failed update to state %d", obj.GetKey(), startingState)
+
+		if rollbackErr := obj.Rollback(startingState); rollbackErr != nil {
+			log.WithError(rollbackErr).Errorf("Object %s failed rollback to state %d", obj.GetKey(), startingState)
+		}
+
 		return err
 	}
 
 	data, err = obj.GenerateStateData(endingState)
 	if err != nil {
+		log.WithError(err).Warnf("Object %s failed to generate ending state %d data", obj.GetKey(), endingState)
 		return err
 	}
 
 	if err := ledger.Log(endingState, data); err != nil {
+		log.WithError(err).Warnf("Object %s failed to log ending state %d", obj.GetKey(), endingState)
 		return err
 	}
 

@@ -565,6 +565,7 @@ func (v *Volume) SetFeature(data []byte) error {
 	return v.detach(ctrls)
 }
 
+/*
 func (v *Volume) DetachController(controllerId uint16) error {
 	controllerIds, err := v.storage.device.ListAttachedControllers(v.namespaceId)
 	if err != nil {
@@ -594,6 +595,7 @@ func (v *Volume) AttachController(controllerId uint16) error {
 
 	return nil
 }
+*/
 
 func (v *Volume) attach(controllerIds []uint16) error {
 	// These are really controller indicies that are passed into the nvme-manager; we've always

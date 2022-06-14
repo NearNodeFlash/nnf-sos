@@ -119,7 +119,7 @@ func (sg *StorageGroup) GenerateStateData(state uint32) ([]byte, error) {
 func (sg *StorageGroup) Rollback(state uint32) error {
 	switch state {
 	case storageGroupCreateStartLogEntryType:
-		// Rollback to a state where no controllers are attached to the storage pool
+		// Rollback to a state where no controllers are detached from the storage pool
 
 		sp := sg.storageService.findStoragePool(sg.storagePoolId)
 		if sp == nil {
@@ -127,7 +127,7 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := pv.storage.FindVolume(pv.volumeId).DetachController(sg.endpoint.controllerId); err != nil {
+			if err := nvme.DetachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
 				return err
 			}
 		}
@@ -141,7 +141,7 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := pv.storage.FindVolume(pv.volumeId).AttachController(sg.endpoint.controllerId); err != nil {
+			if err := nvme.AttachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
 				return err
 			}
 		}
