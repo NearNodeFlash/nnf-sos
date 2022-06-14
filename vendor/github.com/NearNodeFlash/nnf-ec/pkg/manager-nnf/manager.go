@@ -150,6 +150,17 @@ func (s *StorageService) createStoragePool(id, name, description string, policy 
 	return &s.pools[len(s.pools)-1]
 }
 
+func (s *StorageService) deleteStoragePool(sp *StoragePool) {
+
+	for storagePoolIdx, storagePool := range s.pools {
+		if storagePool.id == sp.id {
+			s.pools = append(s.pools[:storagePoolIdx], s.pools[storagePoolIdx+1:]...)
+			break
+		}
+	}
+
+}
+
 func (s *StorageService) findStorage(sn string) *nvme.Storage {
 	for _, storage := range nvme.GetStorage() {
 		if storage.SerialNumber() == sn {
@@ -671,6 +682,9 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 
 	if err := s.persistentController.CreatePersistentObject(p, updateFunc, storagePoolStorageCreateStartLogEntryType, storagePoolStorageCreateCompleteLogEntryType); err != nil {
 		log.WithError(err).Errorf("Failed to create volume from storage pool %s", p.id)
+
+		s.deleteStoragePool(p)
+
 		return ec.NewErrInternalServerError().WithResourceType(StorageServiceOdataType).WithError(err).WithCause("Failed to allocate storage volumes")
 	}
 
@@ -776,10 +790,6 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 
 	deleteFunc := func() error {
 		return p.deallocateVolumes()
-
-		// TODO: If any delete fails, we're left with dangling volumes preventing
-		// further deletion. Need to fix or recover from this. Maybe a transaction
-		// log.
 	}
 
 	if err := s.persistentController.DeletePersistentObject(p, deleteFunc, storagePoolStorageDeleteStartLogEntryType, storagePoolStorageDeleteCompleteLogEntryType); err != nil {
@@ -789,16 +799,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), p)
 
-	for idx, pool := range s.pools {
-		if pool.id == storagePoolId {
-			copy(s.pools[idx:], s.pools[idx+1:])
-			s.pools = s.pools[:len(s.pools)-1]
-			break
-		}
-	}
-
-	// TODO: Move the above to a useful function
-	//s.deleteStoragePool(p)
+	s.deleteStoragePool(p)
 
 	return nil
 }
@@ -957,7 +958,7 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 
 	updateFunc := func() error {
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.AttachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
+			if err := nvme.AttachController(pv.storage.FindVolume(pv.volumeId), sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -966,6 +967,10 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 	}
 
 	if err := s.persistentController.CreatePersistentObject(sg, updateFunc, storageGroupCreateStartLogEntryType, storageGroupCreateCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to create storage group %s", sg.id)
+
+		s.deleteStorageGroup(sg)
+
 		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause("failed to create storage group")
 	}
 
@@ -1047,7 +1052,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 
 		// Detach the endpoint from the NVMe namespaces
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachControllers(pv.storage.FindVolume(pv.volumeId), []uint16{sg.endpoint.controllerId}); err != nil {
+			if err := nvme.DetachController(pv.storage.FindVolume(pv.volumeId), sg.endpoint.controllerId); err != nil {
 				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
 			}
 		}
@@ -1061,6 +1066,8 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 	}
 
 	if err := s.persistentController.DeletePersistentObject(sg, deleteFunc, storageGroupDeleteStartLogEntryType, storageGroupDeleteCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to delete storage group %s", sg.id)
+
 		return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause("Failed to delete storage group")
 	}
 
@@ -1166,6 +1173,10 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 	fs := s.createFileSystem(model.Id, sp, fsApi)
 
 	if err := s.persistentController.CreatePersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to create file system %s", fs.id)
+
+		s.deleteFileSystem(fs)
+
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause(fmt.Sprintf("File system '%s' failed to create", fs.id))
 	}
 
@@ -1232,6 +1243,8 @@ func (*StorageService) StorageServiceIdFileSystemIdDelete(storageServiceId, file
 	}
 
 	if err := s.persistentController.DeletePersistentObject(fs, func() error { return nil }, fileSystemDeleteStartLogEntryType, fileSystemDeleteCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to delete file system %s", fs.id)
+
 		return ec.NewErrInternalServerError().WithResourceType(FileSystemOdataType).WithError(err).WithCause("Failed to delete file system")
 	}
 
@@ -1401,6 +1414,8 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 	}
 
 	if err := s.persistentController.UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to create file share %s", sh.id)
+
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update", sh.id))
 	}
 
@@ -1464,6 +1479,8 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 	}
 
 	if err := s.persistentController.DeletePersistentObject(sh, deleteFunc, fileShareDeleteStartLogEntryType, fileShareDeleteCompleteLogEntryType); err != nil {
+		log.WithError(err).Errorf("Failed to delete file share %s", sh.id)
+
 		return ec.NewErrInternalServerError().WithError(err).WithResourceType(FileShareOdataType).WithCause("Failed to delete file share")
 	}
 

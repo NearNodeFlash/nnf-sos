@@ -100,8 +100,8 @@ github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb0
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c h1:+m9OtyIa9vlkLE1jI0lTkAhlVQSOlIM4V4GgkJ0HZpA=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c/go.mod h1:VeS+yILAhE2pDE9iIHwsco3UdAVsMLlQdg6L1aTLPOg=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220607211319-444868fe289a h1:r9F2q2Yd7bpVpoU50xi0FfpQ32MFphzf6rnOogVrIIE=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220607211319-444868fe289a/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b h1:9aBZ8Lp7oGxIYz/U02wqLeF7peUDRHblo2ALO8fbt94=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

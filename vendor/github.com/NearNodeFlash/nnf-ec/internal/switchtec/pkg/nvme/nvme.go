@@ -98,6 +98,41 @@ const (
 	NvmeMiRecv                AdminCommandOpCode = 0x1E
 )
 
+type StatusCode uint32
+
+const (
+	StatusCodeMask         = 0x7FF
+	CommandRetryDelayMask  = 0x1800
+	CommandRetryDelayShift = 11
+	MoreMask               = 0x2000
+	DoNotRetryMask         = 0x4000
+)
+
+const (
+	NamespaceAlreadyAttached StatusCode = 0x118
+	NamespaceNotAttached     StatusCode = 0x11a
+)
+
+type CommandError struct {
+	StatusCode        StatusCode
+	CommandRetryDelay uint8
+	More              bool
+	DoNotRetry        bool
+}
+
+func (e *CommandError) Error() string {
+	return fmt.Sprintf("NVMe Status: %#03x CRD: %d More: %t DNR: %t", e.StatusCode, e.CommandRetryDelay, e.More, e.DoNotRetry)
+}
+
+func NewCommandError(status uint32) error {
+	return &CommandError{
+		StatusCode:        StatusCode(status & StatusCodeMask),
+		CommandRetryDelay: uint8((status & CommandRetryDelayMask) >> CommandRetryDelayShift),
+		More:              status&MoreMask != 0,
+		DoNotRetry:        status&DoNotRetryMask != 0,
+	}
+}
+
 func Open(devPath string) (*Device, error) {
 
 	if strings.HasPrefix(path.Base(devPath), "nvme") {

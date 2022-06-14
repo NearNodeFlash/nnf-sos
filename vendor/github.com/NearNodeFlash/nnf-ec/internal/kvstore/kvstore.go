@@ -82,6 +82,8 @@ func (s *Store) Register(registries []Registry) {
 
 func (s *Store) Replay() error {
 	for _, r := range s.registries {
+
+		deleteKeys := make([]string, 0)
 		err := s.db.View(func(txn *badger.Txn) error {
 			opts := badger.DefaultIteratorOptions
 			if len(r.Prefix()) != 0 {
@@ -105,8 +107,15 @@ func (s *Store) Replay() error {
 					return err
 				}
 
-				if err := runReply(r, key, value); err != nil {
+				delete, err := s.runReply(r, key, value)
+				if err != nil {
 					return err
+				}
+
+				// Record the key for deletion so it can be deleted
+				// outside this transaction.
+				if delete {
+					deleteKeys = append(deleteKeys, string(key))
 				}
 			}
 
@@ -116,6 +125,13 @@ func (s *Store) Replay() error {
 		if err != nil {
 			return err
 		}
+
+		for _, key := range deleteKeys {
+			if err := s.DeleteKey(key); err != nil {
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -154,11 +170,11 @@ func (s *Store) NewKey(key string, metadata []byte) (*Ledger, error) {
 	return nil, ErrRegistryNotFound
 }
 
-func (s *Store) OpenKey(key string, deleteOnClose bool) (*Ledger, error) {
+func (s *Store) OpenKey(key string) (*Ledger, error) {
 	for _, r := range s.registries {
 		if strings.HasPrefix(key, r.Prefix()) {
 
-			ledger := s.existingKeyLedger(key, deleteOnClose)
+			ledger := s.existingKeyLedger(key)
 			err := s.db.View(func(txn *badger.Txn) error {
 				item, err := txn.Get([]byte(key))
 				if err != nil {
@@ -187,12 +203,12 @@ func (s *Store) OpenKey(key string, deleteOnClose bool) (*Ledger, error) {
 }
 
 func (s *Store) DeleteKey(key string) error {
-	ledger, err := s.OpenKey(key, true)
+	ledger, err := s.OpenKey(key)
 	if err != nil {
 		return err
 	}
 
-	return ledger.Close()
+	return ledger.Close(true)
 }
 
 var ErrRegistryNotFound = errors.New("registry not found")
@@ -202,7 +218,7 @@ type Registry interface {
 	NewReplay(id string) ReplayHandler
 }
 
-func runReply(registry Registry, key []byte, data []byte) (err error) {
+func (s *Store) runReply(registry Registry, key []byte, data []byte) (delete bool, err error) {
 	id := string(key[len(registry.Prefix()):])
 	it := newIterator(data)
 	replay := registry.NewReplay(string(id))
@@ -214,7 +230,7 @@ func runReply(registry Registry, key []byte, data []byte) (err error) {
 		}
 
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
@@ -224,7 +240,7 @@ func runReply(registry Registry, key []byte, data []byte) (err error) {
 type ReplayHandler interface {
 	Metadata(data []byte) error
 	Entry(t uint32, data []byte) error
-	Done() error
+	Done() (bool, error)
 }
 
 const (
@@ -276,10 +292,9 @@ func (it *tlvIterator) Next() (tlv, bool) {
 }
 
 type Ledger struct {
-	s             *Store
-	key           string
-	bytes         []byte
-	deleteOnClose bool
+	s     *Store
+	key   string
+	bytes []byte
 }
 
 func (l *Ledger) Log(t uint32, v []byte) error {
@@ -298,8 +313,8 @@ func (l *Ledger) Log(t uint32, v []byte) error {
 	return l.s.db.Sync()
 }
 
-func (l *Ledger) Close() error {
-	if l.deleteOnClose {
+func (l *Ledger) Close(delete bool) error {
+	if delete {
 
 		txn := l.s.db.NewTransaction(true)
 		if err := txn.Delete([]byte(l.key)); err != nil {
@@ -312,9 +327,9 @@ func (l *Ledger) Close() error {
 }
 
 func (s *Store) newKeyLedger(key string, bytes []byte) *Ledger {
-	return &Ledger{s: s, key: key, bytes: bytes, deleteOnClose: false}
+	return &Ledger{s: s, key: key, bytes: bytes}
 }
 
-func (s *Store) existingKeyLedger(key string, deleteOnClose bool) *Ledger {
-	return &Ledger{s: s, key: key, deleteOnClose: deleteOnClose}
+func (s *Store) existingKeyLedger(key string) *Ledger {
+	return &Ledger{s: s, key: key}
 }

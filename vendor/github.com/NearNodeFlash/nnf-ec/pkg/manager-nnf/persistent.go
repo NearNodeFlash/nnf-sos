@@ -19,7 +19,10 @@
 
 package nnf
 
-import "github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+import (
+	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	log "github.com/sirupsen/logrus"
+)
 
 // Persistent Controller API provides an interface for creating, updating, and deleting persistent objects.
 type PersistentControllerApi interface {
@@ -68,25 +71,31 @@ func (*DefaultPersistentController) CreatePersistentObject(obj PersistentObjectA
 	if err != nil {
 		return err
 	}
-	defer ledger.Close()
 
-	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
+	err = executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
+
+	if closeErr := ledger.Close(err != nil); closeErr != nil {
+		// If the ledger fails to close we have lost the state of the resource and our only choice is to panic;
+		panic(closeErr)
+	}
+
+	return err
 }
 
 func (*DefaultPersistentController) UpdatePersistentObject(obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
-	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), false)
+	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey())
 	if err != nil {
 		return err
 	}
-	defer ledger.Close()
+	defer ledger.Close(false)
 
 	return executePersistentObjectTransaction(ledger, obj, updateFunc, startingState, endingState)
 }
 
 func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectApi, deleteFunc func() error, startingState, endingState uint32) error {
 
-	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey(), true)
+	ledger, err := obj.GetProvider().GetStore().OpenKey(obj.GetKey())
 	if err != nil {
 		return err
 	}
@@ -95,31 +104,40 @@ func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectA
 		return err
 	}
 
-	return ledger.Close()
+	return ledger.Close(true)
 }
 
 func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
 	data, err := obj.GenerateStateData(startingState)
 	if err != nil {
+		log.WithError(err).Warnf("Object %s failed to generate starting state %d data", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := ledger.Log(startingState, data); err != nil {
+		log.WithError(err).Warnf("Object %s failed to log starting state %d", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := updateFunc(); err != nil {
-		obj.Rollback(startingState)
+		log.WithError(err).Warnf("Object %s failed update to state %d", obj.GetKey(), startingState)
+
+		if rollbackErr := obj.Rollback(startingState); rollbackErr != nil {
+			log.WithError(rollbackErr).Errorf("Object %s failed rollback to state %d", obj.GetKey(), startingState)
+		}
+
 		return err
 	}
 
 	data, err = obj.GenerateStateData(endingState)
 	if err != nil {
+		log.WithError(err).Warnf("Object %s failed to generate ending state %d data", obj.GetKey(), endingState)
 		return err
 	}
 
 	if err := ledger.Log(endingState, data); err != nil {
+		log.WithError(err).Warnf("Object %s failed to log ending state %d", obj.GetKey(), endingState)
 		return err
 	}
 
