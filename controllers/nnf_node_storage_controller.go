@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
@@ -94,10 +95,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// so when we would normally call "return ctrl.Result{}, nil", at that time
 	// "err" is nil - and if permitted we will update err with the result of
 	// the r.Update()
-	statusUpdater := newNodeStorageStatusUpdater(nodeStorage)
+	statusUpdater := newNodeStorageStatusUpdater(ctx, nodeStorage)
 	defer func() {
 		if err == nil {
-			err = statusUpdater.close(ctx, r)
+			err = statusUpdater.close(r)
 		}
 	}()
 
@@ -746,12 +747,14 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 }
 
 type nodeStorageStatusUpdater struct {
+	ctx            context.Context
 	storage        *nnfv1alpha1.NnfNodeStorage
 	existingStatus nnfv1alpha1.NnfNodeStorageStatus
 }
 
-func newNodeStorageStatusUpdater(n *nnfv1alpha1.NnfNodeStorage) *nodeStorageStatusUpdater {
+func newNodeStorageStatusUpdater(c context.Context, n *nnfv1alpha1.NnfNodeStorage) *nodeStorageStatusUpdater {
 	return &nodeStorageStatusUpdater{
+		ctx:            c,
 		storage:        n,
 		existingStatus: (*n.DeepCopy()).Status,
 	}
@@ -762,14 +765,16 @@ func (s *nodeStorageStatusUpdater) update(update func(*nnfv1alpha1.NnfNodeStorag
 }
 
 func (s *nodeStorageStatusUpdater) updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {
+	log.FromContext(s.ctx).Error(err, "Resource failed", "Condition", condition.Type)
+
 	status.Status = nnfv1alpha1.ResourceFailed
 	condition.Reason = nnfv1alpha1.ConditionFailed
 	condition.Message = err.Error()
 }
 
-func (s *nodeStorageStatusUpdater) close(ctx context.Context, r *NnfNodeStorageReconciler) error {
+func (s *nodeStorageStatusUpdater) close(r *NnfNodeStorageReconciler) error {
 	if !reflect.DeepEqual(s.storage.Status, s.existingStatus) {
-		err := r.Update(ctx, s.storage)
+		err := r.Update(s.ctx, s.storage)
 		if !apierrors.IsConflict(err) {
 			return err
 		}
