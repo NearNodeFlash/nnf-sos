@@ -415,28 +415,30 @@ var _ = Describe("Integration Test", func() {
 		type wfTestConfiguration struct {
 			directive                   string
 			expectedDirectiveBreakdowns int
+			hasComputeBreakdown         bool
+			hasStorageBreakdown         bool
 			expectedAllocationSets      int
 		}
 
 		var wfTests = []wfTestConfiguration{
-			{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, 1},
+			{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, true, true, 1},
 
-			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, 1},
-			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, 1},
-			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, 3},
+			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, true, true, 1},
+			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, true, true, 1},
+			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, true, true, 3},
 
-			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, 1},
-			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, 1},
-			{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, 3},
+			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, false, true, 1},
+			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, false, true, 1},
+			{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, false, true, 3},
 
-			{"#DW persistentdw name=createpersistent-xfs", 1, 0},
-			{"#DW persistentdw name=createpersistent-gfs2", 1, 0},
-			{"#DW persistentdw name=createpersistent-lustre", 1, 0},
+			{"#DW persistentdw name=createpersistent-xfs", 1, true, false, 0},
+			{"#DW persistentdw name=createpersistent-gfs2", 1, true, false, 0},
+			{"#DW persistentdw name=createpersistent-lustre", 1, true, false, 0},
 
-			{"#DW delete_persistent name=doesnotexist", 0, 0},
-			{"#DW delete_persistent name=createpersistent-xfs   ", 0, 0},
-			{"#DW delete_persistent name=createpersistent-gfs2  ", 0, 0},
-			{"#DW delete_persistent name=createpersistent-lustre", 0, 0},
+			{"#DW delete_persistent name=doesnotexist", 0, false, false, 0},
+			{"#DW delete_persistent name=createpersistent-xfs   ", 0, false, false, 0},
+			{"#DW delete_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
+			{"#DW delete_persistent name=createpersistent-lustre", 0, false, false, 0},
 		}
 
 		for idx := range wfTests {
@@ -535,7 +537,21 @@ var _ = Describe("Integration Test", func() {
 					return dbd.Status.Ready
 				}).Should(BeTrue())
 
-				if storageDirective == "persistentdw" {
+				if wfTests[idx].hasComputeBreakdown {
+					Expect(dbd.Status.Compute).NotTo(BeNil())
+					Expect(dbd.Status.Compute.Constraints.Location).To(HaveLen(1))
+
+					for _, location := range dbd.Status.Compute.Constraints.Location {
+						servers := &dwsv1alpha1.Servers{}
+						Expect(location.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.Servers{}).Name()))
+						Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: location.Reference.Name, Namespace: location.Reference.Namespace}, servers)).To(Succeed())
+					}
+				} else {
+					Expect(dbd.Status.Compute).To(BeNil())
+				}
+
+				if !wfTests[idx].hasStorageBreakdown {
+					Expect(dbd.Status.Storage).To(BeNil())
 					continue
 				}
 
