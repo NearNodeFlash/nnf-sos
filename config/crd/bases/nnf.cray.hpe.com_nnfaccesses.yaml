@@ -16,7 +16,23 @@ spec:
     singular: nnfaccess
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The desired state
+      jsonPath: .spec.desiredState
+      name: DESIREDSTATE
+      type: string
+    - description: The current state
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: Whether the state has been achieved
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfAccess is the Schema for the nnfaccesses API
