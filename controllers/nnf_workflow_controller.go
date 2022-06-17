@@ -392,7 +392,7 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 		case "create_persistent":
 			createPersistentCount++
 
-		case "delete_persistent":
+		case "destroy_persistent":
 			deletePersistentCount++
 
 		case "persistentdw":
@@ -403,9 +403,9 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 	}
 
 	if directiveCount > 1 {
-		// Ensure create_persistent or delete_persistent are singletons in the workflow
+		// Ensure create_persistent or destroy_persistent are singletons in the workflow
 		if createPersistentCount+deletePersistentCount > 0 {
-			return fmt.Errorf("a single create_persistent or delete_persistent directive allowed per workflow")
+			return fmt.Errorf("a single create_persistent or destroy_persistent directive allowed per workflow")
 		}
 	}
 
@@ -1496,7 +1496,7 @@ func (r *NnfWorkflowReconciler) handlePostRunState(ctx context.Context, workflow
 }
 
 func (r *NnfWorkflowReconciler) handleTeardown(ctx context.Context, workflow *dwsv1alpha1.Workflow, log logr.Logger) (bool, error) {
-	// Add owner labels to the persistentStorageInstances named by a "delete_persistent" #DW.
+	// Add owner labels to the persistentStorageInstances named by a "destroy_persistent" #DW.
 	// They'll get deleted below in the call to deleteChildren
 	err := r.teardownPersistentStorageInstances(ctx, workflow)
 	if err != nil {
@@ -1536,7 +1536,7 @@ func (r *NnfWorkflowReconciler) handleTeardownState(ctx context.Context, workflo
 	return r.completeDriverState(ctx, workflow, driverID, log)
 }
 
-// Delete persistent storage specified with delete_persistent directive
+// Delete persistent storage specified with destroy_persistent directive
 func (r *NnfWorkflowReconciler) teardownPersistentStorageInstances(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
 	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace})
 	var firstErr error
@@ -1548,7 +1548,7 @@ func (r *NnfWorkflowReconciler) teardownPersistentStorageInstances(ctx context.C
 			return err
 		}
 
-		if args["command"] == "delete_persistent" {
+		if args["command"] == "destroy_persistent" {
 			psiName := args["name"]
 			log.Info("Teardown PersistentStorageInstance", "name", psiName)
 

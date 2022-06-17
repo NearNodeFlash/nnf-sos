@@ -42,8 +42,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DirectiveBreakdownSpec defines the storage information WLM
-              needs to select NNF Nodes and request storage from the selected nodes
+            description: DirectiveBreakdownSpec defines the directive string to breakdown
             properties:
               directive:
                 description: 'Directive is a copy of the #DW for this breakdown'
