@@ -91,6 +91,9 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/HewlettPackard/dws v0.0.0-20220613161551-05ca89438c83 h1:lTJgfUtT19L3+VACsHNCEchKFsGAQBwrJOX3eYmlCuU=
 github.com/HewlettPackard/dws v0.0.0-20220613161551-05ca89438c83/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
+github.com/HewlettPackard/dws v0.0.0-20220621142357-8e32b62eca41 h1:tZYYnNBu94sVlobTL7DzOCbk41ixHaRIoK1FhExpNfk=
+github.com/HewlettPackard/dws v0.0.0-20220621142357-8e32b62eca41/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
+github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220516192757-17ac28565db5 h1:t+W1/ma3U4s8Ct4UVfUO+ZHVuytflXuQ7qJJwBre5kE=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220516192757-17ac28565db5/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
@@ -100,6 +103,8 @@ github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb0
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c h1:+m9OtyIa9vlkLE1jI0lTkAhlVQSOlIM4V4GgkJ0HZpA=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220517205036-02c092067a4c/go.mod h1:VeS+yILAhE2pDE9iIHwsco3UdAVsMLlQdg6L1aTLPOg=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220601164537-0e55b2ab4faa h1:haP9Mwy+9a82lPuG54JmRfHQTs2GV3Ke2VJJq2Z0d6s=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220601164537-0e55b2ab4faa/go.mod h1:VeS+yILAhE2pDE9iIHwsco3UdAVsMLlQdg6L1aTLPOg=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b h1:9aBZ8Lp7oGxIYz/U02wqLeF7peUDRHblo2ALO8fbt94=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
@@ -162,6 +167,7 @@ github.com/cockroachdb/datadriven v0.0.0-20200714090401-bf6692d28da5/go.mod h1:h
 github.com/cockroachdb/errors v1.2.4/go.mod h1:rQD95gz6FARkaKkQXUksEje/d9a6wBJoCr5oaCLELYA=
 github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u985jwjWRlyHXQbwatDASoW0RMlZ/3i9yJHE2xLkI=
 github.com/container-storage-interface/spec v1.2.0/go.mod h1:6URME8mwIBbpVyZV93Ce5St17xBiQJQY67NDsuohiy4=
+github.com/container-storage-interface/spec v1.5.0 h1:lvKxe3uLgqQeVQcrnL2CPQKISoKjTJxojEs9cBk+HXo=
 github.com/container-storage-interface/spec v1.5.0/go.mod h1:8K96oQNkJ7pFcC2R9Z1ynGGBB1I93kcS6PGg3SsOk8s=
 github.com/coreos/bbolt v1.3.2/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=
 github.com/coreos/bbolt v1.3.3/go.mod h1:iRUV2dpdMOn7Bo10OQBFzIJO9kkE559Wcmn+qkEiiKk=

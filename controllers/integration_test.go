@@ -113,7 +113,7 @@ var _ = Describe("Integration Test", func() {
 					if strings.HasPrefix(directive, "#DW create_persistent") {
 						return false
 					}
-					if strings.HasPrefix(directive, "#DW delete_persistent") {
+					if strings.HasPrefix(directive, "#DW destroy_persistent") {
 						return false
 					}
 				}
@@ -435,10 +435,10 @@ var _ = Describe("Integration Test", func() {
 			{"#DW persistentdw name=createpersistent-gfs2", 1, true, false, 0},
 			{"#DW persistentdw name=createpersistent-lustre", 1, true, false, 0},
 
-			{"#DW delete_persistent name=doesnotexist", 0, false, false, 0},
-			{"#DW delete_persistent name=createpersistent-xfs   ", 0, false, false, 0},
-			{"#DW delete_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
-			{"#DW delete_persistent name=createpersistent-lustre", 0, false, false, 0},
+			{"#DW destroy_persistent name=doesnotexist", 0, false, false, 0},
+			{"#DW destroy_persistent name=createpersistent-xfs   ", 0, false, false, 0},
+			{"#DW destroy_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
+			{"#DW destroy_persistent name=createpersistent-lustre", 0, false, false, 0},
 		}
 
 		for idx := range wfTests {
@@ -1527,28 +1527,28 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 
-		When("using more than one delete_persistent directive in workflow", func() {
+		When("using more than one destroy_persistent directive in workflow", func() {
 			BeforeEach(func() {
 				directives = []string{
-					"#DW delete_persistent name=p1",
-					"#DW delete_persistent name=p2",
+					"#DW destroy_persistent name=p1",
+					"#DW destroy_persistent name=p2",
 				}
 			})
 
-			It("Fails with more than 1 delete_persistent", func() {
+			It("Fails with more than 1 destroy_persistent", func() {
 				verifyErrorIsPresent()
 			})
 		})
 
-		When("using 1 create_persistent and 1 delete_persistent directive in workflow", func() {
+		When("using 1 create_persistent and 1 destroy_persistent directive in workflow", func() {
 			BeforeEach(func() {
 				directives = []string{
 					"#DW create_persistent name=p1 type=xfs capacity=1GiB",
-					"#DW delete_persistent name=p1",
+					"#DW destroy_persistent name=p1",
 				}
 			})
 
-			It("Fails with 1 create_persistent and 1 delete_persistent", func() {
+			It("Fails with 1 create_persistent and 1 destroy_persistent", func() {
 				verifyErrorIsPresent()
 			})
 		})

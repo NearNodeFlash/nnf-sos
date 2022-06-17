@@ -68,7 +68,7 @@ func getStorageReferenceNameFromWorkflowActual(workflow *dwsv1alpha1.Workflow, d
 	var name, namespace string
 
 	switch p["command"] {
-	case "persistentdw", "create_persistent", "delete_persistent":
+	case "persistentdw", "create_persistent", "destroy_persistent":
 		name = p["name"]
 		namespace = workflow.Namespace
 	default:
@@ -88,7 +88,7 @@ func getStorageReferenceNameFromWorkflowIntended(workflow *dwsv1alpha1.Workflow,
 	var name string
 	namespace := workflow.Namespace
 	switch p["command"] {
-	case "persistentdw", "create_persistent", "delete_persistent":
+	case "persistentdw", "create_persistent", "destroy_persistent":
 		name = p["name"]
 	default:
 		name = createDirectiveBreakdownName(workflow, dwdIndex)
@@ -105,7 +105,7 @@ func getStorageReferenceNameFromDBD(dbd *dwsv1alpha1.DirectiveBreakdown) (string
 
 	p, _ := dwdparse.BuildArgsMap(dbd.Spec.Directive) // ignore error, directives were validated in proposal
 	switch p["command"] {
-	case "persistentdw", "create_persistent", "delete_persistent":
+	case "persistentdw", "create_persistent", "destroy_persistent":
 		name = p["name"]
 	default:
 		name = dbd.Name

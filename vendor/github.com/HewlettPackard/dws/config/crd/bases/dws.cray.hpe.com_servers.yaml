@@ -16,7 +16,15 @@ spec:
     singular: servers
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: True if allocation sets have been generated
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Servers is the Schema for the servers API
