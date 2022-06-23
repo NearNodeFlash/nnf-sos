@@ -51,7 +51,7 @@ type ClientMountReconciler struct {
 
 const (
 	// finalizerClientMount defines the key used for the finalizer
-	finalizerClientMount = "nnf.cray.hpe.com/client_mount"
+	finalizerClientMount = "dws.cray.hpe.com/client_mount"
 )
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete

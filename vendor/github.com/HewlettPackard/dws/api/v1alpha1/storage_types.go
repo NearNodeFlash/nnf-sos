@@ -43,8 +43,9 @@ type StorageDevice struct {
 	// be usable depending on what the storage driver can provide.
 	Capacity int64 `json:"capacity,omitempty"`
 
-	// WearLevel in percent for SSDs
-	WearLevel int64 `json:"wearLevel,omitempty"`
+	// WearLevel in percent for SSDs. A value of 100 indicates the estimated endurance of the non-volatile memory
+	// has been consumed, but may not indicate a storage failure. 
+	WearLevel *int64 `json:"wearLevel,omitempty"`
 
 	// Status of the individual device
 	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
