@@ -93,6 +93,8 @@ github.com/HewlettPackard/dws v0.0.0-20220613161551-05ca89438c83 h1:lTJgfUtT19L3
 github.com/HewlettPackard/dws v0.0.0-20220613161551-05ca89438c83/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
 github.com/HewlettPackard/dws v0.0.0-20220621142357-8e32b62eca41 h1:tZYYnNBu94sVlobTL7DzOCbk41ixHaRIoK1FhExpNfk=
 github.com/HewlettPackard/dws v0.0.0-20220621142357-8e32b62eca41/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
+github.com/HewlettPackard/dws v0.0.0-20220622180158-5515cc45cbce h1:nF1mA0wC2cNPjqQsug3CucSpUZwvkueV64buHqYyjAY=
+github.com/HewlettPackard/dws v0.0.0-20220622180158-5515cc45cbce/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220516192757-17ac28565db5 h1:t+W1/ma3U4s8Ct4UVfUO+ZHVuytflXuQ7qJJwBre5kE=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220516192757-17ac28565db5/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
