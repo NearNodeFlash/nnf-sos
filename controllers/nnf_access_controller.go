@@ -467,9 +467,11 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 	// Read each NnfNodeStorage resource and find the NVMe information for each
 	// allocation.
 	for nodeName, storageCount := range storageCountMap {
+		matchLabels := dwsv1alpha1.MatchingOwner(nnfStorage)
+		matchLabels[nnfv1alpha1.AllocationSetLabel] = allocationSetSpec.Name
+
 		listOptions := []client.ListOption{
-			client.MatchingLabels{nnfv1alpha1.AllocationSetLabel: allocationSetSpec.Name},
-			dwsv1alpha1.MatchingOwner(nnfStorage),
+			matchLabels,
 			client.InNamespace(nodeName),
 		}
 

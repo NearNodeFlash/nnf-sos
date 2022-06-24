@@ -270,9 +270,11 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	allocationSet.AllocationCount = 0
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
+	matchLabels := dwsv1alpha1.MatchingOwner(storage)
+	matchLabels[nnfv1alpha1.AllocationSetLabel] = storage.Spec.AllocationSets[allocationSetIndex].Name
+
 	listOptions := []client.ListOption{
-		dwsv1alpha1.MatchingOwner(storage),
-		client.MatchingLabels{nnfv1alpha1.AllocationSetLabel: storage.Spec.AllocationSets[allocationSetIndex].Name},
+		matchLabels,
 	}
 
 	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
