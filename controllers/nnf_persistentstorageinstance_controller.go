@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/dwdparse"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -112,6 +113,20 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	pinnedProfile, err := createPinnedProfile(ctx, r.Client, r.Scheme, argsMap, persistentStorage, persistentStorage.GetName())
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if pinnedProfile == nil {
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Create the Servers resource
@@ -207,5 +222,6 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha1.PersistentStorageInstance{}).
 		Owns(&dwsv1alpha1.Servers{}).
+		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Complete(r)
 }

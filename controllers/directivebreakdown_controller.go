@@ -41,6 +41,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
 // Define condition values
@@ -138,15 +139,14 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	switch argsMap["command"] {
 	case "create_persistent":
-		var result controllerutil.OperationResult
-		result, persistentStorage, err := r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, argsMap)
+		persistentStorage, err := r.createOrUpdatePersistentStorageInstance(ctx, dbd, commonResourceName, argsMap)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		// If we failed to create the persistent instance or we created it this pass, requeue.
-		if persistentStorage == nil || result == controllerutil.OperationResultCreated {
-			return ctrl.Result{}, nil
+		// Requeue if we failed to create the persistent instance
+		if persistentStorage == nil {
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		// Wait for the ObjectReference to the Servers resource to be filled in
@@ -196,6 +196,15 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			},
 		}
 	case "jobdw":
+		pinnedProfile, err := createPinnedProfile(ctx, r.Client, r.Scheme, argsMap, dbd, commonResourceName)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if pinnedProfile == nil {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
 		// Create the corresponding Servers object
 		servers, err := r.createServers(ctx, commonResourceName, commonResourceNamespace, dbd)
 		if err != nil {
@@ -248,7 +257,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, argsMap map[string]string) (controllerutil.OperationResult, *dwsv1alpha1.PersistentStorageInstance, error) {
+func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, argsMap map[string]string) (*dwsv1alpha1.PersistentStorageInstance, error) {
 	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
 	psi := &dwsv1alpha1.PersistentStorageInstance{
@@ -279,11 +288,11 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 
 	if err != nil {
 		if apierrors.IsConflict(err) {
-			return result, nil, nil
+			return nil, nil
 		}
 
 		log.Error(err, "Failed to create or update PersistentStorageInstance", "name", psi.Name)
-		return result, nil, err
+		return nil, err
 	}
 
 	switch result {
@@ -295,7 +304,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 		log.Info("Updated PersistentStorageInstance", "name", psi.Name, "PIName", psi.Spec.Name)
 	}
 
-	return result, psi, err
+	return psi, err
 }
 
 func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha1.DirectiveBreakdown) (*dwsv1alpha1.Servers, error) {
@@ -485,5 +494,6 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&dwsv1alpha1.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha1.Servers{}).
 		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
+		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Complete(r)
 }

@@ -270,15 +270,6 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 		return r.failDriverState(ctx, workflow, driverID, err.Error())
 	}
 
-	// For each directive breakdown that will require an NnfStorageProfile,
-	// create a pinned copy of the profile.
-	if pResult, err := r.generatePinnedStorageProfiles(ctx, workflow, log); err != nil {
-		log.Error(err, "Unable to generate pinned NnfStorageProfile resources for new DirectiveBreakdown resources")
-		return r.failDriverState(ctx, workflow, driverID, err.Error())
-	} else if pResult.Requeue {
-		return pResult, nil
-	}
-
 	// Loop through the #DWs that registered for the proposal state
 	var dbList []v1.ObjectReference
 	for _, driverStatus := range workflow.Status.Drivers {
@@ -341,33 +332,6 @@ func (r *NnfWorkflowReconciler) handleProposalState(ctx context.Context, workflo
 
 	// Complete state in the drivers
 	return r.completeDriverState(ctx, workflow, driverID, log)
-}
-
-func (r *NnfWorkflowReconciler) generatePinnedStorageProfiles(ctx context.Context, workflow *dwsv1alpha1.Workflow, log logr.Logger) (ctrl.Result, error) {
-
-	result := ctrl.Result{}
-	for dwIndex, directive := range workflow.Spec.DWDirectives {
-		// The webhook validated directives, ignore errors
-		dwArgs, _ := dwdparse.BuildArgsMap(directive)
-		command := dwArgs["command"]
-
-		if command != "jobdw" && command != "create_persistent" {
-			continue
-		}
-
-		pinnedName, _ := getStorageReferenceNameFromWorkflowIntended(workflow, dwIndex)
-		opResult, err := pinProfile(ctx, r.Client, r.Scheme, dwArgs, workflow, pinnedName)
-		if err != nil {
-			log.Error(err, "Failed to pin NnfStorageProfile")
-			return result, err
-		}
-		if opResult != controllerutil.OperationResultNone {
-			// If we created one, then ask for a requeue.
-			log.Info("Created NnfStorageProfile", "name", pinnedName)
-			result.Requeue = true
-		}
-	}
-	return result, nil
 }
 
 // Validate the workflow and return any error found
@@ -799,17 +763,6 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		// no change
 	} else {
 		log.Info("Updated NnfStorage", "name", nnfStorage.Name)
-	}
-
-	// Let this NnfStorage have ownership over the NnfStorageProfile it is using.
-	result, err = setPinnedProfileOwnership(ctx, nnfStorage, r.Client, r.Scheme, nnfStorageProfile)
-	if err != nil {
-		if !apierrors.IsConflict(err) {
-			log.Error(err, "Unable to add new owner to NnfStorageProfile", "name", nnfStorageProfile.GetName())
-		}
-		return nil, err
-	} else if result != controllerutil.OperationResultNone {
-		log.Info("Updated NnfStorageProfile", "name", nnfStorageProfile.GetName())
 	}
 
 	return nnfStorage, nil
@@ -1626,7 +1579,6 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&nnfv1alpha1.NnfDataMovement{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
-		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		Complete(r)
 }

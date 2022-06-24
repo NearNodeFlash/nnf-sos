@@ -91,59 +91,25 @@ func findPinnedProfile(ctx context.Context, clnt client.Client, namespace string
 	return nnfStorageProfile, nil
 }
 
-// setPinnedProfileOwnership sets an owner reference on a pinned profile.
-func setPinnedProfileOwnership(ctx context.Context, newOwner metav1.Object, clnt client.Client, clntScheme *runtime.Scheme, nnfStorageProfile *nnfv1alpha1.NnfStorageProfile) (controllerutil.OperationResult, error) {
-
-	result := controllerutil.OperationResultNone
-
-	if !nnfStorageProfile.Data.Pinned {
-		return result, fmt.Errorf("Attempt to set owner reference on non-pinned NnfStorageProfile: %s", nnfStorageProfile.GetName())
-	}
-	for _, ref := range nnfStorageProfile.GetOwnerReferences() {
-		if ref.UID == newOwner.GetUID() {
-			// No update is necessary.
-			return result, nil
-		}
-	}
-	// Clear out the previous owner, then set the new owner.
-	newOwnerRefs := make([]metav1.OwnerReference, 0)
-	nnfStorageProfile.SetOwnerReferences(newOwnerRefs)
-	controllerutil.SetControllerReference(newOwner, nnfStorageProfile, clntScheme)
-
-	// Add Owner labels for delete. This will clear the existing owner labels if
-	// there are any
-	dwsv1alpha1.AddOwnerLabels(nnfStorageProfile, newOwner)
-
-	err := clnt.Update(ctx, nnfStorageProfile)
-	if err != nil {
-		return result, err
-	}
-	result = controllerutil.OperationResultUpdated
-
-	return result, nil
-}
-
-// pinProfile finds the specified profile and makes a pinned copy of it.
-func pinProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Scheme, args map[string]string, owner metav1.Object, pinnedName string) (controllerutil.OperationResult, error) {
-
-	result := controllerutil.OperationResultNone
+// createPinnedProfile finds the specified profile and makes a pinned copy of it.
+func createPinnedProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Scheme, args map[string]string, owner metav1.Object, pinnedName string) (*nnfv1alpha1.NnfStorageProfile, error) {
 
 	// If we've already pinned a profile, then we're done and
 	// we no longer have a use for the original profile.
 	nnfStorageProfile, err := findPinnedProfile(ctx, clnt, owner.GetNamespace(), pinnedName)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return result, err
+			return nil, err
 		}
 	} else {
 		// The pinned profile already exists.
-		return result, nil
+		return nnfStorageProfile, nil
 	}
 
 	// Find the original profile so we can pin a copy of it.
 	nnfStorageProfile, err = findProfileToUse(ctx, clnt, args)
 	if err != nil {
-		return result, err
+		return nil, err
 	}
 
 	newProfile := nnfStorageProfile.DeepCopy()
@@ -159,13 +125,11 @@ func pinProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Sch
 	err = clnt.Create(ctx, newProfile)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return result, err
+			return nil, err
 		}
-	} else {
-		result = controllerutil.OperationResultCreated
 	}
 
-	return result, nil
+	return newProfile, nil
 }
 
 // mergeLustreStorageDirectiveAndProfile returns an object that merges Lustre options from the DW directive with lustre options from the NnfStorageProfile, with the proper precedence.
