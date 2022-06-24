@@ -143,4 +143,42 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		newProfile.SetLabels(labels)
 		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
 	})
+
+	It("should set defaults for MGT and MDT size", func() {
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
+
+		// The defaults are found in the kubebuilder validation
+		// statements in nnfstorageprofile_types.go.
+		Expect(newProfile.Data.LustreStorage.CapacityMGT).To(Equal("1GiB"))
+		Expect(newProfile.Data.LustreStorage.CapacityMDT).To(Equal("5GiB"))
+	})
+
+	It("should allow 100GB for MGT size", func() {
+		nnfProfile.Data.LustreStorage.CapacityMGT = "100GB"
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
+	It("should allow 100TiB for MDT size", func() {
+		nnfProfile.Data.LustreStorage.CapacityMDT = "100TiB"
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
+	It("should allow 2TB for MDT and MGT size", func() {
+		nnfProfile.Data.LustreStorage.CapacityMGT = "2TB"
+		nnfProfile.Data.LustreStorage.CapacityMDT = "2TB"
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
+	It("should not allow MDT size without a unit", func() {
+		nnfProfile.Data.LustreStorage.CapacityMDT = "1073741824"
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("should not allow MGT size without a unit", func() {
+		nnfProfile.Data.LustreStorage.CapacityMGT = "1073741824"
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
 })
