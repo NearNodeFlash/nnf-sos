@@ -53,6 +53,17 @@ spec:
               lustreStorage:
                 description: LustreStorage defines the Lustre-specific configuration
                 properties:
+                  capacityMdt:
+                    default: 5GiB
+                    description: CapacityMDT specifies the size of the MDT device.  This
+                      is also used for a combined MGT+MDT device.
+                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
+                    type: string
+                  capacityMgt:
+                    default: 1GiB
+                    description: CapacityMGT specifies the size of the MGT device.
+                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
+                    type: string
                   combinedMgtMdt:
                     default: false
                     description: CombinedMGTMDT indicates whether the MGT and MDT

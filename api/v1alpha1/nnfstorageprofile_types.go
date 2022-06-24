@@ -32,6 +32,17 @@ type NnfStorageProfileLustreData struct {
 
 	// ExternalMGS contains the NIDs of a pre-existing MGS that should be used
 	ExternalMGS []string `json:"externalMgs,omitempty"`
+
+	// CapacityMGT specifies the size of the MGT device.
+	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+	// +kubebuilder:default:="1GiB"
+	CapacityMGT string `json:"capacityMgt,omitempty"`
+
+	// CapacityMDT specifies the size of the MDT device.  This is also
+	// used for a combined MGT+MDT device.
+	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+	// +kubebuilder:default:="5GiB"
+	CapacityMDT string `json:"capacityMdt,omitempty"`
 }
 
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration

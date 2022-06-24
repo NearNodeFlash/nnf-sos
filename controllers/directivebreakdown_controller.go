@@ -379,8 +379,8 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		allocationSets = append(allocationSets, component)
 
 	case "lustre":
-		mdtCapacity, _ := getCapacityInBytes("1TB")
-		mgtCapacity, _ := getCapacityInBytes("1GB")
+		mdtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMDT)
+		mgtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMGT)
 
 		lustreData := mergeLustreStorageDirectiveAndProfile(argsMap, nnfStorageProfile)
 
