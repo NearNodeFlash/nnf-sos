@@ -183,7 +183,7 @@ var _ = Describe("Integration Test", func() {
 				commonName, commonNamespace := getStorageReferenceNameFromWorkflowActual(w, dwIndex)
 				nnfStorage := &nnfv1alpha1.NnfStorage{}
 				err = k8sClient.Get(context.TODO(), types.NamespacedName{Name: commonName, Namespace: commonNamespace}, nnfStorage)
-				Expect(verifyPinnedProfile(context.TODO(), k8sClient, commonNamespace, commonName, nnfStorage)).WithOffset(testStackOffset).To(Succeed())
+				Expect(verifyPinnedProfile(context.TODO(), k8sClient, commonNamespace, commonName)).WithOffset(testStackOffset).To(Succeed())
 			}
 		}
 	} // advanceStateAndCheckReady(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow)
@@ -521,21 +521,20 @@ var _ = Describe("Integration Test", func() {
 				dbd := &dwsv1alpha1.DirectiveBreakdown{}
 				Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name()))
 
+				By("DW Directive Breakdown should go ready")
+				Eventually(func() bool {
+					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+					return dbd.Status.Ready
+				}).Should(BeTrue())
+
 				By("Checking DW Directive Breakdown")
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 				Expect(dbd.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 				if storageDirective == "jobdw" || storageDirective == "create_persistent" {
 					By("Verify that pinned profiles have been created")
 					pName, pNamespace := getStorageReferenceNameFromDBD(dbd)
-					// The profile begins life with the workflow as the owner.
-					Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName, workflow)).To(Succeed())
+					Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName)).To(Succeed())
 				}
-
-				By("DW Directive Breakdown should go ready")
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbd), dbd)).To(Succeed())
-					return dbd.Status.Ready
-				}).Should(BeTrue())
 
 				if wfTests[idx].hasComputeBreakdown {
 					Expect(dbd.Status.Compute).NotTo(BeNil())
@@ -1295,9 +1294,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 			pName, pNamespace := getStorageReferenceNameFromDBD(dbd)
-
-			// The profile begins life with the workflow as the owner.
-			Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName, workflow)).To(Succeed())
+			Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName)).To(Succeed())
 
 			By("Get the Servers resource")
 			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, dbdServer)).To(Succeed())
