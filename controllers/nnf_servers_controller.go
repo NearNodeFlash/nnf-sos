@@ -215,9 +215,11 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
+		matchLabels := dwsv1alpha1.MatchingOwner(nnfStorage)
+		matchLabels[nnfv1alpha1.AllocationSetLabel] = label
+
 		listOptions := []client.ListOption{
-			dwsv1alpha1.MatchingOwner(nnfStorage),
-			client.MatchingLabels{nnfv1alpha1.AllocationSetLabel: label},
+			matchLabels,
 		}
 
 		nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
