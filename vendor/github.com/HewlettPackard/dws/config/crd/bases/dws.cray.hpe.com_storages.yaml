@@ -116,7 +116,9 @@ spec:
                       - Failed
                       type: string
                     wearLevel:
-                      description: WearLevel in percent for SSDs
+                      description: WearLevel in percent for SSDs. A value of 100 indicates
+                        the estimated endurance of the non-volatile memory has been
+                        consumed, but may not indicate a storage failure.
                       format: int64
                       type: integer
                   type: object

@@ -55,7 +55,6 @@ import (
 	_ "github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases"
 
 	dwsctrls "github.com/HewlettPackard/dws/controllers"
-	dwsctrls_daemon "github.com/HewlettPackard/dws/mount-daemon/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -265,11 +264,10 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&dwsctrls_daemon.ClientMountReconciler{
+	err = (&dwsctrls.ClientMountReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
 		Scheme: testEnv.Scheme,
-		Mock:   true,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

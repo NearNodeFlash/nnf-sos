@@ -44,7 +44,7 @@ type StorageDevice struct {
 	Capacity int64 `json:"capacity,omitempty"`
 
 	// WearLevel in percent for SSDs. A value of 100 indicates the estimated endurance of the non-volatile memory
-	// has been consumed, but may not indicate a storage failure. 
+	// has been consumed, but may not indicate a storage failure.
 	WearLevel *int64 `json:"wearLevel,omitempty"`
 
 	// Status of the individual device

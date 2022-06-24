@@ -54,8 +54,8 @@ func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 }
 
-// createDirectiveBreakdownName returns a DBD name for the #DW directive at the specified index
-func createDirectiveBreakdownName(workflow *dwsv1alpha1.Workflow, dwIndex int) string {
+// indexedResourceName returns a name for a workflow child resource based on the index of the #DW directive
+func indexedResourceName(workflow *dwsv1alpha1.Workflow, dwIndex int) string {
 	return fmt.Sprintf("%s-%d", workflow.Name, dwIndex)
 }
 
