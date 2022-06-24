@@ -147,7 +147,7 @@ func mergeLustreStorageDirectiveAndProfile(dwArgs map[string]string, nnfStorageP
 		lustreData.CombinedMGTMDT = true
 	} else if externalMgs, present := dwArgs["external_mgs"]; present {
 		lustreData.ExternalMGS = append(lustreData.ExternalMGS, externalMgs)
-	} else if nnfStorageProfile != nil && nnfStorageProfile.Data.LustreStorage != nil {
+	} else if nnfStorageProfile != nil {
 		if nnfStorageProfile.Data.LustreStorage.CombinedMGTMDT {
 			lustreData.CombinedMGTMDT = true
 		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {

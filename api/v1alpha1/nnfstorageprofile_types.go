@@ -37,21 +37,21 @@ type NnfStorageProfileLustreData struct {
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
 	// Placeholder
-	// +kubebuilder:default:=false
+	// +kubebuilder:default:=true
 	Placeholder bool `json:"placeholder,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
 	// Placeholder
-	// +kubebuilder:default:=false
+	// +kubebuilder:default:=true
 	Placeholder bool `json:"placeholder,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
 	// Placeholder
-	// +kubebuilder:default:=false
+	// +kubebuilder:default:=true
 	Placeholder bool `json:"placeholder,omitempty"`
 }
 
@@ -67,16 +67,16 @@ type NnfStorageProfileData struct {
 	Pinned bool `json:"pinned,omitempty"`
 
 	// LustreStorage defines the Lustre-specific configuration
-	LustreStorage *NnfStorageProfileLustreData `json:"lustreStorage,omitempty"`
+	LustreStorage NnfStorageProfileLustreData `json:"lustreStorage"`
 
 	// GFS2Storage defines the GFS2-specific configuration
-	GFS2Storage *NnfStorageProfileGFS2Data `json:"gfs2Storage,omitempty"`
+	GFS2Storage NnfStorageProfileGFS2Data `json:"gfs2Storage"`
 
 	// XFSStorage defines the XFS-specific configuration
-	XFSStorage *NnfStorageProfileXFSData `json:"xfsStorage,omitempty"`
+	XFSStorage NnfStorageProfileXFSData `json:"xfsStorage"`
 
 	// RawStorage defines the Raw-specific configuration
-	RawStorage *NnfStorageProfileRawData `json:"rawStorage,omitempty"`
+	RawStorage NnfStorageProfileRawData `json:"rawStorage"`
 }
 
 //+kubebuilder:object:root=true

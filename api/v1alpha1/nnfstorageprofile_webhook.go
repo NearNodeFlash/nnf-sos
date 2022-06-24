@@ -98,7 +98,7 @@ func (r *NnfStorageProfile) validateContent() error {
 }
 
 func (r *NnfStorageProfile) validateContentLustre() error {
-	if r.Data.LustreStorage != nil && (r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0) {
+	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
 		return fmt.Errorf("Cannot set both combinedMgtMdt and externalMgs")
 	}
 

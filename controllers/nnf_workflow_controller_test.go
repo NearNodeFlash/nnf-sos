@@ -557,12 +557,10 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 	// the controller tests.
 	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
 		profileInvalid := basicNnfStorageProfile("an-invalid-profile")
-		profileInvalid.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
-			ExternalMGS: []string{
-				"10.0.0.1@tcp",
-			},
-			CombinedMGTMDT: true,
+		profileInvalid.Data.LustreStorage.ExternalMGS = []string{
+			"10.0.0.1@tcp",
 		}
+		profileInvalid.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())
 	})
 })

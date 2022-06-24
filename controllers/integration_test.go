@@ -1227,16 +1227,11 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			By("BeforeEach create some custom storage profiles")
 			profileExternalMGS = basicNnfStorageProfile(externalMgsProfileName)
-			profileExternalMGS.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
-				ExternalMGS: []string{
-					profileMgsNid,
-				},
+			profileExternalMGS.Data.LustreStorage.ExternalMGS = []string{
+				profileMgsNid,
 			}
 			profileCombinedMGTMDT = basicNnfStorageProfile(combinedMgtMdtProfileName)
-			profileCombinedMGTMDT.Data.LustreStorage = &nnfv1alpha1.NnfStorageProfileLustreData{
-				CombinedMGTMDT: true,
-			}
-
+			profileCombinedMGTMDT.Data.LustreStorage.CombinedMGTMDT = true
 			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
 			Expect(createNnfStorageProfile(profileCombinedMGTMDT, true)).ToNot(BeNil())
 		})
