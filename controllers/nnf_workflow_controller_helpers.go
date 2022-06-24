@@ -79,24 +79,6 @@ func getStorageReferenceNameFromWorkflowActual(workflow *dwsv1alpha1.Workflow, d
 	return name, namespace
 }
 
-// Returns the intended <name, namespace> pair for the #DW directive at the specified index
-func getStorageReferenceNameFromWorkflowIntended(workflow *dwsv1alpha1.Workflow, dwdIndex int) (string, string) {
-
-	directive := workflow.Spec.DWDirectives[dwdIndex]
-	p, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives were validated in proposal
-
-	var name string
-	namespace := workflow.Namespace
-	switch p["command"] {
-	case "persistentdw", "create_persistent", "destroy_persistent":
-		name = p["name"]
-	default:
-		name = createDirectiveBreakdownName(workflow, dwdIndex)
-	}
-
-	return name, namespace
-}
-
 // Returns the <name, namespace> pair for the #DW directive in the given DirectiveBreakdown
 func getStorageReferenceNameFromDBD(dbd *dwsv1alpha1.DirectiveBreakdown) (string, string) {
 

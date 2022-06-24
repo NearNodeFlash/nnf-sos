@@ -1579,7 +1579,6 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&nnfv1alpha1.NnfDataMovement{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
-		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		Complete(r)
 }
