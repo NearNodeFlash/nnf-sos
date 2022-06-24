@@ -5,3 +5,8 @@ metadata:
   namespace: nnf-system
 data:
   default: true
+  lustreStorage: {}
+  gfs2Storage: {}
+  xfsStorage: {}
+  rawStorage: {}
+

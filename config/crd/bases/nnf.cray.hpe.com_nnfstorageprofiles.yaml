@@ -46,7 +46,7 @@ spec:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
                   placeholder:
-                    default: false
+                    default: true
                     description: Placeholder
                     type: boolean
                 type: object
@@ -73,7 +73,7 @@ spec:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
                   placeholder:
-                    default: false
+                    default: true
                     description: Placeholder
                     type: boolean
                 type: object
@@ -81,10 +81,15 @@ spec:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
                   placeholder:
-                    default: false
+                    default: true
                     description: Placeholder
                     type: boolean
                 type: object
+            required:
+            - gfs2Storage
+            - lustreStorage
+            - rawStorage
+            - xfsStorage
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this

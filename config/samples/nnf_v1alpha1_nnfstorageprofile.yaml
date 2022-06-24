@@ -8,6 +8,10 @@ data:
   lustreStorage:
     externalMgs:
       - "10.0.0.1@tcp"
+  gfs2Storage: {}
+  xfsStorage: {}
+  rawStorage: {}
+
 ---
 
 apiVersion: nnf.cray.hpe.com/v1alpha1
@@ -18,4 +22,8 @@ metadata:
 data:
   lustreStorage:
     combinedMgtMdt: true
+  gfs2Storage: {}
+  xfsStorage: {}
+  rawStorage: {}
+
 
