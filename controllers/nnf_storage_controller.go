@@ -281,6 +281,11 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		return &ctrl.Result{Requeue: true}, nil
 	}
 
+	// Ensure that we found all the NnfNodeStorage resources we were expecting
+	if len(nnfNodeStorageList.Items) != len(storage.Spec.AllocationSets[allocationSetIndex].Nodes) {
+		status = nnfv1alpha1.ResourceStarting
+	}
+
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" || nnfNodeStorage.Spec.LustreStorage.TargetType == "MGTMDT" {
 			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
