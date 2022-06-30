@@ -412,7 +412,8 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess, clients []string, nnfStorage *nnfv1alpha1.NnfStorage, setIndex int) (map[string][]dwsv1alpha1.ClientMountInfo, error) {
 	allocationSet := nnfStorage.Spec.AllocationSets[setIndex]
 
-	if allocationSet.TargetType != "MGT" && allocationSet.TargetType != "MGTMDT" {
+	if allocationSet.ExternalMgsNid == "" && allocationSet.TargetType != "MGT" && allocationSet.TargetType != "MGTMDT" {
+		// Look elsewhere for the MGS NID.
 		return nil, nil
 	}
 
@@ -426,7 +427,11 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		mountInfo.Device.Type = dwsv1alpha1.ClientMountDeviceTypeLustre
 		mountInfo.Device.Lustre = &dwsv1alpha1.ClientMountDeviceLustre{}
 		mountInfo.Device.Lustre.FileSystemName = allocationSet.FileSystemName
-		mountInfo.Device.Lustre.MgsAddresses = []string{nnfStorage.Status.MgsNode}
+		if allocationSet.ExternalMgsNid != "" {
+			mountInfo.Device.Lustre.MgsAddresses = []string{allocationSet.ExternalMgsNid}
+		} else {
+			mountInfo.Device.Lustre.MgsAddresses = []string{nnfStorage.Status.MgsNode}
+		}
 
 		storageMapping[client] = append(storageMapping[client], mountInfo)
 	}
