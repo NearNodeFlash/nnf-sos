@@ -76,9 +76,6 @@ type NnfDataMovementStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Job references the underlying job that performs data movement
-	Job corev1.ObjectReference `json:"job,omitempty"`
-
 	// Node Status reflects the status of individual NNF Node Data Movement operations
 	NodeStatus []NnfDataMovementNodeStatus `json:"nodeStatus,omitempty"`
 
@@ -87,6 +84,12 @@ type NnfDataMovementStatus struct {
 	// one of Starting, Running, or Finished, reflect the three states that
 	// data movement performs.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// StartTime reflects the time at which the Data Movement operation started.
+	StartTime *metav1.MicroTime `json:"startTime,omitempty"`
+
+	// EndTime reflects the time at which the Data Movement operation ended.
+	EndTime *metav1.MicroTime `json:"endTime,omitempty"`
 }
 
 // NnfDataMovementNodeStatus defines the observed state of a DataMovementNode
