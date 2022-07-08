@@ -62,11 +62,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	})
 
 	AfterEach(func() {
-		Eventually(func() error {
-			if err := k8sClient.Get(context.TODO(), key, workflow); err != nil {
-				return err
-			}
-
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 			workflow.Spec.DesiredState = dwsv1alpha1.StateTeardown.String()
 			return k8sClient.Update(context.TODO(), workflow)
 		}).Should(Succeed(), "teardown")

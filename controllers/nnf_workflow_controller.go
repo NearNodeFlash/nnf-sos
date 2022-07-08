@@ -544,9 +544,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 				func() error {
 					dwsv1alpha1.AddWorkflowLabels(directiveBreakdown, workflow)
 					dwsv1alpha1.AddOwnerLabels(directiveBreakdown, workflow)
-					labels := directiveBreakdown.GetLabels()
-					labels[directiveIndexLabel] = strconv.Itoa(dwIndex)
-					directiveBreakdown.SetLabels(labels)
+					addDirectiveIndexLabel(directiveBreakdown, dwIndex)
 
 					directiveBreakdown.Spec.Directive = directive
 
@@ -693,9 +691,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		func() error {
 			dwsv1alpha1.AddWorkflowLabels(nnfStorage, workflow)
 			dwsv1alpha1.AddOwnerLabels(nnfStorage, owner)
-			labels := nnfStorage.GetLabels()
-			labels[directiveIndexLabel] = strconv.Itoa(index)
-			nnfStorage.SetLabels(labels)
+			addDirectiveIndexLabel(nnfStorage, index)
 
 			nnfStorage.Spec.FileSystemType = dwArgs["type"]
 
@@ -921,9 +917,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	dwsv1alpha1.AddWorkflowLabels(dm, workflow)
 	dwsv1alpha1.AddOwnerLabels(dm, workflow)
-	labels := dm.GetLabels()
-	labels[directiveIndexLabel] = strconv.Itoa(index)
-	dm.SetLabels(labels)
+	addDirectiveIndexLabel(dm, index)
 
 	dm.Spec = nnfv1alpha1.NnfDataMovementSpec{
 		Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
@@ -976,7 +970,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, directiveIdx, "servers"),
+			Name:      indexedResourceName(workflow, directiveIdx) + "-servers",
 			Namespace: workflow.Namespace,
 		},
 	}
@@ -985,16 +979,14 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 		func() error {
 			dwsv1alpha1.AddWorkflowLabels(access, workflow)
 			dwsv1alpha1.AddOwnerLabels(access, workflow)
-			labels := access.GetLabels()
-			labels[teardownStateLabel] = teardownState
-			labels[directiveIndexLabel] = strconv.Itoa(directiveIdx)
-			access.SetLabels(labels)
+			addDirectiveIndexLabel(access, directiveIdx)
+			addTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
 				DesiredState:    "mounted",
 				TeardownState:   teardownState,
 				Target:          "all",
-				MountPathPrefix: fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, params["name"]),
+				MountPathPrefix: buildMountPath(workflow, params["name"], params["command"]),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
@@ -1113,9 +1105,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, dm, func() error {
 		dwsv1alpha1.AddWorkflowLabels(dm, workflow)
 		dwsv1alpha1.AddOwnerLabels(dm, workflow)
-		labels := dm.GetLabels()
-		labels[directiveIndexLabel] = strconv.Itoa(index)
-		dm.SetLabels(labels)
+		addDirectiveIndexLabel(dm, index)
 
 		dm.Spec.Monitor = true
 
@@ -1131,7 +1121,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, index, "computes"),
+			Name:      indexedResourceName(workflow, index) + "-computes",
 			Namespace: workflow.Namespace,
 		},
 	}
@@ -1141,9 +1131,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		func() error {
 			dwsv1alpha1.AddWorkflowLabels(access, workflow)
 			dwsv1alpha1.AddOwnerLabels(access, workflow)
-			labels := access.GetLabels()
-			labels[directiveIndexLabel] = strconv.Itoa(index)
-			access.SetLabels(labels)
+			addDirectiveIndexLabel(access, index)
 
 			access.Spec.TeardownState = dwsv1alpha1.StatePostRun.String()
 			access.Spec.DesiredState = "mounted"
@@ -1224,20 +1212,20 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	accessSuffixes := []string{"computes"}
+	accessSuffixes := []string{"-computes"}
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {
 		return nil, err
 	}
 
 	if fsType == "gfs2" {
-		accessSuffixes = append(accessSuffixes, "servers")
+		accessSuffixes = append(accessSuffixes, "-servers")
 	}
 
 	for _, suffix := range accessSuffixes {
 		access := &nnfv1alpha1.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, index, suffix),
+				Name:      indexedResourceName(workflow, index) + suffix,
 				Namespace: workflow.Namespace,
 			},
 		}
@@ -1294,7 +1282,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	// in a different job even if there is data movement happening on the Rabbits
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, index, "computes"),
+			Name:      indexedResourceName(workflow, index) + "-computes",
 			Namespace: workflow.Namespace,
 		},
 	}
@@ -1405,7 +1393,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, index, "computes"),
+			Name:      indexedResourceName(workflow, index) + "-computes",
 			Namespace: workflow.Namespace,
 		},
 	}
@@ -1509,9 +1497,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		}
 
 		dwsv1alpha1.AddOwnerLabels(persistentStorage, workflow)
-		labels := persistentStorage.GetLabels()
-		labels[directiveIndexLabel] = strconv.Itoa(index)
-		persistentStorage.SetLabels(labels)
+		addDirectiveIndexLabel(persistentStorage, index)
 
 		if err := controllerutil.SetControllerReference(workflow, persistentStorage, r.Scheme); err != nil {
 			log.Info("Unable to assign workflow as owner of persistentInstance", "psi", persistentStorage)
