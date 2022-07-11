@@ -211,7 +211,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// Call the correct "start" function based on workflow state for each directive that has registered for
-	// it. The "start" function does the initial work of setting up creating the appropriate child resources.
+	// it. The "start" function does the initial work of setting up and creating the appropriate child resources.
 	for _, driverStatus := range driverList {
 		log.Info("Start", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 		result, err := startFunctions[workflow.Status.State](r, ctx, workflow, driverStatus.DWDIndex)
@@ -1170,8 +1170,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// Create an NnfAccess for the servers resources if necessary. Shared storage like
 	// that of GFS2 provides access to the Rabbit for the lifetime of the user's job.
 	// NnfAccess may already be present if a data_in directive was specified for the
-	// particular $JOB_DW_[name]; in this case we only don't need to recreate the
-	// resource.
+	// particular $JOB_DW_[name]; in this case we only need to recreate the resource
 
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {
