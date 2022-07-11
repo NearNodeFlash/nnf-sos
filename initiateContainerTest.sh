@@ -31,7 +31,7 @@ setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
 echo Running unit tests
 
-go test ./... -coverprofile cover.out |/usr/bin/tee results.txt
+go test ./... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress -ginkgo.failFast |/usr/bin/tee results.txt
 cat results.txt
 
 grep FAIL results.txt && echo "Unit tests failure" && rm results.txt && exit 1
