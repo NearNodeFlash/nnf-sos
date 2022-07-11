@@ -61,7 +61,7 @@ type WorkflowReconciler struct {
 // checkDriverStatus returns true if all registered drivers for the current state completed successfully
 func checkDriverStatus(instance *dwsv1alpha1.Workflow) (bool, error) {
 	for _, d := range instance.Status.Drivers {
-		if d.WatchState == instance.Spec.DesiredState {
+		if d.WatchState == instance.Status.State {
 			if strings.ToLower(d.Reason) == "error" {
 				// Return errors
 				return ConditionTrue, myerror.New(d.Message)
@@ -145,6 +145,8 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
+		workflow.Status.Reason = ""
+		workflow.Status.Message = ""
 		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
 

@@ -148,9 +148,9 @@ func InheritParentLabels(child metav1.Object, owner metav1.Object) {
 
 // deleteChildrenSingle deletes all the children of a single type. Children are found using
 // the owner labels
-func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList ObjectList, parent metav1.Object) (DeleteStatus, error) {
+func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList ObjectList, parent metav1.Object, matchingLabels client.MatchingLabels) (DeleteStatus, error) {
 	// List all the children and filter by the owner labels
-	err := c.List(ctx, childObjectList.(client.ObjectList), MatchingOwner(parent))
+	err := c.List(ctx, childObjectList.(client.ObjectList), matchingLabels)
 	if err != nil {
 		return DeleteRetry, err
 	}
@@ -179,7 +179,7 @@ func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList 
 
 	// If all the child resources are in a single namespace then we can use DeleteAllOf
 	if !multipleNamespaces {
-		err = c.DeleteAllOf(ctx, objectList[0], client.InNamespace(namespace), MatchingOwner(parent))
+		err = c.DeleteAllOf(ctx, objectList[0], client.InNamespace(namespace), matchingLabels)
 		if err != nil {
 			return DeleteRetry, err
 		}
@@ -202,12 +202,16 @@ func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList 
 	return DeleteRetry, g.Wait()
 }
 
-// DeleteChildren deletes all the children of a parent with the resource types defined
-// in a list of ObjectList types. All children of a single type will be fully deleted
-// before starting to delete any children of the next type.
-func DeleteChildren(ctx context.Context, c client.Client, childObjectLists []ObjectList, parent metav1.Object) (DeleteStatus, error) {
+// DeleteChildrenWithLabels deletes all the children of a parent with the resource types defined
+// in a list of ObjectList types and the labels defined in matchingLabels. All children of a
+// single type will be fully deleted before starting to delete any children of the next type.
+func DeleteChildrenWithLabels(ctx context.Context, c client.Client, childObjectLists []ObjectList, parent metav1.Object, matchingLabels client.MatchingLabels) (DeleteStatus, error) {
+	for label, value := range MatchingOwner(parent) {
+		matchingLabels[label] = value
+	}
+
 	for _, childObjectList := range childObjectLists {
-		deleteStatus, err := deleteChildrenSingle(ctx, c, childObjectList, parent)
+		deleteStatus, err := deleteChildrenSingle(ctx, c, childObjectList, parent, matchingLabels)
 		if err != nil {
 			return DeleteRetry, err
 		}
@@ -218,6 +222,13 @@ func DeleteChildren(ctx context.Context, c client.Client, childObjectLists []Obj
 	}
 
 	return DeleteComplete, nil
+}
+
+// DeleteChildren deletes all the children of a parent with the resource types defined
+// in a list of ObjectList types. All children of a single type will be fully deleted
+// before starting to delete any children of the next type.
+func DeleteChildren(ctx context.Context, c client.Client, childObjectLists []ObjectList, parent metav1.Object) (DeleteStatus, error) {
+	return DeleteChildrenWithLabels(ctx, c, childObjectLists, parent, client.MatchingLabels(map[string]string{}))
 }
 
 func OwnerLabelMapFunc(o client.Object) []reconcile.Request {

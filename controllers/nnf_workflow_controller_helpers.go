@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Returns the directive index with the 'name' argument matching name, or -1 if not found
@@ -54,8 +56,8 @@ func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 }
 
-// createDirectiveBreakdownName returns a DBD name for the #DW directive at the specified index
-func createDirectiveBreakdownName(workflow *dwsv1alpha1.Workflow, dwIndex int) string {
+// indexedResourceName returns a name for a workflow child resource based on the index of the #DW directive
+func indexedResourceName(workflow *dwsv1alpha1.Workflow, dwIndex int) string {
 	return fmt.Sprintf("%s-%d", workflow.Name, dwIndex)
 }
 
@@ -93,4 +95,24 @@ func getStorageReferenceNameFromDBD(dbd *dwsv1alpha1.DirectiveBreakdown) (string
 		name = dbd.Name
 	}
 	return name, namespace
+}
+
+func addDirectiveIndexLabel(object metav1.Object, index int) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[directiveIndexLabel] = strconv.Itoa(index)
+	object.SetLabels(labels)
+}
+
+func addTeardownStateLabel(object metav1.Object, state string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[teardownStateLabel] = state
+	object.SetLabels(labels)
 }
