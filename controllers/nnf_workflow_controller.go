@@ -229,7 +229,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				driverStatus.Message = "Internal error: " + err.Error()
 			}
 
-			log.Info("Start error", "State", workflow.Status.State, "index", driverStatus.DWDIndex)
+			log.Info("Start error", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "Message", err.Error())
 			return ctrl.Result{}, err
 		}
 
@@ -273,7 +273,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				driverStatus.Reason = "error"
 				driverStatus.Message = "Internal error: " + err.Error()
 			}
-			log.Info("Finish error", "State", workflow.Status.State, "index", driverStatus.DWDIndex)
+			log.Info("Finish error", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "Message", err.Error())
 
 			return ctrl.Result{}, err
 		}
