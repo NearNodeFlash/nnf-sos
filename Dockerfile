@@ -40,6 +40,7 @@ WORKDIR /workspace
 
 ARG FAILFAST
 COPY hack/ hack/
+COPY test-tools.sh .
 COPY initiateContainerTest.sh .
 COPY Makefile .
 

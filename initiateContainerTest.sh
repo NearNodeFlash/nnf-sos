@@ -23,6 +23,10 @@ echo "Running in $CWD, setting up envtest."
 export ENVTEST_ASSETS_DIR=/nnf/testbin
 export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=20s
 export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=100ms
+export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook
+
+source test-tools.sh; prefix_webhook_names config/webhook ${WEBHOOK_DIR}
+
 mkdir -p ${ENVTEST_ASSETS_DIR}
 test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh
