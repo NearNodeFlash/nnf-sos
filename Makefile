@@ -211,9 +211,11 @@ EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
 TESTDIRS ?= controllers api
 FAILFAST ?= no
-test: manifests generate fmt vet ## Run tests.
+test: manifests generate fmt vet kustomize ## Run tests.
 	find controllers -name "*.db" -type d -exec rm -rf {} +
 	mkdir -p ${ENVTEST_ASSETS_DIR}
+	$(call prefix-resource-names,config/webhook,${ENVTEST_ASSETS_DIR}/webhook)
+
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	if [[ "${FAILFAST}" == yes ]]; then \
 		failfast="-ginkgo.failFast"; \
@@ -222,8 +224,19 @@ test: manifests generate fmt vet ## Run tests.
 	for subdir in ${TESTDIRS}; do \
 		export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
 		export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
-		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
+		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
     	done
+
+define prefix-resource-names
+@set -e ;\
+mkdir -p $2;\
+TMP_DIR=$$(mktemp -d $2/tmp.XXXXXX);\
+cp -r $1/* $$TMP_DIR;\
+cd $$TMP_DIR;\
+$(KUSTOMIZE) edit set nameprefix nnf-;\
+$(KUSTOMIZE) build > $2/manifest.yaml;\
+rm -rf $$TMP_DIR
+endef
 
 ##@ Build
 
