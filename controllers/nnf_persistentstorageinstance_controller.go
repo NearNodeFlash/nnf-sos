@@ -215,6 +215,7 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha1.ObjectList{
 		&nnfv1alpha1.NnfStorageList{},
 		&dwsv1alpha1.ServersList{},
+		&nnfv1alpha1.NnfStorageProfileList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)

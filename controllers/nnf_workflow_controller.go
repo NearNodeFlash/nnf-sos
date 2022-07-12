@@ -1576,7 +1576,6 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&nnfv1alpha1.NnfStorageList{},
 		&dwsv1alpha1.PersistentStorageInstanceList{},
 		&dwsv1alpha1.DirectiveBreakdownList{},
-		&nnfv1alpha1.NnfStorageProfileList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
