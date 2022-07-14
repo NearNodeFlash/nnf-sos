@@ -1398,8 +1398,8 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err == nil {
-		if access.Status.State != "unmounted" {
-			return &ctrl.Result{Requeue: true}, nil
+		if access.Status.State != "unmounted" || access.Status.Ready != true {
+			return &ctrl.Result{}, nil
 		}
 	}
 
