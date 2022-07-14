@@ -114,11 +114,6 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, nil
 		}
 
-		err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
 		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, access)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -126,6 +121,11 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		if deleteStatus == dwsv1alpha1.DeleteRetry {
 			return ctrl.Result{}, nil
+		}
+
+		err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 
 		// Unlock the NnfStorage so it can be used by another NnfAccess
