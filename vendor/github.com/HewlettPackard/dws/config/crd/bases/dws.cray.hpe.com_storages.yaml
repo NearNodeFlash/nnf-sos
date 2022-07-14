@@ -84,6 +84,7 @@ spec:
                     type: array
                 type: object
               capacity:
+                default: 0
                 description: Capacity is the number of bytes this storage provides.
                   This is the total accessible bytes as determined by the driver and
                   may be different than the sum of the devices' capacities.
@@ -138,6 +139,8 @@ spec:
                 enum:
                 - NVMe
                 type: string
+            required:
+            - capacity
             type: object
           kind:
             description: 'Kind is a string value representing the REST resource this
