@@ -128,7 +128,11 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		controllerutil.RemoveFinalizer(dbd, finalizerDirectiveBreakdown)
 		if err := r.Update(ctx, dbd); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -138,6 +142,10 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if !controllerutil.ContainsFinalizer(dbd, finalizerDirectiveBreakdown) {
 		controllerutil.AddFinalizer(dbd, finalizerDirectiveBreakdown)
 		if err := r.Update(ctx, dbd); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

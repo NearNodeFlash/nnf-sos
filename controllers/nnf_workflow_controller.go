@@ -154,7 +154,11 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 		controllerutil.RemoveFinalizer(workflow, finalizerNnfWorkflow)
 		if err := r.Update(ctx, workflow); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -164,6 +168,10 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !controllerutil.ContainsFinalizer(workflow, finalizerNnfWorkflow) {
 		controllerutil.AddFinalizer(workflow, finalizerNnfWorkflow)
 		if err := r.Update(ctx, workflow); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

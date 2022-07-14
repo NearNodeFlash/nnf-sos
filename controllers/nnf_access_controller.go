@@ -135,7 +135,11 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		controllerutil.RemoveFinalizer(access, finalizerNnfAccess)
 		if err := r.Update(ctx, access); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -145,6 +149,10 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if !controllerutil.ContainsFinalizer(access, finalizerNnfAccess) {
 		controllerutil.AddFinalizer(access, finalizerNnfAccess)
 		if err := r.Update(ctx, access); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

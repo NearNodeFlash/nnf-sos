@@ -81,7 +81,11 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 
 		controllerutil.RemoveFinalizer(systemConfiguration, finalizerNnfSystemConfiguration)
 		if err := r.Update(ctx, systemConfiguration); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -91,6 +95,10 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 	if !controllerutil.ContainsFinalizer(systemConfiguration, finalizerNnfSystemConfiguration) {
 		controllerutil.AddFinalizer(systemConfiguration, finalizerNnfSystemConfiguration)
 		if err := r.Update(ctx, systemConfiguration); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

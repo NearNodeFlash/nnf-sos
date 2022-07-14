@@ -97,7 +97,11 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		controllerutil.RemoveFinalizer(clientMount, finalizerNnfClientMount)
 		if err := r.Update(ctx, clientMount); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -123,6 +127,10 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !controllerutil.ContainsFinalizer(clientMount, finalizerNnfClientMount) {
 		controllerutil.AddFinalizer(clientMount, finalizerNnfClientMount)
 		if err := r.Update(ctx, clientMount); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 
