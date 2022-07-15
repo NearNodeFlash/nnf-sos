@@ -127,7 +127,11 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		controllerutil.RemoveFinalizer(nodeStorage, finalizerNnfNodeStorage)
 		if err := r.Update(ctx, nodeStorage); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -139,6 +143,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !controllerutil.ContainsFinalizer(nodeStorage, finalizerNnfNodeStorage) {
 		controllerutil.AddFinalizer(nodeStorage, finalizerNnfNodeStorage)
 		if err := r.Update(ctx, nodeStorage); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

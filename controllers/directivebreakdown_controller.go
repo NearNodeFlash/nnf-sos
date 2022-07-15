@@ -69,8 +69,9 @@ const ( // They should complete the sentence "populateDirectiveBreakdown ____ th
 // DirectiveBreakdownReconciler reconciles a DirectiveBreakdown object
 type DirectiveBreakdownReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *kruntime.Scheme
+	Log          logr.Logger
+	Scheme       *kruntime.Scheme
+	ChildObjects []dwsv1alpha1.ObjectList
 }
 
 type lustreComponentType struct {
@@ -115,17 +116,38 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, nil
 		}
 
-		// TODO: Teardown directiveBreakdown
-		/*
-			if err := r.teardownDirectiveBreakdown(ctx, dbd); err != nil {
+		// Delete all  children that are owned by this DirectiveBreakdown.
+		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, dbd)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if deleteStatus == dwsv1alpha1.DeleteRetry {
+			return ctrl.Result{}, nil
+		}
+
+		controllerutil.RemoveFinalizer(dbd, finalizerDirectiveBreakdown)
+		if err := r.Update(ctx, dbd); err != nil {
+			if !apierrors.IsConflict(err) {
 				return ctrl.Result{}, err
 			}
 
-			controllerutil.RemoveFinalizer(dbd, finalizerDirectiveBreakdown)
-			if err := r.Update(ctx, dbd); err != nil {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	// Add the finalizer if it doesn't exist
+	if !controllerutil.ContainsFinalizer(dbd, finalizerDirectiveBreakdown) {
+		controllerutil.AddFinalizer(dbd, finalizerDirectiveBreakdown)
+		if err := r.Update(ctx, dbd); err != nil {
+			if !apierrors.IsConflict(err) {
 				return ctrl.Result{}, err
 			}
-		*/
+
+			return ctrl.Result{Requeue: true}, nil
+		}
 
 		return ctrl.Result{}, nil
 	}
@@ -488,6 +510,12 @@ func (d *directiveBreakdownStatusUpdater) close(ctx context.Context, r *Directiv
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.ChildObjects = []dwsv1alpha1.ObjectList{
+		&dwsv1alpha1.ServersList{},
+		&nnfv1alpha1.NnfStorageProfileList{},
+		&dwsv1alpha1.PersistentStorageInstanceList{},
+	}
+
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

@@ -90,7 +90,11 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		controllerutil.RemoveFinalizer(nnfNode, finalizerNnfNodeSLC)
 		if err := r.Update(ctx, nnfNode); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -101,6 +105,10 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 		controllerutil.AddFinalizer(nnfNode, finalizerNnfNodeSLC)
 		if err := r.Update(ctx, nnfNode); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 

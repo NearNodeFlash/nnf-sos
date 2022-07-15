@@ -99,7 +99,11 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 		controllerutil.RemoveFinalizer(persistentStorage, finalizerPersistentStorage)
 		if err := r.Update(ctx, persistentStorage); err != nil {
-			return ctrl.Result{}, err
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -109,6 +113,10 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !controllerutil.ContainsFinalizer(persistentStorage, finalizerPersistentStorage) {
 		controllerutil.AddFinalizer(persistentStorage, finalizerPersistentStorage)
 		if err := r.Update(ctx, persistentStorage); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{Requeue: true}, nil
 		}
 
@@ -215,6 +223,7 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha1.ObjectList{
 		&nnfv1alpha1.NnfStorageList{},
 		&dwsv1alpha1.ServersList{},
+		&nnfv1alpha1.NnfStorageProfileList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
