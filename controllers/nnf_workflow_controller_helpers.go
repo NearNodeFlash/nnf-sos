@@ -7,6 +7,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,7 +104,7 @@ func addDirectiveIndexLabel(object metav1.Object, index int) {
 		labels = make(map[string]string)
 	}
 
-	labels[directiveIndexLabel] = strconv.Itoa(index)
+	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	object.SetLabels(labels)
 }
 
