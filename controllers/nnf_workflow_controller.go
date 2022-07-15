@@ -56,12 +56,6 @@ const (
 	// reconciler has finished in using the resource.
 	finalizerNnfWorkflow = "nnf.cray.hpe.com/nnf_workflow"
 
-	// directiveIndexLabel is a label applied to child objects of the workflow
-	// to show which directive they were created for. This is useful during deletion
-	// to filter the child objects by the directive index and only delete the
-	// resources for the directive being processed
-	directiveIndexLabel = "nnf.cray.hpe.com/directive_index"
-
 	// teardownStateLabel is a label applied to NnfAccess resources to determine when
 	// they should be deleted. The delete code filters by the current workflow state
 	// to only delete the correct NnfAccess resources
@@ -1459,7 +1453,7 @@ func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow
 		&nnfv1alpha1.NnfAccessList{},
 	}
 
-	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{directiveIndexLabel: strconv.Itoa(index)})
+	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
 	if err != nil {
 		return nil, err
 	}
@@ -1495,7 +1489,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		persistentStorage.SetOwnerReferences([]metav1.OwnerReference{})
 		dwsv1alpha1.RemoveOwnerLabels(persistentStorage)
 		labels := persistentStorage.GetLabels()
-		delete(labels, directiveIndexLabel)
+		delete(labels, nnfv1alpha1.DirectiveIndexLabel)
 		persistentStorage.SetLabels(labels)
 
 		err = r.Update(ctx, persistentStorage)
@@ -1530,7 +1524,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		&dwsv1alpha1.PersistentStorageInstanceList{},
 	}
 
-	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{directiveIndexLabel: strconv.Itoa(index)})
+	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
 	if err != nil {
 		return nil, err
 	}
