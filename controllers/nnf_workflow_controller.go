@@ -749,6 +749,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 }
 
 func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
+	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dm := &nnfv1alpha1.NnfDataMovement{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
@@ -849,7 +850,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
-			access, result, err = r.setupNnfAccessForServers(ctx, storage, workflow, directiveIdx, teardownState)
+			access, result, err = r.setupNnfAccessForServers(ctx, storage, workflow, directiveIdx, teardownState, log)
 			if err != nil {
 				return storageReference, access, path, nil, err
 			} else if result != controllerutil.OperationResultNone {
@@ -941,6 +942,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	if err := r.Create(ctx, dm); err != nil {
 		return nil, err
 	}
+	log.Info("Created NnfDataMovement", "name", dm.Name)
 
 	return nil, nil
 }
@@ -961,7 +963,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, directiveIdx int, teardownState string) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, directiveIdx int, teardownState string, log logr.Logger) (*nnfv1alpha1.NnfAccess, controllerutil.OperationResult, error) {
 
 	params, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[directiveIdx])
 	if err != nil {
@@ -998,6 +1000,16 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 
 			return ctrl.SetControllerReference(workflow, access, r.Scheme)
 		})
+
+	if err != nil {
+		return nil, result, err
+	}
+
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created NnfAccess", "name", access.Name)
+	} else if result == controllerutil.OperationResultUpdated {
+		log.Info("Updated NnfAccess", "name", access.Name)
+	}
 
 	return access, result, err
 }
@@ -1117,6 +1129,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	if result == controllerutil.OperationResultCreated {
 		log.Info("Created NnfDatamovement", "name", dm.Name)
+	} else if result == controllerutil.OperationResultUpdated {
+		log.Info("Updated NnfDataMovement", "name", dm.Name)
 	}
 
 	access := &nnfv1alpha1.NnfAccess{
@@ -1195,7 +1209,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			teardownState = dwsv1alpha1.StateDataOut.String()
 		}
 
-		access, result, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, teardownState)
+		access, result, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, teardownState, log)
 		if err != nil {
 			return nil, err
 		} else if result == controllerutil.OperationResultCreated {
