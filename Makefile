@@ -224,7 +224,8 @@ test: manifests generate fmt vet ## Run tests.
 	for subdir in ${TESTDIRS}; do \
 		export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
 		export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
-		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
+		export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
+		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
     	done
 
 ##@ Build
