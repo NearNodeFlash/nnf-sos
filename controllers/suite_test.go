@@ -120,7 +120,7 @@ var _ = BeforeSuite(func() {
 		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: []string{
 			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
 			filepath.Join("..", "config", "dws"),
-			filepath.Join("..", "config", "webhook"),
+			os.Getenv("WEBHOOK_DIR"),
 		}},
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
