@@ -187,7 +187,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// Create the ClientMount resources. One ClientMount resource is created per client
-	err = r.createClientMounts(ctx, access, storageMapping)
+	err = r.createClientMounts(ctx, access, storageMapping, log)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -441,6 +441,11 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 			mountInfo.Device.Lustre.MgsAddresses = []string{nnfStorage.Status.MgsNode}
 		}
 
+		// Make it easy for the nnf-dm daemon to find the NnfStorage.
+		mountInfo.Device.DeviceReference = &dwsv1alpha1.ClientMountDeviceReference{
+			ObjectReference: access.Spec.StorageReference,
+		}
+
 		storageMapping[client] = append(storageMapping[client], mountInfo)
 	}
 
@@ -632,6 +637,9 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 			if mount.Device.DeviceReference == nil {
 				continue
 			}
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
+				continue
+			}
 
 			mountRef := mountReference{
 				client:          client,
@@ -749,7 +757,7 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 }
 
 // createClientMounts creates the ClientMount resources based on the information in the storageMapping map.
-func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo, log logr.Logger) error {
 	g := new(errgroup.Group)
 
 	for client, storageList := range storageMapping {
@@ -764,7 +772,7 @@ func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nn
 					Namespace: client,
 				},
 			}
-			_, err := ctrl.CreateOrUpdate(ctx, r.Client, clientMount,
+			result, err := ctrl.CreateOrUpdate(ctx, r.Client, clientMount,
 				func() error {
 					dwsv1alpha1.InheritParentLabels(clientMount, access)
 					dwsv1alpha1.AddOwnerLabels(clientMount, access)
@@ -775,6 +783,17 @@ func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nn
 
 					return nil
 				})
+			if err != nil {
+				log.Error(err, "failed to create or update ClientMount", "name", clientMount.Name)
+				return err
+			}
+			if result == controllerutil.OperationResultCreated {
+				log.Info("Created ClientMount", "name", clientMount.Name)
+			} else if result == controllerutil.OperationResultNone {
+				// no change
+			} else {
+				log.Info("Updated ClientMount", "name", clientMount.Name)
+			}
 			return err
 		})
 	}
