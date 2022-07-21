@@ -47,10 +47,6 @@ type Storage struct {
 	discoveredNamespaces []StorageNamespace
 
 	ctrl ServerControllerApi
-
-	// The assigned File System for this Storage object, or nil if no
-	// fs is present.
-	fileSystem FileSystemApi
 }
 
 // Storage Namespace represents an NVMe Namespace present on the host.
@@ -80,15 +76,15 @@ func (s *Storage) CreateFileSystem(fs FileSystemApi, opts FileSystemOptions) err
 }
 
 func (s *Storage) DeleteFileSystem(fs FileSystemApi) error {
-	return s.ctrl.DeleteFileSystem(s)
+	return s.ctrl.DeleteFileSystem(s, fs)
 }
 
 func (s *Storage) MountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
-	return s.ctrl.MountFileSystem(s, opts)
+	return s.ctrl.MountFileSystem(s, fs, opts)
 }
 
 func (s *Storage) UnmountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
-	return s.ctrl.UnmountFileSystem(s)
+	return s.ctrl.UnmountFileSystem(s, fs)
 }
 
 // Returns the list of devices for this pool.

@@ -25,7 +25,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nvme2 "github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
@@ -117,6 +117,10 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, 
 		if storage != nil {
 			volume, err := storage.FindVolumeByNamespaceId(volume.NamespaceId)
 			if err != nil {
+				if ignoreErrors {
+					continue
+				}
+				
 				return err
 			}
 
@@ -230,13 +234,13 @@ type storagePoolRecoveryRegistry struct {
 	storageService *StorageService
 }
 
-func NewStoragePoolRecoveryRegistry(s *StorageService) kvstore.Registry {
+func NewStoragePoolRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &storagePoolRecoveryRegistry{storageService: s}
 }
 
 func (*storagePoolRecoveryRegistry) Prefix() string { return storagePoolRegistryPrefix }
 
-func (r *storagePoolRecoveryRegistry) NewReplay(id string) kvstore.ReplayHandler {
+func (r *storagePoolRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
 	return &storagePoolRecoveryReplayHandler{storageService: r.storageService, storagePool: StoragePool{id: id}}
 }
 
@@ -262,6 +266,7 @@ func (rh *storagePoolRecoveryReplayHandler) Metadata(data []byte) error {
 		return err
 	}
 
+	rh.storageService.createStoragePool(rh.storagePool.id, metadata.Name, metadata.Description, uuid.MustParse(metadata.Uid), nil)
 	rh.storagePool = StoragePool{
 		id:          rh.storagePool.id,
 		name:        metadata.Name,

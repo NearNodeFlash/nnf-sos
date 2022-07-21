@@ -106,10 +106,8 @@ github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220601164537-0e55b2ab4faa h
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220601164537-0e55b2ab4faa/go.mod h1:VeS+yILAhE2pDE9iIHwsco3UdAVsMLlQdg6L1aTLPOg=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220623194136-08b4e1a6e302 h1:oA73DSra6MfngzpxpkFoZ6vL1pM9neSgutRbtNuHZTg=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220623194136-08b4e1a6e302/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b h1:9aBZ8Lp7oGxIYz/U02wqLeF7peUDRHblo2ALO8fbt94=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220614160410-dac3a6f83e5b/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220706162210-e3216b00db0b h1:lF+trxvYVgr9EreEibjM9ZIEy2tQKbD8llPG+s/FUD0=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220706162210-e3216b00db0b/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220720213002-4173cb4d7ef5 h1:0OGNLF6ivniy1H0R77nkvTPUXxBvUpiN6DQfAjYihOM=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220720213002-4173cb4d7ef5/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=

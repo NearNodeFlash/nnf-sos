@@ -20,7 +20,7 @@
 package nnf
 
 import (
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,8 +37,9 @@ func NewDefaultPersistentController() PersistentControllerApi {
 	return &DefaultPersistentController{}
 }
 
+// Persistent Store Provider provides an interface for supplying a Key-Value Store
 type PersistentStoreProvider interface {
-	GetStore() *kvstore.Store
+	GetStore() *persistent.Store
 }
 
 // Persistent Object API provides interface for creating or updating a persistent object.
@@ -107,7 +108,7 @@ func (*DefaultPersistentController) DeletePersistentObject(obj PersistentObjectA
 	return ledger.Close(true)
 }
 
-func executePersistentObjectTransaction(ledger *kvstore.Ledger, obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
+func executePersistentObjectTransaction(ledger *persistent.Ledger, obj PersistentObjectApi, updateFunc func() error, startingState, endingState uint32) error {
 
 	data, err := obj.GenerateStateData(startingState)
 	if err != nil {

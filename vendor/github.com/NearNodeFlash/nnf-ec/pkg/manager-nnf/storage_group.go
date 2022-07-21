@@ -25,8 +25,7 @@ import (
 
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	server "github.com/NearNodeFlash/nnf-ec/pkg/manager-server"
-
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -156,13 +155,13 @@ type storageGroupRecoveryRegistry struct {
 	storageService *StorageService
 }
 
-func NewStorageGroupRecoveryRegistry(s *StorageService) kvstore.Registry {
+func NewStorageGroupRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &storageGroupRecoveryRegistry{storageService: s}
 }
 
 func (r *storageGroupRecoveryRegistry) Prefix() string { return storageGroupRegistryPrefix }
 
-func (r *storageGroupRecoveryRegistry) NewReplay(id string) kvstore.ReplayHandler {
+func (r *storageGroupRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
 	return &storageGroupRecoveryReplyHandler{id: id, storageService: r.storageService}
 }
 
@@ -181,14 +180,7 @@ func (rh *storageGroupRecoveryReplyHandler) Metadata(data []byte) error {
 	storagePool := rh.storageService.findStoragePool(metadata.StoragePoolId)
 	endpoint := rh.storageService.findEndpoint(metadata.EndpointId)
 
-	rh.storageService.groups = append(rh.storageService.groups,
-		StorageGroup{
-			id:             rh.id,
-			endpoint:       endpoint,
-			serverStorage:  endpoint.serverCtrl.NewStorage(storagePool.uid, nil /*TODO*/),
-			storagePoolId:  metadata.StoragePoolId,
-			storageService: rh.storageService,
-		})
+	rh.storageService.createStorageGroup(rh.id, storagePool, endpoint)
 
 	return nil
 }

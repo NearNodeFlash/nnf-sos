@@ -64,18 +64,18 @@ func (c *RemoteServerController) GetStatus(s *Storage) (StorageStatus, error) {
 	return StorageStatus_Ready, nil
 }
 
-func (c *RemoteServerController) CreateFileSystem(s *Storage, f FileSystemApi, opts FileSystemOptions) error {
+func (c *RemoteServerController) CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error {
 	return fmt.Errorf("Cannot create file system on remote server")
 }
 
-func (r *RemoteServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
+func (r *RemoteServerController) MountFileSystem(*Storage, FileSystemApi, FileSystemOptions) error {
 	return nil
 }
 
-func (r *RemoteServerController) UnmountFileSystem(s *Storage) error {
+func (r *RemoteServerController) UnmountFileSystem(*Storage, FileSystemApi) error {
 	return nil
 }
 
-func (r *RemoteServerController) DeleteFileSystem(s *Storage) error {
+func (r *RemoteServerController) DeleteFileSystem(*Storage, FileSystemApi) error {
 	return nil
 }

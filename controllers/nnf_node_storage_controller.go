@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -85,6 +86,17 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Ensure the NNF Storage Service is running prior taking any action.
+	ss := nnf.NewDefaultStorageService()
+	storageService := &sf.StorageServiceV150StorageService{}
+	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if storageService.Status.State != sf.ENABLED_RST {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// Use the Node Storage Status Updater to track updates to the storage status.
@@ -204,6 +216,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
+
 	ss := nnf.NewDefaultStorageService()
 
 	allocationStatus := &nodeStorage.Status.Allocations[index]
@@ -521,6 +534,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 
 func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
+
 	ss := nnf.NewDefaultStorageService()
 
 	allocationStatus := &nodeStorage.Status.Allocations[index]

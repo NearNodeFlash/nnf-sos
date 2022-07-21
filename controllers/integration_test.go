@@ -359,6 +359,7 @@ var _ = Describe("Integration Test", func() {
 						Name:  nodeName,
 						State: "Enable",
 					},
+					Status: nnfv1alpha1.NnfNodeStatus{},
 				}
 
 				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
