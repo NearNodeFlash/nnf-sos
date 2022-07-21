@@ -106,8 +106,6 @@ func (c *LocalServerController) GetStatus(s *Storage) (StorageStatus, error) {
 }
 
 func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
-	s.fileSystem = fs
-
 	if err := fs.Create(s.Devices(), opts); err != nil {
 		return err
 	}
@@ -115,25 +113,25 @@ func (c *LocalServerController) CreateFileSystem(s *Storage, fs FileSystemApi, o
 	return nil
 }
 
-func (c *LocalServerController) DeleteFileSystem(s *Storage) error {
-	return s.fileSystem.Delete()
+func (c *LocalServerController) DeleteFileSystem(s *Storage, fs FileSystemApi) error {
+	return fs.Delete()
 }
 
-func (c *LocalServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
+func (c *LocalServerController) MountFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
 	mountPoint := opts["mountpoint"].(string)
 	if mountPoint == "" {
 		return nil
 	}
 
-	if err := s.fileSystem.Mount(mountPoint); err != nil {
+	if err := fs.Mount(mountPoint); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *LocalServerController) UnmountFileSystem(s *Storage) error {
-	if err := s.fileSystem.Unmount(); err != nil {
+func (c *LocalServerController) UnmountFileSystem(s *Storage, fs FileSystemApi) error {
+	if err := fs.Unmount(); err != nil {
 		return err
 	}
 

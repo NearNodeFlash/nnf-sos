@@ -40,6 +40,7 @@ import (
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	telemetry "github.com/NearNodeFlash/nnf-ec/pkg/manager-telemetry"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,6 +55,7 @@ type Options struct {
 	cli         bool // Enable CLI commands instead of binary
 	persistence bool // Enable persistent object storage; used during crash/reboot recovery
 
+	json   string // Initialize the element controller with the provided json file
 	direct string // Enable direct management of NVMe devices matching this regexp pattern
 }
 
@@ -71,6 +73,7 @@ func BindFlags(fs *flag.FlagSet) *Options {
 	fs.BoolVar(&opts.mock, "mock", opts.mock, "Enable mock (simulated) environment.")
 	fs.BoolVar(&opts.cli, "cli", opts.cli, "Enable CLI interfaces with devices, instead of raw binary.")
 	fs.BoolVar(&opts.persistence, "persistence", opts.persistence, "Enable persistent object storage (used during crash/reboot recovery)")
+	fs.StringVar(&opts.json, "json", "", "Initialize database with provided json file")
 	fs.StringVar(&opts.direct, "direct", opts.direct, "Enable direct management of NVMe block devices matching this regexp pattern. Implies Mock.")
 
 	nvme.BindFlags(fs)
@@ -106,7 +109,10 @@ func NewController(opts *Options) *ec.Controller {
 		} else {
 			nnfCtrl = nnf.NewMockNnfController(opts.persistence)
 		}
+	}
 
+	if len(opts.json) != 0 {
+		persistent.StorageProvider = persistent.NewJsonFilePersistentStorageProvider(opts.json)
 	}
 
 	return &ec.Controller{

@@ -35,6 +35,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -47,7 +48,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
-	"github.com/NearNodeFlash/nnf-ec/pkg/ec"
+
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	_ "github.com/HewlettPackard/dws/config/crd/bases"
@@ -131,13 +132,6 @@ var _ = BeforeSuite(func() {
 		AttachControlPlaneOutput: true,
 	}
 
-	// Start and initialize the NNF Controller
-	enablePersistence := false
-	controller := nnf.NewController(nnf.NewMockOptions(enablePersistence))
-	Expect(controller.Init(ec.NewDefaultTestOptions())).NotTo(HaveOccurred())
-
-	go controller.Run()
-
 	var err error
 
 	cfg, err = testEnv.Start()
@@ -151,6 +145,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = lusv1alpha1.AddToScheme(testEnv.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -219,6 +216,13 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&NnfNodeECDataReconciler{
+		Client:  k8sManager.GetClient(),
+		Scheme:  testEnv.Scheme,
+		Options: nnf.NewMockOptions(false),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

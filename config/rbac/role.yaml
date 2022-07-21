@@ -17,18 +17,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - endpoints
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   verbs:
   - create
@@ -53,18 +41,6 @@ rules:
   - get
   - list
   - update
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - cray.hpe.com
   resources:
@@ -325,6 +301,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeecdata
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeecdata/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeecdata/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

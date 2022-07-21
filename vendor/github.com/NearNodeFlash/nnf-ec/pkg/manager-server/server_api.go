@@ -75,7 +75,7 @@ type ServerControllerApi interface {
 	GetStatus(*Storage) (StorageStatus, error)
 
 	CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
-	DeleteFileSystem(*Storage) error
-	MountFileSystem(*Storage, FileSystemOptions) error
-	UnmountFileSystem(*Storage) error
+	DeleteFileSystem(*Storage, FileSystemApi) error
+	MountFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
+	UnmountFileSystem(*Storage, FileSystemApi) error
 }
