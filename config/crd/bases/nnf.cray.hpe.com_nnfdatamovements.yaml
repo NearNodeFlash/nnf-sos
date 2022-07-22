@@ -17,6 +17,10 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: True if monitoring a DM
+      jsonPath: .spec.monitor
+      name: ISMONITOR
+      type: boolean
     - description: Current state
       jsonPath: .status.state
       name: STATE
@@ -378,6 +382,7 @@ spec:
                 enum:
                 - Success
                 - Failed
+                - Invalid
                 type: string
             type: object
         type: object

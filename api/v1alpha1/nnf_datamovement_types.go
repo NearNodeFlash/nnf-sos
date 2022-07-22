@@ -87,7 +87,7 @@ type NnfDataMovementStatus struct {
 	State string `json:"state,omitempty"`
 
 	// Status of the current state.
-	// +kubebuilder:validation:Enum=Success;Failed
+	// +kubebuilder:validation:Enum=Success;Failed;Invalid
 	Status string `json:"status,omitempty"`
 
 	// StartTime reflects the time at which the Data Movement operation started.
@@ -125,10 +125,6 @@ const (
 	DataMovementConditionTypeFinished = "Finished"
 )
 
-var (
-	DataMovementConditionTypeOrder = []string{DataMovementConditionTypeStarting, DataMovementConditionTypeRunning, DataMovementConditionTypeFinished}
-)
-
 // Reasons describing the various data movement status conditions. Must be
 // in CamelCase format (see metav1.Condition)
 const (
@@ -137,12 +133,9 @@ const (
 	DataMovementConditionReasonInvalid = "Invalid"
 )
 
-var (
-	DataMovementConditionReasonOrder = []string{DataMovementConditionReasonSuccess, DataMovementConditionReasonFailed, DataMovementConditionReasonInvalid}
-)
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="ISMONITOR",type="boolean",JSONPath=".spec.monitor",description="True if monitoring a DM"
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
