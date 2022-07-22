@@ -16,7 +16,23 @@ spec:
     singular: nnfdatamovement
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: True if monitoring a DM
+      jsonPath: .spec.monitor
+      name: ISMONITOR
+      type: boolean
+    - description: Current state
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: Status of current state
+      jsonPath: .status.status
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfDataMovement is the Schema for the datamovements API
@@ -307,6 +323,9 @@ spec:
                   operation ended.
                 format: date-time
                 type: string
+              message:
+                description: Message contains any text that explains the Status.
+                type: string
               nodeStatus:
                 description: Node Status reflects the status of individual NNF Node
                   Data Movement operations
@@ -353,6 +372,20 @@ spec:
                 description: StartTime reflects the time at which the Data Movement
                   operation started.
                 format: date-time
+                type: string
+              state:
+                description: Current state of data movement.
+                enum:
+                - Starting
+                - Running
+                - Finished
+                type: string
+              status:
+                description: Status of the current state.
+                enum:
+                - Success
+                - Failed
+                - Invalid
                 type: string
             type: object
         type: object
