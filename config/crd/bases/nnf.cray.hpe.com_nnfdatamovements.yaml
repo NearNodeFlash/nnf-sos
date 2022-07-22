@@ -323,6 +323,9 @@ spec:
                   operation ended.
                 format: date-time
                 type: string
+              message:
+                description: Message contains any text that explains the Status.
+                type: string
               nodeStatus:
                 description: Node Status reflects the status of individual NNF Node
                   Data Movement operations

@@ -90,6 +90,9 @@ type NnfDataMovementStatus struct {
 	// +kubebuilder:validation:Enum=Success;Failed;Invalid
 	Status string `json:"status,omitempty"`
 
+	// Message contains any text that explains the Status.
+	Message string `json:"message,omitempty"`
+
 	// StartTime reflects the time at which the Data Movement operation started.
 	StartTime *metav1.MicroTime `json:"startTime,omitempty"`
 
