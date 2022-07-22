@@ -145,7 +145,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
-		workflow.Status.Reason = ""
+		workflow.Status.Status = ""
 		workflow.Status.Message = ""
 		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
@@ -187,19 +187,19 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	updateNeeded := false
 	driverDone, err := checkDriverStatus(workflow)
 	if err != nil {
-		// Update Status only if not already in an ERROR state
+		// Update Status only if not already in an error state.
 		if workflow.Status.State != workflow.Spec.DesiredState ||
 			workflow.Status.Ready != ConditionFalse ||
-			workflow.Status.Reason != "ERROR" {
-			log.Info("Workflow state transitioning to " + "ERROR")
+			workflow.Status.Status != "Error" {
+			log.Info("Workflow state transitioning to Error")
 			workflow.Status.State = workflow.Spec.DesiredState
 			workflow.Status.Ready = ConditionFalse
-			workflow.Status.Reason = "ERROR"
+			workflow.Status.Status = "Error"
 			workflow.Status.Message = err.Error()
 			updateNeeded = true
 		}
 	} else {
-		// Set Ready/Reason based on driverDone condition
+		// Set Ready/Status based on driverDone condition
 		// All drivers achieving the current desiredStatus means we've achieved the desired state
 		if driverDone == ConditionTrue {
 			if workflow.Status.Ready != ConditionTrue {
@@ -207,16 +207,16 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				ts := metav1.NowMicro()
 				workflow.Status.ReadyChange = &ts
 				workflow.Status.ElapsedTimeLastState = ts.Time.Sub(workflow.Status.DesiredStateChange.Time).Round(time.Microsecond).String()
-				workflow.Status.Reason = "Completed"
+				workflow.Status.Status = "Completed"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " completed successfully"
 				log.Info("Workflow transitioning to ready state " + workflow.Status.State)
 				updateNeeded = true
 			}
 		} else {
 			// Driver not ready, update Status if not already in DriverWait
-			if workflow.Status.Reason != "DriverWait" {
+			if workflow.Status.Status != "DriverWait" {
 				workflow.Status.Ready = ConditionFalse
-				workflow.Status.Reason = "DriverWait"
+				workflow.Status.Status = "DriverWait"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " waiting for driver completion"
 				log.Info("Workflow state=" + workflow.Status.State + " waiting for driver completion")
 				updateNeeded = true

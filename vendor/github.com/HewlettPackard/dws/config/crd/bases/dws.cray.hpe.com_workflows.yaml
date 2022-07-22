@@ -17,10 +17,6 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: Desired state
-      jsonPath: .spec.desiredState
-      name: DESIREDSTATE
-      type: string
     - description: Current state
       jsonPath: .status.state
       name: STATE
@@ -29,6 +25,10 @@ spec:
       jsonPath: .status.ready
       name: READY
       type: boolean
+    - description: Indicates achievement of current state
+      jsonPath: .status.status
+      name: STATUS
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
@@ -37,6 +37,11 @@ spec:
       name: JOBID
       priority: 1
       type: integer
+    - description: Desired state
+      jsonPath: .spec.desiredState
+      name: DESIREDSTATE
+      priority: 1
+      type: string
     - description: Time of most recent desiredState change
       jsonPath: .status.desiredStateChange
       name: DESIREDSTATECHANGE
@@ -281,13 +286,17 @@ spec:
                   status
                 format: date-time
                 type: string
-              reason:
-                description: User readable reason and status message
-                type: string
               state:
                 default: proposal
                 description: The state the resource is currently transitioning to.
                   Updated by the controller once started.
+                type: string
+              status:
+                description: User readable reason and status message
+                enum:
+                - Completed
+                - DriverWait
+                - Error
                 type: string
             required:
             - ready
