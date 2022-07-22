@@ -16,7 +16,19 @@ spec:
     singular: nnfdatamovement
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Current state
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: Status of current state
+      jsonPath: .status.status
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfDataMovement is the Schema for the datamovements API
@@ -353,6 +365,19 @@ spec:
                 description: StartTime reflects the time at which the Data Movement
                   operation started.
                 format: date-time
+                type: string
+              state:
+                description: Current state of data movement.
+                enum:
+                - Starting
+                - Running
+                - Finished
+                type: string
+              status:
+                description: Status of the current state.
+                enum:
+                - Success
+                - Failed
                 type: string
             type: object
         type: object

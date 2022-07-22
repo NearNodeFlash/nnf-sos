@@ -73,9 +73,6 @@ type NnfDataMovementSpecSourceDestination struct {
 
 // DataMovementStatus defines the observed state of DataMovement
 type NnfDataMovementStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Node Status reflects the status of individual NNF Node Data Movement operations
 	NodeStatus []NnfDataMovementNodeStatus `json:"nodeStatus,omitempty"`
 
@@ -84,6 +81,14 @@ type NnfDataMovementStatus struct {
 	// one of Starting, Running, or Finished, reflect the three states that
 	// data movement performs.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Current state of data movement.
+	// +kubebuilder:validation:Enum=Starting;Running;Finished
+	State string `json:"state,omitempty"`
+
+	// Status of the current state.
+	// +kubebuilder:validation:Enum=Success;Failed
+	Status string `json:"status,omitempty"`
 
 	// StartTime reflects the time at which the Data Movement operation started.
 	StartTime *metav1.MicroTime `json:"startTime,omitempty"`
@@ -120,6 +125,10 @@ const (
 	DataMovementConditionTypeFinished = "Finished"
 )
 
+var (
+	DataMovementConditionTypeOrder = []string{DataMovementConditionTypeStarting, DataMovementConditionTypeRunning, DataMovementConditionTypeFinished}
+)
+
 // Reasons describing the various data movement status conditions. Must be
 // in CamelCase format (see metav1.Condition)
 const (
@@ -128,8 +137,15 @@ const (
 	DataMovementConditionReasonInvalid = "Invalid"
 )
 
+var (
+	DataMovementConditionReasonOrder = []string{DataMovementConditionReasonSuccess, DataMovementConditionReasonFailed, DataMovementConditionReasonInvalid}
+)
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
+//+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // NnfDataMovement is the Schema for the datamovements API
 type NnfDataMovement struct {
