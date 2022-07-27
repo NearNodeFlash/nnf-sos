@@ -436,9 +436,9 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		mountInfo.Device.Lustre = &dwsv1alpha1.ClientMountDeviceLustre{}
 		mountInfo.Device.Lustre.FileSystemName = allocationSet.FileSystemName
 		if allocationSet.ExternalMgsNid != "" {
-			mountInfo.Device.Lustre.MgsAddresses = []string{allocationSet.ExternalMgsNid}
+			mountInfo.Device.Lustre.MgsAddresses = allocationSet.ExternalMgsNid
 		} else {
-			mountInfo.Device.Lustre.MgsAddresses = []string{nnfStorage.Status.MgsNode}
+			mountInfo.Device.Lustre.MgsAddresses = nnfStorage.Status.MgsNode
 		}
 
 		// Make it easy for the nnf-dm daemon to find the NnfStorage.

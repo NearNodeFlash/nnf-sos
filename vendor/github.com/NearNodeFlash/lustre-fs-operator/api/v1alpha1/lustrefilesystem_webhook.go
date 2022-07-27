@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -80,10 +81,12 @@ func (r *LustreFileSystem) validateLustreFileSystem() error {
 
 func (r *LustreFileSystem) validateMgsNids() *field.Error {
 
-	for index, nid := range r.Spec.MgsNids {
-		f := field.NewPath("spec").Child("mgsNids").Index(index)
+	re := regexp.MustCompile(`[:,]`)
+	f := field.NewPath("spec").Child("mgsNids")
+
+	for _, nid := range re.Split(r.Spec.MgsNids, -1) {
 		if !strings.Contains(nid, "@") {
-			return field.Invalid(f, nid, "must be valid mgsNid format [HOST]@[INTERFACE]")
+			return field.Invalid(f, nid, "must be a valid mgsNid format [HOST]@[INTERFACE]")
 		}
 
 		hostname := strings.SplitN(nid, "@", 2)[0]

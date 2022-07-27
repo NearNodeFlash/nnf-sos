@@ -21,9 +21,9 @@ spec:
       jsonPath: .spec.name
       name: FSNAME
       type: string
-    - description: MGS NID
-      jsonPath: .spec.mgsNids[0]
-      name: MgsNID
+    - description: List of MGS NIDs
+      jsonPath: .spec.mgsNids
+      name: MGSNIDS
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
@@ -59,14 +59,9 @@ spec:
             description: LustreFileSystemSpec defines the desired state of LustreFileSystem
             properties:
               mgsNids:
-                description: MgsNids lists the NID of the MGS to use for accessing
-                  the Lustre file system. The MGS NIDs are combined with the Name
-                  to establish a connection to a global Lustre file system. Connections
-                  occur in the order of the listed NIDs.
-                items:
-                  type: string
-                minItems: 1
-                type: array
+                description: MgsNids is the list of comma- and colon- separated NIDs
+                  of the MGS nodes to use for accessing the Lustre file system.
+                type: string
               mountRoot:
                 description: MountRoot is the mount path used to access the Lustre
                   file system from a host. Data Movement directives can reference

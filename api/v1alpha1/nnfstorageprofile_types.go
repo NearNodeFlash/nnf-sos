@@ -31,7 +31,7 @@ type NnfStorageProfileLustreData struct {
 	CombinedMGTMDT bool `json:"combinedMgtMdt,omitempty"`
 
 	// ExternalMGS contains the NIDs of a pre-existing MGS that should be used
-	ExternalMGS []string `json:"externalMgs,omitempty"`
+	ExternalMGS string `json:"externalMgs,omitempty"`
 
 	// CapacityMGT specifies the size of the MGT device.
 	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"

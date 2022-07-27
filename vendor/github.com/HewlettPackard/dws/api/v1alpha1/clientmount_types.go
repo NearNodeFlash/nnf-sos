@@ -31,8 +31,7 @@ type ClientMountDeviceLustre struct {
 	FileSystemName string `json:"fileSystemName"`
 
 	// List of mgsAddresses of the form [address]@[lnet]
-	// +kubebuilder:validation:MinItems=1
-	MgsAddresses []string `json:"mgsAddresses"`
+	MgsAddresses string `json:"mgsAddresses"`
 }
 
 // ClientMountNVMeDesc uniquely describes an NVMe namespace
