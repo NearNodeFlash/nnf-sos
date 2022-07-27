@@ -75,9 +75,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 	})
 
 	It("should accept externalMgs", func() {
-		nnfProfile.Data.LustreStorage.ExternalMGS = []string{
-			"10.0.0.1@tcp",
-		}
+		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
@@ -92,9 +90,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 	It("should not accept combinedMgtMdt with externalMgs", func() {
 		nnfProfile.Data.LustreStorage.CombinedMGTMDT = true
-		nnfProfile.Data.LustreStorage.ExternalMGS = []string{
-			"10.0.0.1@tcp",
-		}
+		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})

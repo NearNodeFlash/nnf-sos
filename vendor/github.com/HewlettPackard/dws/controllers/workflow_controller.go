@@ -29,6 +29,7 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,19 +61,20 @@ type WorkflowReconciler struct {
 
 // checkDriverStatus returns true if all registered drivers for the current state completed successfully
 func checkDriverStatus(instance *dwsv1alpha1.Workflow) (bool, error) {
+	completed := ConditionTrue
+
 	for _, d := range instance.Status.Drivers {
 		if d.WatchState == instance.Status.State {
 			if strings.ToLower(d.Reason) == "error" {
 				// Return errors
-				return ConditionTrue, myerror.New(d.Message)
+				return ConditionFalse, myerror.New(d.Message)
 			}
 			if d.Completed == ConditionFalse {
-				// Return not ready
-				return ConditionFalse, nil
+				completed = ConditionFalse
 			}
 		}
 	}
-	return ConditionTrue, nil
+	return completed, nil
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
@@ -89,17 +91,23 @@ func checkDriverStatus(instance *dwsv1alpha1.Workflow) (bool, error) {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
-func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
 	log.Info("Reconciling Workflow")
 
 	// Fetch the Workflow workflow
 	workflow := &dwsv1alpha1.Workflow{}
 
-	err := r.Get(ctx, req.NamespacedName, workflow)
-	if err != nil {
+	if err := r.Get(ctx, req.NamespacedName, workflow); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	statusUpdater := newWorkflowStatusUpdater(workflow)
+	defer func() {
+		if err == nil {
+			err = statusUpdater.close(ctx, r)
+		}
+	}()
 
 	// Check if the object is being deleted
 	if !workflow.GetDeletionTimestamp().IsZero() {
@@ -145,16 +153,10 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
-		workflow.Status.Status = ""
+		workflow.Status.Status = "DriverWait"
 		workflow.Status.Message = ""
 		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
-
-		err = r.Update(ctx, workflow)
-		if err != nil {
-			log.Error(err, "Failed to update Workflow state")
-			return ctrl.Result{}, err
-		}
 
 		return ctrl.Result{}, nil
 	}
@@ -184,53 +186,37 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 
-	updateNeeded := false
 	driverDone, err := checkDriverStatus(workflow)
 	if err != nil {
-		// Update Status only if not already in an error state.
-		if workflow.Status.State != workflow.Spec.DesiredState ||
-			workflow.Status.Ready != ConditionFalse ||
-			workflow.Status.Status != "Error" {
+		if workflow.Status.Status != "Error" {
 			log.Info("Workflow state transitioning to Error")
-			workflow.Status.State = workflow.Spec.DesiredState
-			workflow.Status.Ready = ConditionFalse
-			workflow.Status.Status = "Error"
-			workflow.Status.Message = err.Error()
-			updateNeeded = true
 		}
+
+		workflow.Status.Status = "Error"
+		workflow.Status.Message = err.Error()
 	} else {
 		// Set Ready/Status based on driverDone condition
 		// All drivers achieving the current desiredStatus means we've achieved the desired state
 		if driverDone == ConditionTrue {
 			if workflow.Status.Ready != ConditionTrue {
-				workflow.Status.Ready = ConditionTrue
 				ts := metav1.NowMicro()
 				workflow.Status.ReadyChange = &ts
 				workflow.Status.ElapsedTimeLastState = ts.Time.Sub(workflow.Status.DesiredStateChange.Time).Round(time.Microsecond).String()
 				workflow.Status.Status = "Completed"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " completed successfully"
 				log.Info("Workflow transitioning to ready state " + workflow.Status.State)
-				updateNeeded = true
 			}
 		} else {
 			// Driver not ready, update Status if not already in DriverWait
 			if workflow.Status.Status != "DriverWait" {
-				workflow.Status.Ready = ConditionFalse
 				workflow.Status.Status = "DriverWait"
 				workflow.Status.Message = "Workflow " + workflow.Status.State + " waiting for driver completion"
 				log.Info("Workflow state=" + workflow.Status.State + " waiting for driver completion")
-				updateNeeded = true
 			}
 		}
 	}
-	if updateNeeded {
-		err = r.Update(ctx, workflow)
-		if err != nil {
-			log.Error(err, "Failed to update Workflow state")
-			return ctrl.Result{}, nil
-		}
-		log.Info("Status was updated", "State", workflow.Status.State)
-	}
+
+	workflow.Status.Ready = driverDone
 
 	return ctrl.Result{}, nil
 }
@@ -266,6 +252,29 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha1
 	}
 
 	return computes, nil
+}
+
+type workflowStatusUpdater struct {
+	workflow       *dwsv1alpha1.Workflow
+	existingStatus dwsv1alpha1.WorkflowStatus
+}
+
+func newWorkflowStatusUpdater(w *dwsv1alpha1.Workflow) *workflowStatusUpdater {
+	return &workflowStatusUpdater{
+		workflow:       w,
+		existingStatus: (*w.DeepCopy()).Status,
+	}
+}
+
+func (w *workflowStatusUpdater) close(ctx context.Context, r *WorkflowReconciler) error {
+	if !reflect.DeepEqual(w.workflow.Status, w.existingStatus) {
+		err := r.Update(ctx, w.workflow)
+		if !apierrors.IsConflict(err) {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

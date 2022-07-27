@@ -716,7 +716,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = dwArgs["name"][:charsWanted]
 					lustreData := mergeLustreStorageDirectiveAndProfile(dwArgs, nnfStorageProfile)
 					if len(lustreData.ExternalMGS) > 0 {
-						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = lustreData.ExternalMGS[0]
+						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = lustreData.ExternalMGS
 					}
 				}
 

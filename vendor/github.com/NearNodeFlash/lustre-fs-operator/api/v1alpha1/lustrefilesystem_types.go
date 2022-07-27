@@ -36,10 +36,9 @@ type LustreFileSystemSpec struct {
 	// +kubebuilder:validation:MinLength:=1
 	Name string `json:"name"`
 
-	// MgsNids lists the NID of the MGS to use for accessing the Lustre file system. The MGS NIDs are combined with the
-	// Name to establish a connection to a global Lustre file system. Connections occur in the order of the listed NIDs.
-	// +kubebuilder:validation:MinItems:=1
-	MgsNids []string `json:"mgsNids"`
+	// MgsNids is the list of comma- and colon- separated NIDs of the MGS
+	// nodes to use for accessing the Lustre file system.
+	MgsNids string `json:"mgsNids"`
 
 	// MountRoot is the mount path used to access the Lustre file system from a host. Data Movement directives can
 	// reference this field when performing data movement from or to the Lustre file system.
@@ -60,7 +59,7 @@ type LustreFileSystemStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="FSNAME",type="string",JSONPath=".spec.name",description="Lustre file system name"
-//+kubebuilder:printcolumn:name="MgsNID",type="string",JSONPath=".spec.mgsNids[0]",description="MGS NID"
+//+kubebuilder:printcolumn:name="MGSNIDS",type="string",JSONPath=".spec.mgsNids",description="List of MGS NIDs"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:printcolumn:name="MountRoot",type="string",JSONPath=".spec.mountRoot",priority=1,description="Mount path used to mount filesystem"
 //+kubebuilder:printcolumn:name="StorageClass",type="string",JSONPath=".spec.storageClassName",priority=1,description="StorageClass to use"
