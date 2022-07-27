@@ -91,6 +91,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/HewlettPackard/dws v0.0.0-20220726224215-294e62b7e652 h1:x8c5d63n3kx9xxsLsdlskc9wdy4+WuZR3fem1C8Zqnw=
 github.com/HewlettPackard/dws v0.0.0-20220726224215-294e62b7e652/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
+github.com/HewlettPackard/dws v0.0.0-20220727174355-452479fbcc79 h1:xLlQJyWqeOTHn7qCvnHVOcD/OWekQ06r8C3fzAXGUlk=
+github.com/HewlettPackard/dws v0.0.0-20220727174355-452479fbcc79/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220623192103-4ce53adacc95/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
@@ -98,8 +100,8 @@ github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA4
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220726174415-75ead3791889 h1:OvNfeFigg6m0LKsJ4hgwWWXbFUaeCAS3KR9HAgccfSg=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220726174415-75ead3791889/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38 h1:eUS+ynG1Xni4CEMhmQ3dduA3TfUWEyUXRUFKwEJEF30=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220706162210-e3216b00db0b h1:lF+trxvYVgr9EreEibjM9ZIEy2tQKbD8llPG+s/FUD0=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20220706162210-e3216b00db0b/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
