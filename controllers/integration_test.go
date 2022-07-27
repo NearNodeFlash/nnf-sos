@@ -677,7 +677,10 @@ var _ = Describe("Integration Test", func() {
 						"Target":        Equal("single"),
 					}))
 					Expect(access.Status.State).To(Equal("mounted"))
-					Expect(access.Status.Ready).To(BeTrue())
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+						g.Expect(access.Status.Ready).To(BeTrue())
+					}).Should(Succeed())
 
 					By("Checking NNF Access computes reference exists")
 					Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
