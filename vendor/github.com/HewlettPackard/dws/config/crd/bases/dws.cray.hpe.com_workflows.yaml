@@ -242,6 +242,10 @@ spec:
                       type: string
                     dwdIndex:
                       type: integer
+                    error:
+                      description: Driver error string. This is not rolled up into
+                        the workflow's overall status section
+                      type: string
                     lastHB:
                       format: int64
                       type: integer

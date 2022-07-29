@@ -26,10 +26,10 @@ type WorkflowError struct {
 	err         error
 }
 
-func NewWorkflowError(message string, recoverable bool) *WorkflowError {
+func NewWorkflowError(message string) *WorkflowError {
 	return &WorkflowError{
 		message:     message,
-		recoverable: recoverable,
+		recoverable: true,
 	}
 }
 
@@ -46,6 +46,10 @@ func (e *WorkflowError) GetRecoverable() bool {
 }
 
 func (e *WorkflowError) Error() string {
+	if e.err == nil {
+		return e.message
+	}
+
 	return e.message + ": " + e.err.Error()
 }
 
@@ -53,7 +57,18 @@ func (e *WorkflowError) Unwrap() error {
 	return e.err
 }
 
+func (e *WorkflowError) WithFatal() *WorkflowError {
+	e.recoverable = false
+	return e
+}
+
 func (e *WorkflowError) WithError(err error) *WorkflowError {
+	// if the error is already a WorkflowError, then return it unmodified
+	workflowError, ok := err.(*WorkflowError)
+	if ok {
+		return workflowError
+	}
+
 	e.err = err
 	return e
 }
