@@ -41,6 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
+	"github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
+	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
@@ -128,6 +130,32 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 		}
 	}
 
+	// Subscribe to the NNF Event Manager
+	event.EventManager.Subscribe(r)
+
+	return nil
+}
+
+// EventHandler implements event.Subscription. Every Upstream or Downstream event runs the reconciler
+// so all the NNF Node server/drive status stays current.
+func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
+
+	// Upstream link events
+	linkEstablished := e.Is(msgreg.UpstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedUpstreamLinkEstablishedFabric("", ""))
+	linkDropped := e.Is(msgreg.UpstreamLinkDroppedFabric("", ""))
+
+	if linkEstablished || linkDropped {
+		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
+	}
+	
+	// Downstream link events
+	linkEstablished = e.Is(msgreg.DownstreamLinkEstablishedFabric("","")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("",""))
+	linkDropped = e.Is(msgreg.DownstreamLinkDroppedFabric("",""))
+
+	if linkEstablished || linkDropped {
+		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
+	}
+
 	return nil
 }
 
@@ -171,7 +199,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	if storageService.Status.State == "" || storageService.Status.Health == "" { // NJR TODO: A better way to do this would be to initialize the Storage Service in nnf-ec so it has a valid Health & Status
+	if storageService.Status.State != sf.ENABLED_RST {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
