@@ -24,7 +24,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
 )
 
@@ -47,7 +47,7 @@ const (
 var errDeviceNotFound = errors.New("Device Not Found")
 
 type MockNvmePersistenceManager struct {
-	store   *kvstore.Store
+	store   *persistent.Store
 	replays []mockNvmePersistenceReplay
 }
 
@@ -55,12 +55,12 @@ type MockNvmePersistenceManager struct {
 // the Mock NVMe Persistence Registry to handle any Replays in the database.
 func (mgr *MockNvmePersistenceManager) initialize() (err error) {
 
-	mgr.store, err = kvstore.Open("mock.db", false)
+	mgr.store, err = persistent.Open("mock.db", false)
 	if err != nil {
 		panic(err)
 	}
 
-	mgr.store.Register([]kvstore.Registry{newMockNvmePersistenceRegistry(mgr)})
+	mgr.store.Register([]persistent.Registry{newMockNvmePersistenceRegistry(mgr)})
 
 	if err := mgr.store.Replay(); err != nil {
 		panic(err)
@@ -202,7 +202,7 @@ type mockNvmePersistenceRegistry struct {
 	mgr *MockNvmePersistenceManager
 }
 
-func newMockNvmePersistenceRegistry(mgr *MockNvmePersistenceManager) kvstore.Registry {
+func newMockNvmePersistenceRegistry(mgr *MockNvmePersistenceManager) persistent.Registry {
 	return &mockNvmePersistenceRegistry{mgr: mgr}
 }
 
@@ -210,7 +210,7 @@ func (reg *mockNvmePersistenceRegistry) Prefix() string {
 	return mockNvmePersistenceRegistryPrefix
 }
 
-func (reg *mockNvmePersistenceRegistry) NewReplay(id string) kvstore.ReplayHandler {
+func (reg *mockNvmePersistenceRegistry) NewReplay(id string) persistent.ReplayHandler {
 	reg.mgr.replays = append(reg.mgr.replays, mockNvmePersistenceReplay{id: id})
 	return &reg.mgr.replays[len(reg.mgr.replays)-1]
 }

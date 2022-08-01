@@ -42,6 +42,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/NearNodeFlash/nnf-sos/controllers"
@@ -49,7 +50,6 @@ import (
 	//+kubebuilder:scaffold:imports
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
-	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 )
 
 var (
@@ -120,11 +120,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := nnfCtrl.Start(nnfopts); err != nil {
-		setupLog.Error(err, "failed to start nnf controller")
-		os.Exit(1)
-	}
-
 	options := ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -142,7 +137,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := nnfCtrl.SetupReconciler(mgr); err != nil {
+	if err := nnfCtrl.SetupReconcilers(mgr, nnfopts); err != nil {
 		setupLog.Error(err, "unable to create nnf controller reconciler", "controller", nnfCtrl.GetType())
 		os.Exit(1)
 	}
@@ -170,8 +165,7 @@ func main() {
 type nnfControllerInitializer interface {
 	GetType() string
 	SetNamespaces(*ctrl.Options)
-	Start(*nnf.Options) error
-	SetupReconciler(manager.Manager) error
+	SetupReconcilers(manager.Manager, *nnf.Options) error
 }
 
 // Create a new NNF Controller Initializer for the given type, or nil if not found.
@@ -195,28 +189,21 @@ func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
 	options.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
 }
 
-func (*nodeLocalController) Start(opts *nnf.Options) error {
-	c := nnf.NewController(opts)
-	if err := c.Init(&ec.Options{
-		Http:    true,
-		Port:    nnf.Port,
-		Log:     false,
-		Verbose: false,
-	}); err != nil {
-		return err
-	}
-
-	go c.Run()
-
-	return nil
-}
-
-func (c *nodeLocalController) SetupReconciler(mgr manager.Manager) error {
+func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
 	if err := (&controllers.NnfNodeReconciler{
 		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:         mgr.GetScheme(),
 		NamespacedName: types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.NnfNodeECDataReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		NamespacedName: types.NamespacedName{Name: controllers.NnfNodeECDataResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+		Options:        opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -243,9 +230,8 @@ type storageController struct{}
 
 func (*storageController) GetType() string                     { return StorageController }
 func (*storageController) SetNamespaces(options *ctrl.Options) { options.Namespace = "" }
-func (*storageController) Start(*nnf.Options) error            { return nil }
 
-func (c *storageController) SetupReconciler(mgr manager.Manager) error {
+func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
 	if err := (&controllers.NnfSystemConfigurationReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemConfiguration"),

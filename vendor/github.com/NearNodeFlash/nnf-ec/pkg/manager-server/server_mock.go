@@ -69,7 +69,6 @@ func (*MockServerController) GetStatus(s *Storage) (StorageStatus, error) {
 }
 
 func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
-	s.fileSystem = fs
 
 	if fs.IsMockable() {
 		if err := fs.Create(s.Devices(), opts); err != nil {
@@ -80,14 +79,13 @@ func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts
 	return nil
 }
 
-func (*MockServerController) MountFileSystem(s *Storage, opts FileSystemOptions) error {
-	if s.fileSystem.IsMockable() {
-		mountPoint := opts["mountpoint"].(string)
-		if mountPoint == "" {
+func (*MockServerController) MountFileSystem(s *Storage, fs FileSystemApi, mountpoint string) error {
+	if fs.IsMockable() {
+		if mountpoint == "" {
 			return nil
 		}
 
-		if err := s.fileSystem.Mount(mountPoint); err != nil {
+		if err := fs.Mount(mountpoint); err != nil {
 			return err
 		}
 	}
@@ -95,9 +93,9 @@ func (*MockServerController) MountFileSystem(s *Storage, opts FileSystemOptions)
 	return nil
 }
 
-func (*MockServerController) UnmountFileSystem(s *Storage) error {
-	if s.fileSystem.IsMockable() {
-		if err := s.fileSystem.Unmount(); err != nil {
+func (*MockServerController) UnmountFileSystem(s *Storage, fs FileSystemApi, mountpoint string) error {
+	if fs.IsMockable() {
+		if err := fs.Unmount(mountpoint); err != nil {
 			return err
 		}
 	}
@@ -105,9 +103,9 @@ func (*MockServerController) UnmountFileSystem(s *Storage) error {
 	return nil
 }
 
-func (*MockServerController) DeleteFileSystem(s *Storage) error {
-	if s.fileSystem.IsMockable() {
-		return s.fileSystem.Delete()
+func (*MockServerController) DeleteFileSystem(s *Storage, fs FileSystemApi) error {
+	if fs.IsMockable() {
+		return fs.Delete()
 	}
 	return nil
 }
