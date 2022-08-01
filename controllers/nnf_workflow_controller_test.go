@@ -340,7 +340,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Spec: lusv1alpha1.LustreFileSystemSpec{
 					Name:      "maui",
 					MountRoot: "/lus/maui",
-					MgsNids:   []string{"10.0.0.1@tcp"},
+					MgsNids:   "10.0.0.1@tcp",
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
@@ -557,9 +557,7 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 	// the controller tests.
 	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
 		profileInvalid := basicNnfStorageProfile("an-invalid-profile")
-		profileInvalid.Data.LustreStorage.ExternalMGS = []string{
-			"10.0.0.1@tcp",
-		}
+		profileInvalid.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		profileInvalid.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())
 	})

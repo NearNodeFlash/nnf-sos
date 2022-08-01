@@ -79,12 +79,12 @@ func (s *Storage) DeleteFileSystem(fs FileSystemApi) error {
 	return s.ctrl.DeleteFileSystem(s, fs)
 }
 
-func (s *Storage) MountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
-	return s.ctrl.MountFileSystem(s, fs, opts)
+func (s *Storage) MountFileSystem(fs FileSystemApi, mountPoint string) error {
+	return s.ctrl.MountFileSystem(s, fs, mountPoint)
 }
 
-func (s *Storage) UnmountFileSystem(fs FileSystemApi, opts FileSystemOptions) error {
-	return s.ctrl.UnmountFileSystem(s, fs)
+func (s *Storage) UnmountFileSystem(fs FileSystemApi, mountPoint string) error {
+	return s.ctrl.UnmountFileSystem(s, fs, mountPoint)
 }
 
 // Returns the list of devices for this pool.

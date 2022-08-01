@@ -89,8 +89,8 @@ github.com/Azure/go-autorest/tracing v0.6.0/go.mod h1:+vhtPC754Xsa23ID7GlGsrdKBp
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/HewlettPackard/dws v0.0.0-20220722142328-61ef62704d60 h1:la3C4AejKXOvsoQP7q1YL1B74zno+3fq3KtNs7462PE=
-github.com/HewlettPackard/dws v0.0.0-20220722142328-61ef62704d60/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
+github.com/HewlettPackard/dws v0.0.0-20220727174355-452479fbcc79 h1:xLlQJyWqeOTHn7qCvnHVOcD/OWekQ06r8C3fzAXGUlk=
+github.com/HewlettPackard/dws v0.0.0-20220727174355-452479fbcc79/go.mod h1:ENSzxviBNafkA5X+c1XUNIV9J1d2lVt4+r9AbidihNI=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220623192103-4ce53adacc95/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
@@ -98,10 +98,10 @@ github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA4
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
 github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb06e3pkSAbeQ52E9H9iFoQsEEwGN64994WTCIhntQ=
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220623194136-08b4e1a6e302 h1:oA73DSra6MfngzpxpkFoZ6vL1pM9neSgutRbtNuHZTg=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220623194136-08b4e1a6e302/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220725143907-636a69e668c3 h1:n5bpMCHd/sEmi+jTPhmnwecEm2Le7abXUlHCatFEFaw=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220725143907-636a69e668c3/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38 h1:eUS+ynG1Xni4CEMhmQ3dduA3TfUWEyUXRUFKwEJEF30=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220726184901-f1d60304f049 h1:X3f7RN7IXVPj/6ZfD/dK7OGUXB8DfilbNrbZUMlNijw=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220726184901-f1d60304f049/go.mod h1:WGhuERMbd1gdgfdf3LcX9ZHEIlNBWdXRMpFikRgfJ+g=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

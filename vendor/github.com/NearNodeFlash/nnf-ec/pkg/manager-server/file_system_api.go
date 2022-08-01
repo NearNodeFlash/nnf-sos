@@ -80,7 +80,7 @@ type FileSystemApi interface {
 	Delete() error
 
 	Mount(mountpoint string) error
-	Unmount() error
+	Unmount(mountpoint string) error
 }
 
 // FileSystem - Represents an abstract file system, with individual operations
@@ -88,7 +88,6 @@ type FileSystemApi interface {
 type FileSystem struct {
 	name       string
 	devices    []string
-	mountpoint string
 }
 
 type FileSystemError struct {

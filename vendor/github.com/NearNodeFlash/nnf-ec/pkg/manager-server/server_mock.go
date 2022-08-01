@@ -79,14 +79,13 @@ func (*MockServerController) CreateFileSystem(s *Storage, fs FileSystemApi, opts
 	return nil
 }
 
-func (*MockServerController) MountFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
+func (*MockServerController) MountFileSystem(s *Storage, fs FileSystemApi, mountpoint string) error {
 	if fs.IsMockable() {
-		mountPoint := opts["mountpoint"].(string)
-		if mountPoint == "" {
+		if mountpoint == "" {
 			return nil
 		}
 
-		if err := fs.Mount(mountPoint); err != nil {
+		if err := fs.Mount(mountpoint); err != nil {
 			return err
 		}
 	}
@@ -94,9 +93,9 @@ func (*MockServerController) MountFileSystem(s *Storage, fs FileSystemApi, opts 
 	return nil
 }
 
-func (*MockServerController) UnmountFileSystem(s *Storage, fs FileSystemApi) error {
+func (*MockServerController) UnmountFileSystem(s *Storage, fs FileSystemApi, mountpoint string) error {
 	if fs.IsMockable() {
-		if err := fs.Unmount(); err != nil {
+		if err := fs.Unmount(mountpoint); err != nil {
 			return err
 		}
 	}

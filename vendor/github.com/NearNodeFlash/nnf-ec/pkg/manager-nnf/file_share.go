@@ -108,7 +108,8 @@ func (sh *FileShare) GenerateStateData(state uint32) ([]byte, error) {
 		}
 
 		return json.Marshal(entry)
-	case fileShareUpdateCompleteLogEntryType:
+
+	case fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType:
 		entry := fileSharePersistentUpdateCompleteLogEntry{
 			FileSharePath: sh.mountRoot,
 		}
@@ -176,6 +177,16 @@ func (rh *fileShareRecoveryReplayHandler) Metadata(data []byte) error {
 func (rh *fileShareRecoveryReplayHandler) Entry(t uint32, data []byte) error {
 	rh.lastLogEntryType = t
 
+	switch t {
+	case fileShareUpdateCompleteLogEntryType:
+		entry := fileSharePersistentUpdateCompleteLogEntry{}
+		if err := json.Unmarshal(data, &entry); err != nil {
+			return err
+		}
+
+		rh.fileShare.mountRoot = entry.FileSharePath
+	}
+
 	return nil
 }
 
@@ -185,6 +196,12 @@ func (rh *fileShareRecoveryReplayHandler) Done() (bool, error) {
 		// In this case there may be some residual file system operations on the node that need to be rolled back
 
 		// TODO Something like storageGroup.serverStorage.RollbackFileSystem(rh.fileSystem.fsApi)
+
+	case fileShareUpdateStartLogEntryType:
+		// In this case the state of the mount root is unknown - we need to check if the desired mount
+		// is present or not and rollback to the desired state.
+
+		// TODO Something like storageGroup.serverStorage.RollbackFileSystem(rh.fileSystem.fsApi, mountPoint)
 
 	case fileShareDeleteCompleteLogEntryType:
 		rh.fileSystem.deleteFileShare(rh.fileShare)

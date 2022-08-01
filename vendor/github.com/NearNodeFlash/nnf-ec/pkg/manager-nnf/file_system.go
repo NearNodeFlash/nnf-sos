@@ -92,18 +92,6 @@ func (fs *FileSystem) createFileShare(id string, sg *StorageGroup, mountRoot str
 	return &fs.shares[len(fs.shares)-1]
 }
 
-func (fs *FileSystem) updateFileShare(id string, mountRoot string) error {
-
-	for i := range fs.shares {
-		if fs.shares[i].id == id {
-			fs.shares[i].mountRoot = mountRoot
-			return nil
-		}
-	}
-
-	return fmt.Errorf("File share %s not found", id)
-}
-
 func (fs *FileSystem) deleteFileShare(sh *FileShare) {
 
 	sg := fs.storageService.findStorageGroup(sh.storageGroupId)
@@ -126,7 +114,7 @@ type fileSystemPersistentMetadata struct {
 	FileSystemType string `json:"FileSystemType"`
 	FileSystemName string `json:"FileSystemName"`
 
-	server.FileSystemOem
+	server.FileSystemOem `json:",inline"`
 }
 
 func (fs *FileSystem) GetKey() string                       { return fileSystemRegistryPrefix + fs.id }

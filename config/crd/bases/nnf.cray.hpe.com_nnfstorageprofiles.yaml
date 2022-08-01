@@ -72,9 +72,7 @@ spec:
                   externalMgs:
                     description: ExternalMGS contains the NIDs of a pre-existing MGS
                       that should be used
-                    items:
-                      type: string
-                    type: array
+                    type: string
                 type: object
               pinned:
                 default: false

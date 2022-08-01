@@ -1328,18 +1328,12 @@ refreshState:
 	sh := fs.createFileShare(model.Id, sg, model.FileSharePath)
 
 	createFunc := func() error {
-		opts := model.Oem
-		if opts == nil {
-			opts = server.FileSystemOptions{}
-		}
-		opts["mountpoint"] = sh.mountRoot
-
-		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, opts); err != nil {
+		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, model.Oem); err != nil {
 			log.WithError(err).Errorf("Failed to create file share for path %s", model.FileSharePath)
 			return err
 		}
 
-		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
+		if err := sg.serverStorage.MountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
 			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
 			return err
 		}
@@ -1403,34 +1397,39 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StorageGroupOdataType, endpointId))
 	}
 
-	updateFunc := func() error {
-		opts := model.Oem
-		if opts == nil {
-			opts = server.FileSystemOptions{}
-		}
-		opts["mountpoint"] = newPath
-
-		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
-			log.WithError(err).Errorf("Failed to unmount file share for path %s", model.FileSharePath)
-			return err
+	var updateFunc func() error
+	if len(newPath) != 0 {
+		if len(sh.mountRoot) != 0 {
+			// TODO Error: File System already mounted
 		}
 
-		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
-			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
-			return err
+		sh.mountRoot = newPath
+
+		updateFunc = func() error {
+			if err := sg.serverStorage.MountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
+				log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
+				return err
+			}
+
+			return nil
 		}
 
-		return nil
+	} else {
+		updateFunc = func() error {
+			if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
+				log.WithError(err).Errorf("Failed to unmount file share for path %s", model.FileSharePath)
+				return err
+			}
+
+			sh.mountRoot = ""
+
+			return nil
+		}
 	}
 
 	if err := s.persistentController.UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
-		log.WithError(err).Errorf("Failed to create file share %s", sh.id)
-
+		log.WithError(err).Errorf("Failed to update file share %s", sh.id)
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update", sh.id))
-	}
-
-	if err := fs.updateFileShare(model.Id, newPath); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update object", sh.id))
 	}
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceChangedResourceEvent(), sh)
@@ -1475,9 +1474,8 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 	}
 
 	deleteFunc := func() error {
-		opts := server.FileSystemOptions{}
 
-		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
+		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
 			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' failed unmount", exportedShareId))
 		}
 

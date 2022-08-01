@@ -113,10 +113,7 @@ spec:
                               type: string
                             mgsAddresses:
                               description: List of mgsAddresses of the form [address]@[lnet]
-                              items:
-                                type: string
-                              minItems: 1
-                              type: array
+                              type: string
                           required:
                           - fileSystemName
                           - mgsAddresses

@@ -678,7 +678,10 @@ var _ = Describe("Integration Test", func() {
 						"Target":        Equal("single"),
 					}))
 					Expect(access.Status.State).To(Equal("mounted"))
-					Expect(access.Status.Ready).To(BeTrue())
+					Eventually(func(g Gomega) {
+						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+						g.Expect(access.Status.Ready).To(BeTrue())
+					}).Should(Succeed())
 
 					By("Checking NNF Access computes reference exists")
 					Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
@@ -1019,7 +1022,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: lusv1alpha1.LustreFileSystemSpec{
 					Name:      "lustre",
-					MgsNids:   []string{"172.0.0.1@tcp"},
+					MgsNids:   "172.0.0.1@tcp",
 					MountRoot: "/lus/maui",
 				},
 			}
@@ -1230,9 +1233,7 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			By("BeforeEach create some custom storage profiles")
 			profileExternalMGS = basicNnfStorageProfile(externalMgsProfileName)
-			profileExternalMGS.Data.LustreStorage.ExternalMGS = []string{
-				profileMgsNid,
-			}
+			profileExternalMGS.Data.LustreStorage.ExternalMGS = profileMgsNid
 			profileCombinedMGTMDT = basicNnfStorageProfile(combinedMgtMdtProfileName)
 			profileCombinedMGTMDT.Data.LustreStorage.CombinedMGTMDT = true
 			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
@@ -1575,7 +1576,7 @@ var _ = Describe("Integration Test", func() {
 					Spec: lusv1alpha1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
-						MgsNids:   []string{"10.0.0.1@tcp"},
+						MgsNids:   "10.0.0.1@tcp",
 					},
 				}
 				Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
@@ -1611,7 +1612,7 @@ var _ = Describe("Integration Test", func() {
 					Spec: lusv1alpha1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
-						MgsNids:   []string{"10.0.0.1@tcp"},
+						MgsNids:   "10.0.0.1@tcp",
 					},
 				}
 				Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())

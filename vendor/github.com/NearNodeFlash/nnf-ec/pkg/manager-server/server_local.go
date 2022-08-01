@@ -117,8 +117,7 @@ func (c *LocalServerController) DeleteFileSystem(s *Storage, fs FileSystemApi) e
 	return fs.Delete()
 }
 
-func (c *LocalServerController) MountFileSystem(s *Storage, fs FileSystemApi, opts FileSystemOptions) error {
-	mountPoint := opts["mountpoint"].(string)
+func (c *LocalServerController) MountFileSystem(s *Storage, fs FileSystemApi, mountPoint string) error {
 	if mountPoint == "" {
 		return nil
 	}
@@ -130,8 +129,8 @@ func (c *LocalServerController) MountFileSystem(s *Storage, fs FileSystemApi, op
 	return nil
 }
 
-func (c *LocalServerController) UnmountFileSystem(s *Storage, fs FileSystemApi) error {
-	if err := fs.Unmount(); err != nil {
+func (c *LocalServerController) UnmountFileSystem(s *Storage, fs FileSystemApi, mountPoint string) error {
+	if err := fs.Unmount(mountPoint); err != nil {
 		return err
 	}
 

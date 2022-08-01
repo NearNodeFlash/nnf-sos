@@ -76,6 +76,6 @@ type ServerControllerApi interface {
 
 	CreateFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
 	DeleteFileSystem(*Storage, FileSystemApi) error
-	MountFileSystem(*Storage, FileSystemApi, FileSystemOptions) error
-	UnmountFileSystem(*Storage, FileSystemApi) error
+	MountFileSystem(*Storage, FileSystemApi, string) error
+	UnmountFileSystem(*Storage, FileSystemApi, string) error
 }
