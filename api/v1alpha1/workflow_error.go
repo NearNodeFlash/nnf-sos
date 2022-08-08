@@ -19,6 +19,10 @@
 
 package v1alpha1
 
+import (
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+)
+
 //+kubebuilder:object:generate=false
 type WorkflowError struct {
 	message     string
@@ -55,6 +59,21 @@ func (e *WorkflowError) Error() string {
 
 func (e *WorkflowError) Unwrap() error {
 	return e.err
+}
+
+func (e *WorkflowError) Inject(driverStatus *dwsv1alpha1.WorkflowDriverStatus) {
+	driverStatus.Message = e.GetMessage()
+	if e.GetRecoverable() {
+		driverStatus.Reason = "running"
+	} else {
+		driverStatus.Reason = "error"
+	}
+
+	if e.Unwrap() != nil {
+		driverStatus.Error = e.Unwrap().Error()
+	} else {
+		driverStatus.Error = e.Error()
+	}
 }
 
 func (e *WorkflowError) WithFatal() *WorkflowError {

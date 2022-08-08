@@ -218,25 +218,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Start", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 		result, err := startFunctions[workflow.Status.State](r, ctx, workflow, driverStatus.DWDIndex)
 		if err != nil {
-			e, ok := err.(*nnfv1alpha1.WorkflowError)
-			if ok {
-				driverStatus.Message = e.GetMessage()
-				if e.GetRecoverable() {
-					driverStatus.Reason = "running"
-				} else {
-					driverStatus.Reason = "error"
-				}
-
-				if e.Unwrap() != nil {
-					driverStatus.Error = e.Unwrap().Error()
-				} else {
-					driverStatus.Error = e.Error()
-				}
-			} else {
-				driverStatus.Reason = "error"
-				driverStatus.Message = "Internal error: " + err.Error()
-				driverStatus.Error = err.Error()
-			}
+			handleWorkflowError(err, driverStatus)
 
 			log.Info("Start error", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "Message", err.Error())
 			return ctrl.Result{}, err
@@ -271,25 +253,8 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Finish", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 		result, err := finishFunctions[workflow.Status.State](r, ctx, workflow, driverStatus.DWDIndex)
 		if err != nil {
-			e, ok := err.(*nnfv1alpha1.WorkflowError)
-			if ok {
-				driverStatus.Message = e.GetMessage()
-				if e.GetRecoverable() {
-					driverStatus.Reason = "running"
-				} else {
-					driverStatus.Reason = "error"
-				}
+			handleWorkflowError(err, driverStatus)
 
-				if e.Unwrap() != nil {
-					driverStatus.Error = e.Unwrap().Error()
-				} else {
-					driverStatus.Error = e.Error()
-				}
-			} else {
-				driverStatus.Reason = "error"
-				driverStatus.Message = "Internal error: " + err.Error()
-				driverStatus.Error = err.Error()
-			}
 			log.Info("Finish error", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "Message", err.Error())
 
 			return ctrl.Result{}, err
@@ -333,7 +298,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 
 	directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, index, workflow, log)
 	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Parsing DW directive").WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to start parsing DW directive").WithError(err)
 	}
 
 	if directiveBreakdown == nil {
@@ -379,7 +344,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 	err := r.Get(ctx, client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)
 	if err != nil {
 		log.Info("Failed to get DirectiveBreakdown", "name", directiveBreakdown.GetName(), "error", err.Error())
-		return nil, nnfv1alpha1.NewWorkflowError("Parsing DW directive").WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to finish parsing DW directive").WithError(err)
 	}
 
 	// Wait for the breakdown to be ready
