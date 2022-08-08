@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/HewlettPackard/structex"
@@ -198,6 +199,20 @@ func connectDevice(dev *switchtec.Device, ops *switchOps) (err error) {
 		if err = dev.EndPointTunnelEnable(ops.pdfid); err != nil {
 			return err
 		}
+
+		for true {
+			status, err := dev.EndPointTunnelStatus(ops.pdfid)
+			if err != nil {
+				return err
+			}
+
+			if status == switchtec.EnabledEpTunnelStatus {
+				break
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+
 		ops.tunnelStatus = switchtec.EnabledEpTunnelStatus
 	}
 

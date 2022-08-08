@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -70,9 +70,9 @@ const (
 )
 
 type fileSharePersistentMetadata struct {
-	FileSystemId   string  `json:"FileSystemId"`
-	StorageGroupId *string `json:"StorageGroupId,omitempty"`
-	MountRoot      *string `json:"MountRoot,omitempty"`
+	FileSystemId   string `json:"FileSystemId"`
+	StorageGroupId string `json:"StorageGroupId"`
+	MountRoot      string `json:"MountRoot"`
 }
 
 type fileSharePersistentCreateCompleteLogEntry struct {
@@ -95,8 +95,8 @@ func (sh *FileShare) GetProvider() PersistentStoreProvider {
 func (sh *FileShare) GenerateMetadata() ([]byte, error) {
 	return json.Marshal(fileSharePersistentMetadata{
 		FileSystemId:   sh.fileSystemId,
-		StorageGroupId: &sh.storageGroupId,
-		MountRoot:      &sh.mountRoot,
+		StorageGroupId: sh.storageGroupId,
+		MountRoot:      sh.mountRoot,
 	})
 }
 
@@ -108,7 +108,8 @@ func (sh *FileShare) GenerateStateData(state uint32) ([]byte, error) {
 		}
 
 		return json.Marshal(entry)
-	case fileShareUpdateCompleteLogEntryType:
+
+	case fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType:
 		entry := fileSharePersistentUpdateCompleteLogEntry{
 			FileSharePath: sh.mountRoot,
 		}
@@ -134,13 +135,13 @@ type fileShareRecoveryRegistry struct {
 	storageService *StorageService
 }
 
-func NewFileShareRecoveryRegistry(s *StorageService) kvstore.Registry {
+func NewFileShareRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &fileShareRecoveryRegistry{storageService: s}
 }
 
 func (r *fileShareRecoveryRegistry) Prefix() string { return fileShareRegistryPrefix }
 
-func (r *fileShareRecoveryRegistry) NewReplay(id string) kvstore.ReplayHandler {
+func (r *fileShareRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
 	ids := strings.SplitN(id, ":", 2)
 
 	return &fileShareRecoveryReplayHandler{
@@ -154,6 +155,7 @@ type fileShareRecoveryReplayHandler struct {
 	fileShareId      string
 	fileSystemId     string
 	lastLogEntryType uint32
+	fileShare        *FileShare
 	fileSystem       *FileSystem
 	storageService   *StorageService
 }
@@ -164,25 +166,47 @@ func (rh *fileShareRecoveryReplayHandler) Metadata(data []byte) error {
 		return err
 	}
 
-	fileSystem := rh.storageService.findFileSystem(metadata.FileSystemId)
+	rh.fileSystem = rh.storageService.findFileSystem(metadata.FileSystemId)
+	storageGroup := rh.storageService.findStorageGroup(metadata.StorageGroupId)
 
-	fileSystem.shares = append(fileSystem.shares, FileShare{
-		id:             rh.fileShareId,
-		fileSystemId:   metadata.FileSystemId,
-		mountRoot:      *metadata.MountRoot,
-		storageGroupId: *metadata.StorageGroupId,
-		storageService: rh.storageService,
-	})
-
-	rh.fileSystem = fileSystem
+	rh.fileShare = rh.fileSystem.createFileShare(rh.fileShareId, storageGroup, metadata.MountRoot)
 
 	return nil
 }
 
 func (rh *fileShareRecoveryReplayHandler) Entry(t uint32, data []byte) error {
+	rh.lastLogEntryType = t
+
+	switch t {
+	case fileShareUpdateCompleteLogEntryType:
+		entry := fileSharePersistentUpdateCompleteLogEntry{}
+		if err := json.Unmarshal(data, &entry); err != nil {
+			return err
+		}
+
+		rh.fileShare.mountRoot = entry.FileSharePath
+	}
+
 	return nil
 }
 
 func (rh *fileShareRecoveryReplayHandler) Done() (bool, error) {
+	switch rh.lastLogEntryType {
+	case fileShareCreateStartLogEntryType:
+		// In this case there may be some residual file system operations on the node that need to be rolled back
+
+		// TODO Something like storageGroup.serverStorage.RollbackFileSystem(rh.fileSystem.fsApi)
+
+	case fileShareUpdateStartLogEntryType:
+		// In this case the state of the mount root is unknown - we need to check if the desired mount
+		// is present or not and rollback to the desired state.
+
+		// TODO Something like storageGroup.serverStorage.RollbackFileSystem(rh.fileSystem.fsApi, mountPoint)
+
+	case fileShareDeleteCompleteLogEntryType:
+		rh.fileSystem.deleteFileShare(rh.fileShare)
+		return true, nil
+	}
+
 	return false, nil
 }

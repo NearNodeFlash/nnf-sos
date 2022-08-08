@@ -26,9 +26,8 @@ github.com/HewlettPackard/structex
 ## explicit
 github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
-# github.com/NearNodeFlash/nnf-ec v0.0.0-20220706162210-e3216b00db0b
+# github.com/NearNodeFlash/nnf-ec v0.0.0-20220726184901-f1d60304f049
 ## explicit
-github.com/NearNodeFlash/nnf-ec/internal/kvstore
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
 github.com/NearNodeFlash/nnf-ec/pkg
@@ -44,6 +43,7 @@ github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf
 github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme
 github.com/NearNodeFlash/nnf-ec/pkg/manager-server
 github.com/NearNodeFlash/nnf-ec/pkg/manager-telemetry
+github.com/NearNodeFlash/nnf-ec/pkg/persistent
 github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common
 github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models
 # github.com/beorn7/perks v1.0.1

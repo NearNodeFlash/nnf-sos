@@ -58,14 +58,14 @@ func (*DisabledServerController) CreateFileSystem(*Storage, FileSystemApi, FileS
 	return ErrServerControllerDisabled
 }
 
-func (*DisabledServerController) MountFileSystem(*Storage, FileSystemOptions) error {
+func (*DisabledServerController) MountFileSystem(*Storage, FileSystemApi, string) error {
 	return ErrServerControllerDisabled
 }
 
-func (*DisabledServerController) UnmountFileSystem(*Storage) error {
+func (*DisabledServerController) UnmountFileSystem(*Storage, FileSystemApi, string) error {
 	return ErrServerControllerDisabled
 }
 
-func (*DisabledServerController) DeleteFileSystem(*Storage) error {
+func (*DisabledServerController) DeleteFileSystem(*Storage, FileSystemApi) error {
 	return ErrServerControllerDisabled
 }

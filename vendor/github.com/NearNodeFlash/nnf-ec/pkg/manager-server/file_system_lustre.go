@@ -179,25 +179,24 @@ func (f *FileSystemLustre) Mount(mountpoint string) error {
 	if err != nil {
 		return err
 	}
-	f.mountpoint = mountpoint
+
 	return nil
 }
 
-func (f *FileSystemLustre) Unmount() error {
-	if len(f.mountpoint) > 0 {
-		err := runCmd(f, fmt.Sprintf("umount %s", f.mountpoint))
+func (f *FileSystemLustre) Unmount(mountpoint string) error {
+	if len(mountpoint) > 0 {
+		err := runCmd(f, fmt.Sprintf("umount %s", mountpoint))
 		if err != nil {
 			return err
 		}
 	}
-	if err := os.Remove(f.mountpoint); err != nil {
+	if err := os.Remove(mountpoint); err != nil {
 		// Log anything other than ErrNotExist.
 		if os.IsNotExist(err) == false {
 			// Just log it, don't fuss over it.
-			log.Info("Unable to remove mountpoint; continuing", "mountpoint", f.mountpoint, "err", err)
+			log.Info("Unable to remove mountpoint; continuing", "mountpoint", mountpoint, "err", err)
 		}
 	}
-	f.mountpoint = ""
 
 	return nil
 }

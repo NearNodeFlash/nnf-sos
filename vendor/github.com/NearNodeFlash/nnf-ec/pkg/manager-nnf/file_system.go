@@ -25,16 +25,17 @@ import (
 	"strconv"
 
 	server "github.com/NearNodeFlash/nnf-ec/pkg/manager-server"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
-
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
 )
 
 type FileSystem struct {
 	id          string
 	accessModes []string
 
-	fsApi  server.FileSystemApi
+	fsApi server.FileSystemApi
+	fsOem server.FileSystemOem
+
 	shares []FileShare
 
 	storagePoolId  string
@@ -91,18 +92,6 @@ func (fs *FileSystem) createFileShare(id string, sg *StorageGroup, mountRoot str
 	return &fs.shares[len(fs.shares)-1]
 }
 
-func (fs *FileSystem) updateFileShare(id string, mountRoot string) error {
-
-	for i := range fs.shares {
-		if fs.shares[i].id == id {
-			fs.shares[i].mountRoot = mountRoot
-			return nil
-		}
-	}
-
-	return fmt.Errorf("File share %s not found", id)
-}
-
 func (fs *FileSystem) deleteFileShare(sh *FileShare) {
 
 	sg := fs.storageService.findStorageGroup(sh.storageGroupId)
@@ -124,6 +113,8 @@ type fileSystemPersistentMetadata struct {
 	StoragePoolId  string `json:"StoragePoolId"`
 	FileSystemType string `json:"FileSystemType"`
 	FileSystemName string `json:"FileSystemName"`
+
+	server.FileSystemOem `json:",inline"`
 }
 
 func (fs *FileSystem) GetKey() string                       { return fileSystemRegistryPrefix + fs.id }
@@ -134,6 +125,7 @@ func (fs *FileSystem) GenerateMetadata() ([]byte, error) {
 		StoragePoolId:  fs.storagePoolId,
 		FileSystemType: fs.fsApi.Type(),
 		FileSystemName: fs.fsApi.Name(),
+		FileSystemOem:  fs.fsOem,
 	})
 }
 
@@ -162,13 +154,13 @@ type fileSystemRecoveryRegistry struct {
 	storageService *StorageService
 }
 
-func NewFileSystemRecoveryRegistry(s *StorageService) kvstore.Registry {
+func NewFileSystemRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &fileSystemRecoveryRegistry{storageService: s}
 }
 
 func (*fileSystemRecoveryRegistry) Prefix() string { return fileSystemRegistryPrefix }
 
-func (r *fileSystemRecoveryRegistry) NewReplay(id string) kvstore.ReplayHandler {
+func (r *fileSystemRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
 	return &fileSystemRecoveryReplyHandler{
 		fileSystemId:   id,
 		storageService: r.storageService,
@@ -188,19 +180,32 @@ func (rh *fileSystemRecoveryReplyHandler) Metadata(data []byte) error {
 		return err
 	}
 
-	rh.storageService.fileSystems = append(rh.storageService.fileSystems, FileSystem{
-		id:             rh.fileSystemId,
-		storagePoolId:  metadata.StoragePoolId,
-		storageService: rh.storageService,
-	})
+	fsApi, err := server.FileSystemController.NewFileSystem(metadata.FileSystemOem)
+	if err != nil {
+		return fmt.Errorf("File System %s Replay: Failed to create api %s", rh.fileSystemId, err)
+	}
+
+	storagePool := rh.storageService.findStoragePool(metadata.StoragePoolId)
+	if storagePool == nil {
+		return fmt.Errorf("File System %s Replay: Failed to find storage pool %s", rh.fileSystemId, metadata.StoragePoolId)
+	}
+
+	rh.storageService.createFileSystem(rh.fileSystemId, storagePool, fsApi, metadata.FileSystemOem)
 
 	return nil
 }
 
 func (rh *fileSystemRecoveryReplyHandler) Entry(t uint32, data []byte) error {
+	rh.lastLogEntryType = t
 	return nil
 }
 
 func (rh *fileSystemRecoveryReplyHandler) Done() (bool, error) {
+
+	if rh.lastLogEntryType == fileSystemDeleteCompleteLogEntryType {
+		rh.storageService.deleteFileSystem(rh.storageService.findFileSystem(rh.fileSystemId))
+		return true, nil
+	}
+
 	return false, nil
 }

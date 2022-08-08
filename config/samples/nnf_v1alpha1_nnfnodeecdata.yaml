@@ -1,0 +1,6 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfNodeECData
+metadata:
+  name: nnfnodeecdata-sample
+spec:
+  # Add fields here

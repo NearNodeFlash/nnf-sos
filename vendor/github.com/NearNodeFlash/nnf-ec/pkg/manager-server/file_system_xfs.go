@@ -69,21 +69,19 @@ func (f *FileSystemXfs) Mount(mountpoint string) error {
 		return err
 	}
 
-	f.mountpoint = mountpoint
-
 	return nil
 }
 
-func (f *FileSystemXfs) Unmount() error {
-	if f.mountpoint == "" {
+func (f *FileSystemXfs) Unmount(mountpoint string) error {
+	if mountpoint == "" {
 		return nil
 	}
 
-	if _, err := f.run(fmt.Sprintf("umount %s", f.mountpoint)); err != nil {
+	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
 		return err
 	}
 
-	f.mountpoint = ""
+	mountpoint = ""
 
 	return nil
 }

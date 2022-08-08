@@ -28,18 +28,21 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/NearNodeFlash/nnf-ec/internal/kvstore"
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 	fabric "github.com/NearNodeFlash/nnf-ec/pkg/manager-fabric"
 	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	server "github.com/NearNodeFlash/nnf-ec/pkg/manager-server"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
-var storageService = StorageService{}
+var storageService = StorageService{
+	id:    DefaultStorageServiceId,
+	state: sf.DISABLED_RST,
+}
 
 func NewDefaultStorageService() StorageServiceApi {
 	return NewAerService(&storageService) // Wrap the default storage service with Advanced Error Reporting capabilities
@@ -51,7 +54,7 @@ type StorageService struct {
 	health sf.ResourceHealth
 
 	config                   *ConfigFile
-	store                    *kvstore.Store
+	store                    *persistent.Store
 	serverControllerProvider server.ServerControllerProvider
 	persistentController     PersistentControllerApi
 
@@ -74,7 +77,7 @@ func (s *StorageService) OdataIdRef(ref string) sf.OdataV4IdRef {
 	return sf.OdataV4IdRef{OdataId: fmt.Sprintf("%s%s", s.OdataId(), ref)}
 }
 
-func (s *StorageService) GetStore() *kvstore.Store {
+func (s *StorageService) GetStore() *persistent.Store {
 	return s.store
 }
 
@@ -121,7 +124,7 @@ func (s *StorageService) findFileSystem(fileSystemId string) *FileSystem {
 // Create a storage pool object with the provided variables and add it to the storage service's list of storage
 // pools. If an ID is not provided, an unused one will be used. If an ID is provided, the caller must check
 // that the ID does not already exist.
-func (s *StorageService) createStoragePool(id, name, description string, policy AllocationPolicy) *StoragePool {
+func (s *StorageService) createStoragePool(id, name, description string, uid uuid.UUID, policy AllocationPolicy) *StoragePool {
 
 	// If no ID is supplied, find a free Storage Pool Id
 	if len(id) == 0 {
@@ -138,11 +141,15 @@ func (s *StorageService) createStoragePool(id, name, description string, policy 
 		id = strconv.Itoa(poolId)
 	}
 
+	if uid.Variant() == uuid.Invalid {
+		uid = s.allocateStoragePoolUid()
+	}
+
 	s.pools = append(s.pools, StoragePool{
 		id:             id,
 		name:           name,
 		description:    description,
-		uid:            s.allocateStoragePoolUid(),
+		uid:            uid,
 		policy:         policy,
 		storageService: s,
 	})
@@ -252,7 +259,7 @@ func (s *StorageService) allocateStoragePoolUid() uuid.UUID {
 // Create a file system object with the provided variables and add it to the storage service's list of file
 // systems. If an ID is not provided, an unused one will be used. If an ID is provided, the caller must check
 // that the ID does not already exist.
-func (s *StorageService) createFileSystem(id string, sp *StoragePool, fsApi server.FileSystemApi) *FileSystem {
+func (s *StorageService) createFileSystem(id string, sp *StoragePool, fsApi server.FileSystemApi, fsOem server.FileSystemOem) *FileSystem {
 
 	if len(id) == 0 {
 		// Find a free File System Id
@@ -274,6 +281,7 @@ func (s *StorageService) createFileSystem(id string, sp *StoragePool, fsApi serv
 	s.fileSystems = append(s.fileSystems, FileSystem{
 		id:             id,
 		fsApi:          fsApi,
+		fsOem:          fsOem,
 		storagePoolId:  sp.id,
 		storageService: s,
 	})
@@ -424,12 +432,12 @@ func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 
 	// Create the key-value storage database
 	{
-		s.store, err = kvstore.Open("nnf.db", false)
+		s.store, err = persistent.Open("nnf.db", false)
 		if err != nil {
 			return err
 		}
 
-		s.store.Register([]kvstore.Registry{
+		s.store.Register([]persistent.Registry{
 			NewStoragePoolRecoveryRegistry(s),
 			NewStorageGroupRecoveryRegistry(s),
 			NewFileSystemRecoveryRegistry(s),
@@ -664,7 +672,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		return ec.NewErrNotAcceptable().WithResourceType(StorageServiceOdataType).WithError(err).WithCause("Insufficient capacity available")
 	}
 
-	p := s.createStoragePool(model.Id, model.Name, model.Description, policy)
+	p := s.createStoragePool(model.Id, model.Name, model.Description, uuid.UUID{}, policy)
 
 	updateFunc := func() (err error) {
 		p.providingVolumes, err = policy.Allocate(p.uid)
@@ -1170,7 +1178,7 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 		return ec.NewErrNotAcceptable().WithResourceType(FileSystemOdataType).WithEvent(msgreg.PropertyValueNotInListBase(oem.Type, "Type"))
 	}
 
-	fs := s.createFileSystem(model.Id, sp, fsApi)
+	fs := s.createFileSystem(model.Id, sp, fsApi, oem)
 
 	if err := s.persistentController.CreatePersistentObject(fs, func() error { return nil }, fileSystemCreateStartLogEntryType, fileSystemCreateCompleteLogEntryType); err != nil {
 		log.WithError(err).Errorf("Failed to create file system %s", fs.id)
@@ -1218,6 +1226,8 @@ func (*StorageService) StorageServiceIdFileSystemIdGet(storageServiceId, fileSys
 	model.CapacityBytes = int64(sp.allocatedVolume.capacityBytes)
 	model.StoragePool = sf.OdataV4IdRef{OdataId: sp.OdataId()}
 	model.ExportedShares = fs.OdataIdRef("/ExportedFileShares")
+
+	model.Oem = openapi.MarshalOem(fs.fsOem)
 
 	return nil
 }
@@ -1317,19 +1327,13 @@ refreshState:
 
 	sh := fs.createFileShare(model.Id, sg, model.FileSharePath)
 
-	updateFunc := func() error {
-		opts := model.Oem
-		if opts == nil {
-			opts = server.FileSystemOptions{}
-		}
-		opts["mountpoint"] = sh.mountRoot
-
-		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, opts); err != nil {
+	createFunc := func() error {
+		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, model.Oem); err != nil {
 			log.WithError(err).Errorf("Failed to create file share for path %s", model.FileSharePath)
 			return err
 		}
 
-		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
+		if err := sg.serverStorage.MountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
 			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
 			return err
 		}
@@ -1337,7 +1341,7 @@ refreshState:
 		return nil
 	}
 
-	if err := s.persistentController.CreatePersistentObject(sh, updateFunc, fileShareCreateStartLogEntryType, fileShareCreateCompleteLogEntryType); err != nil {
+	if err := s.persistentController.CreatePersistentObject(sh, createFunc, fileShareCreateStartLogEntryType, fileShareCreateCompleteLogEntryType); err != nil {
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to create", sh.id))
 	}
 
@@ -1393,34 +1397,39 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StorageGroupOdataType, endpointId))
 	}
 
-	updateFunc := func() error {
-		opts := model.Oem
-		if opts == nil {
-			opts = server.FileSystemOptions{}
-		}
-		opts["mountpoint"] = newPath
-
-		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
-			log.WithError(err).Errorf("Failed to unmount file share for path %s", model.FileSharePath)
-			return err
+	var updateFunc func() error
+	if len(newPath) != 0 {
+		if len(sh.mountRoot) != 0 {
+			// TODO Error: File System already mounted
 		}
 
-		if err := sg.serverStorage.MountFileSystem(fs.fsApi, opts); err != nil {
-			log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
-			return err
+		sh.mountRoot = newPath
+
+		updateFunc = func() error {
+			if err := sg.serverStorage.MountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
+				log.WithError(err).Errorf("Failed to mount file share for path %s", model.FileSharePath)
+				return err
+			}
+
+			return nil
 		}
 
-		return nil
+	} else {
+		updateFunc = func() error {
+			if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
+				log.WithError(err).Errorf("Failed to unmount file share for path %s", model.FileSharePath)
+				return err
+			}
+
+			sh.mountRoot = ""
+
+			return nil
+		}
 	}
 
 	if err := s.persistentController.UpdatePersistentObject(sh, updateFunc, fileShareUpdateStartLogEntryType, fileShareUpdateCompleteLogEntryType); err != nil {
-		log.WithError(err).Errorf("Failed to create file share %s", sh.id)
-
+		log.WithError(err).Errorf("Failed to update file share %s", sh.id)
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update", sh.id))
-	}
-
-	if err := fs.updateFileShare(model.Id, newPath); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("File share '%s' failed to update object", sh.id))
 	}
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceChangedResourceEvent(), sh)
@@ -1465,9 +1474,8 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdDelete(storage
 	}
 
 	deleteFunc := func() error {
-		opts := server.FileSystemOptions{}
 
-		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, opts); err != nil {
+		if err := sg.serverStorage.UnmountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
 			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' failed unmount", exportedShareId))
 		}
 

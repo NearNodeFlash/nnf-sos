@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -33,15 +34,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	ec "github.com/NearNodeFlash/nnf-ec/pkg"
+	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
+	"github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
+	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
@@ -61,6 +62,8 @@ type NnfNodeReconciler struct {
 	Log    logr.Logger
 	Scheme *kruntime.Scheme
 
+	Options *nnfec.Options
+
 	types.NamespacedName
 }
 
@@ -69,8 +72,6 @@ type NnfNodeReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
-//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core,resources=endpoints,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;update
 
 // Start is called upon starting the component manager and will create the Namespace for controlling the
@@ -80,57 +81,81 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
 	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.
-	if r.NamespacedName.String() == string(types.Separator) {
-		return nil
-	}
+	if r.NamespacedName.String() != string(types.Separator) {
 
-	// Create a namespace unique to this node based on the node's x-name.
-	namespace := &corev1.Namespace{}
-	if err := r.Get(ctx, types.NamespacedName{Name: r.Namespace}, namespace); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("Creating Namespace...")
-			namespace = r.createNamespace()
+		// Create a namespace unique to this node based on the node's x-name.
+		namespace := &corev1.Namespace{}
+		if err := r.Get(ctx, types.NamespacedName{Name: r.Namespace}, namespace); err != nil {
+			if errors.IsNotFound(err) {
+				log.Info("Creating Namespace...")
+				namespace = r.createNamespace()
 
-			if err := r.Create(ctx, namespace); err != nil {
-				log.Error(err, "Create Namespace failed")
-				return err
-			}
+				if err := r.Create(ctx, namespace); err != nil {
+					log.Error(err, "Create Namespace failed")
+					return err
+				}
 
-			log.Info("Created Namespace")
-		} else if !errors.IsAlreadyExists(err) {
-			log.Error(err, "Get Namespace failed")
-			return err
-		}
-	}
-
-	node := &nnfv1alpha1.NnfNode{}
-	if err := r.Get(ctx, r.NamespacedName, node); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("Creating NNF Node...")
-			node = r.createNode()
-
-			if err := r.Create(ctx, node); err != nil {
-				log.Error(err, "Create Node failed")
-				return err
-			}
-
-			log.Info("Created Node")
-		} else if !errors.IsAlreadyExists(err) {
-			log.Error(err, "Get Node failed")
-			return err
-		}
-	} else {
-		// If the pod were to crash and restart, the NNF Node resource will persist
-		// but the pod name will change. Ensure the pod name is current.
-		if node.Spec.Pod != os.Getenv("NNF_POD_NAME") {
-			node.Spec.Pod = os.Getenv("NNF_POD_NAME")
-			if err := r.Update(ctx, node); err != nil {
+				log.Info("Created Namespace")
+			} else if !errors.IsAlreadyExists(err) {
+				log.Error(err, "Get Namespace failed")
 				return err
 			}
 		}
+
+		node := &nnfv1alpha1.NnfNode{}
+		if err := r.Get(ctx, r.NamespacedName, node); err != nil {
+			if errors.IsNotFound(err) {
+				log.Info("Creating NNF Node...")
+				node = r.createNode()
+
+				if err := r.Create(ctx, node); err != nil {
+					log.Error(err, "Create Node failed")
+					return err
+				}
+
+				log.Info("Created Node")
+			} else if !errors.IsAlreadyExists(err) {
+				log.Error(err, "Get Node failed")
+				return err
+			}
+		} else {
+			// If the pod were to crash and restart, the NNF Node resource will persist
+			// but the pod name will change. Ensure the pod name is current.
+			if node.Spec.Pod != os.Getenv("NNF_POD_NAME") {
+				node.Spec.Pod = os.Getenv("NNF_POD_NAME")
+				if err := r.Update(ctx, node); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	log.Info("Started")
+	// Subscribe to the NNF Event Manager
+	event.EventManager.Subscribe(r)
+
+	return nil
+}
+
+// EventHandler implements event.Subscription. Every Upstream or Downstream event runs the reconciler
+// so all the NNF Node server/drive status stays current.
+func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
+
+	// Upstream link events
+	linkEstablished := e.Is(msgreg.UpstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedUpstreamLinkEstablishedFabric("", ""))
+	linkDropped := e.Is(msgreg.UpstreamLinkDroppedFabric("", ""))
+
+	if linkEstablished || linkDropped {
+		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
+	}
+	
+	// Downstream link events
+	linkEstablished = e.Is(msgreg.DownstreamLinkEstablishedFabric("","")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("",""))
+	linkDropped = e.Is(msgreg.DownstreamLinkDroppedFabric("",""))
+
+	if linkEstablished || linkDropped {
+		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
+	}
+
 	return nil
 }
 
@@ -148,13 +173,6 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	// Configure a kubernetes service for access to the NNF Element Controller. This
-	// allows developers to query the full state of the NNF EC using the established
-	// Redfish / Swordfish API.
-	if res, err := r.configureElementControllerService(ctx, node); !res.IsZero() || err != nil {
-		return res, err
 	}
 
 	// Prepare to update the node's status
@@ -179,6 +197,10 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
 		log.Error(err, "Failed to retrieve Storage Service")
 		return ctrl.Result{}, err
+	}
+
+	if storageService.Status.State != sf.ENABLED_RST {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	if node.Status.Status != nnfv1alpha1.ResourceStatus(storageService.Status) ||
@@ -282,83 +304,6 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 			Capacity: 0,
 		},
 	}
-}
-
-// Configure the NNF Element Controller service & endpoint for access to the Redfish / Swordfish API
-// This uses a service without a selector so the NNF EC can be accessed through the NNF namespace.
-//   i.e. curl nnf-ec.THE-NNF-NODE-NAMESPACE.svc.cluster.local/redfish/v1/StorageServices
-// This requires us to manually associate an endpoint to the service for this particular pod.
-func (r *NnfNodeReconciler) configureElementControllerService(ctx context.Context, node *nnfv1alpha1.NnfNode) (ctrl.Result, error) {
-
-	// A DNS-1035 label must consist of lower case alphanumeric characters or
-	// '-', start with an alphabetic character, and end with an alphanumeric
-	// character (e.g. 'my-name',  or 'abc-123', regex used for validation is
-	// '[a-z]([-a-z0-9]*[a-z0-9])?')"
-	name := "nnf-ec"
-
-	log := r.Log.WithValues("Service.Name", name, "Service.Namespace", node.Namespace)
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: node.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       name,
-					Protocol:   corev1.ProtocolTCP,
-					Port:       80,
-					TargetPort: intstr.FromInt(ec.Port),
-				},
-			},
-		},
-	}
-
-	nodeName := os.Getenv("NNF_NODE_NAME")
-	endpoints := &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: node.Namespace,
-		},
-		Subsets: []corev1.EndpointSubset{
-			{
-				Addresses: []corev1.EndpointAddress{
-					{
-						IP:       os.Getenv("NNF_POD_IP"),
-						NodeName: &nodeName,
-					},
-				},
-				Ports: []corev1.EndpointPort{
-					{
-						Name: name,
-						Port: ec.Port,
-					},
-				},
-			},
-		},
-	}
-
-	for _, object := range []client.Object{service, endpoints} {
-		result, err := ctrl.CreateOrUpdate(ctx, r.Client, object, func() error {
-			return ctrl.SetControllerReference(node, object, r.Scheme)
-		})
-
-		if err != nil {
-			log.Error(err, "Failed to create service/endpoint")
-			return ctrl.Result{}, err
-		}
-
-		if result == controllerutil.OperationResultCreated {
-			log.Info("Created service/endpoint")
-		} else if result == controllerutil.OperationResultNone {
-			// no change
-		} else {
-			log.Info("Updated service/endpoint")
-		}
-	}
-
-	return ctrl.Result{}, nil
 }
 
 // Update the Servers status of the NNF Node if necessary
@@ -544,8 +489,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Owns(&corev1.Service{}).   // The Node will create a service for the corresponding x-name
-		Owns(&corev1.Endpoints{}).
 		Watches(&source.Kind{Type: &dwsv1alpha1.SystemConfiguration{}}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		Complete(r)
 }

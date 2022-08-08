@@ -218,7 +218,7 @@ test: manifests generate fmt vet ## Run tests.
 
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	if [[ "${FAILFAST}" == yes ]]; then \
-		failfast="-ginkgo.failFast"; \
+		failfast="-ginkgo.fail-fast"; \
 	fi; \
 	set -o errexit; \
 	for subdir in ${TESTDIRS}; do \

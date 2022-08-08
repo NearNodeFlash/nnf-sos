@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package kvstore
+package persistent
 
 import (
 	"encoding/binary"
@@ -25,8 +25,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-
-	"github.com/dgraph-io/badger/v3"
 )
 
 const (
@@ -35,37 +33,16 @@ const (
 
 type Store struct {
 	path       string
-	db         *badger.DB
+	storage    PersistentStorageApi
 	registries []Registry
 }
 
 func Open(path string, readOnly bool) (*Store, error) {
-
-	opts := badger.DefaultOptions(path)
-	opts.SyncWrites = true
-	//opts.ReadOnly = readOnly // Causes ErrLogTruncate
-	opts.BypassLockGuard = readOnly
-
-	// Shrink the in-memory and on-disk size to a more manageable 8 MiB and 16 MiB, respectively;
-	// We use very little data and the 64 MiB and 256 MiB defaults will cause OOM issues in kubernetes.
-	// 8MiB seems to be the lower limit within badger, anything smaller and badger will complain with
-	//   """
-	//   Valuethreshold 1048576 greater than max batch size of 629145. Either reduce opt.ValueThreshold
-	//   or increase opt.MaxTableSize.
-	//   """
-	opts.MemTableSize = 8 << 20
-	opts.BlockCacheSize = 16 << 20
-
-	db, err := badger.Open(opts)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &Store{path: path, db: db, registries: make([]Registry, 0)}, nil
+	s, err := StorageProvider.NewPersistentStorageInterface(path, readOnly)
+	return &Store{path: path, storage: s, registries: make([]Registry, 0)}, err
 }
 
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) Close() error { return s.storage.Close() }
 
 func (s *Store) Register(registries []Registry) {
 	for _, registry := range registries {
@@ -84,25 +61,15 @@ func (s *Store) Replay() error {
 	for _, r := range s.registries {
 
 		deleteKeys := make([]string, 0)
-		err := s.db.View(func(txn *badger.Txn) error {
-			opts := badger.DefaultIteratorOptions
-			if len(r.Prefix()) != 0 {
-				opts.Prefix = []byte(r.Prefix())
-			}
 
-			itr := txn.NewIterator(opts)
+		err := s.storage.View(func(txn PersistentStorageTransactionApi) error {
+			itr := txn.NewIterator(r.Prefix())
 			defer itr.Close()
 
 			for itr.Rewind(); itr.Valid(); itr.Next() {
-				item := itr.Item()
-				key := item.Key()
-				value := []byte{}
 
-				err := item.Value(func(val []byte) error {
-					value = append([]byte{}, val...)
-					return nil
-				})
-
+				key := itr.Key()
+				value, err := itr.Value()
 				if err != nil {
 					return err
 				}
@@ -151,15 +118,11 @@ func (s *Store) NewKey(key string, metadata []byte) (*Ledger, error) {
 			// Create the Metadata TLV
 			tlv := newTlv(metadataTlvType, metadata)
 
-			err := s.db.Update(func(txn *badger.Txn) error {
-				return txn.Set([]byte(key), tlv.bytes())
+			err := s.storage.Update(func(txn PersistentStorageTransactionApi) error {
+				return txn.Set(key, tlv.bytes())
 			})
 
 			if err != nil {
-				return nil, err
-			}
-
-			if err := s.db.Sync(); err != nil {
 				return nil, err
 			}
 
@@ -175,23 +138,16 @@ func (s *Store) OpenKey(key string) (*Ledger, error) {
 		if strings.HasPrefix(key, r.Prefix()) {
 
 			ledger := s.existingKeyLedger(key)
-			err := s.db.View(func(txn *badger.Txn) error {
-				item, err := txn.Get([]byte(key))
+			err := s.storage.View(func(txn PersistentStorageTransactionApi) error {
+				value, err := txn.Get(key)
 				if err != nil {
 					return err
 				}
-
-				return item.Value(func(val []byte) error {
-					ledger.bytes = append([]byte{}, val...)
-					return nil
-				})
+				ledger.bytes = value
+				return nil
 			})
 
 			if err != nil {
-				return nil, err
-			}
-
-			if err := s.db.Sync(); err != nil {
 				return nil, err
 			}
 
@@ -218,7 +174,7 @@ type Registry interface {
 	NewReplay(id string) ReplayHandler
 }
 
-func (s *Store) runReply(registry Registry, key []byte, data []byte) (delete bool, err error) {
+func (s *Store) runReply(registry Registry, key string, data []byte) (delete bool, err error) {
 	id := string(key[len(registry.Prefix()):])
 	it := newIterator(data)
 	replay := registry.NewReplay(string(id))
@@ -300,28 +256,18 @@ type Ledger struct {
 func (l *Ledger) Log(t uint32, v []byte) error {
 
 	tlv := newTlv(t, v)
+	l.bytes = append(l.bytes, tlv.bytes()...)
 
-	err := l.s.db.Update(func(txn *badger.Txn) error {
-		l.bytes = append(l.bytes, tlv.bytes()...)
-		return txn.Set([]byte(l.key), l.bytes)
+	err := l.s.storage.Update(func(txn PersistentStorageTransactionApi) error {
+		return txn.Set(l.key, l.bytes)
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return l.s.db.Sync()
+	return err
 }
 
 func (l *Ledger) Close(delete bool) error {
 	if delete {
-
-		txn := l.s.db.NewTransaction(true)
-		if err := txn.Delete([]byte(l.key)); err != nil {
-			return err
-		}
-
-		return txn.Commit()
+		return l.s.storage.Delete(l.key)
 	}
 	return nil
 }
