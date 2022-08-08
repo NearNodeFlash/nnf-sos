@@ -11,6 +11,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func handleWorkflowError(err error, driverStatus *dwsv1alpha1.WorkflowDriverStatus) {
+	e, ok := err.(*nnfv1alpha1.WorkflowError)
+	if ok {
+		e.Inject(driverStatus)
+	} else {
+		driverStatus.Reason = "error"
+		driverStatus.Message = "Internal error: " + err.Error()
+		driverStatus.Error = err.Error()
+	}
+}
+
 // Returns the directive index with the 'name' argument matching name, or -1 if not found
 func findDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
 	for idx, directive := range workflow.Spec.DWDirectives {

@@ -112,6 +112,10 @@ type WorkflowDriverStatus struct {
 	Reason  string `json:"reason,omitempty"`
 	Message string `json:"message,omitempty"`
 
+	// Driver error string. This is not rolled up into the workflow's
+	// overall status section
+	Error string `json:"error,omitempty"`
+
 	// CompleteTime reflects the time that the workflow reconciler marks the driver complete
 	CompleteTime *metav1.MicroTime `json:"completeTime,omitempty"`
 }
