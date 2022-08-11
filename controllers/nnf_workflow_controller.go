@@ -224,7 +224,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		driverStatus.Reason = "running"
+		driverStatus.Status = dwsv1alpha1.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -260,7 +260,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		driverStatus.Reason = "running"
+		driverStatus.Status = dwsv1alpha1.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -272,7 +272,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Finish done", "State", workflow.Status.State, "index", driverStatus.DWDIndex)
 
 		ts := metav1.NowMicro()
-		driverStatus.Reason = "completed"
+		driverStatus.Status = dwsv1alpha1.StatusCompleted
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 		driverStatus.CompleteTime = &ts

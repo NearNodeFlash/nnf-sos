@@ -64,9 +64,9 @@ func (e *WorkflowError) Unwrap() error {
 func (e *WorkflowError) Inject(driverStatus *dwsv1alpha1.WorkflowDriverStatus) {
 	driverStatus.Message = e.GetMessage()
 	if e.GetRecoverable() {
-		driverStatus.Reason = "running"
+		driverStatus.Status = dwsv1alpha1.StatusRunning
 	} else {
-		driverStatus.Reason = "error"
+		driverStatus.Status = dwsv1alpha1.StatusError
 	}
 
 	if e.Unwrap() != nil {

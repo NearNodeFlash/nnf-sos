@@ -251,10 +251,16 @@ spec:
                       type: integer
                     message:
                       type: string
-                    reason:
+                    status:
                       description: 'User readable reason. For the CDS driver, this
                         could be the state of the underlying data movement request:  Pending,
                         Queued, Running, Completed or Error'
+                      enum:
+                      - Pending
+                      - Queued
+                      - Running
+                      - Completed
+                      - Error
                       type: string
                     taskID:
                       type: string

@@ -16,7 +16,7 @@ func handleWorkflowError(err error, driverStatus *dwsv1alpha1.WorkflowDriverStat
 	if ok {
 		e.Inject(driverStatus)
 	} else {
-		driverStatus.Reason = "error"
+		driverStatus.Status = dwsv1alpha1.StatusError
 		driverStatus.Message = "Internal error: " + err.Error()
 		driverStatus.Error = err.Error()
 	}

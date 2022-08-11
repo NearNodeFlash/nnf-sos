@@ -108,6 +108,32 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 		return nil
 	}
 
+	// Validate the elements in the Drivers array
+	for i, driverStatus := range w.Status.Drivers {
+		// Elements with watchStates not equal to the current state should not change
+		if driverStatus.WatchState != oldWorkflow.Status.State {
+			if !reflect.DeepEqual(oldWorkflow.Status.Drivers[i], driverStatus) {
+				return fmt.Errorf("Driver entry for non-current state cannot be changed")
+			}
+
+			continue
+		}
+
+		if driverStatus.Completed == true {
+			if driverStatus.Status != StatusCompleted {
+				return fmt.Errorf("Driver cannot be completed without status=Completed")
+			}
+
+			if driverStatus.Error != "" {
+				return fmt.Errorf("Driver cannot be completed when error is present")
+			}
+		} else {
+			if oldWorkflow.Status.Drivers[i].Completed == true {
+				return fmt.Errorf("Driver cannot change from completed state")
+			}
+		}
+	}
+
 	// New state is the desired state in the Spec
 	newState, err := GetWorkflowState(w.Spec.DesiredState)
 	if err != nil {
