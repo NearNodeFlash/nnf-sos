@@ -113,7 +113,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 
-		exists, err := r.teardownStorage(ctx, statusUpdater, storage)
+		exists, err := r.teardownStorage(ctx, storage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -153,19 +153,17 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Initialize the status section of the NnfStorage if it hasn't been done already.
 	if len(storage.Status.AllocationSets) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfStorageStatus) {
-			storage.Status.AllocationSets = make([]nnfv1alpha1.NnfStorageAllocationSetStatus, len(storage.Spec.AllocationSets))
-			for i := range storage.Status.AllocationSets {
-				storage.Status.AllocationSets[i].Status = nnfv1alpha1.ResourceStarting
-			}
-		})
+		storage.Status.AllocationSets = make([]nnfv1alpha1.NnfStorageAllocationSetStatus, len(storage.Spec.AllocationSets))
+		for i := range storage.Status.AllocationSets {
+			storage.Status.AllocationSets[i].Status = nnfv1alpha1.ResourceStarting
+		}
 
 		return ctrl.Result{}, nil
 	}
 
 	// For each allocation, create the NnfNodeStorage resources to fan out to the Rabbit nodes
 	for i := range storage.Spec.AllocationSets {
-		res, err := r.createNodeStorage(ctx, statusUpdater, storage, i)
+		res, err := r.createNodeStorage(ctx, storage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -178,7 +176,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Spec.AllocationSets {
-		res, err := r.aggregateNodeStorageStatus(ctx, statusUpdater, storage, i)
+		res, err := r.aggregateNodeStorageStatus(ctx, storage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -194,7 +192,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // Create an NnfNodeStorage if it doesn't exist, or update it if it requires updating. Each
 // Rabbit node gets an NnfNodeStorage, and there may be multiple allocations requested in it.
 // This limits the number of resources that have to be broadcast to the Rabbits.
-func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
+func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
 	allocationSet := storage.Spec.AllocationSets[allocationSetIndex]
 
@@ -249,7 +247,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 		if err != nil {
 			if !apierrors.IsConflict(err) {
-				statusUpdater.updateError(&storage.Status.AllocationSets[allocationSetIndex], err)
+				storage.Status.AllocationSets[allocationSetIndex].Error = err.Error()
 			}
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -269,7 +267,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, statusUpda
 
 // Get the status from all the child NnfNodeStorage resources and use them to build the status
 // for the NnfStorage.
-func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
+func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
 	allocationSet := &storage.Status.AllocationSets[allocationSetIndex]
 
 	var health nnfv1alpha1.NnfResourceHealthType = nnfv1alpha1.ResourceOkay
@@ -296,21 +294,17 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Spec.LustreStorage.TargetType == "MGT" || nnfNodeStorage.Spec.LustreStorage.TargetType == "MGTMDT" {
-			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
-				s.MgsNode = nnfNodeStorage.Status.LustreStorage.Nid
-			})
+			storage.Status.MgsNode = nnfNodeStorage.Status.LustreStorage.Nid
 		}
 
 		// Wait until the status section of the nnfNodeStorage has been initialized
 		if len(nnfNodeStorage.Status.Allocations) != nnfNodeStorage.Spec.Count {
-			statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
-				// Set the Status to starting unless we've found a failure in one
-				// of the earlier nnfNodeStorages
-				startingStatus := nnfv1alpha1.ResourceStarting
-				startingStatus.UpdateIfWorseThan(&status)
-				allocationSet.Status = status
-				allocationSet.Health = health
-			})
+			// Set the Status to starting unless we've found a failure in one
+			// of the earlier nnfNodeStorages
+			startingStatus := nnfv1alpha1.ResourceStarting
+			startingStatus.UpdateIfWorseThan(&status)
+			allocationSet.Status = status
+			allocationSet.Health = health
 
 			return &ctrl.Result{}, nil
 		}
@@ -329,13 +323,17 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			nodeAllocation.StorageGroup.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileSystem.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileShare.Status.UpdateIfWorseThan(&status)
+
+			for _, condition := range nodeAllocation.Conditions {
+				if condition.Reason == nnfv1alpha1.ConditionFailed {
+					allocationSet.Error = condition.Message
+				}
+			}
 		}
 	}
 
-	statusUpdater.update(func(s *nnfv1alpha1.NnfStorageStatus) {
-		allocationSet.Health = health
-		allocationSet.Status = status
-	})
+	allocationSet.Health = health
+	allocationSet.Status = status
 
 	return nil, nil
 }
@@ -344,11 +342,11 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 // or the object references in the storage resource. We may have created children
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
-func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, statusUpdater *storageStatusUpdater, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
+func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Status.AllocationSets {
-		_, err := r.aggregateNodeStorageStatus(ctx, statusUpdater, storage, i)
+		_, err := r.aggregateNodeStorageStatus(ctx, storage, i)
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -376,8 +374,7 @@ func nnfNodeStorageName(storage *nnfv1alpha1.NnfStorage, allocationSetIndex int,
 
 // Storage Status Updater handles finalizing of updates to the storage object for updates to a Storage object.
 // Kubernete's requires only one such update per generation, with successive generations requiring a requeue.
-// This object allows repeated calls to Update(), with the final call to reconciler.Status().Update() occurring
-// only when the updater is Closed()
+// reconciler.Status().Update() occurs when the updater is Closed() if there are changes to the status section
 type storageStatusUpdater struct {
 	storage        *nnfv1alpha1.NnfStorage
 	existingStatus nnfv1alpha1.NnfStorageStatus
@@ -388,14 +385,6 @@ func newStorageStatusUpdater(s *nnfv1alpha1.NnfStorage) *storageStatusUpdater {
 		storage:        s,
 		existingStatus: (*s.DeepCopy()).Status,
 	}
-}
-
-func (s *storageStatusUpdater) updateError(allocationSet *nnfv1alpha1.NnfStorageAllocationSetStatus, err error) {
-	allocationSet.Reason = err.Error()
-}
-
-func (s *storageStatusUpdater) update(update func(s *nnfv1alpha1.NnfStorageStatus)) {
-	update(&s.storage.Status)
 }
 
 func (s *storageStatusUpdater) close(ctx context.Context, r *NnfStorageReconciler) (bool, error) {

@@ -635,9 +635,9 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		if set.Status != "Ready" {
 			complete = false
 
-			if set.Reason != "" {
-				err := fmt.Errorf("NnfStorage %v allocation set %d error: %s", client.ObjectKeyFromObject(nnfStorage), i, set.Reason)
-				return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(err)
+			if set.Error != "" {
+				err := fmt.Errorf("NnfStorage %v allocation set %d error: %s", client.ObjectKeyFromObject(nnfStorage), i, set.Error)
+				return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithFatal().WithError(err)
 			}
 		}
 	}
