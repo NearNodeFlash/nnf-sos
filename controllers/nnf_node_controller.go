@@ -147,10 +147,10 @@ func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
 	if linkEstablished || linkDropped {
 		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
 	}
-	
+
 	// Downstream link events
-	linkEstablished = e.Is(msgreg.DownstreamLinkEstablishedFabric("","")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("",""))
-	linkDropped = e.Is(msgreg.DownstreamLinkDroppedFabric("",""))
+	linkEstablished = e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
+	linkDropped = e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
 
 	if linkEstablished || linkDropped {
 		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})

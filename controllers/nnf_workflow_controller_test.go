@@ -96,7 +96,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		driverID := os.Getenv("DWS_DRIVER_ID")
 		for _, driver := range workflow.Status.Drivers {
 			if driver.DriverID == driverID {
-				if driver.Reason == "error" {
+				if driver.Status == dwsv1alpha1.StatusError {
 					return &driver
 				}
 			}
