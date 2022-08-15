@@ -136,11 +136,11 @@ spec:
                       description: AllocationCount is the total number of allocations
                         that currently exist
                       type: integer
+                    error:
+                      description: Error is the human readable error string
+                      type: string
                     health:
                       description: Health reflects the health of this NNF Storage
-                      type: string
-                    reason:
-                      description: Reason is the human readable reason for the status
                       type: string
                     status:
                       description: Status reflects the status of this NNF Storage
