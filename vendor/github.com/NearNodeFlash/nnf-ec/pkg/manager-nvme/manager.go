@@ -280,7 +280,8 @@ func (s *Storage) SerialNumber() string     { return s.serialNumber }
 func (s *Storage) IsKioxiaDualPortConfiguration() bool {
 	return false ||
 		strings.Contains(s.qualifiedName, "com.kioxia:KCM6") ||
-		strings.Contains(s.qualifiedName, "com.kioxia:KCD7")
+		strings.Contains(s.qualifiedName, "com.kioxia:KCD7") ||
+		strings.Contains(s.qualifiedName, "com.kioxia:KCM7")
 }
 
 func (s *Storage) FindVolume(id string) *Volume {
@@ -565,12 +566,14 @@ func (v *Volume) attach(controllerId uint16) error {
 	// still use the secondary controller values for all other ports, but we need to remap the
 	// first index to the physical function.
 	//
-	if v.storage.IsKioxiaDualPortConfiguration() {
-		controllerId = controllerId + 2
-	} else if v.storage.device.IsDirectDevice() {
+	if v.storage.device.IsDirectDevice() {
 		if controllerId == 1 {
 			controllerId = v.storage.physicalFunctionControllerId
 		}
+	} else if v.storage.virtManagementEnabled {
+		controllerId = v.storage.controllers[controllerId].controllerId
+	} else if v.storage.IsKioxiaDualPortConfiguration() {
+		controllerId = controllerId + 2
 	}
 
 	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerId})
@@ -593,12 +596,14 @@ func (v *Volume) attach(controllerId uint16) error {
 func (v *Volume) detach(controllerId uint16) error {
 	// See the note on "attach" above
 
-	if v.storage.IsKioxiaDualPortConfiguration() {
-		controllerId = controllerId + 2
-	} else if v.storage.device.IsDirectDevice() {
+	if v.storage.device.IsDirectDevice() {
 		if controllerId == 1 {
 			controllerId = v.storage.physicalFunctionControllerId
 		}
+	} else if v.storage.virtManagementEnabled {
+		controllerId = v.storage.controllers[controllerId].controllerId
+	} else if v.storage.IsKioxiaDualPortConfiguration() {
+		controllerId = controllerId + 2
 	}
 
 	err := v.storage.device.DetachNamespace(v.namespaceId, []uint16{controllerId})
@@ -788,7 +793,7 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 				break
 			}
 
-			s.controllers[idx+1] = StorageController{
+			s.controllers[idx+ /*PF*/ 1] = StorageController{
 				id:             strconv.Itoa(int(sc.SecondaryControllerID)),
 				controllerId:   sc.SecondaryControllerID,
 				functionNumber: sc.VirtualFunctionNumber,
@@ -800,23 +805,25 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 
 			ctrl := &s.controllers[idx+1]
 
-			log.Debugf("Storage %s Initialize Secondary Controller %s", s.id, ctrl.id)
-			if sc.VQFlexibleResourcesAssigned != uint16(s.config.Resources) {
-				if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VQResourceType, s.config.Resources-uint32(sc.VQFlexibleResourcesAssigned)); err != nil {
-					log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VQ Resources", sc.SecondaryControllerID)
-					break
+			if !s.IsKioxiaDualPortConfiguration() {
+				log.Debugf("Storage %s Initialize Secondary Controller %s", s.id, ctrl.id)
+				if sc.VQFlexibleResourcesAssigned != uint16(s.config.Resources) {
+					if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VQResourceType, s.config.Resources-uint32(sc.VQFlexibleResourcesAssigned)); err != nil {
+						log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VQ Resources", sc.SecondaryControllerID)
+						break
+					}
+
+					ctrl.vqResources = uint16(s.config.Resources)
 				}
 
-				ctrl.vqResources = uint16(s.config.Resources)
-			}
+				if sc.VIFlexibleResourcesAssigned != uint16(s.config.Resources) {
+					if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VIResourceType, s.config.Resources-uint32(sc.VIFlexibleResourcesAssigned)); err != nil {
+						log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VI Resources", sc.SecondaryControllerID)
+						break
+					}
 
-			if sc.VIFlexibleResourcesAssigned != uint16(s.config.Resources) {
-				if err := s.device.AssignControllerResources(sc.SecondaryControllerID, VIResourceType, s.config.Resources-uint32(sc.VIFlexibleResourcesAssigned)); err != nil {
-					log.WithError(err).Errorf("Secondary Controller %d: Failed to assign VI Resources", sc.SecondaryControllerID)
-					break
+					ctrl.viResources = uint16(s.config.Resources)
 				}
-
-				ctrl.viResources = uint16(s.config.Resources)
 			}
 
 			if sc.SecondaryControllerState&0x01 == 0 {

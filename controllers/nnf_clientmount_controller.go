@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/mount-utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -176,44 +177,81 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 }
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
-func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, mount bool, log logr.Logger) error {
+func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, shouldMount bool, log logr.Logger) error {
 
-	if clientMountInfo.Device.Type != dwsv1alpha1.ClientMountDeviceTypeReference {
+	switch clientMountInfo.Device.Type {
+	case dwsv1alpha1.ClientMountDeviceTypeLustre:
+		mountPath := clientMountInfo.MountPath
+
+		var mounter mount.Interface
+		if _, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT"); testEnv {
+			mounter = mount.NewFakeMounter([]mount.MountPoint{})
+		} else {
+			mounter = mount.New("")
+		}
+
+		isNotMountPoint, err := mount.IsNotMountPoint(mounter, mountPath)
+		if err != nil {
+			return err
+		}
+
+		if shouldMount {
+			if isNotMountPoint {
+
+				mountSource := clientMountInfo.Device.Lustre.MgsAddresses +
+					":/" +
+					clientMountInfo.Device.Lustre.FileSystemName
+
+				if err := os.MkdirAll(mountPath, 0755); err != nil {
+					return err
+				}
+
+				if err := mounter.Mount(mountSource, mountPath, "lustre", nil); err != nil {
+					return err
+				}
+			}
+		} else {
+			if !isNotMountPoint {
+				if err := mounter.Unmount(mountPath); err != nil {
+					return err
+				}
+			}
+		}
+
+	case dwsv1alpha1.ClientMountDeviceTypeReference:
+
+		namespacedName := types.NamespacedName{
+			Name:      clientMountInfo.Device.DeviceReference.ObjectReference.Name,
+			Namespace: clientMountInfo.Device.DeviceReference.ObjectReference.Namespace,
+		}
+
+		nodeStorage := &nnfv1alpha1.NnfNodeStorage{}
+		if err := r.Get(ctx, namespacedName, nodeStorage); err != nil {
+			return err
+		}
+
+		allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
+		fileShare, err := r.getFileShare(allocationStatus.FileSystem.ID, allocationStatus.FileShare.ID)
+		if err != nil {
+			return err
+		}
+
+		if shouldMount {
+			fileShare.FileSharePath = clientMountInfo.MountPath
+		} else {
+			fileShare.FileSharePath = ""
+		}
+
+		fileShare, err = r.updateFileShare(allocationStatus.FileSystem.ID, fileShare)
+		if err != nil {
+			return err
+		}
+
+	default:
 		return fmt.Errorf("Invalid device type %s", clientMountInfo.Device.Type)
 	}
 
-	if clientMountInfo.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
-		return fmt.Errorf("Invalid device reference kind %s", clientMountInfo.Device.DeviceReference.ObjectReference.Kind)
-	}
-
-	namespacedName := types.NamespacedName{
-		Name:      clientMountInfo.Device.DeviceReference.ObjectReference.Name,
-		Namespace: clientMountInfo.Device.DeviceReference.ObjectReference.Namespace,
-	}
-
-	nodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-	if err := r.Get(ctx, namespacedName, nodeStorage); err != nil {
-		return err
-	}
-
-	allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
-	fileShare, err := r.getFileShare(allocationStatus.FileShare.ID, allocationStatus.FileSystem.ID)
-	if err != nil {
-		return err
-	}
-
-	if mount {
-		fileShare.FileSharePath = clientMountInfo.MountPath
-	} else {
-		fileShare.FileSharePath = ""
-	}
-
-	fileShare, err = r.updateFileShare(fileShare, allocationStatus.FileSystem.ID)
-	if err != nil {
-		return err
-	}
-
-	if mount {
+	if shouldMount {
 		log.Info("Mounted file system", "Mount path", clientMountInfo.MountPath)
 	} else {
 		log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
@@ -222,21 +260,21 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 	return nil
 }
 
-func (r *NnfClientMountReconciler) updateFileShare(fileShare *sf.FileShareV120FileShare, fsID string) (*sf.FileShareV120FileShare, error) {
+func (r *NnfClientMountReconciler) updateFileShare(fileSystemId string, fileShare *sf.FileShareV120FileShare) (*sf.FileShareV120FileShare, error) {
 	ss := nnf.NewDefaultStorageService()
 
-	if err := ss.StorageServiceIdFileSystemIdExportedShareIdPut(ss.Id(), fileShare.Id, fsID, fileShare); err != nil {
+	if err := ss.StorageServiceIdFileSystemIdExportedShareIdPut(ss.Id(), fileSystemId, fileShare.Id, fileShare); err != nil {
 		return nil, err
 	}
 
 	return fileShare, nil
 }
 
-func (r *NnfClientMountReconciler) getFileShare(fsID string, id string) (*sf.FileShareV120FileShare, error) {
+func (r *NnfClientMountReconciler) getFileShare(fileSystemId string, fileShareId string) (*sf.FileShareV120FileShare, error) {
 	ss := nnf.NewDefaultStorageService()
 	sh := &sf.FileShareV120FileShare{}
 
-	if err := ss.StorageServiceIdFileSystemIdExportedShareIdGet(ss.Id(), fsID, id, sh); err != nil {
+	if err := ss.StorageServiceIdFileSystemIdExportedShareIdGet(ss.Id(), fileSystemId, fileShareId, sh); err != nil {
 		return nil, err
 	}
 

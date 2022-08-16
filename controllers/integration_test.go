@@ -151,15 +151,7 @@ var _ = Describe("Integration Test", func() {
 				Eventually(func() error {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).WithOffset(testStackOffset).Should(Succeed())
 
-					dm.Status.Conditions = []metav1.Condition{
-						{
-							Status:             metav1.ConditionTrue,
-							Reason:             nnfv1alpha1.DataMovementConditionReasonSuccess,
-							Type:               nnfv1alpha1.DataMovementConditionTypeFinished,
-							LastTransitionTime: metav1.Now(),
-							Message:            "",
-						},
-					}
+					dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
 
 					return k8sClient.Status().Update(context.TODO(), dm)
 				}).WithOffset(testStackOffset).Should(Succeed())
@@ -1168,13 +1160,8 @@ var _ = Describe("Integration Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), dm)
 				}).Should(Succeed())
 
-				dm.Status.Conditions = []metav1.Condition{{
-					Status:             metav1.ConditionTrue,
-					Reason:             nnfv1alpha1.DataMovementConditionReasonFailed,
-					Type:               nnfv1alpha1.DataMovementConditionTypeFinished,
-					LastTransitionTime: metav1.Now(),
-					Message:            "Error Injection",
-				}}
+				dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
+				dm.Status.Status = nnfv1alpha1.DataMovementConditionReasonFailed
 
 				Expect(k8sClient.Status().Update(context.TODO(), dm)).To(Succeed())
 

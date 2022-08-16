@@ -39,11 +39,15 @@
             "mode": "test",
             "program": "${workspaceFolder}/controllers",
             "args": [
+                "-v=4",
                 "-ginkgo.v",
-                "-ginkgo.progress",
+                "-ginkgo.progress"
             ],
             "env": {
-                "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin"
+                "NNF_TEST_ENVIRONMENT": "true",
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin",
+                "GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT": "10m",
+                "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "500ms"
             },
             "showLog": true
         },

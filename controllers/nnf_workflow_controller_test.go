@@ -398,8 +398,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
@@ -407,8 +407,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
-				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
 						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
@@ -530,8 +530,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(Succeed(), "data movement resource created")
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
@@ -539,8 +539,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Destination.Path).To(Equal("/my-persistent-file.out"))
-				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
 						"Name":      Equal(persistentStorageName),

@@ -21,6 +21,7 @@ package controllers
 
 import (
 	"context"
+	"os"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +52,7 @@ type NnfNodeECDataReconciler struct {
 // Start implements manager.Runnable
 func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 
-	testing := r.NamespacedName.String() == string(types.Separator)
+	_, testing := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 
 	// During testing, the reconciler is started before kubeapi-server runs, so any calls will fail with
 	// 'connection refused'. The test code instead bootstraps this resource manually
@@ -83,7 +84,7 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 
 	// Start the NNF Element Controller
 	c := nnfec.NewController(r.Options)
-	if err := c.Init(&ec.Options{Http: true, Port: nnfec.Port}); err != nil {
+	if err := c.Init(&ec.Options{Http: !testing, Port: nnfec.Port}); err != nil {
 		return err
 	}
 

@@ -29,6 +29,7 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -91,25 +92,8 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        "T",
-		LevelKey:       "L",
-		NameKey:        "N",
-		CallerKey:      "C",
-		FunctionKey:    zapcore.OmitKey,
-		MessageKey:     "M",
-		StacktraceKey:  "S",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.CapitalLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.StringDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-
-	encoder := zapcore.NewConsoleEncoder(encoderConfig)
-
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
 	zaplogger := zapcr.New(zapcr.WriteTo(os.Stdout), zapcr.Encoder(encoder))
-
 	ctrl.SetLogger(zaplogger)
 
 	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))

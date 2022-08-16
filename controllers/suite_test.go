@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -33,7 +32,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -65,6 +63,8 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var ctx context.Context
+var cancel context.CancelFunc
 
 type envSetting struct {
 	envVar string
@@ -115,26 +115,30 @@ var _ = BeforeSuite(func() {
 	zaplogger := zapcr.New(zapcr.WriteTo(GinkgoWriter), zapcr.Encoder(encoder), zapcr.UseDevMode(true))
 	logf.SetLogger(zaplogger)
 
+	ctx, cancel = context.WithCancel(context.TODO())
+
 	By("bootstrapping test environment")
 
+	webhookPaths := []string{
+		filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
+		filepath.Join("..", "config", "dws"),
+	}
+	if env, found := os.LookupEnv("WEBHOOK_DIR"); found {
+		webhookPaths = append(webhookPaths, env)
+	}
+
 	testEnv = &envtest.Environment{
-		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: []string{
-			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
-			filepath.Join("..", "config", "dws"),
-			os.Getenv("WEBHOOK_DIR"),
-		}},
+		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: webhookPaths},
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.com", "NearNodeFlash", "lustre-fs-operator", "config", "crd", "bases"),
 		},
-		AttachControlPlaneOutput: true,
+		//AttachControlPlaneOutput: true,
 	}
 
-	var err error
-
-	cfg, err = testEnv.Start()
+	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -152,25 +156,20 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: testEnv.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
-
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             testEnv.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:  scheme.Scheme,
+		Host:    webhookInstallOptions.LocalServingHost,
+		Port:    webhookInstallOptions.LocalServingPort,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	/*
 		Start Everything
 	*/
+
 	err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -275,39 +274,26 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	// err = (&)
-	go func() {
-		defer GinkgoRecover()
-		err = k8sManager.Start(ctrl.SetupSignalHandler())
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
-		gexec.KillAndWait(4 * time.Second)
-
-		// Teardown the test environment once controller is fnished.
-		// Otherwise from Kubernetes 1.21+, teardon timeouts waiting on
-		// kube-apiserver to return
-		err := testEnv.Stop()
-		Expect(err).ToNot(HaveOccurred())
-
-		// defer GinkgoRecover()
-		// err = k8sManager.Start(ctrl.SetupSignalHandler())
-		// Expect(err).NotTo(HaveOccurred())
-	}()
-
 	k8sClient = k8sManager.GetClient()
 	Expect(k8sClient).ToNot(BeNil())
+
+	go func() {
+		defer GinkgoRecover()
+		err := k8sManager.Start(ctx)
+		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+	}()
 
 	// Load the NNF ruleset to enable the webhook to parse #DW directives
 	ruleset, err := loadNNFDWDirectiveRuleset(filepath.Join("..", "config", "dws", "nnf-ruleset.yaml"))
 	Expect(err).ToNot(HaveOccurred())
 
 	ruleset.Namespace = "default"
-	Expect(k8sClient.Create(context.Background(), &ruleset)).Should(Succeed())
-
+	Expect(k8sClient.Create(context.TODO(), &ruleset)).Should(Succeed())
 })
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
-
+	cancel()
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
