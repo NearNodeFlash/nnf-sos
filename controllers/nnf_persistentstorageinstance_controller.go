@@ -38,6 +38,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -65,6 +66,8 @@ type PersistentStorageReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("PersistentStorage", req.NamespacedName)
+
+	metrics.NnfPersistentStorageReconcilesTotal.Inc()
 
 	persistentStorage := &dwsv1alpha1.PersistentStorageInstance{}
 	if err := r.Get(ctx, req.NamespacedName, persistentStorage); err != nil {

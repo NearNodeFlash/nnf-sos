@@ -42,6 +42,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -66,6 +67,9 @@ type NnfClientMountReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("ClientMount", req.NamespacedName)
+
+	metrics.NnfClientMountReconcilesTotal.Inc()
+
 	clientMount := &dwsv1alpha1.ClientMount{}
 	if err := r.Get(ctx, req.NamespacedName, clientMount); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate

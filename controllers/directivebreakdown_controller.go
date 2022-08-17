@@ -42,6 +42,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 // Define condition values
@@ -94,6 +95,8 @@ type lustreComponentType struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("DirectiveBreakdown", req.NamespacedName)
+
+	metrics.NnfDirectiveBreakdownReconcilesTotal.Inc()
 
 	dbd := &dwsv1alpha1.DirectiveBreakdown{}
 	err = r.Get(ctx, req.NamespacedName, dbd)

@@ -50,6 +50,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -80,6 +81,9 @@ type NnfNodeStorageReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+
+	metrics.NnfNodeStorageReconcilesTotal.Inc()
+
 	nodeStorage := &nnfv1alpha1.NnfNodeStorage{}
 	if err := r.Get(ctx, req.NamespacedName, nodeStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate

@@ -44,6 +44,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 // DWSServersReconciler reconciles a DWS Servers object
@@ -83,6 +84,8 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+
+	metrics.NnfServersReconcilesTotal.Inc()
 
 	servers := &dwsv1alpha1.Servers{}
 	if err := r.Get(ctx, req.NamespacedName, servers); err != nil {
