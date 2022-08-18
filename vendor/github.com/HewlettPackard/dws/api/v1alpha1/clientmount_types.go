@@ -164,15 +164,15 @@ type ClientMountInfoStatus struct {
 
 	// Ready indicates whether status.state has been achieved
 	Ready bool `json:"ready"`
-
-	// Error message of first error
-	Message string `json:"message,omitempty"`
 }
 
 // ClientMountStatus defines the observed state of ClientMount
 type ClientMountStatus struct {
 	// List of mount statuses
 	Mounts []ClientMountInfoStatus `json:"mounts"`
+
+	// Error information
+	Error *ResourceError `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true

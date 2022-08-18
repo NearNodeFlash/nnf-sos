@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
@@ -181,6 +180,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	nodeStorage.Status.Error = nil
+
 	// Loop through each allocation and create the storage
 	for i := 0; i < nodeStorage.Spec.Count; i++ {
 		// Allocate physical storage
@@ -233,6 +234,8 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.StoragePool, err)
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create StoragePool", err)
+		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{Requeue: true}, nil
 	}
@@ -278,8 +281,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 	// Retrieve the collection of endpoints for us to map
 	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
 	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
-		log.Error(err, "Failed to retrieve Storage Service Endpoints")
-		return &ctrl.Result{}, err
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get service endpoint", err).WithFatal()
+		log.Info(nodeStorage.Status.Error.Error())
+
+		return &ctrl.Result{Requeue: true}, nil
 	}
 
 	// Get the Storage resource to map between compute node name and
@@ -292,8 +297,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 	storage := &dwsv1alpha1.Storage{}
 	err := r.Get(ctx, namespacedName, storage)
 	if err != nil {
-		log.Error(err, "Could not read storage", "namespacedName", namespacedName)
-		return &ctrl.Result{}, err
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not read storage resource", err)
+		log.Info(nodeStorage.Status.Error.Error())
+
+		return &ctrl.Result{Requeue: true}, nil
 	}
 
 	// Build a list of all nodes with access to the storage
@@ -331,7 +338,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 			}
 
 			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
-				return &ctrl.Result{}, err
+				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not delete storage group", err).WithFatal()
+				log.Info(nodeStorage.Status.Error.Error())
+
+				return &ctrl.Result{Requeue: true}, nil
 			}
 
 			log.Info("Deleted storage group", "storageGroupID", storageGroupID)
@@ -343,7 +353,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 
 			endPoint, err := r.getEndpoint(ss, endpointID)
 			if err != nil {
-				return &ctrl.Result{}, err
+				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get endpoint", err).WithFatal()
+				log.Info(nodeStorage.Status.Error.Error())
+
+				return &ctrl.Result{Requeue: true}, nil
 			}
 
 			// Skip the endpoints that are not ready
@@ -354,6 +367,8 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
 				statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
+				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create storage group", err).WithFatal()
+				log.Info(nodeStorage.Status.Error.Error())
 
 				return &ctrl.Result{Requeue: true}, nil
 			}
@@ -399,6 +414,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
 			nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
 		})
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get endpoint", err).WithFatal()
+		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{}, nil
 	}
@@ -445,6 +462,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	fs, err := r.createFileSystem(ss, fileSystemID, allocationStatus.StoragePool.ID, oem)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileSystem, err)
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file system", err).WithFatal()
+		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{Requeue: true}, nil
 	}
@@ -495,6 +514,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err).WithFatal()
+		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{Requeue: true}, nil
 	}
@@ -559,6 +580,8 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
 			statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not delete storage pool", err).WithFatal()
+			log.Info(nodeStorage.Status.Error.Error())
 
 			return &ctrl.Result{Requeue: true}, nil
 		}
@@ -616,6 +639,17 @@ func (r *NnfNodeStorageReconciler) createStoragePool(ss nnf.StorageServiceApi, i
 	}
 
 	if err := ss.StorageServiceIdStoragePoolIdPut(ss.Id(), id, sp); err != nil {
+		ecErr, ok := err.(*ec.ControllerError)
+		if ok {
+			resourceErr := dwsv1alpha1.NewResourceError("", err)
+			switch ecErr.Cause() {
+			case "Insufficient capacity available":
+				return nil, resourceErr.WithUserMessage("Insufficient capacity available").WithFatal()
+			default:
+				return nil, err
+			}
+		}
+
 		return nil, err
 	}
 
@@ -787,8 +821,6 @@ func (s *nodeStorageStatusUpdater) update(update func(*nnfv1alpha1.NnfNodeStorag
 }
 
 func (s *nodeStorageStatusUpdater) updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {
-	log.FromContext(s.ctx).Error(err, "Resource failed", "Condition", condition.Type)
-
 	status.Status = nnfv1alpha1.ResourceFailed
 	condition.Reason = nnfv1alpha1.ConditionFailed
 	condition.Message = err.Error()

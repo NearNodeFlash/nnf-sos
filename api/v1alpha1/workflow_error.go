@@ -37,16 +37,16 @@ func NewWorkflowError(message string) *WorkflowError {
 	}
 }
 
-func (e *WorkflowError) GetError() error {
-	return e.err
-}
-
 func (e *WorkflowError) GetMessage() string {
 	return e.message
 }
 
 func (e *WorkflowError) GetRecoverable() bool {
 	return e.recoverable
+}
+
+func (e *WorkflowError) GetError() error {
+	return e.err
 }
 
 func (e *WorkflowError) Error() string {
@@ -86,6 +86,12 @@ func (e *WorkflowError) WithError(err error) *WorkflowError {
 	workflowError, ok := err.(*WorkflowError)
 	if ok {
 		return workflowError
+	}
+
+	resourceError, ok := err.(*dwsv1alpha1.ResourceError)
+	if ok {
+		e.message = resourceError.GetUserMessage()
+		e.recoverable = resourceError.GetRecoverable()
 	}
 
 	e.err = err

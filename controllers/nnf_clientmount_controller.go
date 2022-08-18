@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -117,7 +118,6 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		for i := 0; i < len(clientMount.Status.Mounts); i++ {
 			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
 			clientMount.Status.Mounts[i].Ready = false
-			clientMount.Status.Mounts[i].Message = ""
 		}
 
 		return ctrl.Result{}, nil
@@ -137,8 +137,14 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	clientMount.Status.Error = nil
+
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		return ctrl.Result{}, err
+		resourceError := dwsv1alpha1.NewResourceError("Mount/Unmount failed", err)
+		log.Info(resourceError.Error())
+
+		clientMount.Status.Error = resourceError
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -165,9 +171,8 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 			if firstError == nil {
 				firstError = err
 			}
-			clientMount.Status.Mounts[i].Message = err.Error()
+			clientMount.Status.Mounts[i].Ready = false
 		} else {
-			clientMount.Status.Mounts[i].Message = ""
 			clientMount.Status.Mounts[i].Ready = true
 		}
 	}
@@ -179,11 +184,11 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, mount bool, log logr.Logger) error {
 
 	if clientMountInfo.Device.Type != dwsv1alpha1.ClientMountDeviceTypeReference {
-		return fmt.Errorf("Invalid device type %s", clientMountInfo.Device.Type)
+		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid device type %s", clientMountInfo.Device.Type), nil).WithFatal()
 	}
 
 	if clientMountInfo.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
-		return fmt.Errorf("Invalid device reference kind %s", clientMountInfo.Device.DeviceReference.ObjectReference.Kind)
+		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid device reference kind %s", clientMountInfo.Device.DeviceReference.ObjectReference.Kind), nil).WithFatal()
 	}
 
 	namespacedName := types.NamespacedName{
@@ -199,7 +204,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 	allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
 	fileShare, err := r.getFileShare(allocationStatus.FileShare.ID, allocationStatus.FileSystem.ID)
 	if err != nil {
-		return err
+		return dwsv1alpha1.NewResourceError("Could not get file share", err).WithFatal()
 	}
 
 	if mount {
@@ -210,7 +215,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 	fileShare, err = r.updateFileShare(fileShare, allocationStatus.FileSystem.ID)
 	if err != nil {
-		return err
+		return dwsv1alpha1.NewResourceError("Could not update file share", err)
 	}
 
 	if mount {

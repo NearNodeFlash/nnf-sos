@@ -211,15 +211,30 @@ spec:
           status:
             description: ClientMountStatus defines the observed state of ClientMount
             properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  recoverable:
+                    description: Indication if the error is likely recoverable or
+                      not
+                    type: boolean
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - recoverable
+                type: object
               mounts:
                 description: List of mount statuses
                 items:
                   description: ClientMountInfoStatus is the status for a single mount
                     point
                   properties:
-                    message:
-                      description: Error message of first error
-                      type: string
                     ready:
                       description: Ready indicates whether status.state has been achieved
                       type: boolean
