@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -138,7 +139,8 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		return ctrl.Result{}, err
+		log.Info("Change mount error", "Error", err.Error())
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -166,6 +168,7 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 				firstError = err
 			}
 			clientMount.Status.Mounts[i].Message = err.Error()
+			clientMount.Status.Mounts[i].Ready = false
 		} else {
 			clientMount.Status.Mounts[i].Message = ""
 			clientMount.Status.Mounts[i].Ready = true
