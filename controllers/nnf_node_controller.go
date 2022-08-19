@@ -49,6 +49,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -78,6 +79,8 @@ type NnfNodeReconciler struct {
 // NNF Node CRD that is representiative of this particular NNF Node.
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("NnfNode", r.NamespacedName, "State", "Start")
+
+	metrics.NnfNodeReconcilesTotal.Inc()
 
 	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
 	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.

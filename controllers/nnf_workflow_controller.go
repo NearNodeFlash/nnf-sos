@@ -47,6 +47,7 @@ import (
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -108,6 +109,8 @@ type NnfWorkflowReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
+
+	metrics.NnfWorkflowReconcilesTotal.Inc()
 
 	// Fetch the Workflow instance
 	workflow := &dwsv1alpha1.Workflow{}

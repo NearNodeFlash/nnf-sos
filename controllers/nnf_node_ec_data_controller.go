@@ -34,6 +34,7 @@ import (
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -110,6 +111,8 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *NnfNodeECDataReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
+
+	metrics.NnfNodeECDataReconcilesTotal.Inc()
 
 	// your logic here
 
