@@ -131,9 +131,10 @@ const (
 // Reasons describing the various data movement status conditions. Must be
 // in CamelCase format (see metav1.Condition)
 const (
-	DataMovementConditionReasonSuccess = "Success"
-	DataMovementConditionReasonFailed  = "Failed"
-	DataMovementConditionReasonInvalid = "Invalid"
+	DataMovementConditionReasonSuccess   = "Success"
+	DataMovementConditionReasonFailed    = "Failed"
+	DataMovementConditionReasonInvalid   = "Invalid"
+	DataMovementConditionReasonCancelled = "Cancelled"
 )
 
 //+kubebuilder:object:root=true
