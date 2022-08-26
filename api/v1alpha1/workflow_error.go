@@ -90,8 +90,8 @@ func (e *WorkflowError) WithError(err error) *WorkflowError {
 
 	resourceError, ok := err.(*dwsv1alpha1.ResourceError)
 	if ok {
-		e.message = resourceError.GetUserMessage()
-		e.recoverable = resourceError.GetRecoverable()
+		e.message = resourceError.UserMessage
+		e.recoverable = resourceError.Recoverable
 	}
 
 	e.err = err
