@@ -13,12 +13,13 @@ github.com/Azure/go-autorest/autorest/date
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
-# github.com/HewlettPackard/dws v0.0.0-20220826155757-ea08e76145d7
+# github.com/HewlettPackard/dws v0.0.0-20220826164140-9f0237adcfe7
 ## explicit
 github.com/HewlettPackard/dws/api/v1alpha1
 github.com/HewlettPackard/dws/config/crd/bases
 github.com/HewlettPackard/dws/config/webhook
 github.com/HewlettPackard/dws/controllers
+github.com/HewlettPackard/dws/controllers/metrics
 github.com/HewlettPackard/dws/utils/dwdparse
 # github.com/HewlettPackard/structex v1.0.2
 github.com/HewlettPackard/structex
