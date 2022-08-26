@@ -634,15 +634,14 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 
 	var complete bool = true
 	// Status section should be usable now, check for Ready
-	for i, set := range nnfStorage.Status.AllocationSets {
+	for _, set := range nnfStorage.Status.AllocationSets {
 		if set.Status != "Ready" {
 			complete = false
-
-			if set.Error != "" {
-				err := fmt.Errorf("NnfStorage %v allocation set %d error: %s", client.ObjectKeyFromObject(nnfStorage), i, set.Error)
-				return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithFatal().WithError(err)
-			}
 		}
+	}
+
+	if nnfStorage.Status.Error != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(nnfStorage.Status.Error)
 	}
 
 	if !complete {

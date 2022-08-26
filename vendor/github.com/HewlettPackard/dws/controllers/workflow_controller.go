@@ -21,6 +21,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"runtime"
 	"time"
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/controllers/metrics"
 )
 
 const (
@@ -74,6 +76,8 @@ type WorkflowReconciler struct {
 func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
 	log.Info("Reconciling Workflow")
+
+	metrics.DwsReconcilesTotal.Inc()
 
 	// Fetch the Workflow workflow
 	workflow := &dwsv1alpha1.Workflow{}
@@ -190,7 +194,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		}
 
 		if driver.Message != "" {
-			workflow.Status.Message = driver.Message
+			workflow.Status.Message = fmt.Sprintf("DW Directive %d: %s", driver.DWDIndex, driver.Message)
 		}
 
 		if driver.Status == dwsv1alpha1.StatusError {

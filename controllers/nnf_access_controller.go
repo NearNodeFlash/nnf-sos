@@ -166,7 +166,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if access.Spec.DesiredState != access.Status.State {
 		access.Status.State = access.Spec.DesiredState
 		access.Status.Ready = false
-		access.Status.Message = ""
+		access.Status.Error = nil
 
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -211,7 +211,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	access.Status.Ready = true
-	access.Status.Message = ""
+	access.Status.Error = nil
 
 	return ctrl.Result{}, nil
 }
@@ -828,13 +828,14 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			return false, nil
 		}
 
+		if clientMount.Status.Error != nil {
+			access.Status.Error = clientMount.Status.Error
+			return false, nil
+		}
+
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State {
 				return false, nil
-			}
-
-			if mount.Message != "" {
-				access.Status.Message = mount.Message
 			}
 
 			if mount.Ready == false {

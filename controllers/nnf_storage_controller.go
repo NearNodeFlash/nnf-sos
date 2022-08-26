@@ -334,6 +334,10 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 				}
 			}
 		}
+
+		if nnfNodeStorage.Status.Error != nil {
+			storage.Status.Error = nnfNodeStorage.Status.Error
+		}
 	}
 
 	allocationSet.Health = health
