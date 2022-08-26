@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -60,6 +61,9 @@ type NnfSystemConfigurationReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("SystemConfiguration", req.NamespacedName)
+
+	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
+
 	systemConfiguration := &dwsv1alpha1.SystemConfiguration{}
 	if err := r.Get(ctx, req.NamespacedName, systemConfiguration); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
