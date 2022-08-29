@@ -79,6 +79,17 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Ensure the NNF Storage Service is running prior taking any action.
+	ss := nnf.NewDefaultStorageService()
+	storageService := &sf.StorageServiceV150StorageService{}
+	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if storageService.Status.State != sf.ENABLED_RST {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
+
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
 	statusUpdater := newClientMountStatusUpdater(clientMount)
