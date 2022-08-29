@@ -79,7 +79,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Ensure the NNF Storage Service is running prior taking any action.
+	// Ensure the NNF Storage Service is running prior to taking any action.
 	ss := nnf.NewDefaultStorageService()
 	storageService := &sf.StorageServiceV150StorageService{}
 	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
