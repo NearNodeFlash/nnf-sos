@@ -245,8 +245,8 @@ docker-push: ## Push docker image with the manager.
 
 kind-push: ## Push docker image to kind
 	kind load docker-image --nodes `kubectl get node --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` ${IMG}
-	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
-	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
 
