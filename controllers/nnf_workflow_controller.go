@@ -595,6 +595,27 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 			err := fmt.Errorf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive)
 			return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
 		}
+
+		for _, breakdownAllocationSet := range dbd.Status.Storage.AllocationSets {
+			found := false
+			for _, serverAllocationsSet := range s.Spec.AllocationSets {
+				if breakdownAllocationSet.Label != serverAllocationsSet.Label {
+					continue
+				}
+
+				found = true
+
+				if serverAllocationsSet.AllocationSize < breakdownAllocationSet.MinimumCapacity {
+					err := fmt.Errorf("Allocation set %s specified insufficient capacity", breakdownAllocationSet.Label)
+					return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+				}
+			}
+
+			if found == false {
+				err := fmt.Errorf("Allocation set %s not found in Servers resource", breakdownAllocationSet.Label)
+				return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+			}
+		}
 	}
 
 	_, err = r.createNnfStorage(ctx, workflow, s, index, log)
