@@ -63,6 +63,9 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.24.2
+
 # Jenkins behaviors
 # pipeline_service builds its target docker image and stores it into 1 of 3 destination folders.
 # The behavior of where pipeline_service puts a build is dictated by name of the branch Jenkins
@@ -87,9 +90,6 @@ IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 # NOTE: master-local and stable-local have a 'latest' tag that can be used to fetch the latest of either
 #       the master or release branch.
 
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
-
 # Tell Kustomize to deploy the default config, or an overlay.
 # To use the 'craystack' overlay:
 #   export KUBECONFIG=/my/craystack/kubeconfig.file
@@ -106,6 +106,12 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+
+# Setting SHELL to bash allows bash commands to be executed by recipes.
+# This is a requirement for 'setup-envtest.sh' in the test target.
+# Options are set to exit when a recipe line exits non-zero or a piped command fails.
+SHELL = /usr/bin/env bash -o pipefail
+.SHELLFLAGS = -ec
 
 all: build
 
@@ -128,7 +134,7 @@ help: ## Display this help.
 ##@ Development
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -141,7 +147,6 @@ vet: ## Run go vet against code.
 
 ##@ Test
 
-ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # Explicitly specifying directories to test here to avoid running tests in .dws-operator for the time being.
 # ./controllers/...
 # ./api/...
@@ -198,35 +203,31 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 #   -ginkgo.v
 #         If set, default reporter print out all specs as they begin.
 #
-#  To see the test results as they execute:
-# export KUBEBUILDER_ASSETS=$(pwd)/testbin/bin; export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT="20s"; export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL="100ms"; go test -v -count=1 -cover ./controllers/... -args -ginkgo.v -ginkgo.failFast -ginkgo.randomizeAllSpecs
 
 container-unit-test: ## Build docker image with the manager and execute unit tests.
 	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
 	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 
+ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # Lengthen the default Eventually timeout to try to account for CI/CD issues
 # https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
 EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
 TESTDIRS ?= controllers api
 FAILFAST ?= no
-test: manifests generate fmt vet ## Run tests.
+test: manifests generate fmt vet envtest ## Run tests.
 	find controllers -name "*.db" -type d -exec rm -rf {} +
-	mkdir -p ${ENVTEST_ASSETS_DIR}
 	source test-tools.sh; prefix_webhook_names config/webhook ${ENVTEST_ASSETS_DIR}/webhook
-
-	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	if [[ "${FAILFAST}" == yes ]]; then \
 		failfast="-ginkgo.fail-fast"; \
 	fi; \
 	set -o errexit; \
+	export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
+	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
+	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
 	for subdir in ${TESTDIRS}; do \
-		export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
-		export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
-		export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
-		source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test -v ./$$subdir/... -coverprofile cover.out -args -ginkgo.v -ginkgo.progress $$failfast; \
-    	done
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v -ginkgo.progress $$failfast; \
+	done
 
 ##@ Build
 
@@ -244,8 +245,8 @@ docker-push: ## Push docker image with the manager.
 
 kind-push: ## Push docker image to kind
 	kind load docker-image --nodes `kubectl get node --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` ${IMG}
-	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
-	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
 
@@ -261,14 +262,28 @@ deploy: kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/c
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	./deploy.sh undeploy $(KUSTOMIZE) $(IMG) $(OVERLAY)
 
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+CONTROLLER_GEN = $(LOCALBIN)/controller-gen
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
+KUSTOMIZE = $(LOCALBIN)/kustomize
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+ENVTEST = $(LOCALBIN)/setup-envtest
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))

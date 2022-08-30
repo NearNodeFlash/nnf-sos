@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +44,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -67,12 +69,26 @@ type NnfClientMountReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("ClientMount", req.NamespacedName)
+
+	metrics.NnfClientMountReconcilesTotal.Inc()
+
 	clientMount := &dwsv1alpha1.ClientMount{}
 	if err := r.Get(ctx, req.NamespacedName, clientMount); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Ensure the NNF Storage Service is running prior to taking any action.
+	ss := nnf.NewDefaultStorageService()
+	storageService := &sf.StorageServiceV150StorageService{}
+	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if storageService.Status.State != sf.ENABLED_RST {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// Create a status updater that handles the call to status().Update() if any of the fields
@@ -118,7 +134,6 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		for i := 0; i < len(clientMount.Status.Mounts); i++ {
 			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
 			clientMount.Status.Mounts[i].Ready = false
-			clientMount.Status.Mounts[i].Message = ""
 		}
 
 		return ctrl.Result{}, nil
@@ -138,8 +153,14 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
+	clientMount.Status.Error = nil
+
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		return ctrl.Result{}, err
+		resourceError := dwsv1alpha1.NewResourceError("Mount/Unmount failed", err)
+		log.Info(resourceError.Error())
+
+		clientMount.Status.Error = resourceError
+		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -166,9 +187,8 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 			if firstError == nil {
 				firstError = err
 			}
-			clientMount.Status.Mounts[i].Message = err.Error()
+			clientMount.Status.Mounts[i].Ready = false
 		} else {
-			clientMount.Status.Mounts[i].Message = ""
 			clientMount.Status.Mounts[i].Ready = true
 		}
 	}
@@ -233,7 +253,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 		allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
 		fileShare, err := r.getFileShare(allocationStatus.FileSystem.ID, allocationStatus.FileShare.ID)
 		if err != nil {
-			return err
+			return dwsv1alpha1.NewResourceError("Could not get file share", err).WithFatal()
 		}
 
 		if shouldMount {
@@ -244,11 +264,11 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 		fileShare, err = r.updateFileShare(allocationStatus.FileSystem.ID, fileShare)
 		if err != nil {
-			return err
+			return dwsv1alpha1.NewResourceError("Could not update file share", err)
 		}
 
 	default:
-		return fmt.Errorf("Invalid device type %s", clientMountInfo.Device.Type)
+		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid device type %s", clientMountInfo.Device.Type), nil).WithFatal()
 	}
 
 	if shouldMount {

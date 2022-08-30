@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,8 +67,7 @@ type NnfAccessStatus struct {
 	// Ready signifies whether status.state has been achieved
 	Ready bool `json:"ready"`
 
-	// Error message
-	Message string `json:"message,omitempty"`
+	Error *dwsv1alpha1.ResourceError `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true

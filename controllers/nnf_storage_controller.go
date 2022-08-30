@@ -40,6 +40,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 // NnfStorageReconciler reconciles a Storage object
@@ -84,6 +85,9 @@ const (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+
+	metrics.NnfStorageReconcilesTotal.Inc()
+
 	storage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, req.NamespacedName, storage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
@@ -329,6 +333,10 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 					allocationSet.Error = condition.Message
 				}
 			}
+		}
+
+		if nnfNodeStorage.Status.Error != nil {
+			storage.Status.Error = nnfNodeStorage.Status.Error
 		}
 	}
 

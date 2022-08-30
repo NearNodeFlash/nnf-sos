@@ -44,6 +44,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 // NnfAccessReconciler reconciles a NnfAccess object
@@ -75,6 +76,8 @@ const (
 // move the current state of the cluster closer to the desired state.
 func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfAccess", req.NamespacedName)
+
+	metrics.NnfAccessReconcilesTotal.Inc()
 
 	access := &nnfv1alpha1.NnfAccess{}
 	if err := r.Get(ctx, req.NamespacedName, access); err != nil {
@@ -163,7 +166,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if access.Spec.DesiredState != access.Status.State {
 		access.Status.State = access.Spec.DesiredState
 		access.Status.Ready = false
-		access.Status.Message = ""
+		access.Status.Error = nil
 
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -208,7 +211,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	access.Status.Ready = true
-	access.Status.Message = ""
+	access.Status.Error = nil
 
 	return ctrl.Result{}, nil
 }
@@ -833,13 +836,14 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			return false, nil
 		}
 
+		if clientMount.Status.Error != nil {
+			access.Status.Error = clientMount.Status.Error
+			return false, nil
+		}
+
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State {
 				return false, nil
-			}
-
-			if mount.Message != "" {
-				access.Status.Message = mount.Message
 			}
 
 			if mount.Ready == false {

@@ -97,7 +97,6 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		for i := 0; i < len(clientMount.Status.Mounts); i++ {
 			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
 			clientMount.Status.Mounts[i].Ready = false
-			clientMount.Status.Mounts[i].Message = ""
 		}
 
 		return ctrl.Result{}, nil
@@ -114,9 +113,10 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	for i, _ := range clientMount.Spec.Mounts {
-		clientMount.Status.Mounts[i].Message = ""
 		clientMount.Status.Mounts[i].Ready = true
 	}
+
+	clientMount.Status.Error = nil
 
 	return ctrl.Result{}, nil
 }

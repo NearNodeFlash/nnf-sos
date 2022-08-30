@@ -50,6 +50,7 @@ import (
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 	dmv1alpha1 "github.com/NearNodeFlash/nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
 const (
@@ -110,6 +111,8 @@ type NnfWorkflowReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("Workflow", req.NamespacedName)
+
+	metrics.NnfWorkflowReconcilesTotal.Inc()
 
 	// Fetch the Workflow instance
 	workflow := &dwsv1alpha1.Workflow{}
@@ -594,6 +597,27 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 			err := fmt.Errorf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive)
 			return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
 		}
+
+		for _, breakdownAllocationSet := range dbd.Status.Storage.AllocationSets {
+			found := false
+			for _, serverAllocationsSet := range s.Spec.AllocationSets {
+				if breakdownAllocationSet.Label != serverAllocationsSet.Label {
+					continue
+				}
+
+				found = true
+
+				if serverAllocationsSet.AllocationSize < breakdownAllocationSet.MinimumCapacity {
+					err := fmt.Errorf("Allocation set %s specified insufficient capacity", breakdownAllocationSet.Label)
+					return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+				}
+			}
+
+			if found == false {
+				err := fmt.Errorf("Allocation set %s not found in Servers resource", breakdownAllocationSet.Label)
+				return nil, nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+			}
+		}
 	}
 
 	_, err = r.createNnfStorage(ctx, workflow, s, index, log)
@@ -633,15 +657,14 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 
 	var complete bool = true
 	// Status section should be usable now, check for Ready
-	for i, set := range nnfStorage.Status.AllocationSets {
+	for _, set := range nnfStorage.Status.AllocationSets {
 		if set.Status != "Ready" {
 			complete = false
-
-			if set.Error != "" {
-				err := fmt.Errorf("NnfStorage %v allocation set %d error: %s", client.ObjectKeyFromObject(nnfStorage), i, set.Error)
-				return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithFatal().WithError(err)
-			}
 		}
+	}
+
+	if nnfStorage.Status.Error != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(nnfStorage.Status.Error)
 	}
 
 	if !complete {

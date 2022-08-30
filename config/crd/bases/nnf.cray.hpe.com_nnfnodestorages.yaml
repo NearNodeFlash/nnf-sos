@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.7.0
   creationTimestamp: null
   name: nnfnodestorages.nnf.cray.hpe.com
 spec:
@@ -343,6 +343,23 @@ spec:
                       type: string
                   type: object
                 type: array
+              error:
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  recoverable:
+                    description: Indication if the error is likely recoverable or
+                      not
+                    type: boolean
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - recoverable
+                type: object
               lustreStorage:
                 description: LustreStorageStatus describes the Lustre targets created
                   here.
