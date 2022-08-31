@@ -23,7 +23,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type WorkflowError struct {
 	message     string
 	recoverable bool
