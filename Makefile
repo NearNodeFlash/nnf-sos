@@ -219,7 +219,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	find controllers -name "*.db" -type d -exec rm -rf {} +
 	source test-tools.sh; prefix_webhook_names config/webhook ${ENVTEST_ASSETS_DIR}/webhook
 	if [[ "${FAILFAST}" == yes ]]; then \
-		failfast="-ginkgo.fail-fast"; \
+		failfast="-ginkgo.failFast"; \
 	fi; \
 	set -o errexit; \
 	export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
