@@ -1,6 +1,6 @@
 module github.com/NearNodeFlash/nnf-sos
 
-go 1.17
+go 1.19
 
 require (
 	github.com/HewlettPackard/dws v0.0.0-20220826164140-9f0237adcfe7
