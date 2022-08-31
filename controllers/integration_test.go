@@ -40,6 +40,7 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	dwparse "github.com/HewlettPackard/dws/utils/dwdparse"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	dmv1alpha1 "github.com/NearNodeFlash/nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -93,7 +94,7 @@ var _ = Describe("Integration Test", func() {
 
 		// If we're currently in a staging state, ensure the data movement status is marked as finished so
 		// we can successfully transition out of that state.
-		if state == dwsv1alpha1.StateDataIn || state == dwsv1alpha1.StateDataOut || state == dwsv1alpha1.StatePostRun {
+		if state == dwsv1alpha1.StateDataIn || state == dwsv1alpha1.StateDataOut {
 
 			findDataMovementDirectiveIndex := func() int {
 				for idx, directive := range w.Spec.DWDirectives {
@@ -108,59 +109,24 @@ var _ = Describe("Integration Test", func() {
 				return -1
 			}
 
-			workflowExpectsDatamovementInPostRun := func() bool {
-				for _, directive := range w.Spec.DWDirectives {
-					if strings.HasPrefix(directive, "#DW create_persistent") {
-						return false
-					}
-					if strings.HasPrefix(directive, "#DW destroy_persistent") {
-						return false
-					}
+			if findDataMovementDirectiveIndex() >= 0 {
+
+				dms := &nnfv1alpha1.NnfDataMovementList{}
+				Expect(k8sClient.List(context.TODO(), dms)).Should(Succeed())
+
+				for _, dm := range dms.Items {
+					Eventually(func(g Gomega) error {
+						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&dm), &dm))
+						dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
+						return k8sClient.Status().Update(context.TODO(), &dm)
+					}).WithOffset(testStackOffset).Should(Succeed())
 				}
-
-				return true
-			}
-
-			dm := &nnfv1alpha1.NnfDataMovement{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      w.Name,
-					Namespace: w.Namespace,
-				},
-			}
-
-			if state != dwsv1alpha1.StatePostRun {
-
-				if findDataMovementDirectiveIndex() >= 0 {
-					dm.ObjectMeta = metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-%d", w.Name, findDataMovementDirectiveIndex()),
-						Namespace: w.Namespace,
-					}
-				} else {
-					dm = nil
-				}
-			} else if !workflowExpectsDatamovementInPostRun() {
-				dm = nil
-			}
-
-			if dm != nil {
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
-				}).WithOffset(testStackOffset).Should(Succeed())
-
-				Eventually(func() error {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).WithOffset(testStackOffset).Should(Succeed())
-
-					dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
-
-					return k8sClient.Status().Update(context.TODO(), dm)
-				}).WithOffset(testStackOffset).Should(Succeed())
 			}
 		}
 
 		By(fmt.Sprintf("Waiting to go ready, wf '%s'", w.Name))
-		Eventually(func() bool {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.Ready
 		}).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
 
@@ -922,6 +888,14 @@ var _ = Describe("Integration Test", func() {
 		// Setup a basic workflow; each test is expected to fill in the DWDirectives
 		// in its BeforeEach() clause.
 		BeforeEach(func() {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: dmv1alpha1.DataMovementNamespace,
+				},
+			}
+
+			k8sClient.Create(context.TODO(), ns)
+
 			wfid := uuid.NewString()[0:8]
 			workflow = &dwsv1alpha1.Workflow{
 				ObjectMeta: metav1.ObjectMeta{

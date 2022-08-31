@@ -203,17 +203,16 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 	case dwsv1alpha1.ClientMountDeviceTypeLustre:
 		mountPath := clientMountInfo.MountPath
 
+		_, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+
 		var mounter mount.Interface
-		if _, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT"); testEnv {
+		if testEnv {
 			mounter = mount.NewFakeMounter([]mount.MountPoint{})
 		} else {
 			mounter = mount.New("")
 		}
 
-		isNotMountPoint, err := mount.IsNotMountPoint(mounter, mountPath)
-		if err != nil {
-			return err
-		}
+		isNotMountPoint, _ := mount.IsNotMountPoint(mounter, mountPath)
 
 		if shouldMount {
 			if isNotMountPoint {
@@ -222,8 +221,10 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 					":/" +
 					clientMountInfo.Device.Lustre.FileSystemName
 
-				if err := os.MkdirAll(mountPath, 0755); err != nil {
-					return err
+				if !testEnv {
+					if err := os.MkdirAll(mountPath, 0755); err != nil {
+						return err
+					}
 				}
 
 				if err := mounter.Mount(mountSource, mountPath, "lustre", nil); err != nil {

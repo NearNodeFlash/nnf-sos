@@ -847,7 +847,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
-			access, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, teardownState, log)
+			access, err := r.setupNnfAccessForServers(ctx, storage, workflow, dwIndex, teardownState, log)
 			if err != nil {
 				return storageReference, access, nil, nnfv1alpha1.NewWorkflowError("Could not create data movement mount points").WithError(err)
 			}
@@ -905,24 +905,34 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	_, source := splitStagingArgumentIntoNameAndPath(dwArgs["source"])
 	_, dest := splitStagingArgumentIntoNameAndPath(dwArgs["destination"])
 
+	fsType := targetStorage.Spec.FileSystemType
+
 	getRabbitRelativePath := func(storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path string, index int) string {
 
 		if storageRef.Kind == reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
-
-			// TODO: ephemeral lustre doesn't use an indexed path
-			return filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(index), path)
+			switch fsType {
+			case "xfs", "gfs2":
+				return filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(index), path)
+			case "lustre":
+				return path
+			}
 		}
 
 		return path
 	}
 
-	fsType := targetStorage.Spec.FileSystemType
 	switch fsType {
 	case "xfs", "gfs2":
 
-		// XFS & GFS2 require the individual rabbit nodes are performing the data movement
+		// XFS & GFS2 require the individual rabbit nodes are performing the data movement.
+
+		if len(targetStorage.Spec.AllocationSets) != 1 {
+			msg := fmt.Sprintf("Data Movement: File System %s has unexpected allocation sets %d", fsType, len(targetStorage.Spec.AllocationSets))
+			return nil, nnfv1alpha1.NewWorkflowError(msg).WithFatal()
+		}
 
 		nodes := targetStorage.Spec.AllocationSets[0].Nodes
+
 		for _, node := range nodes {
 
 			for i := 0; i < node.Count; i++ {
@@ -962,7 +972,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		dm := &nnfv1alpha1.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      indexedResourceName(workflow, index) + "-dm",
+				Name:      indexedResourceName(workflow, index),
 				Namespace: dmv1alpha1.DataMovementNamespace,
 			},
 			Spec: nnfv1alpha1.NnfDataMovementSpec{
@@ -1034,6 +1044,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 				DesiredState:    "mounted",
 				TeardownState:   teardownState,
 				Target:          "all",
+				MountPath:       buildMountPath(workflow, params["name"], params["command"]),
 				MountPathPrefix: buildMountPath(workflow, params["name"], params["command"]),
 
 				// NNF Storage is Namespaced Name to the servers object
@@ -1068,7 +1079,6 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 
-	// TODO: Add a DeleteChildrenWithLabelsWithCondition
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
 		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
@@ -1275,14 +1285,19 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 // TODO: Can this function be changed to accept a workflow and directive index? That way it can be used
 // in the data movement code setupNnfAccessForServers()
 func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string) string {
+
+	if len(name) == 0 {
+		panic(fmt.Sprintf("Mount Path: Empty name"))
+	}
+
 	switch command {
 	case "jobdw":
 		return fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, name)
 	case "persistentdw":
 		return fmt.Sprintf("/mnt/nnf/%d/persistent/%s", workflow.Spec.JobID, name)
-	default:
 	}
-	return ""
+
+	panic(fmt.Sprintf("Mount Path: Invalid command '%s'", command))
 }
 
 func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
@@ -1501,9 +1516,9 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha1.Workflow{}).
 		Owns(&nnfv1alpha1.NnfAccess{}).
-		Owns(&nnfv1alpha1.NnfDataMovement{}).
 		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfDataMovement{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
 		Complete(r)
 }

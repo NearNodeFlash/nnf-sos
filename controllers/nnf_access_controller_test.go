@@ -35,7 +35,7 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
-var _ = FDescribe("Access Controller Test", Ordered, func() {
+var _ = Describe("Access Controller Test", Ordered, func() {
 
 	nodeNames := []string{
 		"rabbit-nnf-access-test-node-1",
@@ -126,8 +126,8 @@ var _ = FDescribe("Access Controller Test", Ordered, func() {
 			Expect(k8sClient.Create(context.TODO(), access)).To(Succeed(), "Create NNF Access")
 
 			By("Verify NNF Access goes Ready in mounted state")
-			Eventually(func() bool {
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
 				return access.Status.Ready && access.Status.State == "mounted"
 			}).Should(BeTrue())
 
@@ -156,11 +156,11 @@ var _ = FDescribe("Access Controller Test", Ordered, func() {
 					"DesiredState": Equal(dwsv1alpha1.ClientMountStateMounted),
 					"Mounts":       HaveLen(1),
 				}))
+				Expect(mount.Status.Error).To(BeNil())
 				Expect(mount.Status.Mounts).To(HaveLen(1))
 				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State":   Equal(dwsv1alpha1.ClientMountStateMounted),
-					"Ready":   BeTrue(),
-					"Message": BeEmpty(),
+					"State": Equal(dwsv1alpha1.ClientMountStateMounted),
+					"Ready": BeTrue(),
 				}))
 			}
 
@@ -199,11 +199,11 @@ var _ = FDescribe("Access Controller Test", Ordered, func() {
 					"DesiredState": Equal(dwsv1alpha1.ClientMountStateUnmounted),
 					"Mounts":       HaveLen(1),
 				}))
+				Expect(mount.Status.Error).To(BeNil())
 				Expect(mount.Status.Mounts).To(HaveLen(1))
 				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State":   Equal(dwsv1alpha1.ClientMountStateUnmounted),
-					"Ready":   BeTrue(),
-					"Message": BeEmpty(),
+					"State": Equal(dwsv1alpha1.ClientMountStateUnmounted),
+					"Ready": BeTrue(),
 				}))
 			}
 
