@@ -1109,6 +1109,10 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
 		}
+
+		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
+			return nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Staging operation failed")).WithFatal()
+		}
 	}
 
 	// Delete the NnfDataMovement and NnfAccess resources
@@ -1339,7 +1343,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 		}
 	}
 
-	// TODO: Pass the detailed data movement(s) failure message into the workflow
+	// TODO: Pass the data movement(s) failure message into the workflow
 
 	// Unmount the NnfAccess from the compute nodes. This will free the compute nodes to be used
 	// in a different job even if there is data movement happening on the Rabbits

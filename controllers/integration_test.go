@@ -121,6 +121,7 @@ var _ = Describe("Integration Test", func() {
 						dm := dm
 						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&dm), &dm)).To(Succeed())
 						dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
+						dm.Status.Status = nnfv1alpha1.DataMovementConditionReasonSuccess
 						g.Expect(k8sClient.Status().Update(context.TODO(), &dm)).To(Succeed())
 					}
 				}
