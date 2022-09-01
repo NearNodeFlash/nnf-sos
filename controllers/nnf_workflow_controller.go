@@ -1399,6 +1399,9 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 		return nil, nil
 	}
 
+	// TODO: We should delete the NNF Access for the servers if it's no longer needed (if there are no copy_out directives)
+	//       We should also delete all the user initiated offload operations.
+
 	return nil, nil
 }
 
