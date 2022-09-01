@@ -18,8 +18,8 @@
  */
 
 // Package v1alpha1 contains API Schema definitions for the dm v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=dm.cray.hpe.com
+// +kubebuilder:object:generate=true
+// +groupName=dm.cray.hpe.com
 package v1alpha1
 
 import (

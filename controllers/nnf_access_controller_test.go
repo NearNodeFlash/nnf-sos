@@ -23,7 +23,7 @@ import (
 	"context"
 	"reflect"
 
-	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
@@ -35,20 +35,20 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
-var _ = Describe("Access Controller Test", Ordered, func() {
+var _ = Describe("Access Controller Test", func() {
 
 	nodeNames := []string{
 		"rabbit-nnf-access-test-node-1",
 		"rabbit-nnf-access-test-node-2"}
 
-	BeforeAll(func() {
+	BeforeEach(func() {
 		for _, nodeName := range nodeNames {
 			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
 			Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed(), "Create Namespace")
 		}
 	})
 
-	Describe("Create Client Mounts", Ordered, func() {
+	Describe("Create Client Mounts", func() {
 
 		allocationNodes := make([]nnfv1alpha1.NnfStorageAllocationNodes, len(nodeNames))
 		for idx, nodeName := range nodeNames {

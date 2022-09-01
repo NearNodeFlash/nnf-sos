@@ -58,7 +58,7 @@ type DataMovementManagerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Ready indiciates the Data Movement Manager has achieved the desired readiness state
+	// Ready indicates that the Data Movement Manager has achieved the desired readiness state
 	// and all managed resources are initialized.
 	Ready bool `json:"ready,omitempty"`
 }
