@@ -48,6 +48,7 @@ spec:
             description: NnfDataMovementSpec defines the desired state of DataMovement
             properties:
               cancel:
+                default: false
                 description: Set to true if the data movement operation should be
                   canceled.
                 type: boolean

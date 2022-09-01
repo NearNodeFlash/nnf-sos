@@ -50,6 +50,7 @@ type NnfDataMovementSpec struct {
 	GroupId uint32 `json:"groupId,omitempty"`
 
 	// Set to true if the data movement operation should be canceled.
+	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
 }
 
