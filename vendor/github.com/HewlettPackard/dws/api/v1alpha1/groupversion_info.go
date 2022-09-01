@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the dws v1alpha1 API group
-//+kubebuilder:object:generate=true
-//+groupName=dws.cray.hpe.com
+// +kubebuilder:object:generate=true
+// +groupName=dws.cray.hpe.com
 package v1alpha1
 
 import (

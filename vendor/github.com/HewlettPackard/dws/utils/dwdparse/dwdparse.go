@@ -28,7 +28,7 @@ import (
 )
 
 // DWDirectiveRuleDef defines the DWDirective parser rules
-//+kubebuilder:object:generate=true
+// +kubebuilder:object:generate=true
 type DWDirectiveRuleDef struct {
 	Key             string `json:"key"`
 	Type            string `json:"type"`
@@ -40,7 +40,7 @@ type DWDirectiveRuleDef struct {
 }
 
 // DWDirectiveRuleSpec defines the desired state of DWDirective
-//+kubebuilder:object:generate=true
+// +kubebuilder:object:generate=true
 type DWDirectiveRuleSpec struct {
 	// Name of the #DW command. jobdw, stage_in, etc.
 	Command string `json:"command"`
@@ -133,7 +133,8 @@ func BuildArgsMap(dwd string) (map[string]string, error) {
 
 // ValidateArgs validates a map of arguments against the rules
 // For cases where an unknown command may be allowed because there may be other handlers for that command
-//   failUnknownCommand = false
+//
+//	failUnknownCommand = false
 func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownCommand bool) error {
 	command := args["command"]
 

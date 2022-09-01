@@ -43,7 +43,7 @@ const (
 	DeleteComplete
 )
 
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type ObjectList interface {
 	GetObjectList() []client.Object
 }

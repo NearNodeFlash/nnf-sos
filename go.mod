@@ -2,6 +2,7 @@ module github.com/NearNodeFlash/nnf-sos
 
 go 1.16
 
+replace github.com/HewlettPackard/dws  => ../dws
 replace github.com/NearNodeFlash/nnf-dm => ../nnf-dm
 
 require (

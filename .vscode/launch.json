@@ -47,7 +47,7 @@
                 "NNF_TEST_ENVIRONMENT": "true",
                 "KUBEBUILDER_ASSETS": "${workspaceFolder}/testbin/bin",
                 "GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT": "10m",
-                "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "500ms"
+                "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "100ms"
             },
             "showLog": true
         },
