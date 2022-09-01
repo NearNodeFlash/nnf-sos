@@ -23,6 +23,7 @@ spec:
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
+        uniqueWithin: "jobdw_name"
       - key: "profile"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
@@ -55,6 +56,7 @@ spec:
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
+        uniqueWithin: "create_persistent_name"
       - key: "profile"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
@@ -77,6 +79,7 @@ spec:
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
+        uniqueWithin: "destroy_persistent_name"
   - command: "persistentdw"
     watchStates: proposal,setup,pre_run,post_run,teardown
     ruleDefs:
