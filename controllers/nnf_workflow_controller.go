@@ -1103,13 +1103,16 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	matchingLabels[teardownStateLabel] = workflow.Status.State
 
-	log.Info("Listing NnfDataMovements", "labels", matchingLabels)
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
 		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
 	}
 
-	log.Info("Listed NnfDataMovements", "count", len(dataMovementList.Items))
+	// Since the Finish state is only called when copy_in / copy_out directives are present - the lack of any items
+	// implies that the data movement operations are only just creating and the cache hasn't been updated yet.
+	if len(dataMovementList.Items) == 0 {
+		return &ctrl.Result{RequeueAfter: time.Second}, nil
+	}
 
 	for _, dm := range dataMovementList.Items {
 		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "state", dm.Status.State)
@@ -1129,15 +1132,14 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		}
 	}
 
-	// Delete the NnfDataMovement and NnfAccess resources
+	// Delete the NnfAccess resources if necessary
 	childObjects := []dwsv1alpha1.ObjectList{
-		&nnfv1alpha1.NnfDataMovementList{},
 		&nnfv1alpha1.NnfAccessList{},
 	}
 
 	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, matchingLabels)
 	if err != nil {
-		err = fmt.Errorf("Could not delete NnfDataMovement or NnfAccess children: %w", err)
+		err = fmt.Errorf("Could not delete NnfAccess children: %w", err)
 		return nil, nnfv1alpha1.NewWorkflowError("Could not stop data movement").WithError(err)
 	}
 
