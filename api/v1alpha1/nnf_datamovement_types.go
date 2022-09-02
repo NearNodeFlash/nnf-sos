@@ -72,7 +72,7 @@ type NnfDataMovementStatus struct {
 	State string `json:"state,omitempty"`
 
 	// Status of the current state.
-	// +kubebuilder:validation:Enum=Success;Failed;Invalid
+	// +kubebuilder:validation:Enum=Success;Failed;Invalid;Cancelled
 	Status string `json:"status,omitempty"`
 
 	// Message contains any text that explains the Status.

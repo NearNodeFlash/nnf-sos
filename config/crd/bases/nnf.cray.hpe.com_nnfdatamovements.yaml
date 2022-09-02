@@ -190,6 +190,7 @@ spec:
                 - Success
                 - Failed
                 - Invalid
+                - Cancelled
                 type: string
             type: object
         type: object
