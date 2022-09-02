@@ -800,7 +800,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		// this directive line.
 		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
 
-			// Find the parent directive index that
+			// Find the parent directive index that corresponds to this copy_in/copy_out directive
 			parentDwIndex := findDirectiveIndexByName(workflow, name)
 			if parentDwIndex < 0 {
 				return nil, nil, nil, nnfv1alpha1.NewWorkflowError("No directive matching '" + name + "' found in workflow").WithFatal()
@@ -904,7 +904,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		}
 	}
 
-	// Retrive the target storage that is to perform the data movement.
+	// Retrieve the target storage that is to perform the data movement.
 	// For copy_in, the destination is the Rabbit and therefore the target
 	// For copy_out, the source is the Rabbit and therefore the target
 

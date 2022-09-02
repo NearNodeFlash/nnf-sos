@@ -330,7 +330,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				},
 			}
 
-			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tess
+			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tests
 		})
 
 		BeforeEach(func() {
