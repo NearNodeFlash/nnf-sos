@@ -978,6 +978,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				addDirectiveIndexLabel(dm, index)
 				addTeardownStateLabel(dm, workflow.Status.State)
 
+				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
 					if !errors.IsAlreadyExists(err) {
 						return nil, nnfv1alpha1.NewWorkflowError("Data Movement failed to create").WithError(err)
@@ -986,7 +987,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 		}
-		break
+
 	case "lustre":
 
 		dm := &nnfv1alpha1.NnfDataMovement{
@@ -1013,6 +1014,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		addDirectiveIndexLabel(dm, index)
 		addTeardownStateLabel(dm, workflow.Status.State)
 
+		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
 			if !errors.IsAlreadyExists(err) {
 				return nil, nnfv1alpha1.NewWorkflowError("Data Movement failed to create").WithError(err)
@@ -1093,6 +1095,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 
 // Monitor a data movement resource for completion
 func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
+	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 
 	// Wait for data movement resources to complete
 
@@ -1100,16 +1103,27 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	matchingLabels[teardownStateLabel] = workflow.Status.State
 
+	log.Info("Listing NnfDataMovements", "labels", matchingLabels)
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
 		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
 	}
 
+	log.Info("Listed NnfDataMovements", "count", len(dataMovementList.Items))
+
 	for _, dm := range dataMovementList.Items {
+		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "state", dm.Status.State)
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
 		}
 
+		// TODO: If one fails they all should fail.
+	}
+
+	// Check results of data movement operations
+	// TODO: Detailed Fail Message?
+	for _, dm := range dataMovementList.Items {
+		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "status", dm.Status.Status)
 		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
 			return nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Staging operation failed")).WithFatal()
 		}
