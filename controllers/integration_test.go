@@ -40,7 +40,6 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	dwparse "github.com/HewlettPackard/dws/utils/dwdparse"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
-	dmv1alpha1 "github.com/NearNodeFlash/nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -891,7 +890,7 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			ns := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: dmv1alpha1.DataMovementNamespace,
+					Name: nnfv1alpha1.DataMovementNamespace,
 				},
 			}
 
@@ -1134,7 +1133,7 @@ var _ = Describe("Integration Test", func() {
 				dm := &nnfv1alpha1.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "failed-data-movement",
-						Namespace: dmv1alpha1.DataMovementNamespace,
+						Namespace: nnfv1alpha1.DataMovementNamespace,
 					},
 				}
 				dwsv1alpha1.AddWorkflowLabels(dm, workflow)

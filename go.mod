@@ -2,12 +2,9 @@ module github.com/NearNodeFlash/nnf-sos
 
 go 1.19
 
-replace github.com/NearNodeFlash/nnf-dm => ../nnf-dm
-
 require (
 	github.com/HewlettPackard/dws v0.0.0-20220901164709-192b9c0bd96c
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38
-	github.com/NearNodeFlash/nnf-dm v0.0.0-20220830153611-0be8f906cb59
 	github.com/NearNodeFlash/nnf-ec v0.0.0-20220829193624-66025314aec0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3

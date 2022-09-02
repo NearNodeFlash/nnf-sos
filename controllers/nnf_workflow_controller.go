@@ -48,7 +48,6 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
-	dmv1alpha1 "github.com/NearNodeFlash/nnf-dm/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -993,7 +992,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		dm := &nnfv1alpha1.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      indexedResourceName(workflow, index),
-				Namespace: dmv1alpha1.DataMovementNamespace,
+				Namespace: nnfv1alpha1.DataMovementNamespace,
 			},
 			Spec: nnfv1alpha1.NnfDataMovementSpec{
 				Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{

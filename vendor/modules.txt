@@ -35,9 +35,6 @@ github.com/HewlettPackard/structex
 ## explicit; go 1.16
 github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
-# github.com/NearNodeFlash/nnf-dm v0.0.0-20220830153611-0be8f906cb59 => ../nnf-dm
-## explicit; go 1.19
-github.com/NearNodeFlash/nnf-dm/api/v1alpha1
 # github.com/NearNodeFlash/nnf-ec v0.0.0-20220829193624-66025314aec0
 ## explicit; go 1.16
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
@@ -852,4 +849,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/NearNodeFlash/nnf-dm => ../nnf-dm
