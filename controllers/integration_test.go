@@ -79,7 +79,7 @@ var _ = Describe("Integration Test", func() {
 	}
 
 	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow) {
-		By("advanceStateAndCheckReady: advance workflow state")
+		By(fmt.Sprintf("advanceStateAndCheckReady: advance workflow state %s", state))
 
 		// If this method fails, have the test results report where it was called from rather
 		// than where it fails in this method.
@@ -91,84 +91,42 @@ var _ = Describe("Integration Test", func() {
 		// was doing as it tried to advanceState versus, why advanceState fails.
 		advanceState(state, w, testStackOffset+1)
 
-		// If we're currently in a staging state, ensure the data movement status is marked as finished so
-		// we can successfully transition out of that state.
-		if state == dwsv1alpha1.StateDataIn || state == dwsv1alpha1.StateDataOut || state == dwsv1alpha1.StatePostRun {
+		By(fmt.Sprintf("Waiting to go ready, wf '%s'", w.Name))
+		Eventually(func(g Gomega) bool {
 
-			findDataMovementDirectiveIndex := func() int {
-				for idx, directive := range w.Spec.DWDirectives {
-					if state == dwsv1alpha1.StateDataIn && strings.HasPrefix(directive, "#DW copy_in") {
-						return idx
+			// If we're currently in a staging state, ensure the data movement status is marked as finished so
+			// we can successfully transition out of that state.
+			if w.Status.State == dwsv1alpha1.StateDataIn.String() || w.Status.State == dwsv1alpha1.StateDataOut.String() {
+
+				findDataMovementDirectiveIndex := func() int {
+					for idx, directive := range w.Spec.DWDirectives {
+						if state == dwsv1alpha1.StateDataIn && strings.HasPrefix(directive, "#DW copy_in") {
+							return idx
+						}
+						if state == dwsv1alpha1.StateDataOut && strings.HasPrefix(directive, "#DW copy_out") {
+							return idx
+						}
 					}
-					if state == dwsv1alpha1.StateDataOut && strings.HasPrefix(directive, "#DW copy_out") {
-						return idx
-					}
+
+					return -1
 				}
-
-				return -1
-			}
-
-			workflowExpectsDatamovementInPostRun := func() bool {
-				for _, directive := range w.Spec.DWDirectives {
-					if strings.HasPrefix(directive, "#DW create_persistent") {
-						return false
-					}
-					if strings.HasPrefix(directive, "#DW destroy_persistent") {
-						return false
-					}
-				}
-
-				return true
-			}
-
-			dm := &nnfv1alpha1.NnfDataMovement{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      w.Name,
-					Namespace: w.Namespace,
-				},
-			}
-
-			if state != dwsv1alpha1.StatePostRun {
 
 				if findDataMovementDirectiveIndex() >= 0 {
-					dm.ObjectMeta = metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-%d", w.Name, findDataMovementDirectiveIndex()),
-						Namespace: w.Namespace,
+
+					dms := &nnfv1alpha1.NnfDataMovementList{}
+					Expect(k8sClient.List(context.TODO(), dms)).To(Succeed())
+
+					for _, dm := range dms.Items {
+						dm := dm
+						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&dm), &dm)).To(Succeed())
+						dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
+						dm.Status.Status = nnfv1alpha1.DataMovementConditionReasonSuccess
+						g.Expect(k8sClient.Status().Update(context.TODO(), &dm)).To(Succeed())
 					}
-				} else {
-					dm = nil
 				}
-			} else if !workflowExpectsDatamovementInPostRun() {
-				dm = nil
 			}
 
-			if dm != nil {
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
-				}).WithOffset(testStackOffset).Should(Succeed())
-
-				Eventually(func() error {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)).WithOffset(testStackOffset).Should(Succeed())
-
-					dm.Status.Conditions = []metav1.Condition{
-						{
-							Status:             metav1.ConditionTrue,
-							Reason:             nnfv1alpha1.DataMovementConditionReasonSuccess,
-							Type:               nnfv1alpha1.DataMovementConditionTypeFinished,
-							LastTransitionTime: metav1.Now(),
-							Message:            "",
-						},
-					}
-
-					return k8sClient.Status().Update(context.TODO(), dm)
-				}).WithOffset(testStackOffset).Should(Succeed())
-			}
-		}
-
-		By(fmt.Sprintf("Waiting to go ready, wf '%s'", w.Name))
-		Eventually(func() bool {
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.Ready
 		}).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
 
@@ -930,6 +888,14 @@ var _ = Describe("Integration Test", func() {
 		// Setup a basic workflow; each test is expected to fill in the DWDirectives
 		// in its BeforeEach() clause.
 		BeforeEach(func() {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nnfv1alpha1.DataMovementNamespace,
+				},
+			}
+
+			k8sClient.Create(context.TODO(), ns)
+
 			wfid := uuid.NewString()[0:8]
 			workflow = &dwsv1alpha1.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1059,6 +1025,7 @@ var _ = Describe("Integration Test", func() {
 
 		validateNnfAccessIsNotFound := func() {
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
+
 			access := &nnfv1alpha1.NnfAccess{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, 0, "servers"),
@@ -1162,19 +1129,25 @@ var _ = Describe("Integration Test", func() {
 				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun, workflow)
 
 				By("Injecting an error in the data movement resource")
-				dm := &nnfv1alpha1.NnfDataMovement{}
+
+				dm := &nnfv1alpha1.NnfDataMovement{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "failed-data-movement",
+						Namespace: nnfv1alpha1.DataMovementNamespace,
+					},
+				}
+				dwsv1alpha1.AddWorkflowLabels(dm, workflow)
+				dwsv1alpha1.AddOwnerLabels(dm, workflow)
+				addTeardownStateLabel(dm, dwsv1alpha1.StatePostRun.String())
+
+				Expect(k8sClient.Create(context.TODO(), dm)).To(Succeed())
 
 				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), dm)
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
 				}).Should(Succeed())
 
-				dm.Status.Conditions = []metav1.Condition{{
-					Status:             metav1.ConditionTrue,
-					Reason:             nnfv1alpha1.DataMovementConditionReasonFailed,
-					Type:               nnfv1alpha1.DataMovementConditionTypeFinished,
-					LastTransitionTime: metav1.Now(),
-					Message:            "Error Injection",
-				}}
+				dm.Status.State = nnfv1alpha1.DataMovementConditionTypeFinished
+				dm.Status.Status = nnfv1alpha1.DataMovementConditionReasonFailed
 
 				Expect(k8sClient.Status().Update(context.TODO(), dm)).To(Succeed())
 

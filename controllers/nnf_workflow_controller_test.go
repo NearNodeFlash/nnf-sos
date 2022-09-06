@@ -68,20 +68,15 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			return k8sClient.Update(context.TODO(), workflow)
 		}).Should(Succeed(), "teardown")
 
-		Eventually(func() bool {
-			Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-			return workflow.Status.State == workflow.Spec.DesiredState
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+			return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateTeardown.String()
 		}).Should(BeTrue(), "reach desired teardown state")
-
-		Eventually(func() bool {
-			Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-			return workflow.Status.Ready
-		}).Should(BeTrue())
 
 		Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
 
-		expected := &dwsv1alpha1.Workflow{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			expected := &dwsv1alpha1.Workflow{}
 			return k8sClient.Get(context.TODO(), key, expected)
 		}).ShouldNot(Succeed())
 
@@ -308,21 +303,17 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		JustBeforeEach(func() {
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			// Kubernetes isn't always returning the object right away; we don't fully understand why at this point; need to wait until it responds with a valid object
-			Eventually(func() error {
-				return k8sClient.Get(context.TODO(), key, workflow)
-			}).Should(Succeed(), "wait for create to occur")
-
-			Eventually(func() bool {
-				Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 				return workflow.Status.Ready
 			}).Should(BeTrue(), "waiting for ready after create")
 
 			workflow.Spec.DesiredState = dwsv1alpha1.StateSetup.String()
 			Expect(k8sClient.Update(context.TODO(), workflow)).To(Succeed())
-			Eventually(func() bool {
-				Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-				return workflow.Status.Ready && workflow.Status.State == workflow.Spec.DesiredState
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+				return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup.String()
 			}).Should(BeTrue(), "transition through setup")
 		})
 
@@ -330,6 +321,16 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		var (
 			lustre *lusv1alpha1.LustreFileSystem
 		)
+
+		BeforeEach(func() {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nnfv1alpha1.DataMovementNamespace,
+				},
+			}
+
+			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tests
+		})
 
 		BeforeEach(func() {
 			lustre = &lusv1alpha1.LustreFileSystem{
@@ -362,20 +363,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			It("transition to data movement", func() {
 
-				// Expect the workflow has owner reference to the job storage instance; this verifies the garbage collection
-				// chain is set up, but recall that GC is not running in the testenv so we can't prove it is deleted on teardown.
-				// See https://book.kubebuilder.io/reference/envtest.html#testing-considerations
-				controller := true
-				blockOwnerDeletion := true
-				ownerRef := metav1.OwnerReference{
-					Kind:               "Workflow",
-					APIVersion:         dwsv1alpha1.GroupVersion.String(),
-					UID:                workflow.GetUID(),
-					Name:               workflow.GetName(),
-					Controller:         &controller,
-					BlockOwnerDeletion: &blockOwnerDeletion,
-				}
-
 				By("transition to data in state")
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
@@ -387,7 +374,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				dm := &nnfv1alpha1.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-%d", workflow.Name, 1),
-						Namespace: workflow.Namespace,
+						Namespace: nnfv1alpha1.DataMovementNamespace,
 					},
 				}
 
@@ -395,20 +382,18 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
 				}).Should(Succeed(), "expect data movement resource")
 
-				Expect(dm.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
-
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal("/my-file.out"))
-				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.Path).To(Equal(buildMountPath(workflow, "test", "jobdw") + "/my-file.out"))
+				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
 						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
@@ -428,11 +413,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{Name: persistentStorageName, Namespace: workflow.Namespace},
 					Spec: dwsv1alpha1.PersistentStorageInstanceSpec{
-						Name:   persistentStorageName,
-						FsType: "xfs",
-						// DWDirective: "some directive",
+						Name:        persistentStorageName,
+						FsType:      "lustre",
+						DWDirective: workflow.Spec.DWDirectives[0],
 					},
-					Status: dwsv1alpha1.PersistentStorageInstanceStatus{},
 				}
 				Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
 
@@ -449,7 +433,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						Namespace: workflow.Namespace,
 					},
 					Spec: nnfv1alpha1.NnfStorageSpec{
-						FileSystemType: "xfs",
+						FileSystemType: "lustre",
 						AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
 					},
 					Status: nnfv1alpha1.NnfStorageStatus{
@@ -484,12 +468,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 
 			BeforeEach(func() {
-				createPersistentStorageInstance()
-
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
 					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_%s/my-persistent-file.out", persistentStorageName),
 				}
+
+				createPersistentStorageInstance()
 			})
 
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
@@ -512,16 +496,16 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			It("transitions to data movement", func() {
 
-				Eventually(func() error {
-					Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 					workflow.Spec.DesiredState = dwsv1alpha1.StateDataIn.String()
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "transition desired state to data_in")
 
 				dm := &nnfv1alpha1.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      fmt.Sprintf("%s-%d", workflow.Name, 1),
-						Namespace: workflow.Namespace,
+						Name:      indexedResourceName(workflow, 1),
+						Namespace: nnfv1alpha1.DataMovementNamespace,
 					},
 				}
 
@@ -530,17 +514,17 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(Succeed(), "data movement resource created")
 
 				Expect(dm.Spec.Source.Path).To(Equal(lustre.Spec.MountRoot + "/my-file.in"))
-				Expect(dm.Spec.Source.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Source.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal("/my-persistent-file.out"))
-				Expect(dm.Spec.Destination.Storage).ToNot(BeNil())
-				Expect(*dm.Spec.Destination.Storage).To(MatchFields(IgnoreExtras,
+				Expect(dm.Spec.Destination.Path).To(Equal(buildMountPath(workflow, persistentStorageName, "persistentdw") + "/my-persistent-file.out"))
+				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
+				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
 						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
 						"Name":      Equal(persistentStorageName),

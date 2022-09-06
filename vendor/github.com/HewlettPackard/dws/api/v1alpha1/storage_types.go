@@ -101,7 +101,7 @@ type StorageData struct {
 }
 
 // Storage is the Schema for the storages API
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 type Storage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

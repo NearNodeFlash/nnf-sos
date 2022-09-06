@@ -28,6 +28,12 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+const (
+	// The required namespace for an NNF Data Movement operation. This is for system wide (lustre) data movement.
+	// Individual nodes may also perform data movement in which case they use the NNF Node Name as the namespace.
+	DataMovementNamespace = "nnf-dm-system"
+)
+
 // NnfDataMovementSpec defines the desired state of DataMovement
 type NnfDataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -49,11 +55,9 @@ type NnfDataMovementSpec struct {
 	// the data movement operation.
 	GroupId uint32 `json:"groupId,omitempty"`
 
-	// Monitor refers to the monitoring state of the resource. When "true", the data movement
-	// resource is placed in a mode where it monitors subresources continuously. When "false"
-	// a data movement resource is allowed to finish once all subresources finish.
+	// Set to true if the data movement operation should be canceled.
 	// +kubebuilder:default:=false
-	Monitor bool `json:"monitor,omitempty"`
+	Cancel bool `json:"cancel,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
@@ -64,30 +68,17 @@ type NnfDataMovementSpecSourceDestination struct {
 
 	// Storage describes the storage backing this data movement specification; Storage can reference
 	// either NNF storage or global Lustre storage depending on the object references Kind field.
-	Storage *corev1.ObjectReference `json:"storageInstance,omitempty"`
-
-	// Access references the NNF Access element that is needed to perform data movement. This provides
-	// details as to the mount path and backing storage across NNF Nodes.
-	Access *corev1.ObjectReference `json:"access,omitempty"`
+	StorageReference corev1.ObjectReference `json:"storageReference,omitempty"`
 }
 
 // DataMovementStatus defines the observed state of DataMovement
 type NnfDataMovementStatus struct {
-	// Node Status reflects the status of individual NNF Node Data Movement operations
-	NodeStatus []NnfDataMovementNodeStatus `json:"nodeStatus,omitempty"`
-
-	// Conditions represents an array of conditions that refect the current
-	// status of the data movement operation. Each condition type must be
-	// one of Starting, Running, or Finished, reflect the three states that
-	// data movement performs.
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
 	// Current state of data movement.
 	// +kubebuilder:validation:Enum=Starting;Running;Finished
 	State string `json:"state,omitempty"`
 
 	// Status of the current state.
-	// +kubebuilder:validation:Enum=Success;Failed;Invalid
+	// +kubebuilder:validation:Enum=Success;Failed;Invalid;Cancelled
 	Status string `json:"status,omitempty"`
 
 	// Message contains any text that explains the Status.
@@ -98,27 +89,6 @@ type NnfDataMovementStatus struct {
 
 	// EndTime reflects the time at which the Data Movement operation ended.
 	EndTime *metav1.MicroTime `json:"endTime,omitempty"`
-}
-
-// NnfDataMovementNodeStatus defines the observed state of a DataMovementNode
-type NnfDataMovementNodeStatus struct {
-	// Node is the node who's status this status element describes
-	Node string `json:"node,omitempty"`
-
-	// Count is the total number of resources managed by this node
-	Count uint32 `json:"count,omitempty"`
-
-	// Running is the number of resources running under this node
-	Running uint32 `json:"running,omitemtpy"`
-
-	// Complete is the number of resource completed by this node
-	Complete uint32 `json:"complete,omitempty"`
-
-	// Status is an array of status strings reported by resources in this node
-	Status []string `json:"status,omitempty"`
-
-	// Messages is an array of error messages reported by resources in this node
-	Messages []string `json:"messages,omitempty"`
 }
 
 // Types describing the various data movement status conditions.
@@ -139,7 +109,6 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="ISMONITOR",type="boolean",JSONPath=".spec.monitor",description="True if monitoring a DM"
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

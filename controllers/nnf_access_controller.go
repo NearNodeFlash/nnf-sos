@@ -183,7 +183,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, nil
 	}
 
-	// Create the ClientMount resources. One ClientMount resource is created per client
+	// Add compute node information to the storage map, if necessary.
 	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -353,7 +353,6 @@ func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Conte
 // getClientListFromStorageReference returns a list of client node names from the NnfStorage resource. This is the list of Rabbit
 // nodes that host the storage
 func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Context, access *nnfv1alpha1.NnfAccess) ([]string, error) {
-	nnfStorage := &nnfv1alpha1.NnfStorage{}
 
 	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
 		return nil, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
@@ -364,12 +363,19 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
+	nnfStorage := &nnfv1alpha1.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return nil, err
 	}
 
 	clients := []string{}
 	for _, allocationSetSpec := range nnfStorage.Spec.AllocationSets {
+		if nnfStorage.Spec.FileSystemType == "lustre" {
+			if allocationSetSpec.NnfStorageLustreSpec.TargetType != "OST" {
+				continue
+			}
+		}
+
 		for _, node := range allocationSetSpec.Nodes {
 			clients = append(clients, node.Name)
 		}
@@ -763,8 +769,8 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo, log logr.Logger) error {
 	g := new(errgroup.Group)
 
-	for client, storageList := range storageMapping {
-		client := client
+	for clientName, storageList := range storageMapping {
+		clientName := clientName
 		storageList := storageList
 
 		// Start a goroutine for each ClientMount to create
@@ -772,7 +778,7 @@ func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nn
 			clientMount := &dwsv1alpha1.ClientMount{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      clientMountName(access),
-					Namespace: client,
+					Namespace: clientName,
 				},
 			}
 			result, err := ctrl.CreateOrUpdate(ctx, r.Client, clientMount,
@@ -780,22 +786,24 @@ func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nn
 					dwsv1alpha1.InheritParentLabels(clientMount, access)
 					dwsv1alpha1.AddOwnerLabels(clientMount, access)
 
-					clientMount.Spec.Node = client
+					clientMount.Spec.Node = clientName
 					clientMount.Spec.DesiredState = dwsv1alpha1.ClientMountState(access.Spec.DesiredState)
 					clientMount.Spec.Mounts = storageList
 
 					return nil
 				})
+
+			namespacedName := client.ObjectKeyFromObject(clientMount).String()
 			if err != nil {
-				log.Error(err, "failed to create or update ClientMount", "name", clientMount.Name)
+				log.Error(err, "failed to create or update ClientMount", "name", namespacedName)
 				return err
 			}
 			if result == controllerutil.OperationResultCreated {
-				log.Info("Created ClientMount", "name", clientMount.Name)
+				log.Info("Created ClientMount", "name", namespacedName)
 			} else if result == controllerutil.OperationResultNone {
 				// no change
 			} else {
-				log.Info("Updated ClientMount", "name", clientMount.Name)
+				log.Info("Updated ClientMount", "name", namespacedName)
 			}
 			return err
 		})

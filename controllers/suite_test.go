@@ -119,24 +119,26 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 
+	webhookPaths := []string{
+		filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
+		filepath.Join("..", "config", "dws"),
+	}
+	if env, found := os.LookupEnv("WEBHOOK_DIR"); found {
+		webhookPaths = append(webhookPaths, env)
+	}
+
 	testEnv = &envtest.Environment{
-		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: []string{
-			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
-			filepath.Join("..", "config", "dws"),
-			os.Getenv("WEBHOOK_DIR"),
-		}},
+		WebhookInstallOptions: envtest.WebhookInstallOptions{Paths: webhookPaths},
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.com", "NearNodeFlash", "lustre-fs-operator", "config", "crd", "bases"),
 		},
-		AttachControlPlaneOutput: true,
+		//AttachControlPlaneOutput: true,
 	}
 
-	var err error
-
-	cfg, err = testEnv.Start()
+	cfg, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
@@ -154,25 +156,20 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: testEnv.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
-
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             testEnv.Scheme,
-		Host:               webhookInstallOptions.LocalServingHost,
-		Port:               webhookInstallOptions.LocalServingPort,
-		CertDir:            webhookInstallOptions.LocalServingCertDir,
-		LeaderElection:     false,
-		MetricsBindAddress: "0",
+		Scheme:  scheme.Scheme,
+		Host:    webhookInstallOptions.LocalServingHost,
+		Port:    webhookInstallOptions.LocalServingPort,
+		CertDir: webhookInstallOptions.LocalServingCertDir,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
 	/*
 		Start Everything
 	*/
+
 	err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -282,7 +279,7 @@ var _ = BeforeSuite(func() {
 
 	go func() {
 		defer GinkgoRecover()
-		err = k8sManager.Start(ctx)
+		err := k8sManager.Start(ctx)
 		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 

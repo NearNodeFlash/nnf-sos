@@ -75,7 +75,6 @@ var _ webhook.Validator = &Workflow{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateCreate() error {
-	workflowlog.Info("validate create", "name", w.Name)
 
 	if w.Spec.DesiredState != "proposal" {
 		return fmt.Errorf("desired state must start in 'proposal'")
@@ -86,7 +85,6 @@ func (w *Workflow) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateUpdate(old runtime.Object) error {
-	workflowlog.Info("validate update", "name", w.Name)
 
 	oldWorkflow, ok := old.(*Workflow)
 	if !ok {
@@ -170,7 +168,6 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateDelete() error {
-	workflowlog.Info("validate delete", "name", w.Name)
 	return nil
 }
 
@@ -237,7 +234,7 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 }
 
 // RuleParser defines the interface a rule parser must provide
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type RuleParser interface {
 	ReadRules() error
 	GetRuleList() []dwdparse.DWDirectiveRuleSpec
@@ -245,7 +242,7 @@ type RuleParser interface {
 }
 
 // RuleList contains the rules to be applied for a particular driver
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type RuleList struct {
 	rules []dwdparse.DWDirectiveRuleSpec
 }
@@ -289,7 +286,7 @@ func (r *RuleList) GetRuleList() []dwdparse.DWDirectiveRuleSpec {
 var _ RuleParser = &MutatingRuleParser{}
 
 // MutatingRuleParser provides the rulelist
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type MutatingRuleParser struct {
 	RuleList
 }
@@ -322,11 +319,13 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 			continue
 		}
 
-		driverStatus := WorkflowDriverStatus{}
-		driverStatus.DriverID = label
 		// Register states for this driver
-		driverStatus.DWDIndex = index
-		driverStatus.WatchState = state
+		driverStatus := WorkflowDriverStatus{
+			DriverID:   label,
+			DWDIndex:   index,
+			WatchState: state,
+			Status:     StatusPending,
+		}
 		workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
 		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
 	}
@@ -336,7 +335,7 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 var _ RuleParser = &ValidatingRuleParser{}
 
 // ValidatingRuleParser provides the rulelist
-//+kubebuilder:object:generate=false
+// +kubebuilder:object:generate=false
 type ValidatingRuleParser struct {
 	RuleList
 }

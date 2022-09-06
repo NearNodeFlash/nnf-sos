@@ -290,19 +290,6 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
-  - nnfdatamovementworkflows
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfnodeecdata
   verbs:
   - create
