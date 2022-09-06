@@ -223,7 +223,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 				if !testEnv {
 					if err := os.MkdirAll(mountPath, 0755); err != nil {
-						return err
+						return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", mountPath), err)
 					}
 				}
 

@@ -219,11 +219,6 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Call the correct "start" function based on workflow state for each directive that has registered for
 	// it. The "start" function does the initial work of setting up and creating the appropriate child resources.
 	for _, driverStatus := range driverList {
-
-		if !(driverStatus.Status == dwsv1alpha1.StatusPending || driverStatus.Status == dwsv1alpha1.StatusError) {
-			continue
-		}
-
 		log.Info("Start", "State", workflow.Status.State, "index", driverStatus.DWDIndex, "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 		result, err := startFunctions[workflow.Status.State](r, ctx, workflow, driverStatus.DWDIndex)
 		if err != nil {
@@ -233,6 +228,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
+		driverStatus.Status = dwsv1alpha1.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -242,7 +238,6 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		log.Info("Start done", "State", workflow.Status.State, "index", driverStatus.DWDIndex)
-		driverStatus.Status = dwsv1alpha1.StatusRunning
 	}
 
 	finishFunctions := map[string]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*ctrl.Result, error){
@@ -931,7 +926,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			case "xfs", "gfs2":
 				return filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(index), path)
 			case "lustre":
-				return path
+				return access.Spec.MountPath + path
 			}
 		}
 
