@@ -118,13 +118,3 @@ func addDirectiveIndexLabel(object metav1.Object, index int) {
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	object.SetLabels(labels)
 }
-
-func addTeardownStateLabel(object metav1.Object, state string) {
-	labels := object.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	labels[teardownStateLabel] = state
-	object.SetLabels(labels)
-}

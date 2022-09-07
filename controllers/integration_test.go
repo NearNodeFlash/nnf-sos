@@ -1138,7 +1138,7 @@ var _ = Describe("Integration Test", func() {
 				}
 				dwsv1alpha1.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha1.AddOwnerLabels(dm, workflow)
-				addTeardownStateLabel(dm, dwsv1alpha1.StatePostRun.String())
+				nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, dwsv1alpha1.StatePostRun.String())
 
 				Expect(k8sClient.Create(context.TODO(), dm)).To(Succeed())
 
