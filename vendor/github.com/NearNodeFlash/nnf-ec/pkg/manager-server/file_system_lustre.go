@@ -201,6 +201,14 @@ func (f *FileSystemLustre) Unmount(mountpoint string) error {
 	return nil
 }
 
+func (f *FileSystemLustre) GenerateRecoveryData() map[string]string {
+	return map[string]string{}
+}
+
+func (f *FileSystemLustre) LoadRecoveryData(map[string]string) {
+
+}
+
 func (f *FileSystemLustre) zfsTargType() string {
 	return strings.ToLower(string(f.targetType))
 }

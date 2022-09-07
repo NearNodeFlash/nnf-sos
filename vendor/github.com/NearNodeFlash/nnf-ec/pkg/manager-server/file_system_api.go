@@ -81,13 +81,16 @@ type FileSystemApi interface {
 
 	Mount(mountpoint string) error
 	Unmount(mountpoint string) error
+
+	GenerateRecoveryData() map[string]string
+	LoadRecoveryData(data map[string]string)
 }
 
 // FileSystem - Represents an abstract file system, with individual operations
 // defined by the underlying FileSystemApi implementation
 type FileSystem struct {
-	name       string
-	devices    []string
+	name    string
+	devices []string
 }
 
 type FileSystemError struct {

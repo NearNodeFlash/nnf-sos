@@ -67,3 +67,11 @@ func (f *FileSystemZfs) Unmount(mountpoint string) error {
 
 	return err
 }
+
+func (f *FileSystemZfs) GenerateRecoveryData() map[string]string {
+	return map[string]string{}
+}
+
+func (f *FileSystemZfs) LoadRecoveryData(map[string]string) {
+
+}
