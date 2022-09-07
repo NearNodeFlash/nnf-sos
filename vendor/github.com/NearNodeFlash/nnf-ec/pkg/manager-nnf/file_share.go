@@ -174,6 +174,8 @@ func (rh *fileShareRecoveryReplayHandler) Metadata(data []byte) error {
 
 	rh.fileSystem = rh.storageService.findFileSystem(metadata.FileSystemId)
 	storageGroup := rh.storageService.findStorageGroup(metadata.StorageGroupId)
+	
+	rh.fileSystem.fsApi.LoadDeviceList(storageGroup.serverStorage.Devices())
 
 	rh.fileShare = rh.fileSystem.createFileShare(rh.fileShareId, storageGroup, metadata.MountRoot)
 

@@ -27,9 +27,10 @@ import (
 )
 
 const (
-	VolumeGroupName = "volumeGroupName"
+	VolumeGroupName   = "volumeGroupName"
 	LogicalVolumeName = "logicalVolumeName"
 )
+
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
@@ -190,20 +191,15 @@ func (f *FileSystemLvm) Mount(mountpoint string) error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("mount --bind %s %s", f.devPath(), mountpoint)); err != nil {
+	mounted, err := f.IsMountPoint(mountpoint)
+	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (f *FileSystemLvm) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
-	}
-
-	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
-		return err
+	
+	if !mounted {
+		if _, err := f.run(fmt.Sprintf("mount --bind %s %s", f.devPath(), mountpoint)); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -211,7 +207,7 @@ func (f *FileSystemLvm) Unmount(mountpoint string) error {
 
 func (f *FileSystemLvm) GenerateRecoveryData() map[string]string {
 	return map[string]string{
-		VolumeGroupName: f.vgName,
+		VolumeGroupName:   f.vgName,
 		LogicalVolumeName: f.lvName,
 	}
 }

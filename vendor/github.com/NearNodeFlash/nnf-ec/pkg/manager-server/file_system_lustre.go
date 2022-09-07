@@ -171,25 +171,44 @@ func (f *FileSystemLustre) Mount(mountpoint string) error {
 		}
 	}
 
-	var devName string = f.devices[0]
-	if f.backFs == BackFsZfs {
-		devName = f.zfsVolName()
-	}
-	err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", devName, mountpoint))
+	mounted, err := f.FileSystem.IsMountPoint(mountpoint)
 	if err != nil {
 		return err
+	}
+
+	if !mounted {
+		var devName string 
+		if f.backFs == BackFsZfs {
+			devName = f.zfsVolName()
+		} else {
+			devName = f.devices[0]
+		}
+		
+		err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", devName, mountpoint))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (f *FileSystemLustre) Unmount(mountpoint string) error {
-	if len(mountpoint) > 0 {
-		err := runCmd(f, fmt.Sprintf("umount %s", mountpoint))
-		if err != nil {
+	if mountpoint == "" {
+		return nil
+	}
+
+	mounted, err := f.IsMountPoint(mountpoint)
+	if err != nil {
+		return err
+	}
+
+	if mounted {
+		if err := runCmd(f, fmt.Sprintf("umount %s", mountpoint)); err != nil {
 			return err
 		}
 	}
+
 	if err := os.Remove(mountpoint); err != nil {
 		// Log anything other than ErrNotExist.
 		if os.IsNotExist(err) == false {

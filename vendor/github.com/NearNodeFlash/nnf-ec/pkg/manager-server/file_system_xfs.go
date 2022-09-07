@@ -65,23 +65,16 @@ func (f *FileSystemXfs) Mount(mountpoint string) error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("mount %s %s", f.FileSystemLvm.devPath(), mountpoint)); err != nil {
+	mounted, err := f.IsMountPoint(mountpoint)
+	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (f *FileSystemXfs) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
+	if !mounted {
+		if _, err := f.run(fmt.Sprintf("mount %s %s", f.FileSystemLvm.devPath(), mountpoint)); err != nil {
+			return err
+		}
 	}
-
-	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
-		return err
-	}
-
-	mountpoint = ""
 
 	return nil
 }
