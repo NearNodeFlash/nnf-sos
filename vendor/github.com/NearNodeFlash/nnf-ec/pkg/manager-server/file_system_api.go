@@ -100,9 +100,25 @@ func (f *FileSystem) LoadDeviceList(devices []string) {
 	f.devices = devices
 }
 
-func (f *FileSystem) IsMountPoint(mountpoint string) (bool, error) {
+func (f *FileSystem) mount(source string, target string, fstype string, options []string) error{
+
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return err
+	}
+
 	mounter := mount.New("")
-	return mounter.IsMountPoint(mountpoint)
+	mounted, err := mounter.IsMountPoint(target)
+	if err != nil {
+		return err
+	}
+
+	if !mounted {
+		if err := mounter.Mount(source, target, fstype, options); err != nil {
+			log.Errorf("Mount failed: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (f *FileSystem) Unmount(mountpoint string) error {
@@ -118,6 +134,7 @@ func (f *FileSystem) Unmount(mountpoint string) error {
 
 	if mounted {
 		if err := mounter.Unmount(mountpoint); err != nil {
+			log.Errorf("Unmount failed: %w", err)
 			return err
 		}
 	}

@@ -163,61 +163,14 @@ func (f *FileSystemLustre) Delete() error {
 
 func (f *FileSystemLustre) Mount(mountpoint string) error {
 
-	if err := os.MkdirAll(mountpoint, 0755); err != nil {
-		// Skip anything other than ErrExist.
-		if os.IsExist(err) == false {
-			log.Error(err, "Unable to create mountpoint", " mountpoint ", mountpoint)
-			return err
-		}
+	var devName string 
+	if f.backFs == BackFsZfs {
+		devName = f.zfsVolName()
+	} else {
+		devName = f.devices[0]
 	}
 
-	mounted, err := f.FileSystem.IsMountPoint(mountpoint)
-	if err != nil {
-		return err
-	}
-
-	if !mounted {
-		var devName string 
-		if f.backFs == BackFsZfs {
-			devName = f.zfsVolName()
-		} else {
-			devName = f.devices[0]
-		}
-		
-		err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", devName, mountpoint))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (f *FileSystemLustre) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
-	}
-
-	mounted, err := f.IsMountPoint(mountpoint)
-	if err != nil {
-		return err
-	}
-
-	if mounted {
-		if err := runCmd(f, fmt.Sprintf("umount %s", mountpoint)); err != nil {
-			return err
-		}
-	}
-
-	if err := os.Remove(mountpoint); err != nil {
-		// Log anything other than ErrNotExist.
-		if os.IsNotExist(err) == false {
-			// Just log it, don't fuss over it.
-			log.Info("Unable to remove mountpoint; continuing", "mountpoint", mountpoint, "err", err)
-		}
-	}
-
-	return nil
+	return f.mount(devName, mountpoint, "lustre", nil)
 }
 
 func (f *FileSystemLustre) GenerateRecoveryData() map[string]string {
