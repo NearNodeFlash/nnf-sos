@@ -195,8 +195,17 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	ready, err := r.getNodeStorageEndpointStatus(ctx, access, storageMapping)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if ready == false {
+		return ctrl.Result{}, nil
+	}
+
 	// Aggregate the status from all the ClientMount resources
-	ready, err := r.getClientMountStatus(ctx, access, clientList)
+	ready, err = r.getClientMountStatus(ctx, access, clientList)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -646,6 +655,7 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 			if mount.Device.DeviceReference == nil {
 				continue
 			}
+
 			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
 				continue
 			}
@@ -704,6 +714,55 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 	return nil
 }
 
+func (r *NnfAccessReconciler) getNodeStorageEndpointStatus(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) (bool, error) {
+	// NnfNodeStorage clientReferences only need to be checked for compute nodes. If
+	// this nnfAccess is not for compute nodes, then there's no work to do.
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return true, nil
+	}
+
+	nodeStorageMap := make(map[corev1.ObjectReference]bool)
+
+	// Make a map of NnfNodeStorage references that were mounted by this
+	// nnfAccess
+	for _, storageList := range storageMapping {
+		for _, mount := range storageList {
+			if mount.Device.DeviceReference == nil {
+				continue
+			}
+
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
+				continue
+			}
+
+			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = true
+		}
+	}
+
+	// Update each of the NnfNodeStorage resources to remove the clientEndpoints that
+	// were added earlier. Leave the first endpoint since that corresponds to the
+	// rabbit node.
+	for nodeStorageReference := range nodeStorageMap {
+		namespacedName := types.NamespacedName{
+			Name:      nodeStorageReference.Name,
+			Namespace: nodeStorageReference.Namespace,
+		}
+
+		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
+		err := r.Get(ctx, namespacedName, nnfNodeStorage)
+		if err != nil {
+			return false, err
+		}
+
+		if nnfNodeStorage.Status.Error != nil {
+			access.Status.Error = nnfNodeStorage.Status.Error
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 // removeNodeStorageEndpoints modifies the NnfNodeStorage resources to remove the client endpoints for the
 // compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
 // those compute nodes and remove access to the NVMe namespaces from the computes.
@@ -721,6 +780,10 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 	for _, storageList := range storageMapping {
 		for _, mount := range storageList {
 			if mount.Device.DeviceReference == nil {
+				continue
+			}
+
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
 				continue
 			}
 

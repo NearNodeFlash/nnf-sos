@@ -1280,12 +1280,12 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-
 			err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
 			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(err)
+		}
+
+		if access.Status.Error != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(access.Status.Error)
 		}
 
 		if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
@@ -1395,6 +1395,10 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err == nil {
+		if access.Status.Error != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not unmount file system from compute nodes").WithError(access.Status.Error)
+		}
+
 		if access.Status.State != "unmounted" || access.Status.Ready != true {
 			return &ctrl.Result{}, nil
 		}
