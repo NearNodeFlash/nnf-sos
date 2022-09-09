@@ -143,8 +143,7 @@ func (n *NnfDataMovementList) GetObjectList() []client.Object {
 
 const (
 	// DataMovementTeardownStateLabel is the label applied to Data Movement and related resources that describes
-	// what workflow state the resource is no longer need and can be safely deleted. The finish logic filters objects
-	// by the current workflow state to only delete the correct resources.
+	// the workflow state when the resource is no longer need and can be safely deleted.
 	DataMovementTeardownStateLabel = "nnf.cray.hpe.com/teardown_state"
 )
 
