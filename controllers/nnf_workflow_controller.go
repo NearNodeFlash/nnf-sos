@@ -58,11 +58,6 @@ const (
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished in using the resource.
 	finalizerNnfWorkflow = "nnf.cray.hpe.com/nnf_workflow"
-
-	// teardownStateLabel is a label applied to NnfAccess resources to determine when
-	// they should be deleted. The delete code filters by the current workflow state
-	// to only delete the correct NnfAccess resources
-	teardownStateLabel = "nnf.cray.hpe.com/teardown_state"
 )
 
 type nnfResourceState int
@@ -969,8 +964,8 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 				dwsv1alpha1.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha1.AddOwnerLabels(dm, workflow)
+				nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 				addDirectiveIndexLabel(dm, index)
-				addTeardownStateLabel(dm, workflow.Status.State)
 
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
@@ -1005,8 +1000,8 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		dwsv1alpha1.AddWorkflowLabels(dm, workflow)
 		dwsv1alpha1.AddOwnerLabels(dm, workflow)
+		nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 		addDirectiveIndexLabel(dm, index)
-		addTeardownStateLabel(dm, workflow.Status.State)
 
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
@@ -1053,8 +1048,8 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 		func() error {
 			dwsv1alpha1.AddWorkflowLabels(access, workflow)
 			dwsv1alpha1.AddOwnerLabels(access, workflow)
+			nnfv1alpha1.AddDataMovementTeardownStateLabel(access, teardownState)
 			addDirectiveIndexLabel(access, index)
-			addTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
 				DesiredState:    "mounted",
@@ -1095,7 +1090,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-	matchingLabels[teardownStateLabel] = workflow.Status.State
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = workflow.Status.State
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -1280,12 +1275,12 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-
 			err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
 			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(err)
+		}
+
+		if access.Status.Error != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(access.Status.Error)
 		}
 
 		if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
@@ -1336,7 +1331,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 	// Wait for data movement resources to complete
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[teardownStateLabel] = workflow.Status.State
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = workflow.Status.State
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -1395,6 +1390,10 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err == nil {
+		if access.Status.Error != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not unmount file system from compute nodes").WithError(access.Status.Error)
+		}
+
 		if access.Status.State != "unmounted" || access.Status.Ready != true {
 			return &ctrl.Result{}, nil
 		}
