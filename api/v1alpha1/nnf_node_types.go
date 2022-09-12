@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	"github.com/HewlettPackard/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -95,6 +96,10 @@ type NnfNode struct {
 
 	Spec   NnfNodeSpec   `json:"spec,omitempty"`
 	Status NnfNodeStatus `json:"status,omitempty"`
+}
+
+func (n *NnfNode) GetStatus() updater.Status[*NnfNodeStatus] {
+	return &n.Status
 }
 
 //+kubebuilder:object:root=true

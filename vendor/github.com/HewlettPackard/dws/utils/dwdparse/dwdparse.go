@@ -37,6 +37,7 @@ type DWDirectiveRuleDef struct {
 	Max             int    `json:"max,omitempty"`
 	IsRequired      bool   `json:"isRequired,omitempty"`
 	IsValueRequired bool   `json:"isValueRequired,omitempty"`
+	UniqueWithin    string `json:"uniqueWithin,omitempty"`
 }
 
 // DWDirectiveRuleSpec defines the desired state of DWDirective
@@ -135,7 +136,7 @@ func BuildArgsMap(dwd string) (map[string]string, error) {
 // For cases where an unknown command may be allowed because there may be other handlers for that command
 //
 //	failUnknownCommand = false
-func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownCommand bool) error {
+func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, uniqueMap map[string]bool, failUnknownCommand bool) error {
 	command := args["command"]
 
 	// Determine the rules map for command
@@ -204,6 +205,15 @@ func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownC
 				return errors.New("unsupported value type: " + rule.Type)
 			}
 
+			if rule.UniqueWithin != "" {
+				_, ok := uniqueMap[rule.UniqueWithin+"/"+v]
+				if ok {
+					return fmt.Errorf("Value '%s' must be unique within '%s'", v, rule.UniqueWithin)
+				}
+
+				uniqueMap[rule.UniqueWithin+"/"+v] = true
+			}
+
 			// NOTE: We know that we don't have repeated arguments here because the arguments
 			//       come to us in a map indexed by the argment name.
 			argToRuleMap[rule] = k
@@ -225,7 +235,7 @@ func ValidateArgs(args map[string]string, rule DWDirectiveRuleSpec, failUnknownC
 }
 
 // ValidateDWDirective validates a set of #DW directives against a specified rule set
-func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, failUnknownCommand bool) (bool, error) {
+func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, uniqueMap map[string]bool, failUnknownCommand bool) (bool, error) {
 
 	// Build a map of the #DW commands and arguments
 	argsMap, err := BuildArgsMap(dwd)
@@ -245,7 +255,7 @@ func ValidateDWDirective(rule DWDirectiveRuleSpec, dwd string, failUnknownComman
 		return true, nil
 	}
 
-	err = ValidateArgs(argsMap, rule, failUnknownCommand)
+	err = ValidateArgs(argsMap, rule, uniqueMap, failUnknownCommand)
 	if err != nil {
 		return false, err
 	}

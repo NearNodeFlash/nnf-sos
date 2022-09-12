@@ -22,6 +22,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/HewlettPackard/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -58,6 +59,7 @@ var workflowStrings = [...]string{
 	"teardown",
 }
 
+// Strings associated with workflow statuses
 const (
 	StatusPending    = "Pending"
 	StatusQueued     = "Queued"
@@ -118,7 +120,7 @@ type WorkflowDriverStatus struct {
 	// User readable reason.
 	// For the CDS driver, this could be the state of the underlying
 	// data movement request:  Pending, Queued, Running, Completed or Error
-	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error
+	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error;DriverWait
 	Status string `json:"status,omitempty"`
 
 	Message string `json:"message,omitempty"`
@@ -192,6 +194,10 @@ type Workflow struct {
 
 	Spec   WorkflowSpec   `json:"spec,omitempty"`
 	Status WorkflowStatus `json:"status,omitempty"`
+}
+
+func (c *Workflow) GetStatus() updater.Status[*WorkflowStatus] {
+	return &c.Status
 }
 
 //+kubebuilder:object:root=true

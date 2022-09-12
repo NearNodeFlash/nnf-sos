@@ -262,6 +262,7 @@ spec:
                       - Running
                       - Completed
                       - Error
+                      - DriverWait
                       type: string
                     taskID:
                       type: string

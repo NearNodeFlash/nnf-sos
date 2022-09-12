@@ -104,6 +104,7 @@ type ServersList struct {
 	Items           []Servers `json:"items"`
 }
 
+// GetObjectList returns a list of Servers references.
 func (s *ServersList) GetObjectList() []client.Object {
 	objectList := []client.Object{}
 

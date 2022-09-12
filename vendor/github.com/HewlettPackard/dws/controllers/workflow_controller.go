@@ -38,6 +38,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/controllers/metrics"
+	"github.com/HewlettPackard/dws/utils/updater"
 )
 
 const (
@@ -81,17 +82,15 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 
 	// Fetch the Workflow workflow
 	workflow := &dwsv1alpha1.Workflow{}
-
 	if err := r.Get(ctx, req.NamespacedName, workflow); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := newWorkflowStatusUpdater(workflow)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(ctx, r)
-		}
-	}()
+	// Create a status updater that handles the call to r.Update() if any of the fields
+	// in workflow.Status{} change. This is necessary since Status is not a subresource
+	// of the workflow.
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.WorkflowStatus](workflow)
+	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	// Check if the object is being deleted
 	if !workflow.GetDeletionTimestamp().IsZero() {

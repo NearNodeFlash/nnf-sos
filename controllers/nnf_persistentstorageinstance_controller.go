@@ -37,6 +37,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -76,13 +77,6 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
-	statusUpdater := newPersistentStorageStatusUpdater(persistentStorage)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(ctx, r)
-		}
-	}()
 
 	if !persistentStorage.GetDeletionTimestamp().IsZero() {
 		log.Info("Deleting")
@@ -126,6 +120,9 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.PersistentStorageInstanceStatus](persistentStorage)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+
 	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -150,6 +147,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	persistentStorage.Status.State = dwsv1alpha1.PSIStateCreating // Temp until Tony fixes the State value
 	persistentStorage.Status.Servers = v1.ObjectReference{
 		Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
 		Name:      servers.Name,
@@ -196,29 +194,6 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 	}
 
 	return server, err
-}
-
-type persistentStorageStatusUpdater struct {
-	persistentStorage *dwsv1alpha1.PersistentStorageInstance
-	existingStatus    dwsv1alpha1.PersistentStorageInstanceStatus
-}
-
-func newPersistentStorageStatusUpdater(p *dwsv1alpha1.PersistentStorageInstance) *persistentStorageStatusUpdater {
-	return &persistentStorageStatusUpdater{
-		persistentStorage: p,
-		existingStatus:    (*p.DeepCopy()).Status,
-	}
-}
-
-func (p *persistentStorageStatusUpdater) close(ctx context.Context, r *PersistentStorageReconciler) error {
-	if !reflect.DeepEqual(p.persistentStorage.Status, p.existingStatus) {
-		err := r.Status().Update(ctx, p.persistentStorage)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

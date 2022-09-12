@@ -41,13 +41,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
-	"github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
+	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -179,18 +180,8 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}
 
 	// Prepare to update the node's status
-	statusUpdater := newStatusUpdater(node)
-
-	// Use the defer logic to submit a final update to the node's status, if required.
-	// This modifies the return err on failure, such that it is automatically retried
-	// by the controller if non-nil error is returned.
-	defer func() {
-		if err == nil {
-			if err = statusUpdater.Close(ctx, r); err != nil { // NOTE: err here is the named returned value
-				r.Log.Info(fmt.Sprintf("Failed to update status with error %s", err))
-			}
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](node)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Access the default storage service running in the NNF Element
 	// Controller. Check for any State/Health change.
@@ -206,35 +197,24 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	if node.Status.Status != nnfv1alpha1.ResourceStatus(storageService.Status) ||
-		node.Status.Health != nnfv1alpha1.ResourceHealth(storageService.Status) {
-		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-			s.Status = nnfv1alpha1.ResourceStatus(storageService.Status)
-			s.Health = nnfv1alpha1.ResourceHealth(storageService.Status)
-		})
-	}
+	node.Status.Status = nnfv1alpha1.ResourceStatus(storageService.Status)
+	node.Status.Health = nnfv1alpha1.ResourceHealth(storageService.Status)
 
-	// Update the capacity and capacity allocated to reflect the current
-	// values.
+	// Update the capacity and capacity allocated to reflect the current values.
 	capacitySource := &sf.CapacityCapacitySource{}
 	if err := ss.StorageServiceIdCapacitySourceGet(ss.Id(), capacitySource); err != nil {
 		log.Error(err, "Failed to retrieve Storage Service Capacity")
 		return ctrl.Result{}, err
 	}
 
-	if node.Status.Capacity != capacitySource.ProvidedCapacity.Data.GuaranteedBytes ||
-		node.Status.CapacityAllocated != capacitySource.ProvidedCapacity.Data.AllocatedBytes {
-		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-			s.Capacity = capacitySource.ProvidedCapacity.Data.GuaranteedBytes
-			s.CapacityAllocated = capacitySource.ProvidedCapacity.Data.AllocatedBytes
-		})
-	}
+	node.Status.Capacity = capacitySource.ProvidedCapacity.Data.GuaranteedBytes
+	node.Status.CapacityAllocated = capacitySource.ProvidedCapacity.Data.AllocatedBytes
 
-	if err := updateServers(node, statusUpdater, log); err != nil {
+	if err := updateServers(node, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := updateDrives(node, statusUpdater, log); err != nil {
+	if err := updateDrives(node, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -262,9 +242,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		for i := range node.Status.Servers {
 			server := &node.Status.Servers[i]
 			if server.ID == "0" {
-				statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-					s.Servers[i].Hostname = storageNode.Name
-				})
+				node.Status.Servers[i].Hostname = storageNode.Name
 				continue
 			}
 
@@ -273,9 +251,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 					continue
 				}
 
-				statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-					s.Servers[i].Hostname = compute.Name
-				})
+				node.Status.Servers[i].Hostname = compute.Name
 			}
 		}
 	}
@@ -310,7 +286,7 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
 }
 
 // Update the Servers status of the NNF Node if necessary
-func updateServers(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log logr.Logger) error {
+func updateServers(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 
 	ss := nnf.NewDefaultStorageService()
 
@@ -322,9 +298,7 @@ func updateServers(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log 
 	}
 
 	if len(node.Status.Servers) < len(serverEndpointCollection.Members) {
-		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-			s.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
-		})
+		node.Status.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
 	}
 
 	// Iterate over the server endpoints to ensure we've reflected
@@ -338,18 +312,11 @@ func updateServers(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log 
 			return err
 		}
 
-		if node.Status.Servers[idx].ID != serverEndpoint.Id || node.Status.Servers[idx].Name != serverEndpoint.Name {
-			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].ID = serverEndpoint.Id
-				s.Servers[idx].Name = serverEndpoint.Name
-			})
-		}
-
-		if node.Status.Servers[idx].Status != nnfv1alpha1.ResourceStatus(serverEndpoint.Status) || node.Status.Servers[idx].Health != nnfv1alpha1.ResourceHealth(serverEndpoint.Status) {
-			statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-				s.Servers[idx].Status = nnfv1alpha1.ResourceStatus(serverEndpoint.Status)
-				s.Servers[idx].Health = nnfv1alpha1.ResourceHealth(serverEndpoint.Status)
-			})
+		node.Status.Servers[idx].NnfResourceStatus = nnfv1alpha1.NnfResourceStatus{
+			ID:     serverEndpoint.Id,
+			Name:   serverEndpoint.Name,
+			Status: nnfv1alpha1.ResourceStatus(serverEndpoint.Status),
+			Health: nnfv1alpha1.ResourceHealth(serverEndpoint.Status),
 		}
 	}
 
@@ -357,7 +324,7 @@ func updateServers(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log 
 }
 
 // Update the Drives status of the NNF Node if necessary
-func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log logr.Logger) error {
+func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 	storageService := nvme.NewDefaultStorageService()
 
 	storageCollection := &sf.StorageCollectionStorageCollection{}
@@ -367,9 +334,7 @@ func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log l
 	}
 
 	if len(node.Status.Drives) < len(storageCollection.Members) {
-		statusUpdater.Update(func(s *nnfv1alpha1.NnfNodeStatus) {
-			s.Drives = make([]nnfv1alpha1.NnfDriveStatus, len(storageCollection.Members))
-		})
+		node.Status.Drives = make([]nnfv1alpha1.NnfDriveStatus, len(storageCollection.Members))
 	}
 
 	// Iterate over the storage devices and controllers to ensure we've reflected
@@ -384,18 +349,11 @@ func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log l
 			return err
 		}
 
-		if drive.ID != storage.Id || drive.Name != storage.Name {
-			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-				drive.ID = storage.Id
-				drive.Name = storage.Name
-			})
-		}
-
-		if drive.Status != nnfv1alpha1.ResourceStatus(storage.Status) || drive.Health != nnfv1alpha1.ResourceHealth(storage.Status) {
-			statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-				drive.Status = nnfv1alpha1.ResourceStatus(storage.Status)
-				drive.Health = nnfv1alpha1.ResourceHealth(storage.Status)
-			})
+		drive.NnfResourceStatus = nnfv1alpha1.NnfResourceStatus{
+			ID:     storage.Id,
+			Name:   storage.Name,
+			Status: nnfv1alpha1.ResourceStatus(storage.Status),
+			Health: nnfv1alpha1.ResourceHealth(storage.Status),
 		}
 
 		if storage.Status.State == sf.ENABLED_RST {
@@ -417,12 +375,8 @@ func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log l
 					return err
 				}
 
-				if drive.Model != storageController.Model || drive.WearLevel != int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage) {
-					statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-						drive.Model = storageController.Model
-						drive.WearLevel = int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage)
-					})
-				}
+				drive.Model = storageController.Model
+				drive.WearLevel = int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage)
 			}
 
 			// The Swordfish architecture places capacity information in a Storage device's Storage Pools. For our implementation,
@@ -433,39 +387,10 @@ func updateDrives(node *nnfv1alpha1.NnfNode, statusUpdater *statusUpdater, log l
 				return err
 			}
 
-			if drive.Capacity != storagePool.CapacityBytes {
-				statusUpdater.Update(func(*nnfv1alpha1.NnfNodeStatus) {
-					drive.Capacity = storagePool.CapacityBytes
-				})
-			}
+			drive.Capacity = storagePool.CapacityBytes
 		}
 	}
 
-	return nil
-}
-
-type statusUpdater struct {
-	node        *nnfv1alpha1.NnfNode
-	needsUpdate bool
-}
-
-func newStatusUpdater(node *nnfv1alpha1.NnfNode) *statusUpdater {
-	return &statusUpdater{
-		node:        node,
-		needsUpdate: false,
-	}
-}
-
-func (s *statusUpdater) Update(update func(status *nnfv1alpha1.NnfNodeStatus)) {
-	update(&s.node.Status)
-	s.needsUpdate = true
-}
-
-func (s *statusUpdater) Close(ctx context.Context, r *NnfNodeReconciler) error {
-	defer func() { s.needsUpdate = false }()
-	if s.needsUpdate {
-		return r.Status().Update(ctx, s.node)
-	}
 	return nil
 }
 

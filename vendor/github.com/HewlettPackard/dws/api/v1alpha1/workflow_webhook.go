@@ -206,13 +206,15 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 		return err
 	}
 
+	uniqueMap := make(map[string]bool)
+
 	for i, directive := range workflow.Spec.DWDirectives {
 		validDirective := false
 		for _, rule := range ruleParser.GetRuleList() {
 			// validate #DW syntax
 			const rejectUnsupportedCommands bool = true
 
-			valid, err := dwdparse.ValidateDWDirective(rule, directive, rejectUnsupportedCommands)
+			valid, err := dwdparse.ValidateDWDirective(rule, directive, uniqueMap, rejectUnsupportedCommands)
 			if err != nil {
 				// #DW parser validation failed
 				workflowlog.Info("dwDirective validation failed", "Error", err)

@@ -47,6 +47,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	"github.com/HewlettPackard/dws/utils/updater"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -118,13 +119,8 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := newWorkflowStatusUpdater(workflow)
-	defer func() {
-		updateErr := statusUpdater.close(ctx, r)
-		if err == nil && updateErr != nil {
-			err = updateErr
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.WorkflowStatus](workflow)
+	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	driverID := os.Getenv("DWS_DRIVER_ID")
 
@@ -1530,29 +1526,6 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 	}
 
 	return psi, err
-}
-
-type workflowStatusUpdater struct {
-	workflow       *dwsv1alpha1.Workflow
-	existingStatus dwsv1alpha1.WorkflowStatus
-}
-
-func newWorkflowStatusUpdater(w *dwsv1alpha1.Workflow) *workflowStatusUpdater {
-	return &workflowStatusUpdater{
-		workflow:       w,
-		existingStatus: (*w.DeepCopy()).Status,
-	}
-}
-
-func (w *workflowStatusUpdater) close(ctx context.Context, r *NnfWorkflowReconciler) error {
-	if !reflect.DeepEqual(w.workflow.Status, w.existingStatus) {
-		err := r.Update(ctx, w.workflow)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

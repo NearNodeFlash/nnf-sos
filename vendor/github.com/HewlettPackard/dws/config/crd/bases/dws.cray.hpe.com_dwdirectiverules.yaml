@@ -64,6 +64,8 @@ spec:
                         type: string
                       type:
                         type: string
+                      uniqueWithin:
+                        type: string
                     required:
                     - key
                     - type

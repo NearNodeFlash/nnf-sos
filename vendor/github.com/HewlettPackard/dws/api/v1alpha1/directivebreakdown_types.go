@@ -20,6 +20,8 @@
 package v1alpha1
 
 import (
+	"github.com/HewlettPackard/dws/utils/updater"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,6 +158,10 @@ type DirectiveBreakdown struct {
 
 	Spec   DirectiveBreakdownSpec   `json:"spec,omitempty"`
 	Status DirectiveBreakdownStatus `json:"status,omitempty"`
+}
+
+func (db *DirectiveBreakdown) GetStatus() updater.Status[*DirectiveBreakdownStatus] {
+	return &db.Status
 }
 
 //+kubebuilder:object:root=true

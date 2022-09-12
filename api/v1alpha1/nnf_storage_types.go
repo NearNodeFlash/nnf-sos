@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -133,6 +134,10 @@ type NnfStorage struct {
 
 	Spec   NnfStorageSpec   `json:"spec,omitempty"`
 	Status NnfStorageStatus `json:"status,omitempty"`
+}
+
+func (s *NnfStorage) GetStatus() updater.Status[*NnfStorageStatus] {
+	return &s.Status
 }
 
 //+kubebuilder:object:root=true

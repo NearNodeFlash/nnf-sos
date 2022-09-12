@@ -23,7 +23,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"reflect"
 	"runtime"
 	"strings"
 	"time"
@@ -42,6 +41,7 @@ import (
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -93,12 +93,8 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
-	statusUpdater := newClientMountStatusUpdater(clientMount)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(ctx, r)
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ClientMountStatus](clientMount)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {
@@ -300,29 +296,6 @@ func (r *NnfClientMountReconciler) getFileShare(fileSystemId string, fileShareId
 	}
 
 	return sh, nil
-}
-
-type clientMountStatusUpdater struct {
-	clientMount    *dwsv1alpha1.ClientMount
-	existingStatus dwsv1alpha1.ClientMountStatus
-}
-
-func newClientMountStatusUpdater(c *dwsv1alpha1.ClientMount) *clientMountStatusUpdater {
-	return &clientMountStatusUpdater{
-		clientMount:    c,
-		existingStatus: (*c.DeepCopy()).Status,
-	}
-}
-
-func (c *clientMountStatusUpdater) close(ctx context.Context, r *NnfClientMountReconciler) error {
-	if !reflect.DeepEqual(c.clientMount.Status, c.existingStatus) {
-		err := r.Status().Update(ctx, c.clientMount)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func filterByRabbitNamespacePrefixForTest() predicate.Predicate {

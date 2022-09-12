@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -87,12 +88,8 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := newAccessStatusUpdater(access)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(ctx, r)
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfAccessStatus](access)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
@@ -920,29 +917,6 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 func clientMountName(access *nnfv1alpha1.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
-}
-
-type accessStatusUpdater struct {
-	access         *nnfv1alpha1.NnfAccess
-	existingStatus nnfv1alpha1.NnfAccessStatus
-}
-
-func newAccessStatusUpdater(a *nnfv1alpha1.NnfAccess) *accessStatusUpdater {
-	return &accessStatusUpdater{
-		access:         a,
-		existingStatus: (*a.DeepCopy()).Status,
-	}
-}
-
-func (a *accessStatusUpdater) close(ctx context.Context, r *NnfAccessReconciler) error {
-	if !reflect.DeepEqual(a.access.Status, a.existingStatus) {
-		err := r.Status().Update(ctx, a.access)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
