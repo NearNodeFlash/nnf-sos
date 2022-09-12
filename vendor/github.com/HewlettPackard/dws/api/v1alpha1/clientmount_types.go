@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	"github.com/HewlettPackard/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,6 +138,7 @@ type ClientMountInfo struct {
 // ClientMountState specifies the go type for MountState
 type ClientMountState string
 
+// ClientMountState string constants
 const (
 	ClientMountStateMounted   ClientMountState = "mounted"
 	ClientMountStateUnmounted ClientMountState = "unmounted"
@@ -187,6 +189,10 @@ type ClientMount struct {
 	Status ClientMountStatus `json:"status,omitempty"`
 }
 
+func (c *ClientMount) GetStatus() updater.Status[*ClientMountStatus] {
+	return &c.Status
+}
+
 //+kubebuilder:object:root=true
 
 // ClientMountList contains a list of ClientMount
@@ -196,6 +202,7 @@ type ClientMountList struct {
 	Items           []ClientMount `json:"items"`
 }
 
+// GetObjectList returns a list of Client references.
 func (c *ClientMountList) GetObjectList() []client.Object {
 	objectList := []client.Object{}
 

@@ -33,6 +33,23 @@ const (
 	PersistentStorageNamespaceLabel = "dws.cray.hpe.com/persistentstorage.namespace"
 )
 
+// PersistentStorageInstanceState specifies the golang type for PSIState
+type PersistentStorageInstanceState string
+
+// State enumerations
+const (
+	// The PSI resource exists in k8s, but the storage and filesystem that it represents has not been created yet
+	PSIStateCreating PersistentStorageInstanceState = "creating"
+
+	// The storage and filesystem represented by the PSI exists and is ready for use
+	PSIStateActive PersistentStorageInstanceState = "active"
+
+	// A #DW delete_persistent directive has been issued in a workflow.
+	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be deleted.
+	// New #DW persistent_dw requests after the 'Deleting' state has been entered will fail.
+	PSIStateDeleting PersistentStorageInstanceState = "deleting"
+)
+
 // PersistentStorageInstanceSpec defines the desired state of PersistentStorageInstance
 type PersistentStorageInstanceSpec struct {
 	// Name is the name given to this persistent storage instance.
@@ -50,6 +67,10 @@ type PersistentStorageInstanceSpec struct {
 type PersistentStorageInstanceStatus struct {
 	// Servers refers to the Servers resource that provides the backing storage for this storage instance
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
+	// Current state of the PersistentStorageInstance
+	// +kubebuilder:validation:Enum=creating;active;deleting
+	// +kubebuilder:default:=creating
+	State PersistentStorageInstanceState `json:"state"`
 }
 
 //+kubebuilder:object:root=true
@@ -66,13 +87,14 @@ type PersistentStorageInstance struct {
 
 //+kubebuilder:object:root=true
 
-// PersistentStorageInstanceList contains a list of PersistentStorageInstance
+// PersistentStorageInstanceList contains a list of PersistentStorageInstances
 type PersistentStorageInstanceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []PersistentStorageInstance `json:"items"`
 }
 
+// GetObjectList returns a list of PersistentStorageInstance references.
 func (p *PersistentStorageInstanceList) GetObjectList() []client.Object {
 	objectList := []client.Object{}
 

@@ -22,12 +22,10 @@ package controllers
 import (
 	"context"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 )
 
 // ClientMountReconciler reconciles a ClientMount object
@@ -64,12 +63,12 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Create a status updater that handles the call to status().Update() if any of the fields
-	// in clientMount.Status change
-	statusUpdater := newClientMountStatusUpdater(clientMount)
+	// Create a status updater that handles the call to r.Status().Update() if any of the fields
+	// in clientMount.Status{} change
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ClientMountStatus](clientMount)
 	defer func() {
 		if err == nil {
-			err = statusUpdater.close(ctx, r)
+			err = statusUpdater.CloseWithStatusUpdate(ctx, r)
 		}
 	}()
 
@@ -112,36 +111,13 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	for i, _ := range clientMount.Spec.Mounts {
+	for i := range clientMount.Spec.Mounts {
 		clientMount.Status.Mounts[i].Ready = true
 	}
 
 	clientMount.Status.Error = nil
 
 	return ctrl.Result{}, nil
-}
-
-type clientMountStatusUpdater struct {
-	clientMount    *dwsv1alpha1.ClientMount
-	existingStatus dwsv1alpha1.ClientMountStatus
-}
-
-func newClientMountStatusUpdater(c *dwsv1alpha1.ClientMount) *clientMountStatusUpdater {
-	return &clientMountStatusUpdater{
-		clientMount:    c,
-		existingStatus: (*c.DeepCopy()).Status,
-	}
-}
-
-func (c *clientMountStatusUpdater) close(ctx context.Context, r *ClientMountReconciler) error {
-	if !reflect.DeepEqual(c.clientMount.Status, c.existingStatus) {
-		err := r.Status().Update(ctx, c.clientMount)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func filterByNonRabbitNamespacePrefixForTest() predicate.Predicate {

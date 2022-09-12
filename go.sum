@@ -85,8 +85,8 @@ github.com/Azure/go-autorest/tracing v0.6.0/go.mod h1:+vhtPC754Xsa23ID7GlGsrdKBp
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/HewlettPackard/dws v0.0.0-20220901164709-192b9c0bd96c h1:dwwz8m+fb9tCpV7u83ieSXV+eHAaSFYysrUtxeatEhE=
-github.com/HewlettPackard/dws v0.0.0-20220901164709-192b9c0bd96c/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
+github.com/HewlettPackard/dws v0.0.0-20220912152524-11c69f992d06 h1:zE7+nqu4g8krOQzMY41+9qeiWvVfHxIzhoKnuM5MAkg=
+github.com/HewlettPackard/dws v0.0.0-20220912152524-11c69f992d06/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220623192103-4ce53adacc95/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
