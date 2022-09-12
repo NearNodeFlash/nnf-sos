@@ -163,42 +163,22 @@ func (f *FileSystemLustre) Delete() error {
 
 func (f *FileSystemLustre) Mount(mountpoint string) error {
 
-	if err := os.MkdirAll(mountpoint, 0755); err != nil {
-		// Skip anything other than ErrExist.
-		if os.IsExist(err) == false {
-			log.Error(err, "Unable to create mountpoint", " mountpoint ", mountpoint)
-			return err
-		}
-	}
-
-	var devName string = f.devices[0]
+	var devName string 
 	if f.backFs == BackFsZfs {
 		devName = f.zfsVolName()
-	}
-	err := runCmd(f, fmt.Sprintf("mount -t lustre %s %s", devName, mountpoint))
-	if err != nil {
-		return err
+	} else {
+		devName = f.devices[0]
 	}
 
-	return nil
+	return f.mount(devName, mountpoint, "lustre", nil)
 }
 
-func (f *FileSystemLustre) Unmount(mountpoint string) error {
-	if len(mountpoint) > 0 {
-		err := runCmd(f, fmt.Sprintf("umount %s", mountpoint))
-		if err != nil {
-			return err
-		}
-	}
-	if err := os.Remove(mountpoint); err != nil {
-		// Log anything other than ErrNotExist.
-		if os.IsNotExist(err) == false {
-			// Just log it, don't fuss over it.
-			log.Info("Unable to remove mountpoint; continuing", "mountpoint", mountpoint, "err", err)
-		}
-	}
+func (f *FileSystemLustre) GenerateRecoveryData() map[string]string {
+	return map[string]string{}
+}
 
-	return nil
+func (f *FileSystemLustre) LoadRecoveryData(map[string]string) {
+
 }
 
 func (f *FileSystemLustre) zfsTargType() string {

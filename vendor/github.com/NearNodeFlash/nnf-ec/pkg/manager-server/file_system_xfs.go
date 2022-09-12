@@ -56,32 +56,7 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 	return nil
 }
 
-func (f *FileSystemXfs) Delete() error {
-	return f.FileSystemLvm.Delete()
-}
-
 func (f *FileSystemXfs) Mount(mountpoint string) error {
-	if _, err := f.run(fmt.Sprintf("mkdir -p %s", mountpoint)); err != nil {
-		return err
-	}
-
-	if _, err := f.run(fmt.Sprintf("mount %s %s", f.FileSystemLvm.devPath(), mountpoint)); err != nil {
-		return err
-	}
-
-	return nil
+	return f.mount(f.devPath(), mountpoint, "", nil)
 }
 
-func (f *FileSystemXfs) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
-	}
-
-	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
-		return err
-	}
-
-	mountpoint = ""
-
-	return nil
-}

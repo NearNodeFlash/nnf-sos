@@ -68,6 +68,7 @@ func (*FileSystemGfs2) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemGfs2{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
+			shared:     true,
 		},
 		clusterName: oem.ClusterName,
 	}, nil
@@ -80,7 +81,7 @@ func (*FileSystemGfs2) Type() string                  { return "gfs2" }
 func (f *FileSystemGfs2) Name() string { return f.name }
 
 func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error {
-	opts["shared"] = true
+
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
 		return err
 	}
@@ -92,30 +93,6 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 	return nil
 }
 
-func (f *FileSystemGfs2) Delete() error {
-	return f.FileSystemLvm.Delete()
-}
-
 func (f *FileSystemGfs2) Mount(mountpoint string) error {
-	if _, err := f.run(fmt.Sprintf("mkdir -p %s", mountpoint)); err != nil {
-		return err
-	}
-
-	if _, err := f.run(fmt.Sprintf("mount %s %s", f.FileSystemLvm.devPath(), mountpoint)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (f *FileSystemGfs2) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
-	}
-
-	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
-		return err
-	}
-
-	return nil
+	return f.mount(f.devPath(), mountpoint, "", nil)
 }

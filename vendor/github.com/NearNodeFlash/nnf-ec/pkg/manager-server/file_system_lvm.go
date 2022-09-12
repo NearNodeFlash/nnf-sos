@@ -26,6 +26,11 @@ import (
 	"strings"
 )
 
+const (
+	VolumeGroupName   = "volumeGroupName"
+	LogicalVolumeName = "logicalVolumeName"
+)
+
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
@@ -53,20 +58,16 @@ func (f *FileSystemLvm) Name() string { return f.name }
 
 func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
-	if _, exists := opts["volumeGroupName"]; exists {
-		f.vgName = opts["volumeGroupName"].(string)
+	if _, exists := opts[VolumeGroupName]; exists {
+		f.vgName = opts[VolumeGroupName].(string)
 	} else {
 		f.vgName = fmt.Sprintf("%s_vg", f.Name())
 	}
 
-	if _, exists := opts["logicalVolumeName"]; exists {
-		f.lvName = opts["logicalVolumeName"].(string)
+	if _, exists := opts[LogicalVolumeName]; exists {
+		f.lvName = opts[LogicalVolumeName].(string)
 	} else {
 		f.lvName = fmt.Sprintf("%s_lv", f.Name())
-	}
-
-	if _, exists := opts["shared"]; exists {
-		f.shared = opts["shared"].(bool)
 	}
 
 	// TODO: Some sort of rollback mechanism on failure condition
@@ -182,31 +183,19 @@ func (f *FileSystemLvm) Delete() error {
 }
 
 func (f *FileSystemLvm) Mount(mountpoint string) error {
-	if _, err := f.run(fmt.Sprintf("mkdir -p %s", filepath.Dir(mountpoint))); err != nil {
-		return err
-	}
-
-	if _, err := f.run(fmt.Sprintf("touch %s", mountpoint)); err != nil {
-		return err
-	}
-
-	if _, err := f.run(fmt.Sprintf("mount --bind %s %s", f.devPath(), mountpoint)); err != nil {
-		return err
-	}
-
-	return nil
+	return f.mount(f.devPath(), mountpoint, "", []string{"--bind"})
 }
 
-func (f *FileSystemLvm) Unmount(mountpoint string) error {
-	if mountpoint == "" {
-		return nil
+func (f *FileSystemLvm) GenerateRecoveryData() map[string]string {
+	return map[string]string{
+		VolumeGroupName:   f.vgName,
+		LogicalVolumeName: f.lvName,
 	}
+}
 
-	if _, err := f.run(fmt.Sprintf("umount %s", mountpoint)); err != nil {
-		return err
-	}
-
-	return nil
+func (f *FileSystemLvm) LoadRecoveryData(data map[string]string) {
+	f.vgName = data[VolumeGroupName]
+	f.lvName = data[LogicalVolumeName]
 }
 
 func (f *FileSystemLvm) devPath() string {

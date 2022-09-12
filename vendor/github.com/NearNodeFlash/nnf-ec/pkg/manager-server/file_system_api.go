@@ -22,9 +22,11 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
+	"k8s.io/mount-utils"
 
 	"github.com/NearNodeFlash/nnf-ec/pkg/logging"
 )
@@ -81,13 +83,65 @@ type FileSystemApi interface {
 
 	Mount(mountpoint string) error
 	Unmount(mountpoint string) error
+
+	GenerateRecoveryData() map[string]string
+	LoadRecoveryData(data map[string]string)
+	LoadDeviceList(devices []string)
 }
 
 // FileSystem - Represents an abstract file system, with individual operations
 // defined by the underlying FileSystemApi implementation
 type FileSystem struct {
-	name       string
-	devices    []string
+	name    string
+	devices []string
+}
+
+func (f *FileSystem) LoadDeviceList(devices []string) {
+	f.devices = devices
+}
+
+func (f *FileSystem) mount(source string, target string, fstype string, options []string) error {
+
+	if err := os.MkdirAll(target, 0755); err != nil {
+		return err
+	}
+
+	mounter := mount.New("")
+	mounted, err := mounter.IsMountPoint(target)
+	if err != nil {
+		return err
+	}
+
+	if !mounted {
+		if err := mounter.Mount(source, target, fstype, options); err != nil {
+			log.Errorf("Mount failed: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (f *FileSystem) Unmount(mountpoint string) error {
+	if mountpoint == "" {
+		return nil
+	}
+
+	mounter := mount.New("")
+	mounted, err := mounter.IsMountPoint(mountpoint)
+	if err != nil {
+		return err
+	}
+
+	if mounted {
+		if err := mounter.Unmount(mountpoint); err != nil {
+			log.Errorf("Unmount failed: %v", err)
+			return err
+		}
+	}
+
+	_ = os.Remove(mountpoint) // Attempt to remove the directory but don't fuss about it if not
+
+	return nil
 }
 
 type FileSystemError struct {
