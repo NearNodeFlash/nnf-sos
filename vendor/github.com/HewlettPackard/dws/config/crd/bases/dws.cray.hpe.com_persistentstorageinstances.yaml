@@ -100,7 +100,6 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               state:
-                default: creating
                 description: Current state of the PersistentStorageInstance
                 enum:
                 - creating

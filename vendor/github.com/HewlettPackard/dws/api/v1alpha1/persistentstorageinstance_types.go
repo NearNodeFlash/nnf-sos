@@ -71,7 +71,6 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 	// Current state of the PersistentStorageInstance
 	// +kubebuilder:validation:Enum=creating;active;deleting
-	// +kubebuilder:default:=creating
 	State PersistentStorageInstanceState `json:"state"`
 }
 

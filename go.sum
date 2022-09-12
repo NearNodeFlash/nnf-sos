@@ -87,6 +87,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/HewlettPackard/dws v0.0.0-20220912170832-cfd60d860c7e h1:8iL6LKGIyms92N9wQadLDfCgDg8jHc5ElG+vpzqoftM=
 github.com/HewlettPackard/dws v0.0.0-20220912170832-cfd60d860c7e/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
+github.com/HewlettPackard/dws v0.0.0-20220912185638-8515b1a0003d h1:iQNfFqOrMwaj9bPvZZqIEoJ48vcWDvdF74Rqng1gJdo=
+github.com/HewlettPackard/dws v0.0.0-20220912185638-8515b1a0003d/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220623192103-4ce53adacc95/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=

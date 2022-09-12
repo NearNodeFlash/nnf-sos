@@ -147,6 +147,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	persistentStorage.Status.State = dwsv1alpha1.PSIStateCreating // Temp until Tony fixes the State value
 	persistentStorage.Status.Servers = v1.ObjectReference{
 		Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
 		Name:      servers.Name,
