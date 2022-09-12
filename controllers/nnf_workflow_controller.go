@@ -719,11 +719,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
-					charsWanted := 8
-					if len(dwArgs["name"]) < charsWanted {
-						charsWanted = len(dwArgs["name"])
-					}
-					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = dwArgs["name"][:charsWanted]
+					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = string(s.GetUID())[:8]
 					lustreData := mergeLustreStorageDirectiveAndProfile(dwArgs, nnfStorageProfile)
 					if len(lustreData.ExternalMGS) > 0 {
 						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = lustreData.ExternalMGS
