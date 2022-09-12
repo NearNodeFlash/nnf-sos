@@ -21,7 +21,6 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 	"runtime"
 	"strconv"
 
@@ -39,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -99,17 +99,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Create an updater for the entire node. This will handle calls to r.Status().Update() such
 	// that we can repeatedly make calls to the internal update method, with the final update
 	// occuring on the on function exit.
-	statusUpdater := newStorageStatusUpdater(storage)
-	defer func() {
-		if err == nil {
-			var updated bool
-			updated, err = statusUpdater.close(ctx, r)
-
-			if updated == true {
-				res.Requeue = true
-			}
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -378,29 +369,6 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 // - The same Rabbit node could be listed more than once within the same allocation.
 func nnfNodeStorageName(storage *nnfv1alpha1.NnfStorage, allocationSetIndex int, i int) string {
 	return storage.Namespace + "-" + storage.Name + "-" + storage.Spec.AllocationSets[allocationSetIndex].Name + "-" + strconv.Itoa(i)
-}
-
-// Storage Status Updater handles finalizing of updates to the storage object for updates to a Storage object.
-// Kubernete's requires only one such update per generation, with successive generations requiring a requeue.
-// reconciler.Status().Update() occurs when the updater is Closed() if there are changes to the status section
-type storageStatusUpdater struct {
-	storage        *nnfv1alpha1.NnfStorage
-	existingStatus nnfv1alpha1.NnfStorageStatus
-}
-
-func newStorageStatusUpdater(s *nnfv1alpha1.NnfStorage) *storageStatusUpdater {
-	return &storageStatusUpdater{
-		storage:        s,
-		existingStatus: (*s.DeepCopy()).Status,
-	}
-}
-
-func (s *storageStatusUpdater) close(ctx context.Context, r *NnfStorageReconciler) (bool, error) {
-	if !reflect.DeepEqual(s.storage.Status, s.existingStatus) {
-		return true, r.Status().Update(ctx, s.storage)
-	}
-
-	return false, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

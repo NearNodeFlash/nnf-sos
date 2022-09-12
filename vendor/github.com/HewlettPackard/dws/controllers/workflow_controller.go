@@ -90,11 +90,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	// in workflow.Status{} change. This is necessary since Status is not a subresource
 	// of the workflow.
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.WorkflowStatus](workflow)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.CloseWithUpdate(ctx, r)
-		}
-	}()
+	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	// Check if the object is being deleted
 	if !workflow.GetDeletionTimestamp().IsZero() {

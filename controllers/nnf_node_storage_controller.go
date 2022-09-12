@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +47,7 @@ import (
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -110,12 +110,8 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// so when we would normally call "return ctrl.Result{}, nil", at that time
 	// "err" is nil - and if permitted we will update err with the result of
 	// the r.Update()
-	statusUpdater := newNodeStorageStatusUpdater(ctx, nodeStorage)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(r)
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStorageStatus](nodeStorage)
+	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	// Check if the object is being deleted. Deletion is carefully coordinated around
 	// the NNF resources being managed by this NNF Node Storage resource. For a
@@ -131,7 +127,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		for i := range nodeStorage.Status.Allocations {
 			// Release physical storage
-			result, err := r.deleteStorage(statusUpdater, nodeStorage, i)
+			result, err := r.deleteStorage(nodeStorage, i)
 			if err != nil {
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -170,16 +166,17 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Initialize the status section with empty allocation statuses.
 	if len(nodeStorage.Status.Allocations) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			nodeStorage.Status.Allocations = make([]nnfv1alpha1.NnfNodeStorageAllocationStatus, nodeStorage.Spec.Count)
-			for i := range nodeStorage.Status.Allocations {
-				nodeStorage.Status.Allocations[i].Conditions = nnfv1alpha1.NewConditions()
-				nodeStorage.Status.Allocations[i].StoragePool.Status = nnfv1alpha1.ResourceStarting
-				nodeStorage.Status.Allocations[i].StorageGroup.Status = nnfv1alpha1.ResourceStarting
-				nodeStorage.Status.Allocations[i].FileSystem.Status = nnfv1alpha1.ResourceStarting
-				nodeStorage.Status.Allocations[i].FileShare.Status = nnfv1alpha1.ResourceStarting
-			}
-		})
+		nodeStorage.Status.Allocations = make([]nnfv1alpha1.NnfNodeStorageAllocationStatus, nodeStorage.Spec.Count)
+
+		for i := range nodeStorage.Status.Allocations {
+			allocation := &nodeStorage.Status.Allocations[i]
+
+			allocation.Conditions = nnfv1alpha1.NewConditions()
+			allocation.StoragePool.Status = nnfv1alpha1.ResourceStarting
+			allocation.StorageGroup.Status = nnfv1alpha1.ResourceStarting
+			allocation.FileSystem.Status = nnfv1alpha1.ResourceStarting
+			allocation.FileShare.Status = nnfv1alpha1.ResourceStarting
+		}
 
 		return ctrl.Result{}, nil
 	}
@@ -189,7 +186,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Loop through each allocation and create the storage
 	for i := 0; i < nodeStorage.Spec.Count; i++ {
 		// Allocate physical storage
-		result, err := r.allocateStorage(statusUpdater, nodeStorage, i)
+		result, err := r.allocateStorage(nodeStorage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -198,7 +195,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Create a block device in /dev that is accessible on the Rabbit node
-		result, err = r.createBlockDevice(ctx, statusUpdater, nodeStorage, i)
+		result, err = r.createBlockDevice(ctx, nodeStorage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -207,7 +204,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Format the block device from the Rabbit with a file system (if needed)
-		result, err = r.formatFileSystem(statusUpdater, nodeStorage, i)
+		result, err = r.formatFileSystem(nodeStorage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -219,7 +216,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService()
@@ -228,16 +225,14 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 
 	condition := &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexCreateStoragePool]
 	if len(allocationStatus.StoragePool.ID) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			condition.LastTransitionTime = metav1.Now()
-			condition.Status = metav1.ConditionTrue
-		})
+		condition.LastTransitionTime = metav1.Now()
+		condition.Status = metav1.ConditionTrue
 	}
 
 	storagePoolID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
-		statusUpdater.updateError(condition, &allocationStatus.StoragePool, err)
+		updateError(condition, &allocationStatus.StoragePool, err)
 		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create StoragePool", err)
 		log.Info(nodeStorage.Status.Error.Error())
 
@@ -247,24 +242,20 @@ func (r *NnfNodeStorageReconciler) allocateStorage(statusUpdater *nodeStorageSta
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.StoragePool.ID) == 0 {
 		log.Info("Created storage pool", "Id", sp.Id)
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.StoragePool.ID = sp.Id
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = nnfv1alpha1.ConditionSuccess
-			condition.Message = ""
-		})
+		allocationStatus.StoragePool.ID = sp.Id
+		condition.Status = metav1.ConditionFalse
+		condition.Reason = nnfv1alpha1.ConditionSuccess
+		condition.Message = ""
 	}
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
-		allocationStatus.StoragePool.Health = nnfv1alpha1.ResourceHealth(sp.Status)
-		allocationStatus.CapacityAllocated = sp.CapacityBytes
-	})
+	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
+	allocationStatus.StoragePool.Health = nnfv1alpha1.ResourceHealth(sp.Status)
+	allocationStatus.CapacityAllocated = sp.CapacityBytes
 
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 	ss := nnf.NewDefaultStorageService()
 
@@ -276,10 +267,8 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 	// Group makes block storage available on the server, which itself is a prerequisite to
 	// any file system built on top of the block storage.
 	if len(allocationStatus.StorageGroup.ID) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			condition.LastTransitionTime = metav1.Now()
-			condition.Status = metav1.ConditionTrue
-		})
+		condition.LastTransitionTime = metav1.Now()
+		condition.Status = metav1.ConditionTrue
 	}
 
 	// Retrieve the collection of endpoints for us to map
@@ -370,7 +359,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
-				statusUpdater.updateError(condition, &allocationStatus.StorageGroup, err)
+				updateError(condition, &allocationStatus.StorageGroup, err)
 				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create storage group", err).WithFatal()
 				log.Info(nodeStorage.Status.Error.Error())
 
@@ -380,26 +369,22 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, status
 			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 			if len(allocationStatus.StorageGroup.ID) == 0 {
 				log.Info("Created storage group", "storageGroupID", storageGroupID)
-				statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-					allocationStatus.StorageGroup.ID = sg.Id
-					condition.LastTransitionTime = metav1.Now()
-					condition.Status = metav1.ConditionFalse // we are finished with this state
-					condition.Reason = nnfv1alpha1.ConditionSuccess
-					condition.Message = ""
-				})
+				allocationStatus.StorageGroup.ID = sg.Id
+				condition.LastTransitionTime = metav1.Now()
+				condition.Status = metav1.ConditionFalse // we are finished with this state
+				condition.Reason = nnfv1alpha1.ConditionSuccess
+				condition.Message = ""
 			}
 
-			statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-				allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
-				allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
-			})
+			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
+			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
 		}
 	}
 
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 	ss := nnf.NewDefaultStorageService()
 
@@ -415,9 +400,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	// Find the Rabbit node endpoint to collect LNet information
 	endpoint, err := r.getEndpoint(ss, os.Getenv("RABBIT_NODE"))
 	if err != nil {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
-		})
+		nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
 		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get endpoint", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
@@ -427,10 +410,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	// Create the FileSystem
 	condition := &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexCreateFileSystem]
 	if len(allocationStatus.FileSystem.ID) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			condition.Status = metav1.ConditionTrue
-			condition.LastTransitionTime = metav1.Now()
-		})
+		condition.Status = metav1.ConditionTrue
+		condition.LastTransitionTime = metav1.Now()
 	}
 
 	var fsType string
@@ -465,7 +446,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	fileSystemID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
 	fs, err := r.createFileSystem(ss, fileSystemID, allocationStatus.StoragePool.ID, oem)
 	if err != nil {
-		statusUpdater.updateError(condition, &allocationStatus.FileSystem, err)
+		updateError(condition, &allocationStatus.FileSystem, err)
 		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file system", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
@@ -475,27 +456,21 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.FileSystem.ID) == 0 {
 		log.Info("Created filesystem", "Id", fs.Id)
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.FileSystem.ID = fs.Id
-			condition.LastTransitionTime = metav1.Now()
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = nnfv1alpha1.ConditionSuccess
-			condition.Message = ""
-		})
+		allocationStatus.FileSystem.ID = fs.Id
+		condition.LastTransitionTime = metav1.Now()
+		condition.Status = metav1.ConditionFalse
+		condition.Reason = nnfv1alpha1.ConditionSuccess
+		condition.Message = ""
 	}
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
-		allocationStatus.FileSystem.Health = nnfv1alpha1.ResourceOkay
-	})
+	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
+	allocationStatus.FileSystem.Health = nnfv1alpha1.ResourceOkay
 
 	// Create the FileShare
 	condition = &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexCreateFileShare]
 	if len(allocationStatus.FileShare.ID) == 0 {
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			condition.Status = metav1.ConditionTrue
-			condition.LastTransitionTime = metav1.Now()
-		})
+		condition.Status = metav1.ConditionTrue
+		condition.LastTransitionTime = metav1.Now()
 	}
 
 	fileShareID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)
@@ -517,7 +492,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
-		statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+		updateError(condition, &allocationStatus.FileShare, err)
 		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
@@ -537,27 +512,23 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(statusUpdater *nodeStorageSt
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.FileShare.ID) == 0 {
 		log.Info("Created file share", "Id", sh.Id)
-		statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-			allocationStatus.FileShare.ID = sh.Id
-			allocationStatus.VolumeGroup = volumeGroupName(fileShareID)
-			allocationStatus.LogicalVolume = logicalVolumeName(fileShareID)
-			condition.LastTransitionTime = metav1.Now()
-			condition.Status = metav1.ConditionFalse
-			condition.Reason = nnfv1alpha1.ConditionSuccess
-			condition.Message = ""
-		})
+		allocationStatus.FileShare.ID = sh.Id
+		allocationStatus.VolumeGroup = volumeGroupName(fileShareID)
+		allocationStatus.LogicalVolume = logicalVolumeName(fileShareID)
+		condition.LastTransitionTime = metav1.Now()
+		condition.Status = metav1.ConditionFalse
+		condition.Reason = nnfv1alpha1.ConditionSuccess
+		condition.Message = ""
 	}
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		allocationStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
-		allocationStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
-		nodeStorage.Status.LustreStorage.Nid = nid
-	})
+	allocationStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
+	allocationStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
+	nodeStorage.Status.LustreStorage.Nid = nid
 
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatusUpdater, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService()
@@ -569,10 +540,8 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 
 	condition := &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexDeleteStoragePool]
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		condition.Status = metav1.ConditionTrue
-		condition.LastTransitionTime = metav1.Now()
-	})
+	condition.Status = metav1.ConditionTrue
+	condition.LastTransitionTime = metav1.Now()
 
 	log.Info("Deleting storage pool", "Id", allocationStatus.StoragePool.ID)
 
@@ -583,7 +552,7 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 		// If the error is from a 404 error, then there's nothing to clean up and we
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
-			statusUpdater.updateError(condition, &allocationStatus.FileShare, err)
+			updateError(condition, &allocationStatus.FileShare, err)
 			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not delete storage pool", err).WithFatal()
 			log.Info(nodeStorage.Status.Error.Error())
 
@@ -591,19 +560,17 @@ func (r *NnfNodeStorageReconciler) deleteStorage(statusUpdater *nodeStorageStatu
 		}
 	}
 
-	statusUpdater.update(func(*nnfv1alpha1.NnfNodeStorageStatus) {
-		allocationStatus.StoragePool.ID = ""
-		allocationStatus.StorageGroup.ID = ""
-		allocationStatus.FileSystem.ID = ""
-		allocationStatus.FileShare.ID = ""
-		allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceDeleted
-		allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceDeleted
-		allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceDeleted
-		allocationStatus.FileShare.Status = nnfv1alpha1.ResourceDeleted
-		allocationStatus.VolumeGroup = ""
-		allocationStatus.LogicalVolume = ""
-		nodeStorage.Status.LustreStorage.Nid = ""
-	})
+	allocationStatus.StoragePool.ID = ""
+	allocationStatus.StorageGroup.ID = ""
+	allocationStatus.FileSystem.ID = ""
+	allocationStatus.FileShare.ID = ""
+	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceDeleted
+	allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceDeleted
+	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceDeleted
+	allocationStatus.FileShare.Status = nnfv1alpha1.ResourceDeleted
+	allocationStatus.VolumeGroup = ""
+	allocationStatus.LogicalVolume = ""
+	nodeStorage.Status.LustreStorage.Nid = ""
 
 	return &ctrl.Result{}, nil
 }
@@ -806,39 +773,10 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 	return fs, nil
 }
 
-type nodeStorageStatusUpdater struct {
-	ctx            context.Context
-	storage        *nnfv1alpha1.NnfNodeStorage
-	existingStatus nnfv1alpha1.NnfNodeStorageStatus
-}
-
-func newNodeStorageStatusUpdater(c context.Context, n *nnfv1alpha1.NnfNodeStorage) *nodeStorageStatusUpdater {
-	return &nodeStorageStatusUpdater{
-		ctx:            c,
-		storage:        n,
-		existingStatus: (*n.DeepCopy()).Status,
-	}
-}
-
-func (s *nodeStorageStatusUpdater) update(update func(*nnfv1alpha1.NnfNodeStorageStatus)) {
-	update(&s.storage.Status)
-}
-
-func (s *nodeStorageStatusUpdater) updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {
+func updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {
 	status.Status = nnfv1alpha1.ResourceFailed
 	condition.Reason = nnfv1alpha1.ConditionFailed
 	condition.Message = err.Error()
-}
-
-func (s *nodeStorageStatusUpdater) close(r *NnfNodeStorageReconciler) error {
-	if !reflect.DeepEqual(s.storage.Status, s.existingStatus) {
-		err := r.Update(s.ctx, s.storage)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -74,31 +74,39 @@ func NewStatusUpdater[S Status[S]](rsrc resource[S]) *statusUpdater[S] {
 // changed from the initially recorded status. CloseWithUpdate will NOT return an error
 // if there is a resource conflict on this version of the resource. The reconciler will
 // already have an event queued for the new version of the resource.
-func (updater *statusUpdater[S]) CloseWithUpdate(ctx context.Context, c client.Writer) error {
-	return updater.close(ctx, c)
+func (updater *statusUpdater[S]) CloseWithUpdate(ctx context.Context, c client.Writer, err error) error {
+	return updater.close(ctx, c, err)
 }
 
 // CloseWithStatusUpdate will attempt to update the resource's status if any of the status
 // fields have changed from the initially recorded status. CloseWithStatusUpdate will NOT
 // return an error if there is a resource conflict on this version of the resource. The
 // reconciler will already have an event queued for the new version of the resource.
-func (updater *statusUpdater[S]) CloseWithStatusUpdate(ctx context.Context, c client.StatusClient) error {
-	return updater.close(ctx, c.Status())
+func (updater *statusUpdater[S]) CloseWithStatusUpdate(ctx context.Context, c client.StatusClient, err error) error {
+	return updater.close(ctx, c.Status(), err)
 }
 
 type clientUpdater interface {
 	Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error
 }
 
-func (updater *statusUpdater[S]) close(ctx context.Context, c clientUpdater) error {
+func (updater *statusUpdater[S]) close(ctx context.Context, c clientUpdater, err error) error {
 	if !reflect.DeepEqual(updater.resource.GetStatus(), updater.status) {
-		err := c.Update(ctx, updater.resource)
 
-		// Do not return an error if there is a resource conflict on this version of the resource.
-		// The reconciler will already have an event queued for the new version of the resource.
-		if !errors.IsConflict(err) {
-			return err
+		// Always attempt an update to the resource even in the presence of different error, but
+		// do not override the original error if present.
+		updateError := c.Update(ctx, updater.resource)
+
+		if err == nil {
+			// Do not return an error if there is a resource conflict on this version of the resource.
+			// The reconciler will already have an event queued for the new version of the resource.
+			if !errors.IsConflict(updateError) {
+				return updateError
+			}
 		}
+
+		return err
+
 	}
 
 	return nil

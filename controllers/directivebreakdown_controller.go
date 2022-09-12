@@ -41,6 +41,7 @@ import (
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -104,12 +105,8 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := newDirectiveBreakdownStatusUpdater(dbd)
-	defer func() {
-		if err == nil {
-			err = statusUpdater.close(ctx, r)
-		}
-	}()
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.DirectiveBreakdownStatus](dbd)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Check if the object is being deleted
 	if !dbd.GetDeletionTimestamp().IsZero() {
@@ -486,29 +483,6 @@ func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy 
 			Key:  constraintKey,
 		}}
 	}
-}
-
-type directiveBreakdownStatusUpdater struct {
-	directiveBreakdown *dwsv1alpha1.DirectiveBreakdown
-	existingStatus     dwsv1alpha1.DirectiveBreakdownStatus
-}
-
-func newDirectiveBreakdownStatusUpdater(d *dwsv1alpha1.DirectiveBreakdown) *directiveBreakdownStatusUpdater {
-	return &directiveBreakdownStatusUpdater{
-		directiveBreakdown: d,
-		existingStatus:     (*d.DeepCopy()).Status,
-	}
-}
-
-func (d *directiveBreakdownStatusUpdater) close(ctx context.Context, r *DirectiveBreakdownReconciler) error {
-	if !reflect.DeepEqual(d.directiveBreakdown.Status, d.existingStatus) {
-		err := r.Status().Update(ctx, d.directiveBreakdown)
-		if !apierrors.IsConflict(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
