@@ -199,10 +199,13 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				wearLevel := d.WearLevel
 				device := dwsv1alpha1.StorageDevice{
-					Model:     d.Model,
-					Capacity:  d.Capacity,
-					Status:    string(d.Status),
-					WearLevel: &wearLevel,
+					Model:           d.Model,
+					SerialNumber:    d.SerialNumber,
+					FirmwareVersion: d.FirmwareVersion,
+					Capacity:        d.Capacity,
+					Status:          string(d.Status),
+					WearLevel:       &wearLevel,
+					Slot:            d.Slot,
 				}
 				devices = append(devices, device)
 			}

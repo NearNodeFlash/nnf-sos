@@ -39,6 +39,15 @@ type StorageDevice struct {
 	// Model is the manufacturer information about the device
 	Model string `json:"model,omitempty"`
 
+	// The serial number for this storage controller.
+	SerialNumber string `json:"serialNumber,omitempty"`
+
+	// The firmware version of this storage controller.
+	FirmwareVersion string `json:"firmwareVersion,omitempty"`
+
+	// Physical slot location of the storage controller.
+	Slot string `json:"slot,omitempty"`
+
 	// Capacity in bytes of the device. The full capacity may not
 	// be usable depending on what the storage driver can provide.
 	Capacity int64 `json:"capacity,omitempty"`

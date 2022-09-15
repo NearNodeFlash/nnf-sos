@@ -20,7 +20,7 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/HewlettPackard/dws v0.0.0-20220912185638-8515b1a0003d
+# github.com/HewlettPackard/dws v0.0.0-20220915195527-2515faa59c7f
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha1
 github.com/HewlettPackard/dws/config/crd/bases
@@ -36,7 +36,7 @@ github.com/HewlettPackard/structex
 ## explicit; go 1.16
 github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
-# github.com/NearNodeFlash/nnf-ec v0.0.0-20220909132713-e531bba9f6bb
+# github.com/NearNodeFlash/nnf-ec v0.0.0-20220915194816-49769d6bcf19
 ## explicit; go 1.16
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec

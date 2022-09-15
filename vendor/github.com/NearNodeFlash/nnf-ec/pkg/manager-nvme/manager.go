@@ -988,6 +988,15 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 	model.FirmwareVersion = s.firmwareRevision
 	model.Model = s.modelNumber
 
+	// Retrieve the slot label and value for this storage controller
+	location, err := FabricController.GetPortPartLocation(s.switchId, s.portId)
+	if err != nil {
+		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller failed to retrieve part location: Storage: %s", storageId))
+	}
+	model.Location.PartLocation.ServiceLabel = location.ServiceLabel
+	model.Location.PartLocation.LocationOrdinalValue = location.LocationOrdinalValue
+	model.Location.PartLocation.LocationType = location.LocationType
+
 	model.Links.EndpointsodataCount = 1
 	model.Links.Endpoints = make([]sf.OdataV4IdRef, model.Links.EndpointsodataCount)
 	model.Links.Endpoints[0].OdataId = endpointId
