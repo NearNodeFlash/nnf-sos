@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,6 +10,8 @@ import (
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func handleWorkflowError(err error, driverStatus *dwsv1alpha1.WorkflowDriverStatus) {
@@ -117,4 +120,50 @@ func addDirectiveIndexLabel(object metav1.Object, index int) {
 
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	object.SetLabels(labels)
+}
+
+// Wait on the NnfAccesses for this workflow-index to reach the provided state.
+func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int, state string) (*ctrl.Result, error) {
+
+	accessSuffixes := []string{"-computes"}
+
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+	}
+
+	if fsType == "gfs2" || fsType == "lustre" {
+		accessSuffixes = append(accessSuffixes, "-servers")
+	}
+
+	for _, suffix := range accessSuffixes {
+		access := &nnfv1alpha1.NnfAccess{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      indexedResourceName(workflow, index) + suffix,
+				Namespace: workflow.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+			err = fmt.Errorf("Could not get NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), err)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+		}
+
+		if access.Status.Error != nil {
+			err = fmt.Errorf("Error on NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), access.Status.Error)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+		}
+
+		// If we're mounting, we must always wait for ready
+		// If we're unmounting, check that the teardown state label is for this state
+
+		teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
+		if state == "mounted" || (!found || teardownState == workflow.Spec.DesiredState) {
+			if access.Status.State != state || !access.Status.Ready {
+				return &ctrl.Result{}, nil
+			}
+		}
+	}
+
+	return nil, nil
 }

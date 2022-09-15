@@ -1041,7 +1041,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 			dwsv1alpha1.AddWorkflowLabels(access, workflow)
 			dwsv1alpha1.AddOwnerLabels(access, workflow)
 			nnfv1alpha1.AddDataMovementTeardownStateLabel(access, teardownState)
-			addDirectiveIndexLabel(access, index)
+			addDirectiveIndexLabel(access, parentDwIndex)
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
 				DesiredState:    "mounted",
@@ -1076,7 +1076,6 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 
 // Monitor a data movement resource for completion
 func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
-	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 
 	// Wait for data movement resources to complete
 
@@ -1096,7 +1095,6 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	}
 
 	for _, dm := range dataMovementList.Items {
-		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "state", dm.Status.State)
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
 		}
@@ -1107,7 +1105,6 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	// Check results of data movement operations
 	// TODO: Detailed Fail Message?
 	for _, dm := range dataMovementList.Items {
-		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "status", dm.Status.Status)
 		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
 			return nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Staging operation failed")).WithFatal()
 		}
@@ -1246,39 +1243,15 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 }
 
 func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
-	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	accessSuffixes := []string{"-computes"}
-	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
 	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'mounted' state").WithError(err).WithFatal()
+	} else if result.IsZero() {
+		return result, nil
 	}
 
-	if fsType == "gfs2" || fsType == "lustre" {
-		accessSuffixes = append(accessSuffixes, "-servers")
-	}
-
-	for _, suffix := range accessSuffixes {
-		access := &nnfv1alpha1.NnfAccess{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      indexedResourceName(workflow, index) + suffix,
-				Namespace: workflow.Namespace,
-			},
-		}
-
-		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-			err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
-			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(err)
-		}
-
-		if access.Status.Error != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Could not mount file system on compute nodes").WithError(access.Status.Error)
-		}
-
-		if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
-			return &ctrl.Result{}, nil
-		}
-	}
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	// Add an environment variable to the workflow status section for the location of the
 	// mount point on the clients.
@@ -1321,27 +1294,6 @@ func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string)
 
 func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
 
-	// Wait for data movement resources to complete
-	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = workflow.Status.State
-
-	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
-	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
-	}
-
-	for _, dm := range dataMovementList.Items {
-		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
-			return &ctrl.Result{}, nil
-		}
-
-		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
-			return nil, nnfv1alpha1.NewWorkflowError("Data movement unsuccessful").WithFatal()
-		}
-	}
-
-	// TODO: Pass the data movement(s) failure message into the workflow
-
 	// Unmount the NnfAccess from the compute nodes. This will free the compute nodes to be used
 	// in a different job even if there is data movement happening on the Rabbits
 	access := &nnfv1alpha1.NnfAccess{
@@ -1369,39 +1321,89 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 		}
 	}
 
+	// Wait for data movement resources to complete
+	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = dwsv1alpha1.StatePostRun.String()
+
+	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
+	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
+	}
+
+	for _, dm := range dataMovementList.Items {
+		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
+			return &ctrl.Result{}, nil
+		}
+	}
+
+	// Unmount the NnfAccess for the server nodes only if the access has a post-run teardown state. Otherwise
+	// the resource is used by later copy_out directives.
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+	}
+
+	if fsType == "gfs2" || fsType == "lustre" {
+		access = &nnfv1alpha1.NnfAccess{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      indexedResourceName(workflow, index) + "-servers",
+				Namespace: workflow.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+			err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
+			return nil, nnfv1alpha1.NewWorkflowError("Unable to find server node mount information").WithError(err)
+		}
+
+		if state := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]; state == workflow.Status.State {
+			if access.Spec.DesiredState != "unmounted" {
+				access.Spec.DesiredState = "unmounted"
+
+				if err := r.Update(ctx, access); err != nil {
+					if !apierrors.IsConflict(err) {
+						err = fmt.Errorf("Could not update NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
+						return nil, nnfv1alpha1.NewWorkflowError("Unable to request server node unmount").WithError(err)
+					}
+
+					return &ctrl.Result{}, nil
+				}
+			}
+		}
+	}
+
 	return nil, nil
 }
 
 func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*ctrl.Result, error) {
 
-	access := &nnfv1alpha1.NnfAccess{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index) + "-computes",
-			Namespace: workflow.Namespace,
-		},
+	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "unmounted")
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'unmounted' state").WithError(err).WithFatal()
+	} else if !result.IsZero() {
+		return result, nil
 	}
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err == nil {
-		if access.Status.Error != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Could not unmount file system from compute nodes").WithError(access.Status.Error)
-		}
+	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
+	// TODO: Customer asked if this could be optional
+	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = dwsv1alpha1.StatePostRun.String()
 
-		if access.Status.State != "unmounted" || access.Status.Ready != true {
+	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
+	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Could not retrieve data movements").WithError(err)
+	}
+
+	for _, dm := range dataMovementList.Items {
+		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
 		}
-	}
 
-	if err := r.Delete(ctx, access); err != nil {
-		if !apierrors.IsNotFound(err) {
-			err = fmt.Errorf("Could not delete compute NnfAccess: %w", err)
-			return nil, nnfv1alpha1.NewWorkflowError("Could not unmount file system from compute nodes").WithError(err)
+		if dm.Status.Status == nnfv1alpha1.DataMovementConditionReasonFailed {
+			err := fmt.Errorf("Data movement %s failed", client.ObjectKeyFromObject(&dm).String())
+			return nil, nnfv1alpha1.NewWorkflowError("Data movement unsuccessful").WithError(err).WithFatal()
 		}
-
-		return nil, nil
 	}
-
-	// TODO: We should delete the NNF Access for the servers if it's no longer needed (if there are no copy_out directives)
-	//       We should also delete all the user initiated offload operations.
 
 	return nil, nil
 }
