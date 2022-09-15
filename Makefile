@@ -64,7 +64,7 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 IMG ?= $(IMAGE_TAG_BASE):$(VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.24.2
+ENVTEST_K8S_VERSION = 1.25.0
 
 # Jenkins behaviors
 # pipeline_service builds its target docker image and stores it into 1 of 3 destination folders.
@@ -226,7 +226,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
 	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
 	for subdir in ${TESTDIRS}; do \
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v -ginkgo.progress $$failfast; \
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v -ginkgo.progress $$failfast; \
 	done
 
 ##@ Build
