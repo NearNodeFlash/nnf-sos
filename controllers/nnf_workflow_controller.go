@@ -1098,8 +1098,6 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
 		}
-
-		// TODO: If one fails they all should fail.
 	}
 
 	// Check results of data movement operations
@@ -1110,19 +1108,71 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		}
 	}
 
-	// Delete the NnfAccess resources if necessary
-	childObjects := []dwsv1alpha1.ObjectList{
-		&nnfv1alpha1.NnfAccessList{},
-	}
-
-	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, matchingLabels)
+	// Unmount any NNF Accesses that are no longer needed and cannot be shared (i.e. an XFS volume)
+	// These NNF Accesses should have a teardown label with the current data_in/data_out state.
+	dwArgs, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
-		err = fmt.Errorf("Could not delete NnfAccess children: %w", err)
-		return nil, nnfv1alpha1.NewWorkflowError("Could not stop data movement").WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("Invalid DW directive index %d: %s", index, workflow.Spec.DWDirectives[index]).WithFatal()
 	}
 
-	if deleteStatus == dwsv1alpha1.DeleteRetry {
-		return &ctrl.Result{}, nil
+	unmountIfNecessary := func(param string) (*ctrl.Result, error) {
+		name, _ := splitStagingArgumentIntoNameAndPath(param)
+
+		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
+			parentDwIndex := findDirectiveIndexByName(workflow, name)
+			if parentDwIndex < 0 {
+				return nil, nnfv1alpha1.NewWorkflowErrorf("No directive matching '%s' found in workflow", name).WithFatal()
+			}
+
+			access := &nnfv1alpha1.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      indexedResourceName(workflow, parentDwIndex) + "-servers",
+					Namespace: workflow.Namespace,
+				},
+			}
+
+			if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+				return nil, nnfv1alpha1.NewWorkflowErrorf("NnfAccess %s failed get", client.ObjectKeyFromObject(access)).WithError(err)
+			}
+
+			teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
+			if !found {
+				return nil, nnfv1alpha1.NewWorkflowErrorf("NnfAccess %s missing label %s", client.ObjectKeyFromObject(access), nnfv1alpha1.DataMovementTeardownStateLabel).WithFatal()
+			}
+
+			if teardownState == workflow.Spec.DesiredState {
+				if access.Spec.DesiredState != "unmounted" {
+					access.Spec.DesiredState = "unmounted"
+
+					if err := r.Update(ctx, access); err != nil {
+						if !apierrors.IsConflict(err) {
+							return nil, nnfv1alpha1.NewWorkflowErrorf("NnfAccess %s failed update", client.ObjectKeyFromObject(access)).WithError(err)
+						}
+					}
+
+					return &ctrl.Result{}, nil
+				}
+
+				if access.Status.Error != nil {
+					return nil, nnfv1alpha1.NewWorkflowErrorf("NnfAccess %s encountered error", client.ObjectKeyFromObject(access)).WithError(err)
+				}
+
+				if access.Status.State != "unmounted" || !access.Status.Ready {
+					return &ctrl.Result{}, nil
+				}
+			}
+
+		}
+
+		return nil, nil
+	}
+
+	if result, err := unmountIfNecessary(dwArgs["source"]); err != nil || !result.IsZero() {
+		return result, err
+	}
+
+	if result, err := unmountIfNecessary(dwArgs["destination"]); err != nil || !result.IsZero() {
+		return result, err
 	}
 
 	return nil, nil
@@ -1333,42 +1383,6 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	for _, dm := range dataMovementList.Items {
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
 			return &ctrl.Result{}, nil
-		}
-	}
-
-	// Unmount the NnfAccess for the server nodes only if the access has a post-run teardown state. Otherwise
-	// the resource is used by later copy_out directives.
-	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
-	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
-	}
-
-	if fsType == "gfs2" || fsType == "lustre" {
-		access = &nnfv1alpha1.NnfAccess{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      indexedResourceName(workflow, index) + "-servers",
-				Namespace: workflow.Namespace,
-			},
-		}
-
-		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-			err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to find server node mount information").WithError(err)
-		}
-
-		if state := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]; state == workflow.Status.State {
-			if access.Spec.DesiredState != "unmounted" {
-				access.Spec.DesiredState = "unmounted"
-
-				if err := r.Update(ctx, access); err != nil {
-					if !apierrors.IsConflict(err) {
-						err = fmt.Errorf("Could not update NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
-						return nil, nnfv1alpha1.NewWorkflowError("Unable to request server node unmount").WithError(err)
-					}
-
-					return &ctrl.Result{}, nil
-				}
-			}
 		}
 	}
 
