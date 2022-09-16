@@ -356,7 +356,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		return nodeStoragesExist, err
 	}
 
-	if deleteStatus == dwsv1alpha1.DeleteRetry {
+	if !deleteStatus.Complete() {
 		return nodeStoragesExist, nil
 	}
 

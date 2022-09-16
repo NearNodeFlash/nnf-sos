@@ -86,6 +86,9 @@ spec:
                         provide.
                       format: int64
                       type: integer
+                    firmwareVersion:
+                      description: The firmware version of this storage controller.
+                      type: string
                     health:
                       description: NnfResourceHealthType defines the health of an
                         NNF resource.
@@ -101,6 +104,12 @@ spec:
                     name:
                       description: Name reflects the common name of this NNF Server
                         resource.
+                      type: string
+                    serialNumber:
+                      description: The serial number for this storage controller.
+                      type: string
+                    slot:
+                      description: Physical slot location of the storage controller.
                       type: string
                     status:
                       description: NnfResourceStatusType is the string that indicates

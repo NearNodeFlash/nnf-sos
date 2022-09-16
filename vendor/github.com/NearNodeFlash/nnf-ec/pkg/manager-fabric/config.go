@@ -62,8 +62,9 @@ type SwitchConfig struct {
 	Metadata struct {
 		Name string
 	}
-	PciGen int32 `yaml:"pciGen"`
-	Ports  []PortConfig
+	PciGen     int32  `yaml:"pciGen"`
+	SlotPrefix string `yaml:"slotPrefix"`
+	Ports      []PortConfig
 
 	ManagementPortCount int
 	UpstreamPortCount   int
@@ -75,6 +76,7 @@ type PortConfig struct {
 	Name  string
 	Type  string
 	Port  int
+	Slot  int
 	Width int
 }
 
