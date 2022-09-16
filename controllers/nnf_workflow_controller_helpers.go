@@ -68,6 +68,7 @@ func (r *result) info() []interface{} {
 
 	if r.object != nil {
 		args = append(args, "object", client.ObjectKeyFromObject(r.object).String())
+		args = append(args, "gvk", r.object.GetObjectKind().GroupVersionKind().String())
 	}
 
 	if r.deleteStatus != nil {
