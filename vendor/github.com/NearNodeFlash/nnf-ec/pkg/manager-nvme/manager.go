@@ -577,9 +577,10 @@ func (v *Volume) attach(controllerId uint16) error {
 	}
 
 	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerId})
-	log.Infof("Device %s Attach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
-
+	
 	if err != nil {
+		log.Infof("Device %s Attach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
+		
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceAlreadyAttached {
@@ -607,9 +608,10 @@ func (v *Volume) detach(controllerId uint16) error {
 	}
 
 	err := v.storage.device.DetachNamespace(v.namespaceId, []uint16{controllerId})
-	log.Infof("Device %s Detach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
 
 	if err != nil {
+		log.Infof("Device %s Detach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
+
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceNotAttached {
