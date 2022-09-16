@@ -577,9 +577,10 @@ func (v *Volume) attach(controllerId uint16) error {
 	}
 
 	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerId})
-	log.Infof("Device %s Attach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
-
+	
 	if err != nil {
+		log.Infof("Device %s Attach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
+		
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceAlreadyAttached {
@@ -607,9 +608,10 @@ func (v *Volume) detach(controllerId uint16) error {
 	}
 
 	err := v.storage.device.DetachNamespace(v.namespaceId, []uint16{controllerId})
-	log.Infof("Device %s Detach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
 
 	if err != nil {
+		log.Infof("Device %s Detach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
+
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceNotAttached {
@@ -987,6 +989,15 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 	model.SerialNumber = s.serialNumber
 	model.FirmwareVersion = s.firmwareRevision
 	model.Model = s.modelNumber
+
+	// Retrieve the slot label and value for this storage controller
+	location, err := FabricController.GetPortPartLocation(s.switchId, s.portId)
+	if err != nil {
+		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller failed to retrieve part location: Storage: %s", storageId))
+	}
+	model.Location.PartLocation.ServiceLabel = location.ServiceLabel
+	model.Location.PartLocation.LocationOrdinalValue = location.LocationOrdinalValue
+	model.Location.PartLocation.LocationType = location.LocationType
 
 	model.Links.EndpointsodataCount = 1
 	model.Links.Endpoints = make([]sf.OdataV4IdRef, model.Links.EndpointsodataCount)

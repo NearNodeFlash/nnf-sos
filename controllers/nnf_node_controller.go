@@ -377,6 +377,9 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 
 				drive.Model = storageController.Model
 				drive.WearLevel = int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage)
+				drive.SerialNumber = storageController.SerialNumber
+				drive.FirmwareVersion = storageController.FirmwareVersion
+				drive.Slot = fmt.Sprintf("%s%d", storageController.Location.PartLocation.ServiceLabel, storageController.Location.PartLocation.LocationOrdinalValue)
 			}
 
 			// The Swordfish architecture places capacity information in a Storage device's Storage Pools. For our implementation,

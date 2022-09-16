@@ -101,9 +101,18 @@ spec:
                         provide.
                       format: int64
                       type: integer
+                    firmwareVersion:
+                      description: The firmware version of this storage controller.
+                      type: string
                     model:
                       description: Model is the manufacturer information about the
                         device
+                      type: string
+                    serialNumber:
+                      description: The serial number for this storage controller.
+                      type: string
+                    slot:
+                      description: Physical slot location of the storage controller.
                       type: string
                     status:
                       description: Status of the individual device

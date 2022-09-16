@@ -7,7 +7,7 @@
 
  * Author: Nate Roiger
  *
- * Copyright 2020 Hewlett Packard Enterprise Development LP
+ * Copyright 2020, 2022 Hewlett Packard Enterprise Development LP
  */
 
 package openapi
@@ -59,6 +59,9 @@ type ManagerActions = models.ManagerV1100Actions
 // OdataIdRef - A reference to a resource.
 type OdataIdRef = models.OdataV4IdRef
 
+// PartLocation - The part location within the placement.
+type PartLocation = models.ResourceV1100PartLocation
+
 // RedfishError - The error payload from a Redfish Service.
 type RedfishError = models.RedfishError
 
@@ -70,6 +73,9 @@ type ResourceBlock = models.ResourceBlockV133ResourceBlock
 
 // ResourceIdentifier - Any additional identifiers for a resource.
 type ResourceIdentifier = models.ResourceIdentifier
+
+// ResourceLocation - The location of a resource.
+type ResourceLocation = models.ResourceLocation
 
 // ResourcePowerState - Power state of a resource
 type ResourcePowerState = models.ResourcePowerState

@@ -1532,3 +1532,29 @@ func (f *Fabric) FindDownstreamEndpoint(portId, functionId string) (string, erro
 
 	return fmt.Sprintf("/redfish/v1/Fabrics/%s/Endpoints/%s", f.id, ep.id), nil
 }
+
+func (f *Fabric) GetSwitchPort(switchId, portId string) (*Port, error) {
+	s := f.findSwitch(switchId)
+	if s == nil {
+		return nil, fmt.Errorf("failed to find switch: switchId: %s", switchId)
+	}
+	p := s.findPort(portId)
+	if p == nil {
+		return nil, fmt.Errorf("failed to find port: switchId: %s, portId: %s", switchId, portId)
+	}
+
+	return p, nil
+}
+
+func (f *Fabric) GetPortPartLocation(switchId, portId string) (*openapi.PartLocation, error) {
+	p, err := f.GetSwitchPort(switchId, portId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.PartLocation{
+		ServiceLabel:         p.swtch.config.SlotPrefix,
+		LocationOrdinalValue: int64(p.config.Slot),
+		LocationType:         sf.SLOT_RV1100LT,
+	}, nil
+}

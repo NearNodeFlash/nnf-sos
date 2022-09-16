@@ -85,10 +85,8 @@ github.com/Azure/go-autorest/tracing v0.6.0/go.mod h1:+vhtPC754Xsa23ID7GlGsrdKBp
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
-github.com/HewlettPackard/dws v0.0.0-20220912170832-cfd60d860c7e h1:8iL6LKGIyms92N9wQadLDfCgDg8jHc5ElG+vpzqoftM=
-github.com/HewlettPackard/dws v0.0.0-20220912170832-cfd60d860c7e/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
-github.com/HewlettPackard/dws v0.0.0-20220912185638-8515b1a0003d h1:iQNfFqOrMwaj9bPvZZqIEoJ48vcWDvdF74Rqng1gJdo=
-github.com/HewlettPackard/dws v0.0.0-20220912185638-8515b1a0003d/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
+github.com/HewlettPackard/dws v0.0.0-20220915211447-2536c3f45adb h1:zxVGrO6CzK2rLKmu7b6e0ku2yKYHFNqW5LQhQ3H1u20=
+github.com/HewlettPackard/dws v0.0.0-20220915211447-2536c3f45adb/go.mod h1:ls20UsxQwpC+PBp0olV9xCVsp0pH6dHEmJIVpZVqtUg=
 github.com/HewlettPackard/lustre-csi-driver v0.0.0-20220623192103-4ce53adacc95/go.mod h1:Wwr96QYACIixBjBXpST9yMS81WxMu/tF/zc/5OW21Dk=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
@@ -98,8 +96,8 @@ github.com/NYTimes/gziphandler v0.0.0-20170623195520-56545f4a5d46/go.mod h1:3wb0
 github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMomdKFjzJNB0c=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38 h1:eUS+ynG1Xni4CEMhmQ3dduA3TfUWEyUXRUFKwEJEF30=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220727174249-9b7004c2cb38/go.mod h1:Ae1E/j2hmUaHW7pQAOesc57pyYmBlgBgI2C6xtwPutg=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220909132713-e531bba9f6bb h1:Oxfv2iJpAhraqku05+Ym8quQMeCP9CRNuUDJjU5cWO8=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20220909132713-e531bba9f6bb/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220916150000-517a1ab34a59 h1:QFkPIdADUOMcq3abBzoOifgtQUpVnCI7AHJGjJZMd6w=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20220916150000-517a1ab34a59/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1 h1:WEQqlqaGbrPkxLJWfBwQmfEAE1Z7ONdDLqrN38tNFfI=
