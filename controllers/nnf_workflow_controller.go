@@ -61,80 +61,6 @@ const (
 	finalizerNnfWorkflow = "nnf.cray.hpe.com/nnf_workflow"
 )
 
-type result struct {
-	ctrl.Result
-	reason       string
-	object       client.Object
-	deleteStatus *dwsv1alpha1.DeleteStatus
-}
-
-func (r *result) complete() bool {
-	if r == nil {
-		return true
-	}
-
-	return r.IsZero()
-}
-
-func (r *result) info() []interface{} {
-
-	args := make([]interface{}, 0)
-
-	if r == nil {
-		return args
-	}
-
-	if len(r.reason) != 0 {
-		args = append(args, "reason", r.reason)
-	}
-
-	if r.object != nil {
-		args = append(args, "object", client.ObjectKeyFromObject(r.object).String())
-	}
-
-	if r.deleteStatus != nil {
-		args = append(args, r.deleteStatus.Info()...)
-	}
-
-	return args
-}
-
-func (r *result) withReason(format string, a ...any) *result {
-	if r == Requeue {
-		return &result{Result: r.Result, reason: fmt.Sprintf(format, a...)}
-	}
-
-	r.reason = fmt.Sprintf(format, a...)
-	return r
-}
-
-func (r *result) withObject(object client.Object) *result {
-	if object == nil {
-		return r
-	}
-	if r == Requeue {
-		return &result{Result: r.Result, object: object}
-	}
-
-	r.object = object
-	return r
-}
-
-func (r *result) withDeleteStatus(d dwsv1alpha1.DeleteStatus) *result {
-	if r == Requeue {
-		return &result{Result: r.Result, deleteStatus: &d}
-	}
-
-	r.deleteStatus = &d
-	return r
-}
-
-var Requeue = &result{Result: ctrl.Result{Requeue: true}}
-
-func RequeueAfter(duration time.Duration) *result {
-	return &result{Result: ctrl.Result{RequeueAfter: duration}}
-}
-
 // NnfWorkflowReconciler contains the pieces used by the reconciler
 type NnfWorkflowReconciler struct {
 	client.Client
@@ -362,7 +288,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	}
 
 	if directiveBreakdown == nil {
-		return Requeue, nil
+		return Requeue("no breakdown"), nil
 	}
 
 	directiveBreakdownReference := v1.ObjectReference{
@@ -409,7 +335,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 
 	// Wait for the breakdown to be ready
 	if directiveBreakdown.Status.Ready != ConditionTrue {
-		return Requeue.withObject(directiveBreakdown).withReason("status pending"), nil
+		return Requeue("status pending").withObject(directiveBreakdown), nil
 	}
 
 	return nil, nil
@@ -479,10 +405,9 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		}
 	}
 
-	_, err = r.createNnfStorage(ctx, workflow, s, index, log)
-	if err != nil {
+	if storage, err := r.createNnfStorage(ctx, workflow, s, index, log); err != nil {
 		if apierrors.IsConflict(err) {
-			return Requeue, nil
+			return Requeue("conflict").withObject(storage), nil
 		}
 
 		log.Info("Failed to create nnf storage", "Message", err)
@@ -511,7 +436,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	// If the Status section has not been filled in yet, exit and wait.
 	if len(nnfStorage.Status.AllocationSets) != len(nnfStorage.Spec.AllocationSets) {
 		// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
-		return RequeueAfter(time.Second * time.Duration(2)), nil
+		return Requeue("allocation").after(2 * time.Second).withObject(nnfStorage), nil
 	}
 
 	var complete bool = true
@@ -528,10 +453,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 
 	if !complete {
 		// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
-		return RequeueAfter(time.Second*time.Duration(2)).
-				withObject(nnfStorage).
-				withReason("allocation set pending"),
-			nil
+		return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
 	}
 
 	return nil, nil
@@ -625,7 +547,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 			// Wait for accesses to go ready
 			if access.Status.Ready == false {
-				return nil, access, Requeue, nil
+				return nil, access, Requeue("status pending").withObject(access), nil
 			}
 
 			return storageReference, access, nil, nil
@@ -665,7 +587,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			if access.Status.State != "mounted" || !access.Status.Ready {
-				return Requeue.withObject(access).withReason("pending mount"), nil
+				return Requeue("pending mount").withObject(access), nil
 			}
 		}
 	}
@@ -809,13 +731,13 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	// Since the Finish state is only called when copy_in / copy_out directives are present - the lack of any items
 	// implies that the data movement operations are only just creating and the cache hasn't been updated yet.
 	if len(dataMovementList.Items) == 0 {
-		return RequeueAfter(time.Second), nil
+		return Requeue("pending data movement").after(2 * time.Second), nil
 	}
 
 	for _, dm := range dataMovementList.Items {
 		log.Info("Processing data movement", "name", client.ObjectKeyFromObject(&dm).String(), "state", dm.Status.State)
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
-			return Requeue.withObject(&dm).withReason("incomplete"), nil
+			return Requeue("incomplete").withObject(&dm), nil
 		}
 
 		// TODO: If one fails they all should fail.
@@ -842,7 +764,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	}
 
 	if !deleteStatus.Complete() {
-		return Requeue.withDeleteStatus(deleteStatus), nil
+		return Requeue("delete").withDeleteStatus(deleteStatus), nil
 	}
 
 	return nil, nil
@@ -969,7 +891,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		}
 
 		if access.Status.State != access.Spec.DesiredState || access.Status.Ready == false {
-			return Requeue.withObject(access).withReason("pending mount"), nil
+			return Requeue("pending mount").withObject(access), nil
 		}
 	}
 
@@ -1007,7 +929,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 	for _, dm := range dataMovementList.Items {
 		if dm.Status.State != nnfv1alpha1.DataMovementConditionTypeFinished {
-			return Requeue.withObject(&dm).withReason("incomplete"), nil
+			return Requeue("incomplete").withObject(&dm), nil
 		}
 
 		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
@@ -1040,7 +962,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 				return nil, nnfv1alpha1.NewWorkflowError("Unable to request compute node unmount").WithError(err)
 			}
 
-			return Requeue.withObject(access).withReason("updating"), nil
+			return Requeue("conflict").withObject(access), nil
 		}
 	}
 
@@ -1062,7 +984,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 		}
 
 		if access.Status.State != "unmounted" || access.Status.Ready != true {
-			return Requeue.withObject(access).withReason("pending unmount"), nil
+			return Requeue("pending unmount").withObject(access), nil
 		}
 	}
 
@@ -1098,7 +1020,7 @@ func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow
 	}
 
 	if !deleteStatus.Complete() {
-		return Requeue.withDeleteStatus(deleteStatus), nil
+		return Requeue("delete").withDeleteStatus(deleteStatus), nil
 	}
 
 	return nil, nil
@@ -1176,7 +1098,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	}
 
 	if !deleteStatus.Complete() {
-		return Requeue.withDeleteStatus(deleteStatus), nil
+		return Requeue("delete").withDeleteStatus(deleteStatus), nil
 	}
 
 	return nil, nil

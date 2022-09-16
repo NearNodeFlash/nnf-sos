@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
@@ -21,6 +22,60 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+// NNF Workflow stages all return a `result` structure when successful that describes
+// the result of an operation at each stage of the workflow.
+type result struct {
+	ctrl.Result
+	reason       string
+	object       client.Object
+	deleteStatus *dwsv1alpha1.DeleteStatus
+}
+
+// When workflow stages cannot advance they return a Requeue result with a particular reason.
+func Requeue(reason string) *result {
+	return &result{Result: ctrl.Result{}, reason: reason}
+}
+
+func (r *result) complete() bool {
+	return r.IsZero()
+}
+
+func (r *result) after(duration time.Duration) *result {
+	r.Result.RequeueAfter = duration
+	return r
+}
+
+func (r *result) withObject(object client.Object) *result {
+	r.object = object
+	return r
+}
+
+func (r *result) withDeleteStatus(d dwsv1alpha1.DeleteStatus) *result {
+	r.deleteStatus = &d
+	return r
+}
+
+func (r *result) info() []interface{} {
+	args := make([]interface{}, 0)
+	if r == nil {
+		return args
+	}
+
+	if len(r.reason) != 0 {
+		args = append(args, "reason", r.reason)
+	}
+
+	if r.object != nil {
+		args = append(args, "object", client.ObjectKeyFromObject(r.object).String())
+	}
+
+	if r.deleteStatus != nil {
+		args = append(args, r.deleteStatus.Info()...)
+	}
+
+	return args
+}
 
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
