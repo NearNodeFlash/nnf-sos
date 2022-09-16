@@ -63,15 +63,22 @@ type PersistentStorageInstanceSpec struct {
 
 	// DWDirective is a copy of the #DW for this instance
 	DWDirective string `json:"dwDirective"`
+
+	// User ID of the user that created the persistent storage
+	UserID uint32 `json:"userID"`
 }
 
 // PersistentStorageInstanceStatus defines the observed state of PersistentStorageInstance
 type PersistentStorageInstanceStatus struct {
 	// Servers refers to the Servers resource that provides the backing storage for this storage instance
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
+
 	// Current state of the PersistentStorageInstance
 	// +kubebuilder:validation:Enum=creating;active;deleting
 	State PersistentStorageInstanceState `json:"state"`
+
+	// Error information
+	Error *ResourceError `json:"error,omitempty"`
 }
 
 //+kubebuilder:object:root=true

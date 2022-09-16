@@ -78,6 +78,10 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.PersistentStorageInstanceStatus](persistentStorage)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { dwsv1alpha1.SetResourceError(persistentStorage, err) }()
+
 	if !persistentStorage.GetDeletionTimestamp().IsZero() {
 		log.Info("Deleting")
 		if !controllerutil.ContainsFinalizer(persistentStorage, finalizerPersistentStorage) {
@@ -119,9 +123,6 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 		return ctrl.Result{}, nil
 	}
-
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.PersistentStorageInstanceStatus](persistentStorage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
 	if err != nil {

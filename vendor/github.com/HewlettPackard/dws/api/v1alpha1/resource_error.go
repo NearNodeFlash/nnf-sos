@@ -19,6 +19,10 @@
 
 package v1alpha1
 
+import (
+	"reflect"
+)
+
 type ResourceError struct {
 	// Optional user facing message if the error is relevant to an end user
 	UserMessage string `json:"userMessage,omitempty"`
@@ -29,6 +33,22 @@ type ResourceError struct {
 	// Indication if the error is likely recoverable or not
 	// +kubebuilder:validation:Default=true
 	Recoverable bool `json:"recoverable"`
+}
+
+// SetResourceError fills in the ResourceError field in a resource with information from
+// an error. The ResourceError field is expected to be object.Status.Error
+func SetResourceError(object interface{}, err error) {
+	statusField := reflect.ValueOf(object).Elem().FieldByName("Status")
+	if statusField.IsValid() {
+		errorField := statusField.FieldByName("Error")
+		if errorField.IsValid() {
+			if err == nil {
+				errorField.Set(reflect.Zero(errorField.Type()))
+			} else {
+				errorField.Set(reflect.ValueOf(NewResourceError("", err)))
+			}
+		}
+	}
 }
 
 func NewResourceError(message string, err error) *ResourceError {

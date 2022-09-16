@@ -192,6 +192,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 					addDirectiveIndexLabel(directiveBreakdown, dwIndex)
 
 					directiveBreakdown.Spec.Directive = directive
+					directiveBreakdown.Spec.UserID = workflow.Spec.UserID
 
 					// Link the directive breakdown to the workflow
 					return ctrl.SetControllerReference(workflow, directiveBreakdown, r.Scheme)
