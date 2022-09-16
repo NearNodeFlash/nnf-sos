@@ -36,13 +36,6 @@ const (
 	OwnerNamespaceLabel = "dws.cray.hpe.com/owner.namespace"
 )
 
-type DeleteStatus int
-
-const (
-	DeleteRetry DeleteStatus = iota
-	DeleteComplete
-)
-
 // +kubebuilder:object:generate=false
 type ObjectList interface {
 	GetObjectList() []client.Object
@@ -146,18 +139,56 @@ func InheritParentLabels(child metav1.Object, owner metav1.Object) {
 	child.SetLabels(labels)
 }
 
+// DeleteStatus provides information about the status of DeleteChildren* operation
+type DeleteStatus struct {
+	complete bool
+	objects  []client.Object
+}
+
+// Complete returns true if the delete is complete, and false otherwise
+func (d *DeleteStatus) Complete() bool { return d.complete }
+
+// Info returns key/value pairs that describe the delete status operation; the returned array
+// must alternate string keys and arbitrary values so it can be passed to logr.Logging.Info()
+func (d *DeleteStatus) Info() []interface{} {
+	args := make([]interface{}, 0)
+	args = append(args, "complete", d.complete)
+
+	if len(d.objects) >= 1 {
+		args = append(args, "object", client.ObjectKeyFromObject(d.objects[0]).String())
+	}
+	if len(d.objects) > 1 {
+		args = append(args, "count", len(d.objects))
+	}
+
+	return args
+}
+
+var deleteRetry = DeleteStatus{complete: false}
+var deleteComplete = DeleteStatus{complete: true}
+
+func (d DeleteStatus) withObject(obj client.Object) DeleteStatus {
+	d.objects = []client.Object{obj}
+	return d
+}
+
+func (d DeleteStatus) withObjectList(objs []client.Object) DeleteStatus {
+	d.objects = objs
+	return d
+}
+
 // deleteChildrenSingle deletes all the children of a single type. Children are found using
 // the owner labels
 func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList ObjectList, parent metav1.Object, matchingLabels client.MatchingLabels) (DeleteStatus, error) {
 	// List all the children and filter by the owner labels
 	err := c.List(ctx, childObjectList.(client.ObjectList), matchingLabels)
 	if err != nil {
-		return DeleteRetry, err
+		return deleteRetry, err
 	}
 
 	objectList := childObjectList.GetObjectList()
 	if len(objectList) == 0 {
-		return DeleteComplete, nil
+		return deleteComplete, nil
 	}
 
 	// Check whether the child objects span multiple namespaces.
@@ -170,10 +201,9 @@ func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList 
 
 		namespace = obj.GetNamespace()
 
-		// Wait for any deletes to finish if the resource is already
-		// marked for deletion
+		// Wait for any deletes to finish if the resource is already marked for deletion
 		if !obj.GetDeletionTimestamp().IsZero() {
-			return DeleteRetry, nil
+			return deleteRetry.withObject(obj), nil
 		}
 	}
 
@@ -181,10 +211,10 @@ func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList 
 	if !multipleNamespaces {
 		err = c.DeleteAllOf(ctx, objectList[0], client.InNamespace(namespace), matchingLabels)
 		if err != nil {
-			return DeleteRetry, err
+			return deleteRetry, err
 		}
 
-		return DeleteRetry, nil
+		return deleteRetry.withObjectList(objectList), nil
 	}
 
 	// If the child resources span multiple namespaces, then we have to delete them
@@ -199,7 +229,7 @@ func deleteChildrenSingle(ctx context.Context, c client.Client, childObjectList 
 		})
 	}
 
-	return DeleteRetry, g.Wait()
+	return deleteRetry.withObjectList(objectList), g.Wait()
 }
 
 // DeleteChildrenWithLabels deletes all the children of a parent with the resource types defined
@@ -213,15 +243,15 @@ func DeleteChildrenWithLabels(ctx context.Context, c client.Client, childObjectL
 	for _, childObjectList := range childObjectLists {
 		deleteStatus, err := deleteChildrenSingle(ctx, c, childObjectList, parent, matchingLabels)
 		if err != nil {
-			return DeleteRetry, err
+			return deleteRetry, err
 		}
 
-		if deleteStatus == DeleteRetry {
-			return DeleteRetry, nil
+		if !deleteStatus.Complete() {
+			return deleteStatus, nil
 		}
 	}
 
-	return DeleteComplete, nil
+	return deleteComplete, nil
 }
 
 // DeleteChildren deletes all the children of a parent with the resource types defined
