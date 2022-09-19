@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
@@ -925,10 +926,30 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&dwsv1alpha1.ClientMountList{},
 	}
 
+	// NnfAccess must wait for the NnfStorage to be "locked" by establishing
+	// ownership on the storage resource.
+	nnfStorageMapFunc := func(o client.Object) []reconcile.Request {
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      o.GetName() + "-computes",
+					Namespace: o.GetNamespace(),
+				},
+			},
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      o.GetName() + "-servers",
+					Namespace: o.GetNamespace(),
+				},
+			},
+		}
+	}
+
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfAccess{}).
 		Watches(&source.Kind{Type: &dwsv1alpha1.ClientMount{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfStorageMapFunc)).
 		Complete(r)
 }
