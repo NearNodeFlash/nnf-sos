@@ -928,18 +928,22 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// NnfAccess must wait for the NnfStorage to be "locked" by establishing
 	// ownership on the storage resource.
-	nnfStorageMapFunc := func(o client.Object) []reconcile.Request {
+	nnfNodeStorageMapFunc := func(o client.Object) []reconcile.Request {
+
+		name := o.GetLabels()[dwsv1alpha1.OwnerNameLabel]
+		namespace := o.GetLabels()[dwsv1alpha1.OwnerNamespaceLabel]
+
 		return []reconcile.Request{
 			{
 				NamespacedName: types.NamespacedName{
-					Name:      o.GetName() + "-computes",
-					Namespace: o.GetNamespace(),
+					Name:      name + "-computes",
+					Namespace: namespace,
 				},
 			},
 			{
 				NamespacedName: types.NamespacedName{
-					Name:      o.GetName() + "-servers",
-					Namespace: o.GetNamespace(),
+					Name:      name + "-servers",
+					Namespace: namespace,
 				},
 			},
 		}
@@ -950,6 +954,6 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfAccess{}).
 		Watches(&source.Kind{Type: &dwsv1alpha1.ClientMount{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfStorageMapFunc)).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfNodeStorageMapFunc)).
 		Complete(r)
 }
