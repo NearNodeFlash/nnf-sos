@@ -26,6 +26,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/sync/errgroup"
@@ -119,8 +120,8 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 
-		if deleteStatus == dwsv1alpha1.DeleteRetry {
-			return ctrl.Result{}, nil
+		if !deleteStatus.Complete() {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
 		err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
@@ -177,7 +178,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if wait {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Add compute node information to the storage map, if necessary.
@@ -198,7 +199,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	if ready == false {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Aggregate the status from all the ClientMount resources
@@ -209,7 +210,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Wait for all of the ClientMounts to be ready before setting the Ready field
 	if ready == false {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	if access.Status.Ready == false {
@@ -271,8 +272,7 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 		nnfStorage.SetAnnotations(annotations)
 	}
 
-	err := r.Update(ctx, nnfStorage)
-	if err != nil {
+	if err := r.Update(ctx, nnfStorage); err != nil {
 		return false, err
 	}
 
@@ -702,8 +702,7 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 			continue
 		}
 
-		err = r.Update(ctx, nnfNodeStorage)
-		if err != nil {
+		if err = r.Update(ctx, nnfNodeStorage); err != nil {
 			return err
 		}
 	}
@@ -924,6 +923,22 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha1.ObjectList{
 		&dwsv1alpha1.ClientMountList{},
 	}
+
+	// NOTE: NNF Access controller also depends on NNF Storage and NNF Node Storage status'
+	// as part of its reconcile sequence. But since there is not a very good way to translate
+	// from these resources to the associated NNF Access resource as one would typically do
+	// in an EqueueRequestsFromMapFunc(), the Reconciler instead requeues until the necessary
+	// resource state is observed.
+	//
+	// For NNF Storage updates, a job DW maps well to the two NNF Access
+	//     i.e. o.GetName() + "-computes"     and o.GetName() + "-servers"
+	// But for a persistent DW there is no good translation.
+	//
+	// For NNF Node Storage updates, a job DW is pretty straight forward using ownership 
+	// labels to get the parent NNF Storage. But for a persistent DW it has the same problem
+	// as NNF Storage.
+	//
+	// Matt or Tony might be able to clean this up.
 
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).

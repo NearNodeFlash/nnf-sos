@@ -104,12 +104,12 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		}
 
 		// Delete all the Computes resources owned by the workflow
-		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
+		DeleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if deleteStatus == dwsv1alpha1.DeleteRetry {
+		if !DeleteStatus.Complete() {
 			return ctrl.Result{}, nil
 		}
 

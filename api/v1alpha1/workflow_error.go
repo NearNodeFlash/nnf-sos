@@ -20,6 +20,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 )
 
@@ -35,6 +37,10 @@ func NewWorkflowError(message string) *WorkflowError {
 		message:     message,
 		recoverable: true,
 	}
+}
+
+func NewWorkflowErrorf(format string, a ...any) *WorkflowError {
+	return NewWorkflowError(fmt.Sprintf(format, a...))
 }
 
 func (e *WorkflowError) GetMessage() string {

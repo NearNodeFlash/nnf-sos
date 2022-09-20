@@ -94,7 +94,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		if deleteStatus == dwsv1alpha1.DeleteRetry {
+		if !deleteStatus.Complete() {
 			return ctrl.Result{}, nil
 		}
 

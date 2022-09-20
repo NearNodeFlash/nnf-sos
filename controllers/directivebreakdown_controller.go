@@ -123,7 +123,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
-		if deleteStatus == dwsv1alpha1.DeleteRetry {
+		if !deleteStatus.Complete() {
 			return ctrl.Result{}, nil
 		}
 

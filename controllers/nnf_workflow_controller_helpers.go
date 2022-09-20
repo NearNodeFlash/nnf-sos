@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
@@ -21,6 +22,61 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
+
+// NNF Workflow stages all return a `result` structure when successful that describes
+// the result of an operation at each stage of the workflow.
+type result struct {
+	ctrl.Result
+	reason       string
+	object       client.Object
+	deleteStatus *dwsv1alpha1.DeleteStatus
+}
+
+// When workflow stages cannot advance they return a Requeue result with a particular reason.
+func Requeue(reason string) *result {
+	return &result{Result: ctrl.Result{}, reason: reason}
+}
+
+func (r *result) complete() bool {
+	return r.IsZero()
+}
+
+func (r *result) after(duration time.Duration) *result {
+	r.Result.RequeueAfter = duration
+	return r
+}
+
+func (r *result) withObject(object client.Object) *result {
+	r.object = object
+	return r
+}
+
+func (r *result) withDeleteStatus(d dwsv1alpha1.DeleteStatus) *result {
+	r.deleteStatus = &d
+	return r
+}
+
+func (r *result) info() []interface{} {
+	args := make([]interface{}, 0)
+	if r == nil {
+		return args
+	}
+
+	if len(r.reason) != 0 {
+		args = append(args, "reason", r.reason)
+	}
+
+	if r.object != nil {
+		args = append(args, "object", client.ObjectKeyFromObject(r.object).String())
+		args = append(args, "kind", r.object.GetObjectKind().GroupVersionKind().Kind)
+	}
+
+	if r.deleteStatus != nil {
+		args = append(args, r.deleteStatus.Info()...)
+	}
+
+	return args
+}
 
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
@@ -539,4 +595,107 @@ func addDirectiveIndexLabel(object metav1.Object, index int) {
 
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	object.SetLabels(labels)
+}
+
+func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int, accessSuffix string) (*result, error) {
+	if !(accessSuffix == "computes" || accessSuffix == "servers") {
+		panic(fmt.Sprint("unhandled NnfAccess suffix", accessSuffix))
+	}
+
+	if accessSuffix == "servers" {
+		// Check if we should also wait on the NnfAccess for the servers
+		fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+		if err != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+		}
+
+		if !(fsType == "gfs2" || fsType == "lustre") {
+			return nil, nil
+		}
+	}
+
+	access := &nnfv1alpha1.NnfAccess{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(workflow, index) + "-" + accessSuffix,
+			Namespace: workflow.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+		err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to find compute node mount information").WithError(err)
+	}
+
+	teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
+	if !found || teardownState == workflow.Status.State {
+		if access.Spec.DesiredState != "unmounted" {
+			access.Spec.DesiredState = "unmounted"
+
+			if err := r.Update(ctx, access); err != nil {
+				if !apierrors.IsConflict(err) {
+					err = fmt.Errorf("Could not update NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
+					return nil, nnfv1alpha1.NewWorkflowError("Unable to request compute node unmount").WithError(err)
+				}
+
+				return Requeue("conflict").withObject(access), nil
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+// Wait on the NnfAccesses for this workflow-index to reach the provided state.
+func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int, state string) (*result, error) {
+
+	accessSuffixes := []string{"-computes"}
+
+	// Check if we should also wait on the NnfAccess for the servers
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+	}
+
+	if fsType == "gfs2" || fsType == "lustre" {
+		accessSuffixes = append(accessSuffixes, "-servers")
+	}
+
+	for _, suffix := range accessSuffixes {
+
+		access := &nnfv1alpha1.NnfAccess{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      indexedResourceName(workflow, index) + suffix,
+				Namespace: workflow.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
+			err = fmt.Errorf("Could not get NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), err)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+		}
+
+		if access.Status.Error != nil {
+			err = fmt.Errorf("Error on NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), access.Status.Error)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+		}
+
+		if state == "mounted" {
+			// When mounting, we must always go ready regardless of workflow state
+			if access.Status.State != "mounted" || !access.Status.Ready {
+				return Requeue("pending mount").withObject(access), nil
+			}
+		} else {
+			// When unmounting, we are conditionally dependent on the workflow state matching the
+			// state of the teardown label, if found.
+			teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
+			if !found || teardownState == workflow.Status.State {
+				if access.Status.State != "unmounted" || !access.Status.Ready {
+					return Requeue("pending unmount").withObject(access), nil
+				}
+
+			}
+		}
+	}
+
+	return nil, nil
 }
