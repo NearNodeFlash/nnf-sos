@@ -678,12 +678,20 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
 		}
 
-		// If we're mounting, we must always wait for ready
-		// Otherwise we're unmounting, check that the teardown state label is for this state if present, or not found
-		teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
-		if state == "mounted" || (!found || teardownState == workflow.Status.State) {
-			if access.Status.State != state || !access.Status.Ready {
-				return Requeue("pending unmount").withObject(access), nil
+		if state == "mounted" {
+			// When mounting, we must always go ready regardless of workflow state
+			if access.Status.State != "mounted" || !access.Status.Ready {
+				return Requeue("pending mount").withObject(access), nil
+			}
+		} else {
+			// When unmounting, we are conditionally dependent on the workflow state matching the
+			// state of the teardown label, if found.
+			teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
+			if !found || teardownState == workflow.Status.State {
+				if access.Status.State != "unmounted" || !access.Status.Ready {
+					return Requeue("pending unmount").withObject(access), nil
+				}
+
 			}
 		}
 	}
