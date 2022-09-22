@@ -119,7 +119,7 @@ type NnfStorageStatus struct {
 	// from the spec.
 	AllocationSets []NnfStorageAllocationSetStatus `json:"allocationSets,omitempty"`
 
-	Error *dwsv1alpha1.ResourceError `json:"error,omitempty"`
+	dwsv1alpha1.ResourceError `json:",inline"`
 
 	// TODO: Conditions
 }

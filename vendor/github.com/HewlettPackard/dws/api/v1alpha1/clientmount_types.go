@@ -174,7 +174,7 @@ type ClientMountStatus struct {
 	Mounts []ClientMountInfoStatus `json:"mounts"`
 
 	// Error information
-	Error *ResourceError `json:"error,omitempty"`
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

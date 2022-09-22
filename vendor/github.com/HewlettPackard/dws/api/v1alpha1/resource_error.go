@@ -19,11 +19,7 @@
 
 package v1alpha1
 
-import (
-	"reflect"
-)
-
-type ResourceError struct {
+type ResourceErrorInfo struct {
 	// Optional user facing message if the error is relevant to an end user
 	UserMessage string `json:"userMessage,omitempty"`
 
@@ -31,37 +27,25 @@ type ResourceError struct {
 	DebugMessage string `json:"debugMessage"`
 
 	// Indication if the error is likely recoverable or not
-	// +kubebuilder:validation:Default=true
 	Recoverable bool `json:"recoverable"`
 }
 
-// SetResourceError fills in the ResourceError field in a resource with information from
-// an error. The ResourceError field is expected to be object.Status.Error
-func SetResourceError(object interface{}, err error) {
-	statusField := reflect.ValueOf(object).Elem().FieldByName("Status")
-	if statusField.IsValid() {
-		errorField := statusField.FieldByName("Error")
-		if errorField.IsValid() {
-			if err == nil {
-				errorField.Set(reflect.Zero(errorField.Type()))
-			} else {
-				errorField.Set(reflect.ValueOf(NewResourceError("", err)))
-			}
-		}
-	}
+type ResourceError struct {
+	// Error information
+	Error *ResourceErrorInfo `json:"error,omitempty"`
 }
 
-func NewResourceError(message string, err error) *ResourceError {
-	resourceError := &ResourceError{
+func NewResourceError(message string, err error) *ResourceErrorInfo {
+	resourceError := &ResourceErrorInfo{
 		Recoverable: true,
 	}
 
 	if err != nil {
 		// If the error provided is already a ResourceError, use it and concatenate
 		// the debug messages
-		_, ok := err.(*ResourceError)
+		_, ok := err.(*ResourceErrorInfo)
 		if ok {
-			resourceError = err.(*ResourceError)
+			resourceError = err.(*ResourceErrorInfo)
 		}
 
 		if message == "" {
@@ -76,12 +60,12 @@ func NewResourceError(message string, err error) *ResourceError {
 	return resourceError
 }
 
-func (e *ResourceError) WithFatal() *ResourceError {
+func (e *ResourceErrorInfo) WithFatal() *ResourceErrorInfo {
 	e.Recoverable = false
 	return e
 }
 
-func (e *ResourceError) WithUserMessage(message string) *ResourceError {
+func (e *ResourceErrorInfo) WithUserMessage(message string) *ResourceErrorInfo {
 	// Only set the user message if it's empty. This prevents upper layers
 	// from overriding a user message set by a lower layer
 	if e.UserMessage == "" {
@@ -91,6 +75,14 @@ func (e *ResourceError) WithUserMessage(message string) *ResourceError {
 	return e
 }
 
-func (e *ResourceError) Error() string {
+func (e *ResourceErrorInfo) Error() string {
 	return e.DebugMessage
+}
+
+func (e *ResourceError) SetResourceError(err error) {
+	if err == nil {
+		e.Error = nil
+	} else {
+		e.Error = NewResourceError("", err)
+	}
 }

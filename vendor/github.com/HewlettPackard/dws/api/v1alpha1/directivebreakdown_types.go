@@ -149,7 +149,7 @@ type DirectiveBreakdownStatus struct {
 	Ready bool `json:"ready"`
 
 	// Error information
-	Error *ResourceError `json:"error,omitempty"`
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
