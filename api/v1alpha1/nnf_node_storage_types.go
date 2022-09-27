@@ -96,7 +96,7 @@ type NnfNodeStorageStatus struct {
 	// Allocations is the list of storage allocations that were made
 	Allocations []NnfNodeStorageAllocationStatus `json:"allocations,omitempty"`
 
-	Error *dwsv1alpha1.ResourceError `json:"error,omitempty"`
+	dwsv1alpha1.ResourceError `json:",inline"`
 
 	// LustreStorageStatus describes the Lustre targets created here.
 	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`

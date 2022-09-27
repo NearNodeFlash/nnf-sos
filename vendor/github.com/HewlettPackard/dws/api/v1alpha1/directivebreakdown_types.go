@@ -132,6 +132,9 @@ type ComputeBreakdown struct {
 type DirectiveBreakdownSpec struct {
 	// Directive is a copy of the #DW for this breakdown
 	Directive string `json:"directive"`
+
+	// User ID of the user associated with the job
+	UserID uint32 `json:"userID"`
 }
 
 // DirectiveBreakdownStatus defines the storage information WLM needs to select NNF Nodes and request storage from the selected nodes
@@ -144,6 +147,9 @@ type DirectiveBreakdownStatus struct {
 
 	// Ready indicates whether AllocationSets have been generated (true) or not (false)
 	Ready bool `json:"ready"`
+
+	// Error information
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

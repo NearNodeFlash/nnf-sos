@@ -46,10 +46,10 @@ const (
 	// The storage and filesystem represented by the PSI exists and is ready for use
 	PSIStateActive PersistentStorageInstanceState = "active"
 
-	// A #DW delete_persistent directive has been issued in a workflow.
-	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be deleted.
-	// New #DW persistent_dw requests after the 'Deleting' state has been entered will fail.
-	PSIStateDeleting PersistentStorageInstanceState = "deleting"
+	// A #DW destroy_persistent directive has been issued in a workflow.
+	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be destroyed.
+	// New #DW persistent_dw requests after the PSI enters the 'destroying' state will fail.
+	PSIStateDestroying PersistentStorageInstanceState = "destroying"
 )
 
 // PersistentStorageInstanceSpec defines the desired state of PersistentStorageInstance
@@ -63,15 +63,22 @@ type PersistentStorageInstanceSpec struct {
 
 	// DWDirective is a copy of the #DW for this instance
 	DWDirective string `json:"dwDirective"`
+
+	// User ID of the user that created the persistent storage
+	UserID uint32 `json:"userID"`
 }
 
 // PersistentStorageInstanceStatus defines the observed state of PersistentStorageInstance
 type PersistentStorageInstanceStatus struct {
 	// Servers refers to the Servers resource that provides the backing storage for this storage instance
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
+
 	// Current state of the PersistentStorageInstance
 	// +kubebuilder:validation:Enum=creating;active;deleting
 	State PersistentStorageInstanceState `json:"state"`
+
+	// Error information
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

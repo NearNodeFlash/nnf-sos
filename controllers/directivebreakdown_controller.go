@@ -107,6 +107,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.DirectiveBreakdownStatus](dbd)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { dbd.Status.SetResourceError(err) }()
 
 	// Check if the object is being deleted
 	if !dbd.GetDeletionTimestamp().IsZero() {
@@ -169,6 +170,10 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		// Requeue if we failed to create the persistent instance
 		if persistentStorage == nil {
 			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if persistentStorage.Status.Error != nil {
+			return ctrl.Result{}, persistentStorage.Status.Error
 		}
 
 		// Wait for the ObjectReference to the Servers resource to be filled in
@@ -299,11 +304,16 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 				if err != nil {
 					return err
 				}
+			} else {
+				if psi.Spec.UserID != dbd.Spec.UserID {
+					return dwsv1alpha1.NewResourceError(fmt.Sprintf("Existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID), nil).WithUserMessage("User ID does not match existing persistent storage").WithFatal()
+				}
 			}
 
 			psi.Spec.Name = argsMap["name"]
 			psi.Spec.FsType = argsMap["type"]
 			psi.Spec.DWDirective = dbd.Spec.Directive
+			psi.Spec.UserID = dbd.Spec.UserID
 
 			return nil
 		})

@@ -68,7 +68,7 @@ type NnfAccessStatus struct {
 	// Ready signifies whether status.state has been achieved
 	Ready bool `json:"ready"`
 
-	Error *dwsv1alpha1.ResourceError `json:"error,omitempty"`
+	dwsv1alpha1.ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

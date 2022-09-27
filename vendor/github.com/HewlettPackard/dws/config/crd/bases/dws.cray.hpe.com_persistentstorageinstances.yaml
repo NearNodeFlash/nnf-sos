@@ -52,15 +52,38 @@ spec:
               name:
                 description: Name is the name given to this persistent storage instance.
                 type: string
+              userID:
+                description: User ID of the user that created the persistent storage
+                format: int32
+                type: integer
             required:
             - dwDirective
             - fsType
             - name
+            - userID
             type: object
           status:
             description: PersistentStorageInstanceStatus defines the observed state
               of PersistentStorageInstance
             properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  recoverable:
+                    description: Indication if the error is likely recoverable or
+                      not
+                    type: boolean
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - recoverable
+                type: object
               servers:
                 description: Servers refers to the Servers resource that provides
                   the backing storage for this storage instance

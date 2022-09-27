@@ -167,6 +167,7 @@ spec:
             description: NnfAccessStatus defines the observed state of NnfAccess
             properties:
               error:
+                description: Error information
                 properties:
                   debugMessage:
                     description: Internal debug message for the error

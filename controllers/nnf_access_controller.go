@@ -751,7 +751,7 @@ func (r *NnfAccessReconciler) getNodeStorageEndpointStatus(ctx context.Context, 
 		}
 
 		if nnfNodeStorage.Status.Error != nil {
-			access.Status.Error = nnfNodeStorage.Status.Error
+			access.Status.SetResourceError(nnfNodeStorage.Status.Error)
 			return false, nil
 		}
 	}
@@ -896,7 +896,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 
 		if clientMount.Status.Error != nil {
-			access.Status.Error = clientMount.Status.Error
+			access.Status.SetResourceError(clientMount.Status.Error)
 			return false, nil
 		}
 
@@ -934,7 +934,7 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	//     i.e. o.GetName() + "-computes"     and o.GetName() + "-servers"
 	// But for a persistent DW there is no good translation.
 	//
-	// For NNF Node Storage updates, a job DW is pretty straight forward using ownership 
+	// For NNF Node Storage updates, a job DW is pretty straight forward using ownership
 	// labels to get the parent NNF Storage. But for a persistent DW it has the same problem
 	// as NNF Storage.
 	//

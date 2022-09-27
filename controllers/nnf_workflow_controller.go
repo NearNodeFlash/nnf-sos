@@ -333,6 +333,10 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 		return nil, nnfv1alpha1.NewWorkflowError("Unable to finish parsing DW directive").WithError(err)
 	}
 
+	if directiveBreakdown.Status.Error != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("").WithError(directiveBreakdown.Status.Error)
+	}
+
 	// Wait for the breakdown to be ready
 	if directiveBreakdown.Status.Ready != ConditionTrue {
 		return Requeue("status pending").withObject(directiveBreakdown), nil
@@ -1030,6 +1034,12 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			}
 
 			return nil, nil
+		}
+
+		if persistentStorage.Spec.UserID != workflow.Spec.UserID {
+			err = fmt.Errorf("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID)
+			log.Info(err.Error())
+			return nil, nnfv1alpha1.NewWorkflowError("user ID does not match existing persistent storage").WithError(err).WithFatal()
 		}
 
 		dwsv1alpha1.AddOwnerLabels(persistentStorage, workflow)
