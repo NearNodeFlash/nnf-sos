@@ -47,9 +47,9 @@ const (
 	PSIStateActive PersistentStorageInstanceState = "active"
 
 	// A #DW destroy_persistent directive has been issued in a workflow.
-	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be deleted.
-	// New #DW persistent_dw requests after the 'Deleting' state has been entered will fail.
-	PSIStateDeleting PersistentStorageInstanceState = "deleting"
+	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be destroyed.
+	// New #DW persistent_dw requests after the PSI enters the 'destroying' state will fail.
+	PSIStateDestroying PersistentStorageInstanceState = "destroying"
 )
 
 // PersistentStorageInstanceSpec defines the desired state of PersistentStorageInstance

@@ -149,6 +149,7 @@ spec:
                   type: object
                 type: array
               error:
+                description: Error information
                 properties:
                   debugMessage:
                     description: Internal debug message for the error
