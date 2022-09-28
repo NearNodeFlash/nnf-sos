@@ -164,6 +164,38 @@ spec:
           status:
             description: DataMovementStatus defines the observed state of DataMovement
             properties:
+              commandStatus:
+                description: CommandStatus reflects the current status of the underlying
+                  Data Movement command as it executes. The command status is polled
+                  at a certain frequency to avoid excessive updates to the Data Movement
+                  resource.
+                properties:
+                  elapsedTime:
+                    description: ElapsedTime reflects the elapsed time since the underlying
+                      data movement command started.
+                    format: date-time
+                    type: string
+                  lastMessageTime:
+                    description: LastMessageTime reflects the time at which the last
+                      message was received over standard output or standard error
+                      by the underlying data movement command.
+                    format: date-time
+                    type: string
+                  message:
+                    description: LastMessage reflects the last message received over
+                      standard output or standard error as captured by the underlying
+                      data movement command.
+                    type: string
+                  progress:
+                    description: Progress refects the progress of the underlying data
+                      movement command as captured from standard output. A best effort
+                      is made to parse the command output as a percentage. If no progress
+                      has yet to be measured than this field is omitted. If the latest
+                      command output does not contain a valid percentage, then the
+                      value is unchanged from the previously parsed value.
+                    format: int32
+                    type: integer
+                type: object
               endTime:
                 description: EndTime reflects the time at which the Data Movement
                   operation ended.
@@ -172,6 +204,10 @@ spec:
               message:
                 description: Message contains any text that explains the Status.
                 type: string
+              restarts:
+                description: Restarts contains the number of restarts of the Data
+                  Movement operation.
+                type: integer
               startTime:
                 description: StartTime reflects the time at which the Data Movement
                   operation started.

@@ -71,6 +71,28 @@ type NnfDataMovementSpecSourceDestination struct {
 	StorageReference corev1.ObjectReference `json:"storageReference,omitempty"`
 }
 
+// DataMovementCommandStatus defines the observed status of the underlying data movement
+// command (MPI File Utils' `dcp` command).
+type NnfDataMovementCommandStatus struct {
+
+	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
+	ElapsedTime metav1.MicroTime `json:"elapsedTime,omitempty"`
+
+	// Progress refects the progress of the underlying data movement command as captured from standard output.
+	// A best effort is made to parse the command output as a percentage. If no progress has
+	// yet to be measured than this field is omitted. If the latest command output does not
+	// contain a valid percentage, then the value is unchanged from the previously parsed value.
+	ProgressPercentage *int32 `json:"progress,omitempty"`
+
+	// LastMessage reflects the last message received over standard output or standard error as
+	// captured by the underlying data movement command.
+	LastMessage string `json:"message,omitempty"`
+
+	// LastMessageTime reflects the time at which the last message was received over standard output or
+	// standard error by the underlying data movement command.
+	LastMessageTime metav1.MicroTime `json:"lastMessageTime,omitempty"`
+}
+
 // DataMovementStatus defines the observed state of DataMovement
 type NnfDataMovementStatus struct {
 	// Current state of data movement.
@@ -89,6 +111,14 @@ type NnfDataMovementStatus struct {
 
 	// EndTime reflects the time at which the Data Movement operation ended.
 	EndTime *metav1.MicroTime `json:"endTime,omitempty"`
+
+	// CommandStatus reflects the current status of the underlying Data Movement command
+	// as it executes. The command status is polled at a certain frequency to avoid excessive
+	// updates to the Data Movement resource.
+	CommandStatus *NnfDataMovementCommandStatus `json:"commandStatus,omitempty"`
+
+	// Restarts contains the number of restarts of the Data Movement operation.
+	Restarts int `json:"restarts,omitempty"`
 }
 
 // Types describing the various data movement status conditions.
