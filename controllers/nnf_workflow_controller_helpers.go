@@ -564,8 +564,8 @@ func getStorageReferenceNameFromWorkflowActual(workflow *dwsv1alpha1.Workflow, d
 		name = p["name"]
 		namespace = workflow.Namespace
 	default:
-		name = workflow.Status.DirectiveBreakdowns[dwdIndex].Name
-		namespace = workflow.Status.DirectiveBreakdowns[dwdIndex].Namespace
+		name = indexedResourceName(workflow, dwdIndex)
+		namespace = workflow.Namespace
 	}
 
 	return name, namespace
