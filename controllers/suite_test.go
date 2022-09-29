@@ -30,7 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -290,7 +290,7 @@ var _ = BeforeSuite(func() {
 	ruleset.Namespace = "default"
 	Expect(k8sClient.Create(context.Background(), &ruleset)).Should(Succeed())
 
-}, 60)
+})
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
