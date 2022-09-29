@@ -74,7 +74,6 @@ type NnfDataMovementSpecSourceDestination struct {
 // DataMovementCommandStatus defines the observed status of the underlying data movement
 // command (MPI File Utils' `dcp` command).
 type NnfDataMovementCommandStatus struct {
-
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
 	ElapsedTime metav1.MicroTime `json:"elapsedTime,omitempty"`
 
@@ -112,13 +111,13 @@ type NnfDataMovementStatus struct {
 	// EndTime reflects the time at which the Data Movement operation ended.
 	EndTime *metav1.MicroTime `json:"endTime,omitempty"`
 
+	// Restarts contains the number of restarts of the Data Movement operation.
+	Restarts int `json:"restarts,omitempty"`
+
 	// CommandStatus reflects the current status of the underlying Data Movement command
 	// as it executes. The command status is polled at a certain frequency to avoid excessive
 	// updates to the Data Movement resource.
 	CommandStatus *NnfDataMovementCommandStatus `json:"commandStatus,omitempty"`
-
-	// Restarts contains the number of restarts of the Data Movement operation.
-	Restarts int `json:"restarts,omitempty"`
 }
 
 // Types describing the various data movement status conditions.
