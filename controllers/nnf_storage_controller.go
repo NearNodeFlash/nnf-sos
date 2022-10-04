@@ -156,6 +156,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	storage.Status.Error = nil
+
 	// For each allocation, create the NnfNodeStorage resources to fan out to the Rabbit nodes
 	for i := range storage.Spec.AllocationSets {
 		res, err := r.createNodeStorage(ctx, storage, i)
@@ -269,6 +271,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	var status nnfv1alpha1.NnfResourceStatusType = nnfv1alpha1.ResourceReady
 
 	allocationSet.AllocationCount = 0
+	allocationSet.Error = ""
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
 	matchLabels := dwsv1alpha1.MatchingOwner(storage)
