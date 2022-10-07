@@ -44,14 +44,140 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  Options:
+                    description: NnfStorageProfileMiscData defines additional args
+                      to pass to mkfs, mount, and other utilities.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               lustreStorage:
                 description: LustreStorage defines the Lustre-specific configuration
                 properties:
+                  MdtOptions:
+                    description: Additional args for any MDT target or any combined
+                      MGT/MDT target.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  MgtOptions:
+                    description: Additional args for any MGT target.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  OstOptions:
+                    description: Additional args for any OST target.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   capacityMdt:
                     default: 5GiB
                     description: CapacityMDT specifies the size of the MDT device.  This
@@ -80,18 +206,76 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  Options:
+                    description: NnfStorageProfileMiscData defines additional args
+                      to pass to mkfs, mount, and other utilities.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  Options:
+                    description: NnfStorageProfileMiscData defines additional args
+                      to pass to mkfs, mount, and other utilities.
+                    properties:
+                      AddLvCreate:
+                        description: AddLvCreate specifies any additional args for
+                          lvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddMkfs:
+                        description: AddMkfs specifies any additional args for mkfs.
+                        items:
+                          type: string
+                        type: array
+                      AddMount:
+                        description: AddMount specifies any additional args for mount.
+                        items:
+                          type: string
+                        type: array
+                      AddPvCreate:
+                        description: AddPvCreate specifies any additional args for
+                          pvcreate.
+                        items:
+                          type: string
+                        type: array
+                      AddVgCreate:
+                        description: AddVgCreate specifies any additional args for
+                          vgcreate.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
             required:
             - gfs2Storage

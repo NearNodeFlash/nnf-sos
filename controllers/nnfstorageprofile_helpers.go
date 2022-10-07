@@ -132,6 +132,39 @@ func createPinnedProfile(ctx context.Context, clnt client.Client, clntScheme *ru
 	return newProfile, nil
 }
 
+// addPinnedStorageProfileLabel adds name/namespace labels to a resource to indicate
+// which pinned storage profile is being used with that resource.
+func addPinnedStorageProfileLabel(object metav1.Object, nnfStorageProfile *nnfv1alpha1.NnfStorageProfile) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[nnfv1alpha1.PinnedStorageProfileLabelName] = nnfStorageProfile.GetName()
+	labels[nnfv1alpha1.PinnedStorageProfileLabelNameSpace] = nnfStorageProfile.GetNamespace()
+	object.SetLabels(labels)
+}
+
+// getPinnedStorageProfileFromLabel finds the pinned storage profile via the labels on the
+// specified resource.
+func getPinnedStorageProfileFromLabel(ctx context.Context, clnt client.Client, object metav1.Object) (*nnfv1alpha1.NnfStorageProfile, error) {
+	labels := object.GetLabels()
+	if labels == nil {
+		return nil, fmt.Errorf("unable to find labels")
+	}
+
+	pinnedName, okName := labels[nnfv1alpha1.PinnedStorageProfileLabelName]
+	if !okName {
+		return nil, fmt.Errorf("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelName)
+	}
+	pinnedNamespace, okNamespace := labels[nnfv1alpha1.PinnedStorageProfileLabelNameSpace]
+	if !okNamespace {
+		return nil, fmt.Errorf("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelNameSpace)
+	}
+
+	return findPinnedProfile(ctx, clnt, pinnedNamespace, pinnedName)
+}
+
 // mergeLustreStorageDirectiveAndProfile returns an object that merges Lustre options from the DW directive with lustre options from the NnfStorageProfile, with the proper precedence.
 func mergeLustreStorageDirectiveAndProfile(dwArgs map[string]string, nnfStorageProfile *nnfv1alpha1.NnfStorageProfile) *nnfv1alpha1.NnfStorageProfileLustreData {
 	lustreData := &nnfv1alpha1.NnfStorageProfileLustreData{}

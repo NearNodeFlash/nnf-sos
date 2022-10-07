@@ -34,9 +34,10 @@ const (
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
-	lvName string
-	vgName string
-	shared bool
+	lvName  string
+	vgName  string
+	shared  bool
+	AddOpts FileSystemOemLvmAddOpts
 }
 
 func init() {
@@ -46,6 +47,7 @@ func init() {
 func (*FileSystemLvm) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemLvm{
 		FileSystem: FileSystem{name: oem.Name},
+		AddOpts:    oem.LvmAddOpts,
 		shared:     false,
 	}, nil
 }
@@ -101,8 +103,9 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	}
 
 	// Create the physical volumes.
+	addPvCreate := strings.Join(f.AddOpts.PvCreate, " ")
 	for _, device := range devices {
-		if _, err := f.run(fmt.Sprintf("pvcreate %s", device)); err != nil {
+		if _, err := f.run(fmt.Sprintf("pvcreate %s %s", addPvCreate, device)); err != nil {
 			return err
 		}
 	}
@@ -113,7 +116,8 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		shared = "--shared"
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgcreate %s %s %s", shared, f.vgName, strings.Join(devices, " "))); err != nil {
+	addVgCreate := strings.Join(f.AddOpts.VgCreate, " ")
+	if _, err := f.run(fmt.Sprintf("vgcreate %s %s %s %s", shared, addVgCreate, f.vgName, strings.Join(devices, " "))); err != nil {
 		return err
 	}
 
@@ -147,7 +151,8 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		zeroOpt = "--yes"
 	}
 
-	if _, err := f.run(fmt.Sprintf("lvcreate %s -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", zeroOpt, len(devices), f.lvName, f.vgName)); err != nil {
+	addLvCreate := strings.Join(f.AddOpts.LvCreate, " ")
+	if _, err := f.run(fmt.Sprintf("lvcreate %s -l 100%%VG --stripes %d --stripesize=32KiB %s --name %s %s", zeroOpt, len(devices), addLvCreate, f.lvName, f.vgName)); err != nil {
 		return err
 	}
 

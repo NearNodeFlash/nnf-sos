@@ -27,30 +27,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type LustreTargetType string
-
 const (
-	TargetMGT    LustreTargetType = "MGT"
-	TargetMDT    LustreTargetType = "MDT"
-	TargetMGTMDT LustreTargetType = "MGTMDT"
-	TargetOST    LustreTargetType = "OST"
+	TargetMGT    string = "MGT"
+	TargetMDT    string = "MDT"
+	TargetMGTMDT string = "MGTMDT"
+	TargetOST    string = "OST"
 )
 
-var targetTypes = map[string]LustreTargetType{
+var targetTypes = map[string]string{
 	"MGT":    TargetMGT,
 	"MDT":    TargetMDT,
 	"MGTMDT": TargetMGTMDT,
 	"OST":    TargetOST,
 }
 
-type LustreBackFsType string
-
 const (
-	BackFsLdiskfs LustreBackFsType = "ldiskfs"
-	BackFsZfs     LustreBackFsType = "zfs"
+	BackFsLdiskfs string = "ldiskfs"
+	BackFsZfs     string = "zfs"
 )
 
-var backFsTypes = map[string]LustreBackFsType{
+var backFsTypes = map[string]string{
 	"ldiskfs": BackFsLdiskfs,
 	"zfs":     BackFsZfs,
 }
@@ -63,27 +59,23 @@ type FileSystemLustre struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
 
-	targetType LustreTargetType
-	mgsNode    string
-	index      int
-	backFs     LustreBackFsType
+	Oem              FileSystemOemLustre
+	MkfsMountAddOpts FileSystemOemMkfsMountAddOpts
 }
 
 func (*FileSystemLustre) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemLustre{
 		FileSystem: FileSystem{name: oem.Name},
-		mgsNode:    oem.MgsNode,
-		index:      oem.Index,
 		// TargetType and BackFs are already verified by IsType() below.
-		targetType: targetTypes[oem.TargetType],
-		backFs:     backFsTypes[oem.BackFs],
+		Oem:              oem.Lustre,
+		MkfsMountAddOpts: oem.MkfsMountAddOpts,
 	}, nil
 }
 
 func (*FileSystemLustre) IsType(oem FileSystemOem) bool {
-	_, ok := targetTypes[oem.TargetType]
+	_, ok := targetTypes[oem.Lustre.TargetType]
 	if ok {
-		_, ok = backFsTypes[oem.BackFs]
+		_, ok = backFsTypes[oem.Lustre.BackFs]
 	}
 	return ok
 }
@@ -97,24 +89,28 @@ func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) e
 	var err error
 	var backFs string
 	f.devices = devices
-	if f.backFs == BackFsZfs {
-		backFs = fmt.Sprintf("--backfstype=%s %s", f.backFs, f.zfsVolName())
+	if f.Oem.BackFs == BackFsZfs {
+		backFs = fmt.Sprintf("--backfstype=%s %s", f.Oem.BackFs, f.zfsVolName())
 	}
 	devsStr := strings.Join(devices, " ")
 	if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 		// On non-NVMe.
 		devsStr = devices[0]
 	}
-	switch f.targetType {
+	var mkfsArgs string
+	switch f.Oem.TargetType {
 	case TargetMGT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs %s %s", backFs, devsStr))
+		mkfsArgs = "--mgs"
 	case TargetMDT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mdt --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, devsStr))
+		mkfsArgs = fmt.Sprintf("--mdt --fsname=%s --mgsnode=%s --index=%d", f.name, f.Oem.MgsNode, f.Oem.Index)
 	case TargetMGTMDT:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --mgs --mdt --fsname=%s --index=%d %s %s", f.name, f.index, backFs, devsStr))
+		mkfsArgs = fmt.Sprintf("--mgs --mdt --fsname=%s --index=%d", f.name, f.Oem.Index)
 	case TargetOST:
-		err = runCmd(f, fmt.Sprintf("mkfs.lustre --ost --fsname=%s --mgsnode=%s --index=%d %s %s", f.name, f.mgsNode, f.index, backFs, devsStr))
+		mkfsArgs = fmt.Sprintf("--ost --fsname=%s --mgsnode=%s --index=%d", f.name, f.Oem.MgsNode, f.Oem.Index)
 	}
+	addMkfs := strings.Join(f.MkfsMountAddOpts.Mkfs, " ")
+	mkfsCmd := fmt.Sprintf("mkfs.lustre %s %s %s %s", mkfsArgs, backFs, addMkfs, devsStr)
+	err = runCmd(f, mkfsCmd)
 
 	return err
 }
@@ -131,7 +127,7 @@ func runCmd(f *FileSystemLustre, cmd string) error {
 
 func (f *FileSystemLustre) Delete() error {
 	var err error
-	if f.backFs == BackFsZfs {
+	if f.Oem.BackFs == BackFsZfs {
 		zpool := f.zfsPoolName()
 		// Query the existence of the pool.
 		err = runCmd(f, fmt.Sprintf("zpool list %s", zpool))
@@ -163,14 +159,14 @@ func (f *FileSystemLustre) Delete() error {
 
 func (f *FileSystemLustre) Mount(mountpoint string) error {
 
-	var devName string 
-	if f.backFs == BackFsZfs {
+	var devName string
+	if f.Oem.BackFs == BackFsZfs {
 		devName = f.zfsVolName()
 	} else {
 		devName = f.devices[0]
 	}
 
-	return f.mount(devName, mountpoint, "lustre", nil)
+	return f.mount(devName, mountpoint, "lustre", f.MkfsMountAddOpts.Mount)
 }
 
 func (f *FileSystemLustre) GenerateRecoveryData() map[string]string {
@@ -182,7 +178,7 @@ func (f *FileSystemLustre) LoadRecoveryData(map[string]string) {
 }
 
 func (f *FileSystemLustre) zfsTargType() string {
-	return strings.ToLower(string(f.targetType))
+	return strings.ToLower(string(f.Oem.TargetType))
 }
 
 func (f *FileSystemLustre) zfsPoolName() string {
@@ -190,5 +186,5 @@ func (f *FileSystemLustre) zfsPoolName() string {
 }
 
 func (f *FileSystemLustre) zfsVolName() string {
-	return fmt.Sprintf("%s/%s%d", f.zfsPoolName(), f.zfsTargType(), f.index)
+	return fmt.Sprintf("%s/%s%d", f.zfsPoolName(), f.zfsTargType(), f.Oem.Index)
 }

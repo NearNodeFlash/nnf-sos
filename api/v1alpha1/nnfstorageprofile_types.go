@@ -24,6 +24,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// NnfStorageProfileMiscData defines additional args to pass to mkfs, mount, and other utilities.
+type NnfStorageProfileMiscData struct {
+	// AddMkfs specifies any additional args for mkfs.
+	AddMkfs []string `json:"AddMkfs,omitempty"`
+
+	// AddMount specifies any additional args for mount.
+	AddMount []string `json:"AddMount,omitempty"`
+
+	// AddPvCreate specifies any additional args for pvcreate.
+	AddPvCreate []string `json:"AddPvCreate,omitempty"`
+
+	// AddVgCreate specifies any additional args for vgcreate.
+	AddVgCreate []string `json:"AddVgCreate,omitempty"`
+
+	// AddLvCreate specifies any additional args for lvcreate.
+	AddLvCreate []string `json:"AddLvCreate,omitempty"`
+}
+
 // NnfStorageProfileLustreData defines the Lustre-specific configuration
 type NnfStorageProfileLustreData struct {
 	// CombinedMGTMDT indicates whether the MGT and MDT should be created on the same target device
@@ -43,27 +61,30 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
 	// +kubebuilder:default:="5GiB"
 	CapacityMDT string `json:"capacityMdt,omitempty"`
+
+	// Additional args for any MGT target.
+	MgtOptions NnfStorageProfileMiscData `json:"MgtOptions,omitempty"`
+
+	// Additional args for any MDT target or any combined MGT/MDT target.
+	MdtOptions NnfStorageProfileMiscData `json:"MdtOptions,omitempty"`
+
+	// Additional args for any OST target.
+	OstOptions NnfStorageProfileMiscData `json:"OstOptions,omitempty"`
 }
 
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	Options NnfStorageProfileMiscData `json:"Options,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	Options NnfStorageProfileMiscData `json:"Options,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	Options NnfStorageProfileMiscData `json:"Options,omitempty"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile

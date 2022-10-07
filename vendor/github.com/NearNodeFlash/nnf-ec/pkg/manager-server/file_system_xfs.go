@@ -19,11 +19,16 @@
 
 package server
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // FileSystemXfs establishes an XFS file system on an underlying LVM logical volume.
 type FileSystemXfs struct {
 	FileSystemLvm
+
+	MkfsMountAddOpts FileSystemOemMkfsMountAddOpts
 }
 
 func init() {
@@ -34,7 +39,9 @@ func (*FileSystemXfs) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemXfs{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
+			AddOpts:    oem.LvmAddOpts,
 		},
+		MkfsMountAddOpts: oem.MkfsMountAddOpts,
 	}, nil
 }
 
@@ -49,7 +56,8 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("mkfs.xfs %s", f.FileSystemLvm.devPath())); err != nil {
+	addMkfs := strings.Join(f.MkfsMountAddOpts.Mkfs, " ")
+	if _, err := f.run(fmt.Sprintf("mkfs.xfs %s %s", addMkfs, f.FileSystemLvm.devPath())); err != nil {
 		return err
 	}
 
@@ -57,6 +65,5 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 }
 
 func (f *FileSystemXfs) Mount(mountpoint string) error {
-	return f.mount(f.devPath(), mountpoint, "", nil)
+	return f.mount(f.devPath(), mountpoint, "", f.MkfsMountAddOpts.Mount)
 }
-

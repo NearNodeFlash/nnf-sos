@@ -186,18 +186,40 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 	})
 }
 
+type FileSystemOemMkfsMountAddOpts struct {
+	// Any additional args for mkfs or mount.
+	Mkfs  []string `json:"Mkfs,omitempty"`
+	Mount []string `json:"Mount,omitempty"`
+}
+
+type FileSystemOemLvmAddOpts struct {
+	// Any additional args for pvcreate, vgcreate, and lvcreate.
+	PvCreate []string `json:"PvCreate,omitempty"`
+	VgCreate []string `json:"VgCreate,omitempty"`
+	LvCreate []string `json:"LvCreate,omitempty"`
+}
+
+type FileSystemOemLustre struct {
+	MgsNode    string `json:"MgsNode,omitempty"`
+	TargetType string `json:"TargetType"`
+	Index      int    `json:"Index"`
+	BackFs     string `json:"BackFs"`
+}
+
+type FileSystemOemGfs2 struct {
+	ClusterName string `json:"ClusterName"`
+}
+
 // File System OEM defines the structure that is expected to be included inside a
 // Redfish / Swordfish FileSystemV122FileSystem
 type FileSystemOem struct {
-	Type string `json:"Type"`
-	Name string `json:"Name"`
-	// The following are used by Lustre, ignored for others.
-	MgsNode    string `json:"MgsNode,omitempty"`
-	TargetType string `json:"TargetType,omitempty"`
-	Index      int    `json:"Index,omitempty"`
-	BackFs     string `json:"BackFs,omitempty"`
-	// The following is used by GFS2, ignored for others.
-	ClusterName string `json:"ClusterName,omitempty"`
+	Type   string              `json:"Type"`
+	Name   string              `json:"Name"`
+	Lustre FileSystemOemLustre `json:"Lustre,omitempty"`
+	Gfs2   FileSystemOemGfs2   `json:"Gfs2,omitempty"`
+
+	LvmAddOpts       FileSystemOemLvmAddOpts       `json:"LvmAddOpts,omitempty"`
+	MkfsMountAddOpts FileSystemOemMkfsMountAddOpts `json:"MkfsMountAddOpts,omitempty"`
 }
 
 // File System Registry - Maintains a list of eligible file systems registered in the system.

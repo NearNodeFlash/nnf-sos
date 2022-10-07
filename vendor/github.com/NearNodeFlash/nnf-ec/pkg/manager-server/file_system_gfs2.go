@@ -22,11 +22,14 @@ package server
 import (
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 type FileSystemGfs2 struct {
 	FileSystemLvm
-	clusterName string
+
+	Oem              FileSystemOemGfs2
+	MkfsMountAddOpts FileSystemOemMkfsMountAddOpts
 }
 
 func init() {
@@ -50,7 +53,7 @@ func (*FileSystemGfs2) New(oem FileSystemOem) (FileSystemApi, error) {
 		return nil, fmt.Errorf("File Name '%s' overflows 16 character limit", oem.Name)
 	}
 
-	if len(oem.ClusterName) == 0 {
+	if len(oem.Gfs2.ClusterName) == 0 {
 		return nil, fmt.Errorf("Cluster Name not provided")
 	}
 
@@ -61,16 +64,18 @@ func (*FileSystemGfs2) New(oem FileSystemOem) (FileSystemApi, error) {
 		return nil, fmt.Errorf("File System Name '%s' is invalid. Must match pattern '%s'", oem.Name, exp.String())
 	}
 
-	if !exp.MatchString(oem.ClusterName) {
-		return nil, fmt.Errorf("Cluster Name '%s' is invalid. Must match pattern '%s'", oem.ClusterName, exp.String())
+	if !exp.MatchString(oem.Gfs2.ClusterName) {
+		return nil, fmt.Errorf("Cluster Name '%s' is invalid. Must match pattern '%s'", oem.Gfs2.ClusterName, exp.String())
 	}
 
 	return &FileSystemGfs2{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
+			AddOpts:    oem.LvmAddOpts,
 			shared:     true,
 		},
-		clusterName: oem.ClusterName,
+		Oem:              oem.Gfs2,
+		MkfsMountAddOpts: oem.MkfsMountAddOpts,
 	}, nil
 }
 
@@ -86,7 +91,8 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("mkfs.gfs2 -O -j2 -p lock_dlm -t %s:%s %s", f.clusterName, f.Name(), f.FileSystemLvm.devPath())); err != nil {
+	addMkfs := strings.Join(f.MkfsMountAddOpts.Mkfs, " ")
+	if _, err := f.run(fmt.Sprintf("mkfs.gfs2 -O -j2 -p lock_dlm -t %s:%s %s %s", f.Oem.ClusterName, f.Name(), addMkfs, f.FileSystemLvm.devPath())); err != nil {
 		return err
 	}
 
@@ -94,5 +100,5 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 }
 
 func (f *FileSystemGfs2) Mount(mountpoint string) error {
-	return f.mount(f.devPath(), mountpoint, "", nil)
+	return f.mount(f.devPath(), mountpoint, "", f.MkfsMountAddOpts.Mount)
 }
