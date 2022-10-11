@@ -450,7 +450,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.Nnf
 		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file system", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
-		return &ctrl.Result{Requeue: true}, nil
+		return &ctrl.Result{}, nil
 	}
 
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
