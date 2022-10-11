@@ -170,10 +170,12 @@ spec:
                   at a certain frequency to avoid excessive updates to the Data Movement
                   resource.
                 properties:
+                  command:
+                    description: The command that was executed during data movement.
+                    type: string
                   elapsedTime:
                     description: ElapsedTime reflects the elapsed time since the underlying
                       data movement command started.
-                    format: date-time
                     type: string
                   lastMessageTime:
                     description: LastMessageTime reflects the time at which the last
