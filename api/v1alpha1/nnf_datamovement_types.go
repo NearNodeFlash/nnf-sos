@@ -78,7 +78,6 @@ type NnfDataMovementCommandStatus struct {
 	Command string `json:"command,omitempty"`
 
 	// The interval to wait between progress collection during data movement.
-	// +kubebuilder:default:="5s"
 	ProgressCollectionInterval string `json:"collectInterval,omitempty"`
 
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.

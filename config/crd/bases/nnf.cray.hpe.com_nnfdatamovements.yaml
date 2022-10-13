@@ -171,7 +171,6 @@ spec:
                   resource.
                 properties:
                   collectInterval:
-                    default: 5s
                     description: The interval to wait between progress collection
                       during data movement.
                     type: string
