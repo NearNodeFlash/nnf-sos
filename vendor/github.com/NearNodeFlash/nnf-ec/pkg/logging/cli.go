@@ -36,6 +36,13 @@ var Cli = cli{
 	File:   nil,
 }
 
+type LoggingType uint8
+
+const (
+	LogToContainer LoggingType = 0
+	LogToStdout                = 1 << iota
+)
+
 func (l *cli) init() {
 
 	f, err := os.OpenFile("commands.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND|os.O_SYNC, 0755)
@@ -59,6 +66,10 @@ func (l *cli) init() {
 }
 
 func (l *cli) Trace(cmd string, execFunc func(cmd string) ([]byte, error)) ([]byte, error) {
+	return l.Trace2(LogToContainer, cmd, execFunc)
+}
+
+func (l *cli) Trace2(logmask LoggingType, cmd string, execFunc func(cmd string) ([]byte, error)) ([]byte, error) {
 	if l.File == nil {
 		l.init()
 	}
@@ -93,6 +104,15 @@ func (l *cli) Trace(cmd string, execFunc func(cmd string) ([]byte, error)) ([]by
 		WithField("response", response).
 		WithError(err).
 		Info()
+
+	// Get it out to the NNF logs.
+	if logmask&LogToStdout == LogToStdout {
+		log.
+			WithField("command", cmd).
+			WithField("response", response).
+			WithError(err).
+			Info()
+	}
 
 	l.File.Sync()
 

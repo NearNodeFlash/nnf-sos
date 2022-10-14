@@ -159,8 +159,13 @@ type Connection struct {
 
 var manager Fabric
 
+// Used to provide access to exported functions while protecting the singleton (i.e. manager)
+var FabricController *Fabric
+
 func init() {
-	api.RegisterFabricController(&manager)
+	if FabricController == nil {
+		FabricController = &manager
+	}
 }
 
 func isFabric(id string) bool { return id == manager.id }

@@ -20,7 +20,7 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/HewlettPackard/dws v0.0.0-20221020153944-828dc4977d34
+# github.com/HewlettPackard/dws v0.0.0-20221024182847-10a4bad5b056
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha1
 github.com/HewlettPackard/dws/config/crd/bases
@@ -36,7 +36,7 @@ github.com/HewlettPackard/structex
 ## explicit; go 1.19
 github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
-# github.com/NearNodeFlash/nnf-ec v0.0.0-20220916150000-517a1ab34a59
+# github.com/NearNodeFlash/nnf-ec v0.0.0-20221025155626-ce1ea214349a
 ## explicit; go 1.16
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
@@ -56,6 +56,7 @@ github.com/NearNodeFlash/nnf-ec/pkg/manager-telemetry
 github.com/NearNodeFlash/nnf-ec/pkg/persistent
 github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common
 github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models
+github.com/NearNodeFlash/nnf-ec/pkg/var_handler
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile

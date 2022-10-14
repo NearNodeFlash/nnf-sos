@@ -44,10 +44,45 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                    type: object
+                  options:
+                    description: Options contains options for libraries.
+                    properties:
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute. Use one array element per option.  Do not
+                          prepend the options with "-o".
+                        items:
+                          type: string
+                        type: array
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit. Use one array element per option.  Do not
+                          prepend the options with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               lustreStorage:
                 description: LustreStorage defines the Lustre-specific configuration
@@ -72,6 +107,135 @@ spec:
                     description: ExternalMGS contains the NIDs of a pre-existing MGS
                       that should be used
                     type: string
+                  mdtCommandlines:
+                    description: MdtCmdLines contains commands to create an MDT target.
+                    properties:
+                      mkfs:
+                        description: Mkfs specifies the mkfs.lustre commandline, minus
+                          the "mkfs.lustre". Use the --mkfsoptions argument to specify
+                          the zfs create options.  See zfsprops(7). Use the --mountfsoptions
+                          argument to specify persistent mount options for the lustre
+                          targets.
+                        type: string
+                      zpoolCreate:
+                        description: ZpoolCreate specifies the zpool create commandline,
+                          minus the "zpool create". This is where you may specify
+                          zpool create options, and the virtual device (vdev) such
+                          as "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                    type: object
+                  mdtOptions:
+                    description: MdtOptions contains options to use for libraries
+                      used for an MDT target.
+                    properties:
+                      mountTarget:
+                        description: MountTarget specifies mount options for the mount-utils
+                          library to mount a lustre target on the Rabbit. For persistent
+                          mount options for lustre targets, do not use this array;
+                          use the --mountfsoptions argument to mkfs.lustre instead.
+                          Use one array element per option. Do not prepend the options
+                          with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  mgtCommandlines:
+                    description: MgtCmdLines contains commands to create an MGT target.
+                    properties:
+                      mkfs:
+                        description: Mkfs specifies the mkfs.lustre commandline, minus
+                          the "mkfs.lustre". Use the --mkfsoptions argument to specify
+                          the zfs create options.  See zfsprops(7). Use the --mountfsoptions
+                          argument to specify persistent mount options for the lustre
+                          targets.
+                        type: string
+                      zpoolCreate:
+                        description: ZpoolCreate specifies the zpool create commandline,
+                          minus the "zpool create". This is where you may specify
+                          zpool create options, and the virtual device (vdev) such
+                          as "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                    type: object
+                  mgtMdtCommandlines:
+                    description: MgtMdtCmdLines contains commands to create a combined
+                      MGT/MDT target.
+                    properties:
+                      mkfs:
+                        description: Mkfs specifies the mkfs.lustre commandline, minus
+                          the "mkfs.lustre". Use the --mkfsoptions argument to specify
+                          the zfs create options.  See zfsprops(7). Use the --mountfsoptions
+                          argument to specify persistent mount options for the lustre
+                          targets.
+                        type: string
+                      zpoolCreate:
+                        description: ZpoolCreate specifies the zpool create commandline,
+                          minus the "zpool create". This is where you may specify
+                          zpool create options, and the virtual device (vdev) such
+                          as "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                    type: object
+                  mgtMdtOptions:
+                    description: MgtMdtOptions contains options to use for libraries
+                      used for a combined MGT/MDT target.
+                    properties:
+                      mountTarget:
+                        description: MountTarget specifies mount options for the mount-utils
+                          library to mount a lustre target on the Rabbit. For persistent
+                          mount options for lustre targets, do not use this array;
+                          use the --mountfsoptions argument to mkfs.lustre instead.
+                          Use one array element per option. Do not prepend the options
+                          with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  mgtOptions:
+                    description: MgtOptions contains options to use for libraries
+                      used for an MGT target.
+                    properties:
+                      mountTarget:
+                        description: MountTarget specifies mount options for the mount-utils
+                          library to mount a lustre target on the Rabbit. For persistent
+                          mount options for lustre targets, do not use this array;
+                          use the --mountfsoptions argument to mkfs.lustre instead.
+                          Use one array element per option. Do not prepend the options
+                          with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  ostCommandlines:
+                    description: OstCmdLines contains commands to create an OST target.
+                    properties:
+                      mkfs:
+                        description: Mkfs specifies the mkfs.lustre commandline, minus
+                          the "mkfs.lustre". Use the --mkfsoptions argument to specify
+                          the zfs create options.  See zfsprops(7). Use the --mountfsoptions
+                          argument to specify persistent mount options for the lustre
+                          targets.
+                        type: string
+                      zpoolCreate:
+                        description: ZpoolCreate specifies the zpool create commandline,
+                          minus the "zpool create". This is where you may specify
+                          zpool create options, and the virtual device (vdev) such
+                          as "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                    type: object
+                  ostOptions:
+                    description: OstOptions contains options to use for libraries
+                      used for an OST target.
+                    properties:
+                      mountTarget:
+                        description: MountTarget specifies mount options for the mount-utils
+                          library to mount a lustre target on the Rabbit. For persistent
+                          mount options for lustre targets, do not use this array;
+                          use the --mountfsoptions argument to mkfs.lustre instead.
+                          Use one array element per option. Do not prepend the options
+                          with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               pinned:
                 default: false
@@ -80,18 +244,70 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                    type: object
                 type: object
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
-                  placeholder:
-                    default: true
-                    description: Placeholder
-                    type: boolean
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                    type: object
+                  options:
+                    description: Options contains options for libraries.
+                    properties:
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute. Use one array element per option.  Do not
+                          prepend the options with "-o".
+                        items:
+                          type: string
+                        type: array
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit. Use one array element per option.  Do not
+                          prepend the options with "-o".
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
             required:
             - gfs2Storage

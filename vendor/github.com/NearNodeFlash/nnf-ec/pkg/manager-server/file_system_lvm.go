@@ -24,6 +24,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
 
 const (
@@ -34,9 +36,10 @@ const (
 type FileSystemLvm struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
-	lvName string
-	vgName string
-	shared bool
+	lvName  string
+	vgName  string
+	shared  bool
+	CmdArgs FileSystemOemLvm
 }
 
 func init() {
@@ -46,6 +49,7 @@ func init() {
 func (*FileSystemLvm) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemLvm{
 		FileSystem: FileSystem{name: oem.Name},
+		CmdArgs:    oem.LvmCmd,
 		shared:     false,
 	}, nil
 }
@@ -100,12 +104,25 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return nil
 	}
 
+	varHandler := var_handler.NewVarHandler(map[string]string{
+		"$DEVICE_NUM":  fmt.Sprintf("%d", len(devices)),
+		"$DEVICE_LIST": strings.Join(devices, " "),
+		"$LV_NAME":     f.lvName,
+		"$VG_NAME":     f.vgName,
+	})
+	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {
+		return fmt.Errorf("invalid internal device list: %w", err)
+	}
+
 	// Create the physical volumes.
 	for _, device := range devices {
-		if _, err := f.run(fmt.Sprintf("pvcreate %s", device)); err != nil {
+		varHandler.VarMap["$DEVICE"] = device
+		pvArgs := varHandler.ReplaceAll(f.CmdArgs.PvCreate)
+		if _, err := f.run(fmt.Sprintf("pvcreate %s", pvArgs)); err != nil {
 			return err
 		}
 	}
+	delete(varHandler.VarMap, "$DEVICE")
 
 	// Check if we are creating a shared volume group and prepend the necessary flag
 	shared := ""
@@ -113,7 +130,8 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		shared = "--shared"
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgcreate %s %s %s", shared, f.vgName, strings.Join(devices, " "))); err != nil {
+	vgArgs := varHandler.ReplaceAll(f.CmdArgs.VgCreate)
+	if _, err := f.run(fmt.Sprintf("vgcreate %s %s", shared, vgArgs)); err != nil {
 		return err
 	}
 
@@ -147,7 +165,8 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		zeroOpt = "--yes"
 	}
 
-	if _, err := f.run(fmt.Sprintf("lvcreate %s -l 100%%VG --stripes %d --stripesize=32KiB --name %s %s", zeroOpt, len(devices), f.lvName, f.vgName)); err != nil {
+	lvArgs := varHandler.ReplaceAll(f.CmdArgs.LvCreate)
+	if _, err := f.run(fmt.Sprintf("lvcreate %s %s", zeroOpt, lvArgs)); err != nil {
 		return err
 	}
 

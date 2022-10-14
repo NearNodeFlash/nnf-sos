@@ -5,8 +5,36 @@ metadata:
   namespace: nnf-system
 data:
   default: true
-  lustreStorage: {}
-  gfs2Storage: {}
-  xfsStorage: {}
-  rawStorage: {}
+  lustreStorage:
+    combinedMgtMdt: true
+    mgtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mgs $VOL_NAME
+    mdtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mdt --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+    mgtMdtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mgs --mdt --fsname=$FS_NAME --index=$INDEX $VOL_NAME
+    ostCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --ost --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+  gfs2Storage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      lvCreate: -l 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
+  xfsStorage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      lvCreate: -l 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      mkfs: $DEVICE
+  rawStorage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      lvCreate: -l 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+
 

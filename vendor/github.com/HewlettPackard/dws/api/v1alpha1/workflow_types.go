@@ -104,6 +104,12 @@ type WorkflowSpec struct {
 	// conjunction with User ID to run subtasks with UserID:GroupID credentials.
 	GroupID uint32 `json:"groupID"`
 
+	// Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
+	// The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
+	// The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
+	// +kubebuilder:default:=false
+	Hurry bool `json:"hurry"`
+
 	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`
 }
@@ -137,7 +143,7 @@ type WorkflowDriverStatus struct {
 type WorkflowStatus struct {
 	// The state the resource is currently transitioning to.
 	// Updated by the controller once started.
-	// +kubebuilder:default=proposal
+	// +kubebuilder:default:=proposal
 	State string `json:"state"`
 
 	// Ready can be 'True', 'False'

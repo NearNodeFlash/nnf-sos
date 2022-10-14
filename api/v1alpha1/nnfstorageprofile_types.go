@@ -24,6 +24,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities.
+type NnfStorageProfileLustreCmdLines struct {
+	// ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
+	// This is where you may specify zpool create options, and the virtual device (vdev) such as
+	// "mirror", or "draid".  See zpoolconcepts(7).
+	ZpoolCreate string `json:"zpoolCreate,omitempty"`
+
+	// Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
+	// Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
+	// Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
+	Mkfs string `json:"mkfs,omitempty"`
+}
+
+// NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
+type NnfStorageProfileLustreMiscOptions struct {
+	// MountTarget specifies mount options for the mount-utils library to mount a lustre target on the Rabbit.
+	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions argument to mkfs.lustre instead.
+	// Use one array element per option. Do not prepend the options with "-o".
+	MountTarget []string `json:"mountTarget,omitempty"`
+}
+
 // NnfStorageProfileLustreData defines the Lustre-specific configuration
 type NnfStorageProfileLustreData struct {
 	// CombinedMGTMDT indicates whether the MGT and MDT should be created on the same target device
@@ -43,27 +64,80 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
 	// +kubebuilder:default:="5GiB"
 	CapacityMDT string `json:"capacityMdt,omitempty"`
+
+	// MgtCmdLines contains commands to create an MGT target.
+	MgtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtCommandlines,omitempty"`
+
+	// MdtCmdLines contains commands to create an MDT target.
+	MdtCmdLines NnfStorageProfileLustreCmdLines `json:"mdtCommandlines,omitempty"`
+
+	// MgtMdtCmdLines contains commands to create a combined MGT/MDT target.
+	MgtMdtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtMdtCommandlines,omitempty"`
+
+	// OstCmdLines contains commands to create an OST target.
+	OstCmdLines NnfStorageProfileLustreCmdLines `json:"ostCommandlines,omitempty"`
+
+	// MgtOptions contains options to use for libraries used for an MGT target.
+	MgtOptions NnfStorageProfileLustreMiscOptions `json:"mgtOptions,omitempty"`
+
+	// MdtOptions contains options to use for libraries used for an MDT target.
+	MdtOptions NnfStorageProfileLustreMiscOptions `json:"mdtOptions,omitempty"`
+
+	// MgtMdtOptions contains options to use for libraries used for a combined MGT/MDT target.
+	MgtMdtOptions NnfStorageProfileLustreMiscOptions `json:"mgtMdtOptions,omitempty"`
+
+	// OstOptions contains options to use for libraries used for an OST target.
+	OstOptions NnfStorageProfileLustreMiscOptions `json:"ostOptions,omitempty"`
+}
+
+// NnfStorageProfileCmdLines defines commandlines to use for mkfs, and other utilities.
+type NnfStorageProfileCmdLines struct {
+	// Mkfs specifies the mkfs commandline, minus the "mkfs".
+	Mkfs string `json:"mkfs,omitempty"`
+
+	// PvCreate specifies the pvcreate commandline, minus the "pvcreate".
+	PvCreate string `json:"pvCreate,omitempty"`
+
+	// VgCreate specifies the vgcreate commandline, minus the "vgcreate".
+	VgCreate string `json:"vgCreate,omitempty"`
+
+	// LvCreate specifies the lvcreate commandline, minus the "lvcreate".
+	LvCreate string `json:"lvCreate,omitempty"`
+}
+
+// NnfStorageProfileMiscOptions defines options to use for the mount library, and other utilities.
+type NnfStorageProfileMiscOptions struct {
+	// MountRabbit specifies mount options for mounting on the Rabbit.
+	// Use one array element per option.  Do not prepend the options with "-o".
+	MountRabbit []string `json:"mountRabbit,omitempty"`
+
+	// MountCompute specifies mount options for mounting on the Compute.
+	// Use one array element per option.  Do not prepend the options with "-o".
+	MountCompute []string `json:"mountCompute,omitempty"`
 }
 
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	// CmdLines contains commands to create volumes and filesystems.
+	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+
+	// Options contains options for libraries.
+	Options NnfStorageProfileMiscOptions `json:"options,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	// CmdLines contains commands to create volumes and filesystems.
+	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+
+	// Options contains options for libraries.
+	Options NnfStorageProfileMiscOptions `json:"options,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
-	// Placeholder
-	// +kubebuilder:default:=true
-	Placeholder bool `json:"placeholder,omitempty"`
+	// CmdLines contains commands to create volumes and filesystems.
+	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile

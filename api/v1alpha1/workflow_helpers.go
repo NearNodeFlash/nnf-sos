@@ -25,4 +25,12 @@ const (
 	// to filter the child objects by the directive index and only delete the
 	// resources for the directive being processed
 	DirectiveIndexLabel = "nnf.cray.hpe.com/directive_index"
+
+	// PinnedStorageProfileLabelName is a label applied to NnfStorage objects to show
+	// which pinned storage profile is being used.
+	PinnedStorageProfileLabelName = "nnf.cray.hpe.com/pinned_storage_profile_name"
+
+	// PinnedStorageProfileLabelNameSpace is a label applied to NnfStorage objects to show
+	// which pinned storage profile is being used.
+	PinnedStorageProfileLabelNameSpace = "nnf.cray.hpe.com/pinned_storage_profile_namespace"
 )
