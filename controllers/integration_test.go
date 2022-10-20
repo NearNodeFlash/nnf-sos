@@ -146,6 +146,23 @@ var _ = Describe("Integration Test", func() {
 		}
 	} // advanceStateAndCheckReady(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow)
 
+	checkPSIConsumerReference := func(storageName string, w *dwsv1alpha1.Workflow) {
+		persistentInstance = &dwsv1alpha1.PersistentStorageInstance{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      storageName,
+				Namespace: w.Namespace,
+			},
+		}
+
+		By(fmt.Sprintf("Retrieving PSI '%s'", storageName))
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), persistentInstance)).To(Succeed(), "PersistentStorageInstance created")
+
+		By("Checking PSI has the correct consumer reference")
+		Expect(len(persistentInstance.Spec.ConsumerReferences)).To(Equal(1))
+		Expect(persistentInstance.Spec.ConsumerReferences[0].Name).To(Equal(indexedResourceName(w, 0)))
+		Expect(persistentInstance.Spec.ConsumerReferences[0].Namespace).To(Equal(w.Namespace))
+	}
+
 	checkPSIToServerMapping := func(psiOwnedByWorkflow bool, storageName string, w *dwsv1alpha1.Workflow) {
 		workFlowOwnerRef := metav1.OwnerReference{
 			Kind:               reflect.TypeOf(dwsv1alpha1.Workflow{}).Name(),
@@ -596,6 +613,9 @@ var _ = Describe("Integration Test", func() {
 			By("Checking Setup state")
 			switch storageDirective {
 			case "jobdw":
+			case "persistendw":
+				checkPSIConsumerReference(storageName, workflow)
+				checkServersToNnfStorageMapping(nnfStoragePresent)
 			default:
 				checkServersToNnfStorageMapping(nnfStoragePresent)
 			}

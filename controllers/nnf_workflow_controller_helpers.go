@@ -699,3 +699,86 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 
 	return nil, nil
 }
+
+func (r *NnfWorkflowReconciler) addPersistentStorageReference(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
+	if err != nil {
+		return err
+	}
+
+	if persistentStorage.Status.State != dwsv1alpha1.PSIStateActive {
+		return fmt.Errorf("PersistentStorage is not active")
+	}
+
+	// Add a consumer reference to the persistent storage for this directive
+	reference := corev1.ObjectReference{
+		Name:      indexedResourceName(workflow, index),
+		Namespace: workflow.Namespace,
+	}
+
+	found := false
+	for _, existingReference := range persistentStorage.Spec.ConsumerReferences {
+		if existingReference == reference {
+			found = true
+		}
+	}
+
+	if !found {
+		persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences, reference)
+
+		err := r.Update(ctx, persistentStorage)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) removePersistentStorageReference(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
+	if err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	// remove the consumer reference on the persistent storage for this directive
+	reference := corev1.ObjectReference{
+		Name:      indexedResourceName(workflow, index),
+		Namespace: workflow.Namespace,
+	}
+
+	found := false
+	for i, existingReference := range persistentStorage.Spec.ConsumerReferences {
+		if existingReference == reference {
+			persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences[:i], persistentStorage.Spec.ConsumerReferences[i+1:]...)
+			found = true
+		}
+	}
+
+	if found {
+		err := r.Update(ctx, persistentStorage)
+		if err != nil {
+			return client.IgnoreNotFound(err)
+		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+	for i, directive := range workflow.Spec.DWDirectives {
+		dwArgs, _ := dwdparse.BuildArgsMap(directive)
+		if dwArgs["command"] == "persistentdw" {
+			err := r.removePersistentStorageReference(ctx, workflow, i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

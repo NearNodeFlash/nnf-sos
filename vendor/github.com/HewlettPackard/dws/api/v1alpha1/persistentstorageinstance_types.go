@@ -66,6 +66,13 @@ type PersistentStorageInstanceSpec struct {
 
 	// User ID of the user that created the persistent storage
 	UserID uint32 `json:"userID"`
+
+	// Desired state of the PersistentStorageInstance
+	// +kubebuilder:validation:Enum=active;destroying
+	State PersistentStorageInstanceState `json:"state"`
+
+	// List of consumers using this persistent storage
+	ConsumerReferences []corev1.ObjectReference `json:"consumerReferences,omitempty"`
 }
 
 // PersistentStorageInstanceStatus defines the observed state of PersistentStorageInstance
@@ -74,7 +81,7 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// Current state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum=creating;active;deleting
+	// +kubebuilder:validation:Enum=creating;active;destroying
 	State PersistentStorageInstanceState `json:"state"`
 
 	// Error information

@@ -314,6 +314,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 			psi.Spec.FsType = argsMap["type"]
 			psi.Spec.DWDirective = dbd.Spec.Directive
 			psi.Spec.UserID = dbd.Spec.UserID
+			psi.Spec.State = dwsv1alpha1.PSIStateActive
 
 			return nil
 		})

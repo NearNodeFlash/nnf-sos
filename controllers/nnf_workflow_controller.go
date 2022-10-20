@@ -119,6 +119,10 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, nil
 		}
 
+		if err := r.removeAllPersistentStorageReferences(ctx, workflow); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -348,6 +352,10 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	if dwArgs["command"] == "persistentdw" {
+		return nil, r.addPersistentStorageReference(ctx, workflow, index)
+	}
 
 	// Only jobdw and create_persistent need to create an NnfStorage resource
 	if dwArgs["command"] != "create_persistent" && dwArgs["command"] != "jobdw" {
@@ -1042,6 +1050,14 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return nil, nnfv1alpha1.NewWorkflowError("user ID does not match existing persistent storage").WithError(err).WithFatal()
 		}
 
+		if len(persistentStorage.Spec.ConsumerReferences) != 0 {
+			err = fmt.Errorf("PersistentStorage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences))
+			log.Info(err.Error())
+			return nil, nnfv1alpha1.NewWorkflowError("PersistentStorage cannot be deleted while in use").WithError(err).WithFatal()
+		}
+
+		persistentStorage.Spec.State = dwsv1alpha1.PSIStateDestroying
+
 		dwsv1alpha1.AddOwnerLabels(persistentStorage, workflow)
 		addDirectiveIndexLabel(persistentStorage, index)
 
@@ -1057,6 +1073,11 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Could not delete peristent storage %v", dwArgs["name"])).WithError(err)
 		}
 		log.Info("Add owner reference for persistent storage for deletion", "psi", persistentStorage)
+	case "persistentdw":
+		err := r.removePersistentStorageReference(ctx, workflow, index)
+		if err != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not remove persistent storage reference").WithError(err)
+		}
 	default:
 	}
 
