@@ -416,6 +416,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						Name:        persistentStorageName,
 						FsType:      "lustre",
 						DWDirective: workflow.Spec.DWDirectives[0],
+						State:       dwsv1alpha1.PSIStateActive,
 					},
 				}
 				Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())

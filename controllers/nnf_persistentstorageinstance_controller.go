@@ -88,6 +88,11 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, nil
 		}
 
+		if len(persistentStorage.Spec.ConsumerReferences) != 0 {
+			log.Info("Unable to delete persistent storage with consumer references")
+			return ctrl.Result{}, nil
+		}
+
 		// Delete all NnfStorage and Servers children that are owned by this PersistentStorage.
 		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, persistentStorage)
 		if err != nil {
@@ -124,6 +129,10 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
+	if persistentStorage.Status.State == "" {
+		persistentStorage.Status.State = dwsv1alpha1.PSIStateCreating
+	}
+
 	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -148,11 +157,40 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	persistentStorage.Status.State = dwsv1alpha1.PSIStateCreating // Temp until Tony fixes the State value
 	persistentStorage.Status.Servers = v1.ObjectReference{
 		Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
 		Name:      servers.Name,
 		Namespace: servers.Namespace,
+	}
+
+	if persistentStorage.Spec.State == dwsv1alpha1.PSIStateDestroying {
+		if len(persistentStorage.Spec.ConsumerReferences) == 0 {
+			persistentStorage.Status.State = dwsv1alpha1.PSIStateDestroying
+		}
+	} else if persistentStorage.Spec.State == dwsv1alpha1.PSIStateActive {
+		// Wait for the NnfStorage to be ready before marking the persistent storage
+		// state as "active"
+		nnfStorage := &nnfv1alpha1.NnfStorage{}
+		if err := r.Get(ctx, req.NamespacedName, nnfStorage); err != nil {
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		// If the Status section has not been filled in yet, exit and wait.
+		if len(nnfStorage.Status.AllocationSets) != len(nnfStorage.Spec.AllocationSets) {
+			return ctrl.Result{}, nil
+		}
+
+		var complete bool = true
+		// Status section should be usable now, check for Ready
+		for _, set := range nnfStorage.Status.AllocationSets {
+			if set.Status != "Ready" {
+				complete = false
+			}
+		}
+
+		if complete == true {
+			persistentStorage.Status.State = dwsv1alpha1.PSIStateActive
+		}
 	}
 
 	return ctrl.Result{}, err
@@ -210,6 +248,7 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha1.PersistentStorageInstance{}).
 		Owns(&dwsv1alpha1.Servers{}).
+		Owns(&nnfv1alpha1.NnfStorage{}).
 		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Complete(r)
 }
