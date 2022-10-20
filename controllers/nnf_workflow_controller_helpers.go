@@ -728,10 +728,7 @@ func (r *NnfWorkflowReconciler) addPersistentStorageReference(ctx context.Contex
 	if !found {
 		persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences, reference)
 
-		err := r.Update(ctx, persistentStorage)
-		if err != nil {
-			return err
-		}
+		return r.Update(ctx, persistentStorage)
 	}
 
 	return nil
@@ -751,18 +748,10 @@ func (r *NnfWorkflowReconciler) removePersistentStorageReference(ctx context.Con
 		Namespace: workflow.Namespace,
 	}
 
-	found := false
 	for i, existingReference := range persistentStorage.Spec.ConsumerReferences {
 		if existingReference == reference {
 			persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences[:i], persistentStorage.Spec.ConsumerReferences[i+1:]...)
-			found = true
-		}
-	}
-
-	if found {
-		err := r.Update(ctx, persistentStorage)
-		if err != nil {
-			return client.IgnoreNotFound(err)
+			return r.Update(ctx, persistentStorage)
 		}
 	}
 

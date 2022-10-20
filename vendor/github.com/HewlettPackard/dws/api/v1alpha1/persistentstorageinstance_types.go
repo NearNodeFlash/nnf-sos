@@ -58,7 +58,7 @@ type PersistentStorageInstanceSpec struct {
 	Name string `json:"name"`
 
 	// FsType describes the File System Type for this storage instance.
-	// +kubebuilder:validation:Enum=raw;xfs;gfs2;lustre
+	// +kubebuilder:validation:Enum:=raw;xfs;gfs2;lustre
 	FsType string `json:"fsType"`
 
 	// DWDirective is a copy of the #DW for this instance
@@ -68,7 +68,7 @@ type PersistentStorageInstanceSpec struct {
 	UserID uint32 `json:"userID"`
 
 	// Desired state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum=active;destroying
+	// +kubebuilder:validation:Enum:=active;destroying
 	State PersistentStorageInstanceState `json:"state"`
 
 	// List of consumers using this persistent storage
@@ -81,7 +81,7 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// Current state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum=creating;active;destroying
+	// +kubebuilder:validation:Enum:=creating;active;destroying
 	State PersistentStorageInstanceState `json:"state"`
 
 	// Error information

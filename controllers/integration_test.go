@@ -158,7 +158,7 @@ var _ = Describe("Integration Test", func() {
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), persistentInstance)).To(Succeed(), "PersistentStorageInstance created")
 
 		By("Checking PSI has the correct consumer reference")
-		Expect(len(persistentInstance.Spec.ConsumerReferences)).To(Equal(1))
+		Expect(persistentInstance.Spec.ConsumerReferences).To(HaveLen(1))
 		Expect(persistentInstance.Spec.ConsumerReferences[0].Name).To(Equal(indexedResourceName(w, 0)))
 		Expect(persistentInstance.Spec.ConsumerReferences[0].Namespace).To(Equal(w.Namespace))
 	}
