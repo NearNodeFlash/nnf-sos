@@ -103,6 +103,11 @@ spec:
                     description: CombinedMGTMDT indicates whether the MGT and MDT
                       should be created on the same target device
                     type: boolean
+                  exclusiveMdt:
+                    default: false
+                    description: ExclusiveMDT indicates that the MDT should not be
+                      colocated with any other target on the chosen server.
+                    type: boolean
                   externalMgs:
                     description: ExternalMGS contains the NIDs of a pre-existing MGS
                       that should be used

@@ -421,12 +421,17 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		var lustreComponents []lustreComponentType
 		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", ""})
 
+		mdtColocationKey := ""
+		if nnfStorageProfile.Data.LustreStorage.ExclusiveMDT {
+			mdtColocationKey = "lustre-mdt"
+		}
+
 		if lustreData.CombinedMGTMDT {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", "lustre-mgt"})
 		} else if len(lustreData.ExternalMGS) > 0 {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtColocationKey})
 		} else {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", ""})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtColocationKey})
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mgtCapacity, "mgt", "lustre-mgt"})
 		}
 

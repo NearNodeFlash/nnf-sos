@@ -65,6 +65,10 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:default:="5GiB"
 	CapacityMDT string `json:"capacityMdt,omitempty"`
 
+	// ExclusiveMDT indicates that the MDT should not be colocated with any other target on the chosen server.
+	// +kubebuilder:default:=false
+	ExclusiveMDT bool `json:"exclusiveMdt,omitempty"`
+
 	// MgtCmdLines contains commands to create an MGT target.
 	MgtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtCommandlines,omitempty"`
 

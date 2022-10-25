@@ -5,7 +5,7 @@ metadata:
   namespace: nnf-system
 data:
   lustreStorage:
-    externalMgs: "10.0.0.1@tcp"
+    exclusiveMdt: true
     mgtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --mgs $VOL_NAME
