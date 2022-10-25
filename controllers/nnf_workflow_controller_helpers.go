@@ -310,6 +310,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			dwsv1alpha1.AddWorkflowLabels(nnfStorage, workflow)
 			dwsv1alpha1.AddOwnerLabels(nnfStorage, owner)
 			addDirectiveIndexLabel(nnfStorage, index)
+			addPinnedStorageProfileLabel(nnfStorage, nnfStorageProfile)
 
 			nnfStorage.Spec.FileSystemType = dwArgs["type"]
 

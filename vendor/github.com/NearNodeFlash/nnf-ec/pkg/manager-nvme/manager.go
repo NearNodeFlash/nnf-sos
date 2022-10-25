@@ -577,10 +577,10 @@ func (v *Volume) attach(controllerId uint16) error {
 	}
 
 	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerId})
-	
+
 	if err != nil {
 		log.Infof("Device %s Attach Namespace: %d Controller: %d Error: %s", v.storage.id, v.namespaceId, controllerId, err)
-		
+
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceAlreadyAttached {
@@ -693,7 +693,7 @@ func (m *Manager) EventHandler(e event.Event) error {
 			return ec.NewErrInternalServerError().WithError(err).WithCause("internal event format illformed")
 		}
 
-		idx, err := FabricController.GetDownstreamPortRelativePortIndex(switchId, portId)
+		idx, err := fabric.FabricController.GetDownstreamPortRelativePortIndex(switchId, portId)
 		if err != nil {
 			return ec.NewErrInternalServerError().WithError(err).WithCause("downstream relative port index not found")
 		}
@@ -975,7 +975,7 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 	}
 
 	// Fill in the relative endpoint for this storage controller
-	endpointId, err := FabricController.FindDownstreamEndpoint(storageId, controllerId)
+	endpointId, err := fabric.FabricController.FindDownstreamEndpoint(storageId, controllerId)
 	if err != nil {
 		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller fabric endpoint not found: Storage: %s Controller: %s", storageId, controllerId))
 	}
@@ -991,7 +991,7 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 	model.Model = s.modelNumber
 
 	// Retrieve the slot label and value for this storage controller
-	location, err := FabricController.GetPortPartLocation(s.switchId, s.portId)
+	location, err := fabric.FabricController.GetPortPartLocation(s.switchId, s.portId)
 	if err != nil {
 		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller failed to retrieve part location: Storage: %s", storageId))
 	}

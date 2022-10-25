@@ -170,7 +170,7 @@ func (e *FileSystemError) Unwrap() error {
 }
 
 func (*FileSystem) run(cmd string) ([]byte, error) {
-	return logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
+	return logging.Cli.Trace2(logging.LogToStdout, cmd, func(cmd string) ([]byte, error) {
 
 		fsError := FileSystemError{command: cmd}
 		shellCmd := exec.Command("bash", "-c", cmd)
@@ -186,18 +186,54 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 	})
 }
 
+type FileSystemOemMkfsMount struct {
+	// The mkfs commandline, minus the "mkfs" command itself.
+	Mkfs string `json:"Mkfs,omitempty"`
+
+	// Arguments for the mount-utils library.
+	Mount []string `json:"Mount,omitempty"`
+}
+
+type FileSystemOemLvm struct {
+	// The pvcreate commandline, minus the "pvcreate" command.
+	PvCreate string `json:"PvCreate,omitempty"`
+
+	// The vgcreate commandline, minus the "vgcreate" command.
+	VgCreate string `json:"VgCreate,omitempty"`
+
+	// The lvcreate commandline, minus the "lvcreate" command.
+	LvCreate string `json:"LvCreate,omitempty"`
+}
+
+type FileSystemOemZfs struct {
+	// The zpool create commandline, minus the "zpool create" command.
+	ZpoolCreate string `json:"ZpoolCreate,omitempty"`
+
+	// For "zfs create", specify the args in the mkfs.lustre --mkfsoptions arg.
+}
+
+type FileSystemOemLustre struct {
+	MgsNode    string `json:"MgsNode,omitempty"`
+	TargetType string `json:"TargetType"`
+	Index      int    `json:"Index"`
+	BackFs     string `json:"BackFs"`
+}
+
+type FileSystemOemGfs2 struct {
+	ClusterName string `json:"ClusterName"`
+}
+
 // File System OEM defines the structure that is expected to be included inside a
 // Redfish / Swordfish FileSystemV122FileSystem
 type FileSystemOem struct {
-	Type string `json:"Type"`
-	Name string `json:"Name"`
-	// The following are used by Lustre, ignored for others.
-	MgsNode    string `json:"MgsNode,omitempty"`
-	TargetType string `json:"TargetType,omitempty"`
-	Index      int    `json:"Index,omitempty"`
-	BackFs     string `json:"BackFs,omitempty"`
-	// The following is used by GFS2, ignored for others.
-	ClusterName string `json:"ClusterName,omitempty"`
+	Type   string              `json:"Type"`
+	Name   string              `json:"Name"`
+	Lustre FileSystemOemLustre `json:"Lustre,omitempty"`
+	Gfs2   FileSystemOemGfs2   `json:"Gfs2,omitempty"`
+
+	LvmCmd    FileSystemOemLvm       `json:"Lvm,omitempty"`
+	MkfsMount FileSystemOemMkfsMount `json:"MkfsMount,omitempty"`
+	ZfsCmd    FileSystemOemZfs       `json:"Zfs,omitempty"`
 }
 
 // File System Registry - Maintains a list of eligible file systems registered in the system.

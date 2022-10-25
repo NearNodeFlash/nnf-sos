@@ -78,6 +78,27 @@ var _ = Describe("Integration Test", func() {
 		}).WithOffset(testStackOffset).Should(Equal(state.String()), fmt.Sprintf("Waiting on state %s", state))
 	}
 
+	verifyNnfNodeStoragesHaveStorageProfileLabel := func(nnfStorage *nnfv1alpha1.NnfStorage) {
+		for allocationSetIndex := range nnfStorage.Spec.AllocationSets {
+			allocationSet := nnfStorage.Spec.AllocationSets[allocationSetIndex]
+			for i, node := range allocationSet.Nodes {
+				// Per Rabbit namespace.
+				nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nnfNodeStorageName(nnfStorage, allocationSetIndex, i),
+						Namespace: node.Name,
+					},
+				}
+
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage)).To(Succeed())
+				By("Verify that the NnfNodeStorage has a label for the pinned profile")
+				_, err := getPinnedStorageProfileFromLabel(context.TODO(), k8sClient, nnfNodeStorage)
+				Expect(err).ShouldNot(HaveOccurred())
+			}
+
+		}
+	}
+
 	advanceStateAndCheckReady := func(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow) {
 		By(fmt.Sprintf("advanceStateAndCheckReady: advance workflow state %s", state))
 
@@ -140,8 +161,15 @@ var _ = Describe("Integration Test", func() {
 				By("Verify that the NnfStorage now owns the pinned profile")
 				commonName, commonNamespace := getStorageReferenceNameFromWorkflowActual(w, dwIndex)
 				nnfStorage := &nnfv1alpha1.NnfStorage{}
-				err = k8sClient.Get(context.TODO(), types.NamespacedName{Name: commonName, Namespace: commonNamespace}, nnfStorage)
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: commonName, Namespace: commonNamespace}, nnfStorage)).To(Succeed())
 				Expect(verifyPinnedProfile(context.TODO(), k8sClient, commonNamespace, commonName)).WithOffset(testStackOffset).To(Succeed())
+
+				By("Verify that the NnfStorage has a label for the pinned profile")
+				_, err = getPinnedStorageProfileFromLabel(context.TODO(), k8sClient, nnfStorage)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				By("Verify that the NnfNodeStorages have a label for the pinned profile")
+				verifyNnfNodeStoragesHaveStorageProfileLabel(nnfStorage)
 			}
 		}
 	} // advanceStateAndCheckReady(state dwsv1alpha1.WorkflowState, w *dwsv1alpha1.Workflow)

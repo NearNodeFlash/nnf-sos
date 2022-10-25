@@ -22,11 +22,15 @@ package server
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
 
 type FileSystemGfs2 struct {
 	FileSystemLvm
-	clusterName string
+
+	Oem       FileSystemOemGfs2
+	MkfsMount FileSystemOemMkfsMount
 }
 
 func init() {
@@ -50,7 +54,7 @@ func (*FileSystemGfs2) New(oem FileSystemOem) (FileSystemApi, error) {
 		return nil, fmt.Errorf("File Name '%s' overflows 16 character limit", oem.Name)
 	}
 
-	if len(oem.ClusterName) == 0 {
+	if len(oem.Gfs2.ClusterName) == 0 {
 		return nil, fmt.Errorf("Cluster Name not provided")
 	}
 
@@ -61,16 +65,18 @@ func (*FileSystemGfs2) New(oem FileSystemOem) (FileSystemApi, error) {
 		return nil, fmt.Errorf("File System Name '%s' is invalid. Must match pattern '%s'", oem.Name, exp.String())
 	}
 
-	if !exp.MatchString(oem.ClusterName) {
-		return nil, fmt.Errorf("Cluster Name '%s' is invalid. Must match pattern '%s'", oem.ClusterName, exp.String())
+	if !exp.MatchString(oem.Gfs2.ClusterName) {
+		return nil, fmt.Errorf("Cluster Name '%s' is invalid. Must match pattern '%s'", oem.Gfs2.ClusterName, exp.String())
 	}
 
 	return &FileSystemGfs2{
 		FileSystemLvm: FileSystemLvm{
 			FileSystem: FileSystem{name: oem.Name},
+			CmdArgs:    oem.LvmCmd,
 			shared:     true,
 		},
-		clusterName: oem.ClusterName,
+		Oem:       oem.Gfs2,
+		MkfsMount: oem.MkfsMount,
 	}, nil
 }
 
@@ -86,7 +92,15 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("mkfs.gfs2 -O -j2 -p lock_dlm -t %s:%s %s", f.clusterName, f.Name(), f.FileSystemLvm.devPath())); err != nil {
+	varHandler := var_handler.NewVarHandler(map[string]string{
+		"$DEVICE":       f.FileSystemLvm.devPath(),
+		"$CLUSTER_NAME": f.Oem.ClusterName,
+		"$LOCK_SPACE":   f.Name(),
+		"$PROTOCOL":     "lock_dlm",
+	})
+	mkfsArgs := varHandler.ReplaceAll(f.MkfsMount.Mkfs)
+
+	if _, err := f.run(fmt.Sprintf("mkfs.gfs2 -O %s", mkfsArgs)); err != nil {
 		return err
 	}
 
@@ -94,5 +108,5 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 }
 
 func (f *FileSystemGfs2) Mount(mountpoint string) error {
-	return f.mount(f.devPath(), mountpoint, "", nil)
+	return f.mount(f.devPath(), mountpoint, "", f.MkfsMount.Mount)
 }

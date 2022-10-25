@@ -204,7 +204,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Format the block device from the Rabbit with a file system (if needed)
-		result, err = r.formatFileSystem(nodeStorage, i)
+		result, err = r.formatFileSystem(ctx, nodeStorage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -384,7 +384,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 	ss := nnf.NewDefaultStorageService()
 
@@ -407,6 +407,15 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.Nnf
 		return &ctrl.Result{}, nil
 	}
 
+	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nodeStorage)
+	if err != nil {
+		nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not find pinned storage profile", err).WithFatal()
+		log.Info(nodeStorage.Status.Error.Error())
+
+		return &ctrl.Result{}, nil
+	}
+
 	// Create the FileSystem
 	condition := &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexCreateFileSystem]
 	if len(allocationStatus.FileSystem.ID) == 0 {
@@ -422,17 +431,53 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.Nnf
 	}
 	oem := nnfserver.FileSystemOem{
 		Type: fsType,
+	}
 
-		// If not lustre, then these will be appropriate zero values.
-		Name:       nodeStorage.Spec.LustreStorage.FileSystemName,
-		Index:      nodeStorage.Spec.LustreStorage.StartIndex + index,
-		MgsNode:    nodeStorage.Spec.LustreStorage.MgsNode,
-		TargetType: nodeStorage.Spec.LustreStorage.TargetType,
-		BackFs:     nodeStorage.Spec.LustreStorage.BackFs,
+	if oem.Type == "lustre" {
+		setLusCmdLines := func(c *nnfv1alpha1.NnfStorageProfileLustreCmdLines) {
+			oem.MkfsMount.Mkfs = c.Mkfs
+			oem.ZfsCmd.ZpoolCreate = c.ZpoolCreate
+		}
+
+		setLusOpts := func(c *nnfv1alpha1.NnfStorageProfileLustreMiscOptions) {
+			oem.MkfsMount.Mount = c.MountTarget
+		}
+
+		oem.Name = nodeStorage.Spec.LustreStorage.FileSystemName
+		oem.Lustre.Index = nodeStorage.Spec.LustreStorage.StartIndex + index
+		oem.Lustre.MgsNode = nodeStorage.Spec.LustreStorage.MgsNode
+		oem.Lustre.TargetType = nodeStorage.Spec.LustreStorage.TargetType
+		oem.Lustre.BackFs = nodeStorage.Spec.LustreStorage.BackFs
+
+		switch nodeStorage.Spec.LustreStorage.TargetType {
+		case "MGT":
+			setLusCmdLines(&nnfStorageProfile.Data.LustreStorage.MgtCmdLines)
+			setLusOpts(&nnfStorageProfile.Data.LustreStorage.MgtOptions)
+		case "MDT":
+			setLusCmdLines(&nnfStorageProfile.Data.LustreStorage.MdtCmdLines)
+			setLusOpts(&nnfStorageProfile.Data.LustreStorage.MdtOptions)
+		case "MGTMDT":
+			setLusCmdLines(&nnfStorageProfile.Data.LustreStorage.MgtMdtCmdLines)
+			setLusOpts(&nnfStorageProfile.Data.LustreStorage.MgtMdtOptions)
+		case "OST":
+			setLusCmdLines(&nnfStorageProfile.Data.LustreStorage.OstCmdLines)
+			setLusOpts(&nnfStorageProfile.Data.LustreStorage.OstOptions)
+		}
+	}
+
+	setCmdLines := func(c *nnfv1alpha1.NnfStorageProfileCmdLines) {
+		oem.MkfsMount.Mkfs = c.Mkfs
+		oem.LvmCmd.PvCreate = c.PvCreate
+		oem.LvmCmd.VgCreate = c.VgCreate
+		oem.LvmCmd.LvCreate = c.LvCreate
+	}
+
+	setOpts := func(c *nnfv1alpha1.NnfStorageProfileMiscOptions) {
+		oem.MkfsMount.Mount = c.MountRabbit
 	}
 
 	if oem.Type == "gfs2" {
-		// GFS2 requires a maximum of 16 alphanumeric, hyphen, or underscore characters. Allow up to 99 storage indecies and
+		// GFS2 requires a maximum of 16 alphanumeric, hyphen, or underscore characters. Allow up to 99 storage indicies and
 		// generate a simple MD5SUM hash value from the node storage name for the tail end. Although not guaranteed, this
 		// should reduce the likelihood of conflicts to a diminishingly small value.
 		checksum := md5.Sum([]byte(nodeStorage.Name))
@@ -440,7 +485,18 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(nodeStorage *nnfv1alpha1.Nnf
 
 		// The cluster name is the "name" of the Rabbit, which is mapped to the node storage namespace (since NNF Node Storage
 		// is rabbit namespace scoped).
-		oem.ClusterName = nodeStorage.Namespace
+		oem.Gfs2.ClusterName = nodeStorage.Namespace
+		setCmdLines(&nnfStorageProfile.Data.GFS2Storage.CmdLines)
+		setOpts(&nnfStorageProfile.Data.GFS2Storage.Options)
+	}
+
+	if oem.Type == "xfs" {
+		setCmdLines(&nnfStorageProfile.Data.XFSStorage.CmdLines)
+		setOpts(&nnfStorageProfile.Data.XFSStorage.Options)
+	}
+
+	if oem.Type == "lvm" {
+		setCmdLines(&nnfStorageProfile.Data.RawStorage.CmdLines)
 	}
 
 	fileSystemID := fmt.Sprintf("%s-%d", nodeStorage.Name, index)

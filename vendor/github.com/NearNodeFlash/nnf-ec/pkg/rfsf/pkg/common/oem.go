@@ -15,10 +15,10 @@ import (
 )
 
 // MarshalOem method converts the provided structure into the OEM map[string]interface{} format for use in the various model_* files
-func MarshalOem(st interface{}) map[string]interface{} {
-	ret := make(map[string]interface{})
+func MarshalOem(in interface{}) map[string]interface{} {
+	oem := make(map[string]interface{})
 
-	val := reflect.ValueOf(st)
+	val := reflect.ValueOf(in)
 	typ := val.Type()
 
 	for i := 0; i < val.NumField(); i++ {
@@ -30,29 +30,38 @@ func MarshalOem(st interface{}) map[string]interface{} {
 
 		switch fieldTyp.Type.Kind() {
 		case reflect.Bool:
-			ret[fieldName] = fieldVal.Bool()
+			oem[fieldName] = fieldVal.Bool()
 		case reflect.Int:
-			ret[fieldName] = fieldVal.Int()
+			oem[fieldName] = fieldVal.Int()
 		case reflect.String:
-			ret[fieldName] = fieldVal.String()
+			oem[fieldName] = fieldVal.String()
 		case reflect.Struct:
-			ret[fieldName] = MarshalOem(fieldVal.Interface())
+			oem[fieldName] = MarshalOem(fieldVal.Interface())
+		case reflect.Slice:
+
+			// Note: This encodes an abritrary value; but the decoder assumes these are strings.
+			sliceField := reflect.MakeSlice(fieldVal.Type(), fieldVal.Len(), fieldVal.Cap())
+			for j := 0; j < sliceField.Len(); j++ {
+				sliceField.Index(j).Set(fieldVal.Index(j))
+			}
+
+			oem[fieldName] = sliceField.Interface()
+
 		default:
 			//return &InvalidMarshalOemError{fieldTyp}
 			panic("oem: Marshal(" + fieldTyp.Type.Kind().String() + ")")
 		}
 	}
 
-	return ret
+	return oem
 }
 
 // UnmarshalOem method converts an OEM map[string]interface{} into the provided structure pointer
-func UnmarshalOem(mp map[string]interface{}, st interface{}) error {
+func UnmarshalOem(oem map[string]interface{}, out interface{}) error {
 
-	val := reflect.ValueOf(st)
-
+	val := reflect.ValueOf(out)
 	if val.Kind() != reflect.Ptr || val.IsNil() {
-		return &InvalidUnmarshalOemError{reflect.TypeOf(st)}
+		return &InvalidUnmarshalOemError{reflect.TypeOf(out)}
 	}
 
 	val = val.Elem()
@@ -64,25 +73,38 @@ func UnmarshalOem(mp map[string]interface{}, st interface{}) error {
 
 		fieldName := fieldTyp.Name
 
-		if _, ok := mp[fieldName]; !ok {
+		if _, ok := oem[fieldName]; !ok {
 			continue
 		}
 
 		switch fieldTyp.Type.Kind() {
 		case reflect.Bool:
-			fieldVal.SetBool(mp[fieldName].(bool))
+			fieldVal.SetBool(oem[fieldName].(bool))
 		case reflect.Int:
-			if _, ok := mp[fieldName].(float64); ok {
-				fieldVal.SetInt(int64(mp[fieldName].(float64)))
+			if _, ok := oem[fieldName].(float64); ok {
+				fieldVal.SetInt(int64(oem[fieldName].(float64)))
 			} else {
-				fieldVal.SetInt(mp[fieldName].(int64))
+				fieldVal.SetInt(oem[fieldName].(int64))
 			}
 		case reflect.String:
-			fieldVal.SetString(mp[fieldName].(string))
+			fieldVal.SetString(oem[fieldName].(string))
 		case reflect.Struct:
-			if err := UnmarshalOem(mp[fieldName].(map[string]interface{}), fieldVal.Addr().Interface()); err != nil {
+			if err := UnmarshalOem(oem[fieldName].(map[string]interface{}), fieldVal.Addr().Interface()); err != nil {
 				return err
 			}
+		case reflect.Slice:
+
+			arr := reflect.ValueOf(oem[fieldName])
+
+			// Resize the fieldVal to take the provided slice/array length
+			fieldVal.Set(reflect.MakeSlice(fieldVal.Type(), arr.Len(), arr.Len()))
+
+			// This assumes an array of strings. We could probably nest this same as reflect.Struct
+			// to make it an array of arbitrary types if we wanted to.
+			for j := 0; j < arr.Len(); j++ {
+				fieldVal.Index(j).SetString(arr.Index(j).Interface().(string))
+			}
+
 		default:
 			return &InvalidUnmarshalOemError{fieldTyp.Type}
 		}

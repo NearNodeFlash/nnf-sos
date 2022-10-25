@@ -23,7 +23,7 @@ import (
 	"fmt"
 
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
-	"github.com/NearNodeFlash/nnf-ec/pkg/api"
+	fabric "github.com/NearNodeFlash/nnf-ec/pkg/manager-fabric"
 )
 
 type DirectNvmeController struct {
@@ -57,7 +57,7 @@ func (c *DirectNvmeDeviceController) Initialize() error {
 
 func (c *DirectNvmeDeviceController) NewNvmeDevice(fabricId string, switchId string, portId string) (NvmeDeviceApi, error) {
 
-	portIdx, err := api.FabricController.GetDownstreamPortRelativePortIndex(switchId, portId)
+	portIdx, err := fabric.FabricController.GetDownstreamPortRelativePortIndex(switchId, portId)
 	if err != nil {
 		return nil, err
 	}
