@@ -428,7 +428,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		}
 
 		if lustreData.CombinedMGTMDT {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", mgtKey})
+			useKey := mgtKey
+			// If both combinedMGTMDT and exclusiveMDT are specified, then exclusiveMDT wins.
+			if mdtKey != nil {
+				useKey = mdtKey
+			}
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", useKey})
 		} else if len(lustreData.ExternalMGS) > 0 {
 			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtKey})
 		} else {
