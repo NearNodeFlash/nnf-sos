@@ -176,6 +176,9 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		return ctrl.Result{}, err
 	}
 
+	// Reset the allocation information. We'll rebuild it based on the nnfStorage/nnfNodeStorages that we find
+	r.clearAllocationStatus(servers)
+
 	ready := true
 	expectedAllocations := 0
 	actualAllocations := 0
@@ -277,11 +280,8 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 	return r.statusUpdate(ctx, servers, batch)
 }
 
-// Either the NnfStorage has not been created yet, or it existed and has been deleted
-func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha1.Servers) (ctrl.Result, error) {
-	// Keep the original to check later for updates
-	originalServers := servers.DeepCopy()
-
+// Reset the allocation information from the status section to empty values
+func (r *DWSServersReconciler) clearAllocationStatus(servers *dwsv1alpha1.Servers) {
 	servers.Status.AllocationSets = []dwsv1alpha1.ServersStatusAllocationSet{}
 	for _, allocationSetSpec := range servers.Spec.AllocationSets {
 		allocationSetStatus := dwsv1alpha1.ServersStatusAllocationSet{}
@@ -293,6 +293,14 @@ func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv
 
 		servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)
 	}
+}
+
+// Either the NnfStorage has not been created yet, or it existed and has been deleted
+func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha1.Servers) (ctrl.Result, error) {
+	// Keep the original to check later for updates
+	originalServers := servers.DeepCopy()
+
+	r.clearAllocationStatus(servers)
 
 	// If nothing has changed avoid the update here because every update modifies LastUpdate
 	// which in turn generates another update.
