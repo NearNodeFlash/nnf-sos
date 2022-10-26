@@ -64,7 +64,7 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) error {
 		// ownerReferences, and labels, but do not allow Data to be
 		// updated.
 		if !reflect.DeepEqual(r.Data, obj.Data) {
-			msg := "Update on pinned resource not allowed"
+			msg := "update on pinned resource not allowed"
 			err := fmt.Errorf(msg)
 			nnfstorageprofilelog.Error(err, "invalid")
 			return err
@@ -89,7 +89,7 @@ func (r *NnfStorageProfile) ValidateDelete() error {
 func (r *NnfStorageProfile) validateContent() error {
 
 	if r.Data.Default && r.Data.Pinned {
-		return fmt.Errorf("The NnfStorageProfile cannot be both default and pinned.")
+		return fmt.Errorf("the NnfStorageProfile cannot be both default and pinned")
 	}
 	if err := r.validateContentLustre(); err != nil {
 		return err
@@ -99,7 +99,7 @@ func (r *NnfStorageProfile) validateContent() error {
 
 func (r *NnfStorageProfile) validateContentLustre() error {
 	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
-		return fmt.Errorf("Cannot set both combinedMgtMdt and externalMgs")
+		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
 	}
 
 	return nil
