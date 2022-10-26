@@ -80,7 +80,7 @@ type lustreComponentType struct {
 	strategy      string
 	cap           int64
 	labelsStr     string
-	colocationKey string
+	colocationKey *dwsv1alpha1.AllocationSetColocationConstraint
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;list;watch;create;update;patch;delete
@@ -405,7 +405,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	switch filesystem {
 	case "raw", "xfs", "gfs2":
 		component := dwsv1alpha1.StorageAllocationSet{}
-		populateStorageAllocationSet(&component, "AllocatePerCompute", breakdownCapacity, filesystem, "")
+		populateStorageAllocationSet(&component, "AllocatePerCompute", breakdownCapacity, filesystem, nil)
 
 		log.Info("allocationSets", "comp", component)
 
@@ -419,20 +419,21 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
-		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", ""})
+		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", nil})
 
-		mdtColocationKey := ""
+		mgtKey := &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
+		var mdtKey *dwsv1alpha1.AllocationSetColocationConstraint
 		if nnfStorageProfile.Data.LustreStorage.ExclusiveMDT {
-			mdtColocationKey = "lustre-mdt"
+			mdtKey = &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive"}
 		}
 
 		if lustreData.CombinedMGTMDT {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", "lustre-mgt"})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", mgtKey})
 		} else if len(lustreData.ExternalMGS) > 0 {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtColocationKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtKey})
 		} else {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtColocationKey})
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mgtCapacity, "mgt", "lustre-mgt"})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mgtCapacity, "mgt", mgtKey})
 		}
 
 		for _, i := range lustreComponents {
@@ -488,16 +489,13 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy string, cap int64, labelStr string, constraintKey string) {
+func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy string, cap int64, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
 	a.Constraints.Labels = []string{"dws.cray.hpe.com/storage=Rabbit"}
-	if len(constraintKey) > 0 {
-		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{{
-			Type: "exclusive",
-			Key:  constraintKey,
-		}}
+	if constraint != nil {
+		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{*constraint}
 	}
 }
 
