@@ -108,7 +108,7 @@ type WorkflowSpec struct {
 	// The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
 	// The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
 	// +kubebuilder:default:=false
-	Hurry bool `json:"hurry"`
+	Hurry bool `json:"hurry,omitempty"`
 
 	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`

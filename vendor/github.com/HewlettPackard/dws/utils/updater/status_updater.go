@@ -109,5 +109,5 @@ func (updater *statusUpdater[S]) close(ctx context.Context, c clientUpdater, err
 
 	}
 
-	return nil
+	return err
 }
