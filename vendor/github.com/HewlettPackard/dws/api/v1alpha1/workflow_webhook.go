@@ -82,6 +82,9 @@ func (w *Workflow) ValidateCreate() error {
 	if w.Spec.Hurry == true {
 		return fmt.Errorf("the hurry flag may not be set on creation")
 	}
+	if w.Status.State != "" {
+		return fmt.Errorf("the status state may not be set")
+	}
 
 	return checkDirectives(w, &ValidatingRuleParser{})
 }

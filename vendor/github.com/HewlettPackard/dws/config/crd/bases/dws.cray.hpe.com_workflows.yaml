@@ -121,7 +121,6 @@ spec:
             - desiredState
             - dwDirectives
             - groupID
-            - hurry
             - jobID
             - userID
             - wlmID
