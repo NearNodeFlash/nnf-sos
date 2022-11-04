@@ -813,7 +813,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.TeardownState = dwsv1alpha1.StatePostRun.String()
 			access.Spec.DesiredState = "mounted"
 			access.Spec.Target = "single"
-			access.Spec.MountPath = buildMountPath(workflow, dwArgs["name"], dwArgs["command"])
+			access.Spec.MountPath = buildMountPath(workflow, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
 				Name:      workflow.Name,
 				Namespace: workflow.Namespace,
@@ -909,7 +909,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
 	}
 
-	workflow.Status.Env[envName] = buildMountPath(workflow, dwArgs["name"], dwArgs["command"])
+	workflow.Status.Env[envName] = buildMountPath(workflow, index)
 
 	return nil, nil
 }

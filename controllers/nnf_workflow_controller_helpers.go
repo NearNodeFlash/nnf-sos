@@ -380,12 +380,6 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 }
 
 func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, index int, parentDwIndex int, teardownState string, log logr.Logger) (*nnfv1alpha1.NnfAccess, error) {
-
-	params, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[parentDwIndex])
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse directive %s: %w", workflow.Spec.DWDirectives[parentDwIndex], err)
-	}
-
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, parentDwIndex) + "-servers",
@@ -404,8 +398,8 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 				DesiredState:    "mounted",
 				TeardownState:   teardownState,
 				Target:          "all",
-				MountPath:       buildMountPath(workflow, params["name"], params["command"]),
-				MountPathPrefix: buildMountPath(workflow, params["name"], params["command"]),
+				MountPath:       buildMountPath(workflow, index),
+				MountPathPrefix: buildMountPath(workflow, index),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
@@ -455,22 +449,8 @@ func (r *NnfWorkflowReconciler) getDirectiveFileSystemType(ctx context.Context, 
 	}
 }
 
-// TODO: Can this function be changed to accept a workflow and directive index? That way it can be used
-// in the data movement code setupNnfAccessForServers()
-func buildMountPath(workflow *dwsv1alpha1.Workflow, name string, command string) string {
-
-	if len(name) == 0 {
-		panic(fmt.Sprintf("Mount Path: Empty name"))
-	}
-
-	switch command {
-	case "jobdw":
-		return fmt.Sprintf("/mnt/nnf/%d/job/%s", workflow.Spec.JobID, name)
-	case "persistentdw":
-		return fmt.Sprintf("/mnt/nnf/%d/persistent/%s", workflow.Spec.JobID, name)
-	}
-
-	panic(fmt.Sprintf("Mount Path: Invalid command '%s'", command))
+func buildMountPath(workflow *dwsv1alpha1.Workflow, index int) string {
+	return fmt.Sprintf("/mnt/nnf/%s-%d", workflow.UID, index)
 }
 
 func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *dwsv1alpha1.Workflow, psiName string) (*dwsv1alpha1.PersistentStorageInstance, error) {
