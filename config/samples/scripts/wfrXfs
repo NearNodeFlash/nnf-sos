@@ -39,7 +39,7 @@ metadata:
   name: $WORKFLOW
   namespace: $NAMESPACE
 spec:
-  desiredState: proposal
+  desiredState: Proposal
   dwDirectives:
   - '#DW jobdw type=xfs capacity=5GB name=$WORKFLOW'
   jobID: 9000001

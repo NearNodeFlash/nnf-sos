@@ -117,7 +117,7 @@ query_combined_mgtmdt()
 
 patch_workflow()
 {
-  desiredState="setup"
+  desiredState="Setup"
   WORKFLOW_PATCH=workflow-patch.yaml
 
   {

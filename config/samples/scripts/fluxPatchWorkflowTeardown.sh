@@ -46,7 +46,7 @@ fi
 
 patch_workflow()
 {
-  desiredState="teardown"
+  desiredState="Teardown"
   WORKFLOW_PATCH=workflow-patch.yaml
 
   {

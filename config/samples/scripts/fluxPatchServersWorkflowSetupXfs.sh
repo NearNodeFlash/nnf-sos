@@ -84,7 +84,7 @@ fi
 
 patch_workflow()
 {
-  desiredState="setup"
+  desiredState="Setup"
   WORKFLOW_PATCH=workflow-patch.yaml
 
   {
