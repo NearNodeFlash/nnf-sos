@@ -29,6 +29,14 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type AllocationStrategy string
+
+const (
+	AllocatePerCompute    AllocationStrategy = "AllocatePerCompute"
+	AllocateAcrossServers AllocationStrategy = "AllocateAcrossServers"
+	AllocateSingleServer  AllocationStrategy = "AllocateSingleServer"
+)
+
 const (
 	// DirectiveLifetimeJob specifies storage allocated for the lifetime of the job
 	DirectiveLifetimeJob = "job"
@@ -64,8 +72,8 @@ type AllocationSetConstraints struct {
 // StorageAllocationSet defines the details of an allocation set
 type StorageAllocationSet struct {
 	// AllocationStrategy specifies the way to determine the number of allocations of the MinimumCapacity required for this AllocationSet.
-	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocateAcrossServers;AllocateSingleServer;AssignPerCompute;AssignAcrossServers;
-	AllocationStrategy string `json:"allocationStrategy"`
+	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocateAcrossServers;AllocateSingleServer
+	AllocationStrategy AllocationStrategy `json:"allocationStrategy"`
 
 	// MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
 	// will use the storage.

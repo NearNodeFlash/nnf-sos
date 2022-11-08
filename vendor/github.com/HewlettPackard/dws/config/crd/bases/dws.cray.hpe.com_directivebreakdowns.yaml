@@ -168,8 +168,6 @@ spec:
                           - AllocatePerCompute
                           - AllocateAcrossServers
                           - AllocateSingleServer
-                          - AssignPerCompute
-                          - AssignAcrossServers
                           type: string
                         constraints:
                           description: Constraint is an additional requirement pertaining

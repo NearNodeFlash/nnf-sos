@@ -77,7 +77,7 @@ type DirectiveBreakdownReconciler struct {
 }
 
 type lustreComponentType struct {
-	strategy      string
+	strategy      dwsv1alpha1.AllocationStrategy
 	cap           int64
 	labelsStr     string
 	colocationKey *dwsv1alpha1.AllocationSetColocationConstraint
@@ -405,7 +405,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	switch filesystem {
 	case "raw", "xfs", "gfs2":
 		component := dwsv1alpha1.StorageAllocationSet{}
-		populateStorageAllocationSet(&component, "AllocatePerCompute", breakdownCapacity, filesystem, nil)
+		populateStorageAllocationSet(&component, dwsv1alpha1.AllocatePerCompute, breakdownCapacity, filesystem, nil)
 
 		log.Info("allocationSets", "comp", component)
 
@@ -419,7 +419,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
-		lustreComponents = append(lustreComponents, lustreComponentType{"AllocateAcrossServers", breakdownCapacity, "ost", nil})
+		lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, breakdownCapacity, "ost", nil})
 
 		mgtKey := &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
 		var mdtKey *dwsv1alpha1.AllocationSetColocationConstraint
@@ -433,12 +433,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 			if mdtKey != nil {
 				useKey = mdtKey
 			}
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mgtmdt", useKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mgtmdt", useKey})
 		} else if len(lustreData.ExternalMGS) > 0 {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})
 		} else {
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mdtCapacity, "mdt", mdtKey})
-			lustreComponents = append(lustreComponents, lustreComponentType{"AllocateSingleServer", mgtCapacity, "mgt", mgtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mgtCapacity, "mgt", mgtKey})
 		}
 
 		for _, i := range lustreComponents {
@@ -494,7 +494,7 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy string, cap int64, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
+func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy dwsv1alpha1.AllocationStrategy, cap int64, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
