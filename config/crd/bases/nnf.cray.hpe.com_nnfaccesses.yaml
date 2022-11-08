@@ -152,10 +152,10 @@ spec:
                 description: TeardownState is the desired state of the workflow for
                   this NNF Access resource to be torn down and deleted.
                 enum:
-                - data_in
-                - pre_run
-                - post_run
-                - data_out
+                - DataIn
+                - PreRun
+                - PostRun
+                - DataOut
                 type: string
             required:
             - desiredState

@@ -379,7 +379,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, index int, parentDwIndex int, teardownState string, log logr.Logger) (*nnfv1alpha1.NnfAccess, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha1.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha1.WorkflowState, log logr.Logger) (*nnfv1alpha1.NnfAccess, error) {
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, parentDwIndex) + "-servers",
@@ -608,7 +608,7 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 	}
 
 	teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
-	if !found || teardownState == workflow.Status.State {
+	if !found || dwsv1alpha1.WorkflowState(teardownState) == workflow.Status.State {
 		if access.Spec.DesiredState != "unmounted" {
 			access.Spec.DesiredState = "unmounted"
 
@@ -669,7 +669,7 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 			// When unmounting, we are conditionally dependent on the workflow state matching the
 			// state of the teardown label, if found.
 			teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
-			if !found || teardownState == workflow.Status.State {
+			if !found || dwsv1alpha1.WorkflowState(teardownState) == workflow.Status.State {
 				if access.Status.State != "unmounted" || !access.Status.Ready {
 					return Requeue("pending unmount").withObject(access), nil
 				}

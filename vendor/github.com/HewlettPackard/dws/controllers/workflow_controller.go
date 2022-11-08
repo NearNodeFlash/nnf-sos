@@ -133,7 +133,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 
 	// Need to set Status.State first because the webhook validates this.
 	if workflow.Status.State != workflow.Spec.DesiredState {
-		log.Info("Workflow state transitioning to " + workflow.Spec.DesiredState)
+		log.Info("Workflow state transitioning", "state", workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
 		workflow.Status.Status = dwsv1alpha1.StatusDriverWait
@@ -145,7 +145,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	}
 
 	// We must create Computes during proposal state
-	if workflow.Spec.DesiredState == dwsv1alpha1.StateProposal.String() {
+	if workflow.Spec.DesiredState == dwsv1alpha1.StateProposal {
 		computes, err := r.createComputes(ctx, workflow, workflow.Name, log)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -206,7 +206,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		ts := metav1.NowMicro()
 		workflow.Status.ReadyChange = &ts
 		workflow.Status.ElapsedTimeLastState = ts.Time.Sub(workflow.Status.DesiredStateChange.Time).Round(time.Microsecond).String()
-		log.Info("Workflow transitioning to ready state " + workflow.Status.State)
+		log.Info("Workflow transitioning to ready", "state", workflow.Status.State)
 	}
 
 	return ctrl.Result{}, nil

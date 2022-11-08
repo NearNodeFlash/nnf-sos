@@ -6,7 +6,7 @@ metadata:
     helm.sh/hook: post-install
 spec:
   - command: "jobdw"
-    watchStates: proposal,setup,pre_run,post_run,teardown
+    watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
       - key: "type"
         type: "string"
@@ -39,7 +39,7 @@ spec:
         isRequired: false
         isValueRequired: true
   - command: "create_persistent"
-    watchStates: proposal,setup,teardown
+    watchStates: Proposal,Setup,Teardown
     ruleDefs:
       - key: "type"
         type: "string"
@@ -72,7 +72,7 @@ spec:
         isRequired: false
         isValueRequired: true
   - command: "destroy_persistent"
-    watchStates: proposal,teardown
+    watchStates: Proposal,Teardown
     ruleDefs:
       - key: "name"
         type: "string"
@@ -81,7 +81,7 @@ spec:
         isValueRequired: true
         uniqueWithin: "destroy_persistent_name"
   - command: "persistentdw"
-    watchStates: proposal,setup,pre_run,post_run,teardown
+    watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
       - key: "name"
         type: "string"
@@ -89,7 +89,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "copy_in"
-    watchStates: proposal,data_in,teardown
+    watchStates: Proposal,DataIn,Teardown
     ruleDefs:
       - key: "source"
         type: "string"
@@ -100,7 +100,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "copy_out"
-    watchStates: proposal,data_out,teardown
+    watchStates: Proposal,DataOut,Teardown
     ruleDefs:
       - key: "source"
         type: "string"

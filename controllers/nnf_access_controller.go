@@ -95,7 +95,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
 	// resource when no ClientReference is provided. These correspond to mounting
-	// the compute nodes during pre_run and mounting the rabbit nodes for data
+	// the compute nodes during PreRun and mounting the rabbit nodes for data
 	// movement.
 	clientList, err := r.getClientList(ctx, access)
 	if err != nil {

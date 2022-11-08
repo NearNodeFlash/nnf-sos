@@ -20,8 +20,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	"github.com/HewlettPackard/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,28 +33,57 @@ const (
 	WorkflowNamespaceLabel = "dws.cray.hpe.com/workflow.namespace"
 )
 
-// WorkflowState is the enumeration of The state of the workflow
-type WorkflowState int
+// WorkflowState is the enumeration of the state of the workflow
+type WorkflowState string
 
-// State enumerations
+// WorkflowState values
 const (
-	StateProposal WorkflowState = iota
-	StateSetup
-	StateDataIn
-	StatePreRun
-	StatePostRun
-	StateDataOut
-	StateTeardown
+	StateProposal WorkflowState = "Proposal"
+	StateSetup    WorkflowState = "Setup"
+	StateDataIn   WorkflowState = "DataIn"
+	StatePreRun   WorkflowState = "PreRun"
+	StatePostRun  WorkflowState = "PostRun"
+	StateDataOut  WorkflowState = "DataOut"
+	StateTeardown WorkflowState = "Teardown"
 )
 
-var workflowStrings = [...]string{
-	"proposal",
-	"setup",
-	"data_in",
-	"pre_run",
-	"post_run",
-	"data_out",
-	"teardown",
+// Next reports the next state after state s
+func (s WorkflowState) next() WorkflowState {
+	switch s {
+	case StateProposal:
+		return StateSetup
+	case StateSetup:
+		return StateDataIn
+	case StateDataIn:
+		return StatePreRun
+	case StatePreRun:
+		return StatePostRun
+	case StatePostRun:
+		return StateDataOut
+	case StateDataOut:
+		return StateTeardown
+	}
+
+	panic(s)
+}
+
+// Last reports whether the state s is the last state
+func (s WorkflowState) last() bool {
+	return s == StateTeardown
+}
+
+// After reports whether the state s is after t
+func (s WorkflowState) after(t WorkflowState) bool {
+
+	for !t.last() {
+		next := t.next()
+		if s == next {
+			return true
+		}
+		t = next
+	}
+
+	return false
 }
 
 // Strings associated with workflow statuses
@@ -69,30 +96,16 @@ const (
 	StatusDriverWait = "DriverWait"
 )
 
-func (s WorkflowState) String() string {
-	return workflowStrings[s]
-}
-
-// GetWorkflowState returns the WorkflowState constant that matches the
-// string value passed in
-func GetWorkflowState(state string) (WorkflowState, error) {
-	for i := StateProposal; i <= StateTeardown; i++ {
-		if i.String() == state {
-			return i, nil
-		}
-	}
-
-	return StateProposal, fmt.Errorf("invalid workflow state '%s'", state)
-}
-
 // WorkflowSpec defines the desired state of Workflow
 type WorkflowSpec struct {
 	// Desired state for the workflow to be in. Unless progressing to the teardown state,
 	// this can only be set to the next state when the current desired state has been achieved.
-	// +kubebuilder:validation:Enum=proposal;setup;data_in;pre_run;post_run;data_out;teardown
-	DesiredState string `json:"desiredState"`
-	WLMID        string `json:"wlmID"`
-	JobID        int    `json:"jobID"`
+	// +kubebuilder:validation:Enum:=Proposal;Setup;DataIn;PreRun;PostRun;DataOut;Teardown
+	// +kubebuilder:validation:Type:=string
+	DesiredState WorkflowState `json:"desiredState"`
+
+	WLMID string `json:"wlmID"`
+	JobID int    `json:"jobID"`
 
 	// UserID specifies the user ID for the workflow. The User ID is used by the various states
 	// in the workflow to ensure the user has permissions to perform certain actions. Used in
@@ -116,12 +129,14 @@ type WorkflowSpec struct {
 
 // WorkflowDriverStatus defines the status information provided by integration drivers.
 type WorkflowDriverStatus struct {
-	DriverID   string `json:"driverID"`
-	TaskID     string `json:"taskID"`
-	DWDIndex   int    `json:"dwdIndex"`
-	WatchState string `json:"watchState"`
-	LastHB     int64  `json:"lastHB"`
-	Completed  bool   `json:"completed"`
+	DriverID string `json:"driverID"`
+	TaskID   string `json:"taskID"`
+	DWDIndex int    `json:"dwdIndex"`
+
+	WatchState WorkflowState `json:"watchState"`
+
+	LastHB    int64 `json:"lastHB"`
+	Completed bool  `json:"completed"`
 
 	// User readable reason.
 	// For the CDS driver, this could be the state of the underlying
@@ -143,8 +158,7 @@ type WorkflowDriverStatus struct {
 type WorkflowStatus struct {
 	// The state the resource is currently transitioning to.
 	// Updated by the controller once started.
-	// +kubebuilder:default:=proposal
-	State string `json:"state"`
+	State WorkflowState `json:"state"`
 
 	// Ready can be 'True', 'False'
 	// Indicates whether State has been reached.

@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -76,14 +77,17 @@ var _ webhook.Validator = &Workflow{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateCreate() error {
 
-	if w.Spec.DesiredState != StateProposal.String() {
-		return fmt.Errorf("desired state must start in %s", StateProposal.String())
+	specPath := field.NewPath("Spec")
+
+	if w.Spec.DesiredState != StateProposal {
+		s := fmt.Sprintf("desired state must start in %s", StateProposal)
+		return field.Invalid(specPath.Child("DesiredState"), w.Spec.DesiredState, s)
 	}
 	if w.Spec.Hurry == true {
-		return fmt.Errorf("the hurry flag may not be set on creation")
+		return field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
 	}
 	if w.Status.State != "" {
-		return fmt.Errorf("the status state may not be set")
+		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set")
 	}
 
 	return checkDirectives(w, &ValidatingRuleParser{})
@@ -100,8 +104,9 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 		return err
 	}
 
-	if w.Spec.Hurry == true && w.Spec.DesiredState != StateTeardown.String() {
-		return fmt.Errorf("the hurry flag may only be set for %s", StateTeardown.String())
+	if w.Spec.Hurry == true && w.Spec.DesiredState != StateTeardown {
+		s := fmt.Sprintf("the hurry flag may be set only in %s", StateTeardown)
+		return field.Invalid(field.NewPath("Spec").Child("Hurry"), w.Spec.Hurry, s)
 	}
 
 	// Check that immutable fields haven't changed.
@@ -112,47 +117,42 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 
 	// Initial setup of the Workflow by the dws controller requires setting the status
 	// state to proposal and adding a finalizer.
-	if oldWorkflow.Status.State == "" && w.Spec.DesiredState == StateProposal.String() {
+	if oldWorkflow.Status.State == "" && w.Spec.DesiredState == StateProposal {
 		return nil
 	}
 
 	// Validate the elements in the Drivers array
 	for i, driverStatus := range w.Status.Drivers {
+
+		driverError := func(errString string) error {
+			return field.InternalError(field.NewPath("Status").Child("Drivers").Index(i), fmt.Errorf(errString))
+		}
+
 		// Elements with watchStates not equal to the current state should not change
 		if driverStatus.WatchState != oldWorkflow.Status.State {
 			if !reflect.DeepEqual(oldWorkflow.Status.Drivers[i], driverStatus) {
-				return fmt.Errorf("driver entry for non-current state cannot be changed")
+				return driverError("driver entry for non-current state cannot be changed")
 			}
-
 			continue
 		}
 
 		if driverStatus.Completed == true {
 			if driverStatus.Status != StatusCompleted {
-				return fmt.Errorf("driver cannot be completed without status=Completed")
+				return driverError("driver cannot be completed without status=Completed")
 			}
 
 			if driverStatus.Error != "" {
-				return fmt.Errorf("driver cannot be completed when error is present")
+				return driverError("driver cannot be completed when error is present")
 			}
 		} else {
 			if oldWorkflow.Status.Drivers[i].Completed == true {
-				return fmt.Errorf("driver cannot change from completed state")
+				return driverError("driver cannot change from completed state")
 			}
 		}
 	}
 
-	// New state is the desired state in the Spec
-	newState, err := GetWorkflowState(w.Spec.DesiredState)
-	if err != nil {
-		return fmt.Errorf("unable to parse DesiredState: %w", err)
-	}
-
-	// Old state is the current state we're on. This is found in the status
-	oldState, err := GetWorkflowState(oldWorkflow.Status.State)
-	if err != nil {
-		return fmt.Errorf("unable to find current state: %w", err)
-	}
+	oldState := oldWorkflow.Status.State
+	newState := w.Spec.DesiredState
 
 	// Progressing to teardown is allowed at any time, and changes to the
 	// Workflow that don't change the state are fine too (immutable fields were
@@ -161,16 +161,17 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 		return nil
 	}
 
-	if newState < oldState {
-		return fmt.Errorf("state cannot progress backwards")
+	// Error checks
+	if oldState.after(newState) {
+		return field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "DesiredState cannot progress backwards")
 	}
 
-	if newState > oldState+1 {
-		return fmt.Errorf("states cannot be skipped")
+	if oldState.next() != newState {
+		return field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "states cannot be skipped")
 	}
 
 	if !oldWorkflow.Status.Ready {
-		return fmt.Errorf("current desired state not yet achieved")
+		return field.Invalid(field.NewPath("Status").Child("State"), oldWorkflow.Status.State, "current desired state not yet achieved")
 	}
 
 	return nil
@@ -181,25 +182,30 @@ func (w *Workflow) ValidateDelete() error {
 	return nil
 }
 
-func validateWorkflowImmutable(a *Workflow, b *Workflow) error {
-	if a.Spec.WLMID != b.Spec.WLMID {
-		return fmt.Errorf("cannot change immutable field WLMID")
+func validateWorkflowImmutable(newWorkflow *Workflow, oldWorkflow *Workflow) error {
+
+	immutableError := func(childField string) error {
+		return field.Forbidden(field.NewPath("Spec").Child(childField), "field is immutable")
 	}
 
-	if a.Spec.JobID != b.Spec.JobID {
-		return fmt.Errorf("cannot change immutable field JobID")
+	if newWorkflow.Spec.WLMID != oldWorkflow.Spec.WLMID {
+		return immutableError("WLMID")
 	}
 
-	if a.Spec.UserID != b.Spec.UserID {
-		return fmt.Errorf("cannot change immutable field UserID")
+	if newWorkflow.Spec.JobID != oldWorkflow.Spec.JobID {
+		return immutableError("JobID")
 	}
 
-	if a.Spec.GroupID != b.Spec.GroupID {
-		return fmt.Errorf("cannot change immutable field GroupID")
+	if newWorkflow.Spec.UserID != oldWorkflow.Spec.UserID {
+		return immutableError("UserID")
 	}
 
-	if !reflect.DeepEqual(a.Spec.DWDirectives, b.Spec.DWDirectives) {
-		return fmt.Errorf("cannot change immutable field DWDirectives")
+	if newWorkflow.Spec.GroupID != oldWorkflow.Spec.GroupID {
+		return immutableError("GroupID")
+	}
+
+	if !reflect.DeepEqual(newWorkflow.Spec.DWDirectives, oldWorkflow.Spec.DWDirectives) {
+		return immutableError("DWDirectives")
 	}
 
 	return nil
@@ -305,12 +311,12 @@ type MutatingRuleParser struct {
 
 // MatchedDirective updates the driver status entries to indicate driver availability
 func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates string, index int, label string) {
-	if watchStates == "" {
+	if len(watchStates) == 0 {
 		// Nothing to do
 		return
 	}
 
-	registrationMap := make(map[string]bool)
+	registrationMap := make(map[WorkflowState]bool)
 	// Build a map of previously registered states for this driver
 	for _, s := range workflow.Status.Drivers {
 		if s.DWDIndex != index {
@@ -326,6 +332,8 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 
 	// Update driver status entries to indicate driver availability
 	for _, state := range strings.Split(watchStates, ",") {
+		state := WorkflowState(state)
+
 		// If this driver is already registered for this directive, skip it
 		if registrationMap[state] {
 			continue
@@ -339,7 +347,7 @@ func (r *MutatingRuleParser) MatchedDirective(workflow *Workflow, watchStates st
 			Status:     StatusPending,
 		}
 		workflow.Status.Drivers = append(workflow.Status.Drivers, driverStatus)
-		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", driverStatus.WatchState)
+		workflowlog.Info("Registering driver", "Driver", driverStatus.DriverID, "Watch state", state)
 	}
 }
 

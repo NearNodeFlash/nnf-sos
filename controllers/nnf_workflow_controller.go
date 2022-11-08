@@ -188,14 +188,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		driverList = append(driverList, driverStatus)
 	}
 
-	startFunctions := map[string]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
-		dwsv1alpha1.StateProposal.String(): (*NnfWorkflowReconciler).startProposalState,
-		dwsv1alpha1.StateSetup.String():    (*NnfWorkflowReconciler).startSetupState,
-		dwsv1alpha1.StateDataIn.String():   (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha1.StatePreRun.String():   (*NnfWorkflowReconciler).startPreRunState,
-		dwsv1alpha1.StatePostRun.String():  (*NnfWorkflowReconciler).startPostRunState,
-		dwsv1alpha1.StateDataOut.String():  (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha1.StateTeardown.String(): (*NnfWorkflowReconciler).startTeardownState,
+	startFunctions := map[dwsv1alpha1.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
+		dwsv1alpha1.StateProposal: (*NnfWorkflowReconciler).startProposalState,
+		dwsv1alpha1.StateSetup:    (*NnfWorkflowReconciler).startSetupState,
+		dwsv1alpha1.StateDataIn:   (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha1.StatePreRun:   (*NnfWorkflowReconciler).startPreRunState,
+		dwsv1alpha1.StatePostRun:  (*NnfWorkflowReconciler).startPostRunState,
+		dwsv1alpha1.StateDataOut:  (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha1.StateTeardown: (*NnfWorkflowReconciler).startTeardownState,
 	}
 
 	// Call the correct "start" function based on workflow state for each directive that has registered for
@@ -224,14 +224,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Start done")
 	}
 
-	finishFunctions := map[string]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
-		dwsv1alpha1.StateProposal.String(): (*NnfWorkflowReconciler).finishProposalState,
-		dwsv1alpha1.StateSetup.String():    (*NnfWorkflowReconciler).finishSetupState,
-		dwsv1alpha1.StateDataIn.String():   (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha1.StatePreRun.String():   (*NnfWorkflowReconciler).finishPreRunState,
-		dwsv1alpha1.StatePostRun.String():  (*NnfWorkflowReconciler).finishPostRunState,
-		dwsv1alpha1.StateDataOut.String():  (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha1.StateTeardown.String(): (*NnfWorkflowReconciler).finishTeardownState,
+	finishFunctions := map[dwsv1alpha1.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
+		dwsv1alpha1.StateProposal: (*NnfWorkflowReconciler).finishProposalState,
+		dwsv1alpha1.StateSetup:    (*NnfWorkflowReconciler).finishSetupState,
+		dwsv1alpha1.StateDataIn:   (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha1.StatePreRun:   (*NnfWorkflowReconciler).finishPreRunState,
+		dwsv1alpha1.StatePostRun:  (*NnfWorkflowReconciler).finishPostRunState,
+		dwsv1alpha1.StateDataOut:  (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha1.StateTeardown: (*NnfWorkflowReconciler).finishTeardownState,
 	}
 
 	// Call the correct "finish" function based on workflow state for each directive that has registered for
@@ -536,19 +536,19 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
-			teardownState := ""
+			var teardownState dwsv1alpha1.WorkflowState
 			if dwArgs["command"] == "copy_in" {
-				teardownState = dwsv1alpha1.StateDataIn.String()
+				teardownState = dwsv1alpha1.StateDataIn
 
 				if fsType == "gfs2" || fsType == "lustre" {
-					teardownState = dwsv1alpha1.StatePostRun.String()
+					teardownState = dwsv1alpha1.StatePostRun
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
-						teardownState = dwsv1alpha1.StateDataOut.String()
+						teardownState = dwsv1alpha1.StateDataOut
 					}
 				}
 			} else if dwArgs["command"] == "copy_out" {
-				teardownState = dwsv1alpha1.StateDataOut.String()
+				teardownState = dwsv1alpha1.StateDataOut
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
@@ -609,7 +609,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	// For copy_out, the source is the Rabbit and therefore the target
 
 	var targetStorageRef *corev1.ObjectReference
-	if workflow.Spec.DesiredState == dwsv1alpha1.StateDataIn.String() {
+	if workflow.Spec.DesiredState == dwsv1alpha1.StateDataIn {
 		targetStorageRef = destStorage
 	} else {
 		targetStorageRef = sourceStorage
@@ -732,7 +732,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = workflow.Status.State
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(workflow.Status.State)
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -810,7 +810,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			dwsv1alpha1.AddOwnerLabels(access, workflow)
 			addDirectiveIndexLabel(access, index)
 
-			access.Spec.TeardownState = dwsv1alpha1.StatePostRun.String()
+			access.Spec.TeardownState = dwsv1alpha1.StatePostRun
 			access.Spec.DesiredState = "mounted"
 			access.Spec.Target = "single"
 			access.Spec.MountPath = buildMountPath(workflow, index)
@@ -867,10 +867,10 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 		// Set the teardown state to post run. If there is a copy_out directive that uses
 		// this storage instance, set the teardown state so NNF Access is preserved through
-		// data_out.
-		teardownState := dwsv1alpha1.StatePostRun.String()
+		// DataOut.
+		teardownState := dwsv1alpha1.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
-			teardownState = dwsv1alpha1.StateDataOut.String()
+			teardownState = dwsv1alpha1.StateDataOut
 		}
 
 		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)
@@ -924,7 +924,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 	// Wait for data movement resources to complete
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = dwsv1alpha1.StatePostRun.String()
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha1.StatePostRun)
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -957,7 +957,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
 	// TODO: Customer asked if this could be optional
 	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = dwsv1alpha1.StatePostRun.String()
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha1.StatePostRun)
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -1008,7 +1008,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	switch dwArgs["command"] {
 	case "create_persistent":
 		for _, driverStatus := range workflow.Status.Drivers {
-			if driverStatus.WatchState == dwsv1alpha1.StateTeardown.String() {
+			if driverStatus.WatchState == dwsv1alpha1.StateTeardown {
 				continue
 			}
 
