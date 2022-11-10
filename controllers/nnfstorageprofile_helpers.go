@@ -164,29 +164,3 @@ func getPinnedStorageProfileFromLabel(ctx context.Context, clnt client.Client, o
 
 	return findPinnedProfile(ctx, clnt, pinnedNamespace, pinnedName)
 }
-
-// mergeLustreStorageDirectiveAndProfile returns an object that merges Lustre options from the DW directive with lustre options from the NnfStorageProfile, with the proper precedence.
-func mergeLustreStorageDirectiveAndProfile(dwArgs map[string]string, nnfStorageProfile *nnfv1alpha1.NnfStorageProfile) *nnfv1alpha1.NnfStorageProfileLustreData {
-	lustreData := &nnfv1alpha1.NnfStorageProfileLustreData{}
-
-	// The combined_mgtmdt and external_mgs args in the directive
-	// take precedence over the storage profile.
-	//
-	// The directive may have only one of these specified; this is
-	// enforced by a webhook.  Likewise, the profile may have only
-	// one specified; this is also enforced by a webhook.
-
-	if _, present := dwArgs["combined_mgtmdt"]; present {
-		lustreData.CombinedMGTMDT = true
-	} else if externalMgs, present := dwArgs["external_mgs"]; present {
-		lustreData.ExternalMGS = externalMgs
-	} else if nnfStorageProfile != nil {
-		if nnfStorageProfile.Data.LustreStorage.CombinedMGTMDT {
-			lustreData.CombinedMGTMDT = true
-		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
-			lustreData.ExternalMGS = nnfStorageProfile.Data.LustreStorage.ExternalMGS
-		}
-	}
-
-	return lustreData
-}

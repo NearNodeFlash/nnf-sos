@@ -415,8 +415,6 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		mdtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMDT)
 		mgtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMGT)
 
-		lustreData := mergeLustreStorageDirectiveAndProfile(argsMap, nnfStorageProfile)
-
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
 		lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, breakdownCapacity, "ost", nil})
@@ -427,14 +425,14 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 			mdtKey = &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive"}
 		}
 
-		if lustreData.CombinedMGTMDT {
+		if nnfStorageProfile.Data.LustreStorage.CombinedMGTMDT {
 			useKey := mgtKey
 			// If both combinedMGTMDT and exclusiveMDT are specified, then exclusiveMDT wins.
 			if mdtKey != nil {
 				useKey = mdtKey
 			}
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mgtmdt", useKey})
-		} else if len(lustreData.ExternalMGS) > 0 {
+		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})
 		} else {
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})

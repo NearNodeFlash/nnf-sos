@@ -29,15 +29,6 @@ spec:
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: false
         isValueRequired: true
-      - key: "combined_mgtmdt"
-        type: "bool"
-        isRequired: false
-        isValueRequired: false
-      - key: "external_mgs"
-        type: "string"
-        pattern: "^[A-Za-z0-9\\-_\\.@,:]+$"
-        isRequired: false
-        isValueRequired: true
   - command: "create_persistent"
     watchStates: Proposal,Setup,Teardown
     ruleDefs:
@@ -60,15 +51,6 @@ spec:
       - key: "profile"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
-        isRequired: false
-        isValueRequired: true
-      - key: "combined_mgtmdt"
-        type: "bool"
-        isRequired: false
-        isValueRequired: false
-      - key: "external_mgs"
-        type: "string"
-        pattern: "^[A-Za-z0-9\\-_\\.@,:]+$"
         isRequired: false
         isValueRequired: true
   - command: "destroy_persistent"
