@@ -395,6 +395,8 @@ var _ = Describe("Integration Test", func() {
 
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
+
+		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
 	AfterEach(func() {
@@ -446,6 +448,9 @@ var _ = Describe("Integration Test", func() {
 			{"#DW destroy_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
 			{"#DW destroy_persistent name=createpersistent-lustre", 0, false, false, 0},
 		}
+
+		err := os.Unsetenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK")
+		Expect(err).NotTo(HaveOccurred())
 
 		for idx := range wfTests {
 			directive := wfTests[idx].directive

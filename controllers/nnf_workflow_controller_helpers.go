@@ -275,6 +275,72 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 	return nil, nil
 }
 
+func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, servers *dwsv1alpha1.Servers) error {
+	if len(dbd.Status.Storage.AllocationSets) != 0 && len(dbd.Status.Storage.AllocationSets) != len(servers.Spec.AllocationSets) {
+		err := fmt.Errorf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive)
+		return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+	}
+
+	for _, breakdownAllocationSet := range dbd.Status.Storage.AllocationSets {
+		found := false
+		for _, serverAllocationSet := range servers.Spec.AllocationSets {
+			if breakdownAllocationSet.Label != serverAllocationSet.Label {
+				continue
+			}
+
+			found = true
+
+			if breakdownAllocationSet.AllocationStrategy == dwsv1alpha1.AllocateSingleServer {
+				if len(serverAllocationSet.Storage) != 1 || serverAllocationSet.Storage[0].AllocationCount != 1 {
+					err := fmt.Errorf("Allocation set %s expected single allocation", breakdownAllocationSet.Label)
+					return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+				}
+			}
+
+			var totalCapacity int64 = 0
+
+			if breakdownAllocationSet.AllocationStrategy == dwsv1alpha1.AllocateAcrossServers {
+				for _, serverAllocation := range serverAllocationSet.Storage {
+					totalCapacity += serverAllocationSet.AllocationSize * int64(serverAllocation.AllocationCount)
+				}
+			} else {
+				totalCapacity = serverAllocationSet.AllocationSize
+			}
+
+			if totalCapacity < breakdownAllocationSet.MinimumCapacity {
+				err := fmt.Errorf("Allocation set %s specified insufficient capacity", breakdownAllocationSet.Label)
+				return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+			}
+
+			// Look up each of the storages specified to make sure they exist
+			for _, serverAllocation := range serverAllocationSet.Storage {
+				storage := &dwsv1alpha1.Storage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      serverAllocation.Name,
+						Namespace: corev1.NamespaceDefault,
+					},
+				}
+
+				if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+					if apierrors.IsNotFound(err) {
+						return nnfv1alpha1.NewWorkflowError("Allocation request did not specify valid storage").WithFatal().WithError(err)
+					}
+
+					return nnfv1alpha1.NewWorkflowError("Could not validate allocation request").WithError(err)
+				}
+			}
+		}
+
+		if found == false {
+			err := fmt.Errorf("Allocation set %s not found in Servers resource", breakdownAllocationSet.Label)
+			return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+		}
+	}
+
+	return nil
+
+}
+
 func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *dwsv1alpha1.Workflow, s *dwsv1alpha1.Servers, index int, log logr.Logger) (*nnfv1alpha1.NnfStorage, error) {
 	nnfStorage := &nnfv1alpha1.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{

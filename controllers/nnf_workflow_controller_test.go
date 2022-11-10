@@ -59,6 +59,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
+
+		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
 	AfterEach(func() {
@@ -534,6 +536,367 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 	}) // When("Using copy_in directives", func()
+
+	When("Using server allocation input", func() {
+		var (
+			storage            *dwsv1alpha1.Storage
+			directiveBreakdown *dwsv1alpha1.DirectiveBreakdown
+			servers            *dwsv1alpha1.Servers
+		)
+
+		JustBeforeEach(func() {
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+				return workflow.Status.Ready
+			}).Should(BeTrue(), "waiting for ready after create")
+
+			directiveBreakdown = &dwsv1alpha1.DirectiveBreakdown{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Status.DirectiveBreakdowns[0].Name,
+					Namespace: workflow.Status.DirectiveBreakdowns[0].Namespace,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
+
+			servers = &dwsv1alpha1.Servers{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      directiveBreakdown.Status.Storage.Reference.Name,
+					Namespace: directiveBreakdown.Status.Storage.Reference.Namespace,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+
+			for _, directiveAllocationSet := range directiveBreakdown.Status.Storage.AllocationSets {
+				allocationSet := dwsv1alpha1.ServersSpecAllocationSet{
+					Label:          directiveAllocationSet.Label,
+					AllocationSize: directiveAllocationSet.MinimumCapacity,
+					Storage: []dwsv1alpha1.ServersSpecStorage{
+						{
+							Name:            "rabbit-node",
+							AllocationCount: 1,
+						},
+					},
+				}
+				servers.Spec.AllocationSets = append(servers.Spec.AllocationSets, allocationSet)
+			}
+
+			Expect(k8sClient.Update(context.TODO(), servers)).To(Succeed())
+
+			err := os.Unsetenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		BeforeEach(func() {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "rabbit-node",
+				},
+			}
+
+			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tests
+		})
+
+		BeforeEach(func() {
+			storage = &dwsv1alpha1.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "rabbit-node",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Data: dwsv1alpha1.StorageData{
+					Capacity: 100000000000,
+					Access: dwsv1alpha1.StorageAccess{
+						Protocol: "PCIe",
+						Servers: []dwsv1alpha1.Node{
+							{
+								Name:   "rabbit-node",
+								Status: "Ready",
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), storage)).To(Succeed())
+		})
+
+		When("Using a Lustre file system", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test type=lustre capacity=1GiB",
+				}
+			})
+
+			It("Succeeds with one allocation per allocation set", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup
+				}).Should(BeTrue(), "waiting for ready after setup")
+			})
+
+			It("Succeeds with multiple allocations in an allocation set", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "ost" {
+							continue
+						}
+
+						// Make four allocations, each with one quarter the size
+						servers.Spec.AllocationSets[i].AllocationSize /= 4
+						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
+						servers.Spec.AllocationSets[i].Storage[1].AllocationCount = 3
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup
+				}).Should(BeTrue(), "waiting for ready after setup")
+			})
+
+			It("Fails when allocation is too small", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					servers.Spec.AllocationSets[0].AllocationSize -= 1
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set allocation size too small")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails when using the incorrect labels", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					servers.Spec.AllocationSets[0].Label = "bad"
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set incorrect allocation set label")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails when an allocation set is duplicated", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					servers.Spec.AllocationSets = append(servers.Spec.AllocationSets, servers.Spec.AllocationSets[0])
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set incorrect allocation set label")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails when using a non-existent storage", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					servers.Spec.AllocationSets[0].Storage[0].Name = "no-such-rabbit"
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set incorrect allocation set label")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails with multiple allocations totaling not enough capacity", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "ost" {
+							continue
+						}
+
+						// Make four allocations, each with one eigth the size
+						servers.Spec.AllocationSets[i].AllocationSize /= 8
+						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
+						servers.Spec.AllocationSets[i].Storage[1].AllocationCount = 3
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations sized too small")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails with multiple allocations specified for AllocationSingleServer", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "mgt" {
+							continue
+						}
+
+						servers.Spec.AllocationSets[i].Storage[0].AllocationCount = 2
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations on the same server")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+			It("Fails with multiple allocations specified for AllocationSingleServer", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "mgt" {
+							continue
+						}
+
+						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations on two servers")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+		})
+
+		When("Using an XFS file system", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test type=xfs capacity=1GiB",
+				}
+			})
+
+			It("Succeeds with one allocation per allocation set", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup
+				}).Should(BeTrue(), "waiting for ready after setup")
+			})
+
+			It("Fails with multiple allocations with total capacity == minimum capacity", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+
+					// Make two  allocations, each with one half the size
+					servers.Spec.AllocationSets[0].AllocationSize /= 2
+					servers.Spec.AllocationSets[0].Storage = append(servers.Spec.AllocationSets[0].Storage, servers.Spec.AllocationSets[0].Storage[0])
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations sized too small")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.State == dwsv1alpha1.StateSetup && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "waiting for setup state to fail")
+			})
+
+		})
+	})
 })
 
 var _ = Describe("NnfStorageProfile Webhook test", func() {
