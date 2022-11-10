@@ -432,8 +432,6 @@ var _ = Describe("Integration Test", func() {
 			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, true, true, 1},
 			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, true, true, 1},
 			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, true, true, 3},
-			{"#DW jobdw name=jobdw-lustre type=lustre combined_mgtmdt capacity=1GiB", 1, true, true, 2},
-			{"#DW jobdw name=jobdw-lustre type=lustre external_mgs=localhost@tcp capacity=1GiB", 1, true, true, 2},
 
 			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, false, true, 1},
 			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, false, true, 1},
@@ -1234,8 +1232,7 @@ var _ = Describe("Integration Test", func() {
 			profileExternalMGS    *nnfv1alpha1.NnfStorageProfile
 			profileCombinedMGTMDT *nnfv1alpha1.NnfStorageProfile
 
-			directiveMgsNid string
-			profileMgsNid   string
+			profileMgsNid string
 
 			dbd       *dwsv1alpha1.DirectiveBreakdown
 			dbdServer *dwsv1alpha1.Servers
@@ -1245,7 +1242,6 @@ var _ = Describe("Integration Test", func() {
 		)
 
 		BeforeEach(func() {
-			directiveMgsNid = "directive-mgs@tcp"
 			profileMgsNid = "profile-mgs@tcp"
 
 			dbd = &dwsv1alpha1.DirectiveBreakdown{}
@@ -1382,16 +1378,6 @@ var _ = Describe("Integration Test", func() {
 			}
 		}
 
-		When("using external_mgs in directive", func() {
-			BeforeEach(func() {
-				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre external_mgs=%s capacity=5GB name=directive-mgs", directiveMgsNid)
-			})
-
-			It("Uses external_mgs via the directive", func() {
-				verifyExternalMgsNid("via directive", directiveMgsNid)
-			})
-		})
-
 		When("using external_mgs in profile", func() {
 			BeforeEach(func() {
 				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s capacity=5GB name=profile-mgs", externalMgsProfileName)
@@ -1402,26 +1388,6 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 
-		When("using external_mgs in directive and profile", func() {
-			BeforeEach(func() {
-				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s external_mgs=%s capacity=5GB name=both-mgs", externalMgsProfileName, directiveMgsNid)
-			})
-
-			It("Uses external_mgs via the directive", func() {
-				verifyExternalMgsNid("via directive", directiveMgsNid)
-			})
-		})
-
-		When("using combined_mgtmdt in directive", func() {
-			BeforeEach(func() {
-				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre combined_mgtmdt capacity=5GB name=directive-mgtmdt")
-			})
-
-			It("Uses combined_mgtmdt via the directive", func() {
-				verifyCombinedMgtMdt()
-			})
-		})
-
 		When("using combined_mgtmdt in profile", func() {
 			BeforeEach(func() {
 				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s capacity=5GB name=profile-mgtmdt", combinedMgtMdtProfileName)
@@ -1429,26 +1395,6 @@ var _ = Describe("Integration Test", func() {
 
 			It("Uses combined_mgtmdt via the profile", func() {
 				verifyCombinedMgtMdt()
-			})
-		})
-
-		When("using combined_mgtmdt from directive when external_mgs is in profile", func() {
-			BeforeEach(func() {
-				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s combined_mgtmdt capacity=5GB name=profile-mgtmdt", externalMgsProfileName)
-			})
-
-			It("Uses combined_mgtmdt via the directive", func() {
-				verifyCombinedMgtMdt()
-			})
-		})
-
-		When("using external_mgs from directive when combined_mgtmdt is in profile", func() {
-			BeforeEach(func() {
-				intendedDirective = fmt.Sprintf("#DW jobdw type=lustre profile=%s external_mgs=%s capacity=5GB name=profile-mgtmdt", combinedMgtMdtProfileName, directiveMgsNid)
-			})
-
-			It("Uses external_mgs via the directive", func() {
-				verifyExternalMgsNid("via directive", directiveMgsNid)
 			})
 		})
 	})
