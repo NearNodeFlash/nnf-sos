@@ -24,10 +24,11 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nvme2 "github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -111,24 +112,33 @@ func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGro
 
 func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, ignoreErrors bool) error {
 
-	for _, volume := range volumes {
-		storage := p.storageService.findStorage(volume.SerialNumber)
+	log.Info("Storage Pool %s: Recover Volumes", p.id)
 
-		if storage != nil {
-			volume, err := storage.FindVolumeByNamespaceId(volume.NamespaceId)
-			if err != nil {
-				if ignoreErrors {
-					continue
-				}
-				
-				return err
+	for _, volumeInfo := range volumes {
+
+		// Locate the NVMe Storage device by Serial Number
+		storage := p.storageService.findStorage(volumeInfo.SerialNumber)
+		if storage == nil {
+			log.Warnf("Storage %s not found", volumeInfo.SerialNumber)
+			continue
+		}
+
+		// Locate the Volume by Namespace ID
+		volume, err := storage.FindVolumeByNamespaceId(volumeInfo.NamespaceId)
+		if err != nil {
+			log.Errorf("Volume %d not found", volumeInfo.NamespaceId)
+			if ignoreErrors {
+				continue
 			}
 
-			p.providingVolumes = append(p.providingVolumes, ProvidingVolume{
-				storage:  storage,
-				volumeId: volume.Id(),
-			})
+			return err
 		}
+
+		p.providingVolumes = append(p.providingVolumes, ProvidingVolume{
+			storage:  storage,
+			volumeId: volume.Id(),
+		})
+		
 	}
 
 	p.allocatedVolume = AllocatedVolume{
