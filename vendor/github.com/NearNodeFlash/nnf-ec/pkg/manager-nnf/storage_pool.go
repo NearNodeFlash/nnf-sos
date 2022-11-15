@@ -24,10 +24,11 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
-	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nvme2 "github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -111,24 +112,33 @@ func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGro
 
 func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, ignoreErrors bool) error {
 
-	for _, volume := range volumes {
-		storage := p.storageService.findStorage(volume.SerialNumber)
+	log.Infof("Storage Pool %s: Recover Volumes", p.id)
 
-		if storage != nil {
-			volume, err := storage.FindVolumeByNamespaceId(volume.NamespaceId)
-			if err != nil {
-				if ignoreErrors {
-					continue
-				}
-				
-				return err
+	for _, volumeInfo := range volumes {
+
+		// Locate the NVMe Storage device by Serial Number
+		storage := p.storageService.findStorage(volumeInfo.SerialNumber)
+		if storage == nil {
+			log.Warnf("Storage %s not found", volumeInfo.SerialNumber)
+			continue
+		}
+
+		// Locate the Volume by Namespace ID
+		volume, err := storage.FindVolumeByNamespaceId(volumeInfo.NamespaceId)
+		if err != nil {
+			log.Errorf("Volume %d not found", volumeInfo.NamespaceId)
+			if ignoreErrors {
+				continue
 			}
 
-			p.providingVolumes = append(p.providingVolumes, ProvidingVolume{
-				storage:  storage,
-				volumeId: volume.Id(),
-			})
+			return err
 		}
+
+		p.providingVolumes = append(p.providingVolumes, ProvidingVolume{
+			storage:  storage,
+			volumeId: volume.Id(),
+		})
+
 	}
 
 	p.allocatedVolume = AllocatedVolume{
@@ -241,7 +251,8 @@ func NewStoragePoolRecoveryRegistry(s *StorageService) persistent.Registry {
 func (*storagePoolRecoveryRegistry) Prefix() string { return storagePoolRegistryPrefix }
 
 func (r *storagePoolRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
-	return &storagePoolRecoveryReplayHandler{storageService: r.storageService, storagePool: StoragePool{id: id}}
+	log.Infof("Storage Pool %s: New Replay", id)
+	return &storagePoolRecoveryReplayHandler{storageService: r.storageService, id: id}
 }
 
 // The Storage Pool Recovery Replay Handler accepts TLVs from the kvstore to
@@ -250,11 +261,14 @@ type storagePoolRecoveryReplayHandler struct {
 	// Reference to the storage service that manages this reply
 	storageService *StorageService
 
+	// The storage pool ID
+	id string
+
 	// Last log entry recorded in the log. This represents state of the storage lifetime
 	lastLogEntryType uint32
 
 	// The recovered storage pool. Only valid if last log entry > storagePoolStorageCreateStartLogEntryType
-	storagePool StoragePool
+	storagePool *StoragePool
 
 	// List of volume information associated with the storage pool. Only valid if last log entry > storagePoolStorageCreateCompleteLogEntryType
 	volumes []storagePoolPersistentVolumeInfo
@@ -266,18 +280,9 @@ func (rh *storagePoolRecoveryReplayHandler) Metadata(data []byte) error {
 		return err
 	}
 
-	rh.storageService.createStoragePool(rh.storagePool.id, metadata.Name, metadata.Description, uuid.MustParse(metadata.Uid), nil)
-	rh.storagePool = StoragePool{
-		id:          rh.storagePool.id,
-		name:        metadata.Name,
-		description: metadata.Description,
-		uid:         uuid.MustParse(metadata.Uid),
-		allocatedVolume: AllocatedVolume{
-			id:            DefaultAllocatedVolumeId,
-			capacityBytes: 0,
-		},
-		storageService: rh.storageService,
-	}
+	rh.storagePool = rh.storageService.createStoragePool(rh.id, metadata.Name, metadata.Description, uuid.MustParse(metadata.Uid), nil)
+
+	rh.storagePool.allocatedVolume = AllocatedVolume{id: DefaultAllocatedVolumeId, capacityBytes: 0}
 
 	return nil
 }
@@ -303,7 +308,6 @@ func (rh *storagePoolRecoveryReplayHandler) Entry(typ uint32, data []byte) error
 }
 
 func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
-
 	switch rh.lastLogEntryType {
 	case storagePoolStorageCreateStartLogEntryType:
 		// In this case the storage pool started, but didn't finish. We may have outstanding namespaces
@@ -311,6 +315,8 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 		// point in time (as there may be other storage pools that will claim the namespaces), we will
 		// defer to the storage service to automatically clean up abandoned namespaces after all
 		// storage pools have been initialized.
+
+		// TODO: Delete any NVMe Namespaces that are abandoned
 
 	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
 		// Case 1. Create Complete: In this case, we've fully created the storage pool and it should be
@@ -326,14 +332,10 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 			return false, err
 		}
 
-		rh.storageService.pools = append(rh.storageService.pools, rh.storagePool)
-
 	case storagePoolStorageDeleteCompleteLogEntryType:
 		// We've deleted all the volumes and the storage pool, but failed to delete the key. The client
 		// should retry the delete, at which point we can delete the storage pool and the entry in
 		// the store.
-
-		rh.storageService.pools = append(rh.storageService.pools, rh.storagePool)
 	}
 
 	return false, nil

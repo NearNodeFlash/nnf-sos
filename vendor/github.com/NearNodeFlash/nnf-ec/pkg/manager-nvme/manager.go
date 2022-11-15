@@ -307,6 +307,9 @@ func (s *Storage) OdataIdRef(ref string) sf.OdataV4IdRef {
 }
 
 func (s *Storage) initialize() error {
+
+	log.Infof("Storage %s Initialize", s.id)
+
 	s.state = sf.STARTING_RST
 
 	ctrl, err := s.device.IdentifyController(0)
@@ -378,6 +381,7 @@ func (s *Storage) initialize() error {
 	s.lbaFormatIndex = uint8(bestIndex)
 	s.blockSizeBytes = 1 << ns.LBAFormats[bestIndex].LBADataSize
 
+	log.Infof("Storage %s Initialized: SerialNumber: %s", s.id, s.serialNumber)
 	return nil
 }
 
