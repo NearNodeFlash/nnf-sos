@@ -308,7 +308,7 @@ func (s *Storage) OdataIdRef(ref string) sf.OdataV4IdRef {
 
 func (s *Storage) initialize() error {
 
-	log.Info("Initialize Storage %s", s.id)
+	log.Infof("Storage %s Initialize", s.id)
 
 	s.state = sf.STARTING_RST
 
@@ -381,7 +381,7 @@ func (s *Storage) initialize() error {
 	s.lbaFormatIndex = uint8(bestIndex)
 	s.blockSizeBytes = 1 << ns.LBAFormats[bestIndex].LBADataSize
 
-	log.Infof("Initialized Storage %s: S/N %s", s.id, s.serialNumber)
+	log.Infof("Storage %s Initialized: SerialNumber: %s", s.id, s.serialNumber)
 	return nil
 }
 
