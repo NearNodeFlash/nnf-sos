@@ -158,7 +158,7 @@ func (mgr *MockNvmePersistenceManager) recordDeleteNamespace(dev *mockDevice, ns
 		panic(err)
 	}
 
-	ledger.Close(true)
+	ledger.Close(false)
 }
 
 func (mgr *MockNvmePersistenceManager) recordAttachController(dev *mockDevice, ns *mockNamespace, ctrlId uint16) {

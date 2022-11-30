@@ -27,7 +27,7 @@ import (
 	"regexp"
 )
 
-// Return the devices that match the provided regexp in Model Number, Serial Number,
+// DeviceList returns the devices that match the provided regexp in Model Number, Serial Number,
 // or Node Qualifying Name (NQN). Returned paths are of the form /dev/nvme[0-9]+.
 func DeviceList(r string) ([]string, error) {
 
