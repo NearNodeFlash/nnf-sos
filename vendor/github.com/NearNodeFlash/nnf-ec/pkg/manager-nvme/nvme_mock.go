@@ -367,6 +367,16 @@ func (d *mockDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error
 	return nil
 }
 
+// FormatNamespace -
+func (d *mockDevice) FormatNamespace(namespaceID nvme.NamespaceIdentifier) error {
+	return nil
+}
+
+// FormatNamespace -
+func (d *mockDevice) WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error {
+	return nil
+}
+
 // AttachNamespace -
 func (d *mockDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
 	ns := d.findNamespace(namespaceId)

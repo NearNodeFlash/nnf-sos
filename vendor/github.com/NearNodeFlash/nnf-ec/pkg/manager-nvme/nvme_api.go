@@ -56,6 +56,9 @@ type NvmeDeviceApi interface {
 	CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error)
 	DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error
 
+	FormatNamespace(namespaceID nvme.NamespaceIdentifier) error
+	WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error
+
 	AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error
 	DetachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error
 

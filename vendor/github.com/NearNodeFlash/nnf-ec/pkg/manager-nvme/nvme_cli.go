@@ -278,6 +278,51 @@ func (d *cliDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error 
 	return nil
 }
 
+func (d *cliDevice) FormatNamespace(namespaceID nvme.NamespaceIdentifier) error {
+	// Example Command
+	//    # nvme format --force --namespace-id=1 /dev/nvme2
+	//    Success formatting namespace:1
+
+	rsp, err := d.run(fmt.Sprintf("format %s --force --namespace-id=%d", d.dev(), namespaceID))
+	if err != nil {
+		return err
+	}
+
+	regex := regexp.MustCompile(`Success formatting namespace:(\d+)\n`)
+	substrings := regex.FindStringSubmatch(rsp)
+	if len(substrings) != 2 {
+		return fmt.Errorf("Namespace not found in response output '%s'", rsp)
+	}
+
+	nsid, err := strconv.Atoi(substrings[1])
+	if err != nil {
+		return err
+	}
+
+	if namespaceID != nvme.NamespaceIdentifier(nsid) {
+		return fmt.Errorf("Formatted NSID (%d) does not match expected NSID (%d)", nsid, namespaceID)
+	}
+
+	return nil
+}
+
+func (d *cliDevice) WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error {
+	idns := &nvme.IdNs{}
+	idns.Utilization = 1 // something other than 0 to get the loop going below
+
+	for idns.Utilization > 0 {
+		idns, err := d.IdentifyNamespace(namespaceID)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Formatting, Utilization(bytes): %d              \r", idns.Utilization) // wipe out straggling digits
+	}
+
+	fmt.Printf("Formatting, Utilization(bytes): %d              \r", idns.Utilization)
+	return nil
+}
+
 func (d *cliDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
 	// Example Command
 	//    # nvme attach-ns /dev/nvme2 --namespace-id=1 --controllers=0x41
