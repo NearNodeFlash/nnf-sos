@@ -21,6 +21,7 @@ package server
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
@@ -52,7 +53,7 @@ func (*FileSystemXfs) IsMockable() bool              { return false }
 func (*FileSystemXfs) Type() string   { return "xfs" }
 func (f *FileSystemXfs) Name() string { return f.name }
 
-func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
+func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) (err error) {
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
 		return err
 	}
@@ -63,6 +64,32 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 	mkfsArgs := varHandler.ReplaceAll(f.MkfsMount.Mkfs)
 
 	if _, err := f.run(fmt.Sprintf("mkfs.xfs %s", mkfsArgs)); err != nil {
+		return err
+	}
+
+	userID := 0
+	if _, exists := opts[UserID]; exists {
+		userID = opts[UserID].(int)
+	}
+
+	groupID := 0
+	if _, exists := opts[GroupID]; exists {
+		groupID = opts[GroupID].(int)
+	}
+
+	mountpath := "/mnt/nnf/client/" + f.name
+	if err := f.Mount(mountpath); err != nil {
+		return err
+	}
+
+	defer func() {
+		unmountErr := f.Unmount(mountpath)
+		if err == nil {
+			err = unmountErr
+		}
+	}()
+
+	if err := os.Chown(mountpath, userID, groupID); err != nil {
 		return err
 	}
 

@@ -31,6 +31,11 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/logging"
 )
 
+const (
+	UserID = "userID"
+	GroupID = "groupID"
+)
+
 type FileSystemControllerApi interface {
 	NewFileSystem(oem FileSystemOem) (FileSystemApi, error)
 }

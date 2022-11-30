@@ -34,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/mount-utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -211,6 +212,20 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if result != nil {
 			return *result, nil
 		}
+	}
+
+	if nodeStorage.Spec.SetOwnerGroup && nodeStorage.Status.OwnerGroupStatus != nnfv1alpha1.ResourceReady {
+		if nodeStorage.Status.OwnerGroupStatus == "" {
+			nodeStorage.Status.OwnerGroupStatus = nnfv1alpha1.ResourceStarting
+
+			return ctrl.Result{}, nil
+		}
+
+		if err := r.setLustreOwnerGroup(nodeStorage); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		nodeStorage.Status.OwnerGroupStatus = nnfv1alpha1.ResourceReady
 	}
 
 	return ctrl.Result{}, nil
@@ -544,6 +559,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	} else {
 		shareOptions["volumeGroupName"] = volumeGroupName(fileShareID)
 		shareOptions["logicalVolumeName"] = logicalVolumeName(fileShareID)
+		shareOptions["userID"] = int(nodeStorage.Spec.UserID)
+		shareOptions["groupID"] = int(nodeStorage.Spec.GroupID)
 	}
 
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
@@ -582,6 +599,49 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	nodeStorage.Status.LustreStorage.Nid = nid
 
 	return nil, nil
+}
+
+func (r *NnfNodeStorageReconciler) setLustreOwnerGroup(nodeStorage *nnfv1alpha1.NnfNodeStorage) error {
+	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
+
+	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+	if found || os.Getenv("ENVIRONMENT") == "kind" {
+		return nil
+	}
+
+	if nodeStorage.Spec.FileSystemType != "lustre" {
+		return fmt.Errorf("Invalid file system type '%s' for setting owner/group", nodeStorage.Spec.FileSystemType)
+	}
+
+	target := "/mnt/nnf/client/" + nodeStorage.Name
+	if err := os.MkdirAll(target, 0755); err != nil {
+		log.Error(err, "Mkdir failed")
+		return err
+	}
+	defer os.RemoveAll(target)
+
+	mounter := mount.New("")
+	mounted, err := mounter.IsMountPoint(target)
+	if err != nil {
+		return err
+	}
+
+	source := nodeStorage.Spec.LustreStorage.MgsNode + ":/" + nodeStorage.Spec.LustreStorage.FileSystemName
+
+	if !mounted {
+		if err := mounter.Mount(source, target, "lustre", nil); err != nil {
+			log.Error(err, "Mount failed")
+			return err
+		}
+	}
+	defer func() { err = mounter.Unmount(target) }()
+
+	if err := os.Chown(target, int(nodeStorage.Spec.UserID), int(nodeStorage.Spec.GroupID)); err != nil {
+		log.Error(err, "Chown failed")
+		return err
+	}
+
+	return nil
 }
 
 func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {

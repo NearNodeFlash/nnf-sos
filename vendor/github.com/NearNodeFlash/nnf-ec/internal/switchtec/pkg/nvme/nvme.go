@@ -41,9 +41,8 @@ type Device struct {
 	ops  ops
 }
 
-// NVMe User I/O Request
+// UserIoCmd represents an NVMe User I/O Request
 // This is a copy of the C definition in '/include/linux/nvme_ioctl.h' struct nvme_user_io{}
-
 type UserIoCmd struct {
 	Opcode   uint8
 	Flags    uint8
@@ -82,8 +81,10 @@ type PassthruCmd struct {
 	Result      uint32 // Bytes 68-71
 }
 
+// AdminCmd aliases the PassthruCmd
 type AdminCmd = PassthruCmd
 
+// AdminCommandOpCode sizes the opcodes listed below
 type AdminCommandOpCode uint8
 
 // Admin Command Op Codes. These are from the NVMe Specification
@@ -97,10 +98,13 @@ const (
 	VirtualMgmtOpCode         AdminCommandOpCode = 0x1c
 	NvmeMiSend                AdminCommandOpCode = 0x1D
 	NvmeMiRecv                AdminCommandOpCode = 0x1E
+	FormatNvmOpCode           AdminCommandOpCode = 0x80
 )
 
+// StatusCode sizes the status codes listed below
 type StatusCode uint32
 
+// Constants applying to the StatusCode
 const (
 	StatusCodeMask         = 0x7FF
 	CommandRetryDelayMask  = 0x1800
@@ -109,11 +113,13 @@ const (
 	DoNotRetryMask         = 0x4000
 )
 
+// Status codes
 const (
 	NamespaceAlreadyAttached StatusCode = 0x118
 	NamespaceNotAttached     StatusCode = 0x11a
 )
 
+// CommandError captures an error and details about handling
 type CommandError struct {
 	StatusCode        StatusCode
 	CommandRetryDelay uint8
@@ -125,6 +131,7 @@ func (e *CommandError) Error() string {
 	return fmt.Sprintf("NVMe Status: %#03x CRD: %d More: %t DNR: %t", e.StatusCode, e.CommandRetryDelay, e.More, e.DoNotRetry)
 }
 
+// NewCommandError generates the default CommandError for use
 func NewCommandError(status uint32) error {
 	return &CommandError{
 		StatusCode:        StatusCode(status & StatusCodeMask),
@@ -134,6 +141,7 @@ func NewCommandError(status uint32) error {
 	}
 }
 
+// Open establishes a connection with the switchtec switch to which subsequent commands are issued.
 func Open(devPath string) (*Device, error) {
 
 	if strings.HasPrefix(path.Base(devPath), "nvme") {
@@ -176,7 +184,7 @@ func Open(devPath string) (*Device, error) {
 		ops:  &ops}, nil
 }
 
-// Connect - Connect will connect a PDFID to an existing switchtec device
+// Connect connects a PDFID to an existing switchtec device
 func Connect(dev *switchtec.Device, pdfid uint16) (*Device, error) {
 	ops := switchOps{
 		dev:   dev,
@@ -219,6 +227,7 @@ func connectDevice(dev *switchtec.Device, ops *switchOps) (err error) {
 	return nil
 }
 
+// Close closes connection with the switchtec switch
 func (dev *Device) Close() {
 	if dev.ops != nil {
 		dev.ops.close()
@@ -231,8 +240,10 @@ const (
 	IdentifyDataSize uint32 = 4096
 )
 
+// IdentifyControllerOrNamespaceType constrains the type for the constants below.
 type IdentifyControllerOrNamespaceType int // CNS
 
+// CNS constants
 const (
 	Namespace_CNS                     IdentifyControllerOrNamespaceType = 0x00
 	Controller_CNS                    IdentifyControllerOrNamespaceType = 0x01
@@ -252,17 +263,19 @@ const (
 type NamespaceIdentifier uint32
 
 const (
-	// The capabilities and settings that are common to all namespaces are reported
-	// by the Identify Namespace data structure for namespace ID FFFFFFFFh.
+	// COMMON_NAMESPACE_IDENTIFIER identifies the capabilities and settings that are common to all namespaces
+	// in the Identify Namespace data structure
 	COMMON_NAMESPACE_IDENTIFIER NamespaceIdentifier = 0xFFFFFFFF
 )
 
+// NamespaceGloballyUniqueIdentifier uniquely identifies the namespace
 type NamespaceGloballyUniqueIdentifier [16]byte
 
 func (a NamespaceGloballyUniqueIdentifier) String() string {
 	return fmt.Sprintf("%x", string(a[:]))
 }
 
+// Parse - ensure the uuid is parseable
 func (a *NamespaceGloballyUniqueIdentifier) Parse(s string) {
 	*a = NamespaceGloballyUniqueIdentifier(uuid.MustParse(s))
 }
@@ -420,40 +433,40 @@ type id_ctrl struct {
 	CommandRetryDelayTime2                    uint16   // CRDT2
 	CommandRetryDelayTime3                    uint16   // CRDT3
 	Reserved134                               [122]byte
-	OptionalAdminCommandSupport               uint16   // OACS
-	AbortCommandLimit                         uint8    // ACL
-	AsynchronousEventRequestLimit             uint8    // AERL
-	FirmwareUpdates                           uint8    // FRMW
-	LogPageAttributes                         uint8    // LPA
-	ErrorLogPageEntries                       uint8    // ELPE
-	NumberPowerStatesSupport                  uint8    // NPSS
-	AdminVendorSpecificCommandConfiguration   uint8    // AVSCC
-	AutonomousPowerStateTranstionAttributes   uint8    // APSTA
-	WarningCompositeTemperatureThreshold      uint16   // WCTEMP
-	CriticalCompositeTemperatureThreashold    uint16   // CCTEMP
-	MaximumTimeForFirmwareActivation          uint16   // MTFA 100ms unites
-	HostMemoryBufferPreferredSize             uint32   // HMPRE 4 KiB Units
-	HostMemoryBufferMinimumSize               uint32   // HMMIN 4KiB Units
-	TotalNVMCapacity                          [16]byte // TNVMCAP
-	UnallocatedNVMCapacity                    [16]byte // UNVMCAP
-	ReplayProtectedMemoryBlockSupport         uint32   // RPMBS
-	ExtendedDriveSelfTestTime                 uint16   // EDSTT
-	DeviceSelfTestOptions                     uint8    // DSTO
-	FirmwareUpdateGranularity                 uint8    // FWUG
-	KeepAliveSupport                          uint16   // KAS
-	HostControllerThermalManagementAttributes uint16   // HCTMA
-	MinimumThermalManagementTemperature       uint16   // MNTMT
-	MaximumThermalManagementTemperature       uint16   // MXTMT
-	SanitizeCapabilities                      uint32   // SNAICAP
-	HostMemoryBufferMinimDescriptorEntrySize  uint32   // HMMINDS
-	HostMemoryMaximumDescriptorEntries        uint16   // HMMAXD
-	NVMSetIdentifierMaximum                   uint16   // NSETIDMAX
-	EnduraceGroupIdentifierMaximum            uint16   // ENDGIDMAX
-	ANATranstitionTime                        uint8    // ANATT
-	AsymentricNamespaceAccessCapabilities     uint8    // ANACAP
-	ANAGroupIdenfierMaximum                   uint32   // ANAGRPMAX
-	NumberOfANAGroupIdentifiers               uint32   // NANAGRPID
-	PersistentEventLogSize                    uint32   // PELS
+	OptionalAdminCommandSupport               uint16               // OACS
+	AbortCommandLimit                         uint8                // ACL
+	AsynchronousEventRequestLimit             uint8                // AERL
+	FirmwareUpdates                           uint8                // FRMW
+	LogPageAttributes                         uint8                // LPA
+	ErrorLogPageEntries                       uint8                // ELPE
+	NumberPowerStatesSupport                  uint8                // NPSS
+	AdminVendorSpecificCommandConfiguration   uint8                // AVSCC
+	AutonomousPowerStateTranstionAttributes   uint8                // APSTA
+	WarningCompositeTemperatureThreshold      uint16               // WCTEMP
+	CriticalCompositeTemperatureThreashold    uint16               // CCTEMP
+	MaximumTimeForFirmwareActivation          uint16               // MTFA 100ms unites
+	HostMemoryBufferPreferredSize             uint32               // HMPRE 4 KiB Units
+	HostMemoryBufferMinimumSize               uint32               // HMMIN 4KiB Units
+	TotalNVMCapacity                          [16]byte             // TNVMCAP
+	UnallocatedNVMCapacity                    [16]byte             // UNVMCAP
+	ReplayProtectedMemoryBlockSupport         uint32               // RPMBS
+	ExtendedDriveSelfTestTime                 uint16               // EDSTT
+	DeviceSelfTestOptions                     uint8                // DSTO
+	FirmwareUpdateGranularity                 uint8                // FWUG
+	KeepAliveSupport                          uint16               // KAS
+	HostControllerThermalManagementAttributes uint16               // HCTMA
+	MinimumThermalManagementTemperature       uint16               // MNTMT
+	MaximumThermalManagementTemperature       uint16               // MXTMT
+	Sanitize                                  SanitizeCapabilities //SANICAP
+	HostMemoryBufferMinimDescriptorEntrySize  uint32               // HMMINDS
+	HostMemoryMaximumDescriptorEntries        uint16               // HMMAXD
+	NVMSetIdentifierMaximum                   uint16               // NSETIDMAX
+	EnduraceGroupIdentifierMaximum            uint16               // ENDGIDMAX
+	ANATranstitionTime                        uint8                // ANATT
+	AsymentricNamespaceAccessCapabilities     uint8                // ANACAP
+	ANAGroupIdenfierMaximum                   uint32               // ANAGRPMAX
+	NumberOfANAGroupIdentifiers               uint32               // NANAGRPID
+	PersistentEventLogSize                    uint32               // PELS
 	Reserved356                               [156]byte
 	CommandSetAttributes                      struct {
 		SubmissionQueueEntrySize              uint8  // SQES
@@ -484,6 +497,19 @@ type id_ctrl struct {
 	Reserved1804                     [244]byte
 	PowerStateDescriptors            [32]id_power_state
 	VendorSpecific                   [1024]byte
+}
+
+// SanitizeCapabilities data structure
+// structex annotations where applicable.
+type SanitizeCapabilities struct {
+	CryptoErase               uint8  `bitfield:"1"` // Bits 0     controller supports Crypto Erase sanitize operation (1), 0 - no support
+	BlockErase                uint8  `bitfield:"1"` // Bits 1     controller supports Block Erase sanitize operation (1), 0 - no support
+	Overwrite                 uint8  `bitfield:"1"` // Bits 2     controller supports Overwrite sanitize operation (1), 0 - no support
+	Unused0                   uint8  `bitfield:"5"` // Bits 7:3   unused
+	Unused1                   uint16 // Bits 23:8  unused
+	Unused2                   uint8  `bitfield:"5"` // Bits 28:24 unused
+	NoDeallocateAfterSanitize uint8  `bitfield:"1"` // Bits 29    No-deallocate After Sanitize bit in Sanitize inhibitied command support (1), 0 - no support
+	NoDeallocateMask          uint8  `bitfield:"2"` // Bits 31:30 No-deallocate After Sanitize mask to extract value.
 }
 
 type id_power_state struct {
@@ -586,6 +612,19 @@ type IdNs struct {
 	VendorSpecific [3712]uint8
 }
 
+// Format Options Data Structure
+// All the parameters listed are the long-form name
+// structex annotations where applicable.
+type FormatNs struct {
+	Format                 uint8    `bitfield:"4"` // Bits 3:0  Indicate one of the 16 supported LBA Formats
+	MetadataSetting        uint8    `bitfield:"1"` // Bits 4    Indicates metadata transfer setting. If the Metadata size is 0, the bit is N/A
+	ProtectionInfo         uint8    `bitfield:"3"` // Bits 7:5  Indicates end-to-end protection information type
+	ProtectionInfoLocation uint8    `bitfield:"1"` // Bits 8    Indicates protection information location in the metadata
+	SecureEraseSetting     uint8    `bitfield:"3"` // Bits 11-9 Indicates secure erase setting, 0 - none, 1 - user data erase, 2 - crypto-erase
+	Fill                   uint8    `bitfield:"4"` // Filler to pad to byte
+	Unused                 [2]uint8 // Pad to uint32
+}
+
 type FormattedLBASize struct {
 	Format   uint8 `bitfield:"4"` // Bits 3:0: Indicates one of the 16 supported LBA Formats
 	Metadata uint8 `bitfield:"1"` // Bit 4: If 1, indicates metadata is transfer at the end of the data LBA
@@ -602,6 +641,7 @@ type CtrlList struct {
 	Identifiers [2047]uint16
 }
 
+// CreateNamespace creates a new namespace with the specified parameters
 func (dev *Device) CreateNamespace(size uint64, capacity uint64, format uint8, dps uint8, sharing uint8, anagrpid uint32, nvmsetid uint16, timeout uint32) (uint32, error) {
 
 	ns := IdNs{
@@ -634,6 +674,7 @@ func (dev *Device) CreateNamespace(size uint64, capacity uint64, format uint8, d
 	return cmd.Result, nil
 }
 
+// DeleteNamespace deletes the specified namespace
 func (dev *Device) DeleteNamespace(namespaceID uint32) error {
 	cmd := AdminCmd{
 		Opcode: uint8(NamespaceManagementOpCode),
@@ -642,6 +683,76 @@ func (dev *Device) DeleteNamespace(namespaceID uint32) error {
 	}
 
 	return dev.ops.submitAdminPassthru(dev, &cmd, nil)
+}
+
+// FormatNamespace issues a suitable format command to the namespace.
+// The existing format is queried and reused, and if crypto erase
+// is supported we chose that.
+func (dev *Device) FormatNamespace(namespaceID uint32) error {
+
+	idctrl, err := dev.IdentifyController()
+	if err != nil {
+		return err
+	}
+
+	idns, err := dev.IdentifyNamespace(namespaceID, true /* namespace present */)
+	if err != nil {
+		return err
+	}
+
+	var secureEraseSetting uint8
+	if idctrl.Sanitize.CryptoErase == 1 {
+		secureEraseSetting = 2
+	}
+
+	// If the drive supports crypto erase, use it.
+	formatOptions := FormatNs{
+		Format:             idns.FormattedLBASize.Format,
+		SecureEraseSetting: secureEraseSetting,
+	}
+
+	buf, err := structex.EncodeByteBuffer(formatOptions)
+	if err != nil {
+		return err
+	}
+
+	cmd := AdminCmd{
+		Opcode: uint8(FormatNvmOpCode),
+		NSID:   namespaceID,
+		Cdw10:  binary.LittleEndian.Uint32(buf),
+	}
+
+	return dev.ops.submitAdminPassthru(dev, &cmd, nil)
+}
+
+// WaitFormatComplete polls the namespace waiting for the Utilization to reach 0.
+func (dev *Device) WaitFormatComplete(namespaceID uint32) error {
+	idns, err := dev.IdentifyNamespace(namespaceID, true /* namespace present */)
+	if err != nil {
+		return err
+	}
+
+	lastUtilization := idns.Utilization
+
+	// As the format command runs, the Utilization should decrease to 0
+	for lastUtilization > 0 {
+		// Pause briefly to for format to make progress
+		delay := 100 * time.Millisecond
+		time.Sleep(delay)
+		idns, err = dev.IdentifyNamespace(namespaceID, true /* namespace present */)
+		if err != nil {
+			return err
+		}
+
+		// Fail if format is stuck
+		if lastUtilization == idns.Utilization {
+			return fmt.Errorf("Format is not progressing after %s", delay.String())
+		}
+
+		lastUtilization = idns.Utilization
+	}
+
+	return nil
 }
 
 func (dev *Device) manageNamespace(namespaceID uint32, controllers []uint16, attach bool) error {
@@ -854,8 +965,10 @@ type MIHostMetadataElementDescriptor struct {
 	Val  []byte
 }
 
+// HostMetadataElementType constains the constants below
 type HostMetadataElementType uint8
 
+// Metadata constants
 const (
 	OsCtrlNameElementType           HostMetadataElementType = 0x01
 	OsDriverNameElementType                                 = 0x02
@@ -904,6 +1017,7 @@ func (builder *MiMeatadataFeatureBuilder) Bytes() []byte {
 	return builder.data[:builder.offset]
 }
 
+// SmartLog health information
 // Get Log Page - SMART / Health Information Log
 // Figure 196 from NVM-Express 1_4a-2020.03.09-Ratified specification
 type SmartLog struct {

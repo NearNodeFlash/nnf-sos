@@ -265,6 +265,10 @@ func DeleteVolume(v *Volume) error {
 	return v.storage.deleteVolume(v.id)
 }
 
+func FormatVolumeAndWaitForComplete(v *Volume) error {
+	return v.storage.formatVolumeAndWaitForComplete(v.id)
+}
+
 func AttachController(v *Volume, controllerId uint16) error {
 	return v.attach(controllerId)
 }
@@ -491,6 +495,40 @@ func (s *Storage) deleteVolume(volumeId string) error {
 			// remove the volume from the array
 			copy(s.volumes[idx:], s.volumes[idx+1:]) // shift left 1 at idx
 			s.volumes = s.volumes[:len(s.volumes)-1] // truncate tail
+
+			return nil
+		}
+	}
+
+	return ec.NewErrNotFound()
+}
+
+func (s *Storage) formatVolume(volumeID string) error {
+	for _, volume := range s.volumes {
+		if volume.id == volumeID {
+			if err := s.device.FormatNamespace(volume.namespaceId); err != nil {
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	return ec.NewErrNotFound()
+}
+
+func (s *Storage) formatVolumeAndWaitForComplete(volumeID string) error {
+	// Launch formats for all namespaces
+	if err := s.formatVolume(volumeID); err != nil {
+		return err
+	}
+
+	// Wait all formats to finish
+	for _, volume := range s.volumes {
+		if volume.id == volumeID {
+			if err := s.device.WaitFormatComplete(volume.namespaceId); err != nil {
+				return err
+			}
 
 			return nil
 		}

@@ -379,6 +379,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			addPinnedStorageProfileLabel(nnfStorage, nnfStorageProfile)
 
 			nnfStorage.Spec.FileSystemType = dwArgs["type"]
+			nnfStorage.Spec.UserID = workflow.Spec.UserID
+			nnfStorage.Spec.GroupID = workflow.Spec.GroupID
 
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}

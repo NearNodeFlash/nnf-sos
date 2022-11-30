@@ -122,6 +122,10 @@ func (d *nvmeDirectDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier)
 	return d.cliDevice.DeleteNamespace(namespaceId)
 }
 
+func (d *nvmeDirectDevice) FormatNamespace(namespaceId nvme.NamespaceIdentifier) error {
+	return d.cliDevice.FormatNamespace(namespaceId)
+}
+
 func (d *nvmeDirectDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
 	return d.cliDevice.AttachNamespace(namespaceId, controllers)
 }

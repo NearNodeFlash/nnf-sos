@@ -117,9 +117,19 @@ spec:
                 - gfs2
                 - lustre
                 type: string
+              groupID:
+                description: Group ID for file system
+                format: int32
+                type: integer
+              userID:
+                description: User ID for file system
+                format: int32
+                type: integer
             required:
             - allocationSets
             - fileSystemType
+            - groupID
+            - userID
             type: object
           status:
             description: NnfStorageStatus defines the observed status of NNF Storage.
@@ -139,10 +149,10 @@ spec:
                       description: Error is the human readable error string
                       type: string
                     health:
-                      description: Health reflects the health of this NNF Storage
+                      description: Health reflects the health of this allocation set
                       type: string
                     status:
-                      description: Status reflects the status of this NNF Storage
+                      description: Status reflects the status of this allocation set
                       type: string
                   required:
                   - allocationCount
@@ -168,6 +178,9 @@ spec:
                 type: object
               mgsNode:
                 description: MgsNode is the NID of the MGS.
+                type: string
+              status:
+                description: Status reflects the status of this NNF Storage
                 type: string
             type: object
         type: object
