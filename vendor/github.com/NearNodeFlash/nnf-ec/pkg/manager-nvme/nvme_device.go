@@ -88,11 +88,11 @@ func (d *nvmeDevice) IdentifyNamespace(namespaceId nvme.NamespaceIdentifier) (*n
 	// 2) Allocated Namespace Management, returns Identify Namespace data structure for the specified
 	//    allocated NSID, regardless of its attach state to a controller.
 	//
-	// We prefer to manage namespaces regardless of there attach state to a particular controller, so
+	// We prefer to manage namespaces regardless of their attach state to a particular controller, so
 	// option 2 is preferred except in cases of the common namespace identifier (-1), in which case
 	// we need to use option 1.
 
-	present := true // Force reading of namespace even if not attached to the particular controller
+	present := true // Force identify namespace even if not attached to the particular controller
 	if namespaceId == CommonNamespaceIdentifier {
 		present = false
 	}
@@ -191,6 +191,16 @@ func (d *nvmeDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint6
 // DeleteNamespace -
 func (d *nvmeDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error {
 	return d.dev.DeleteNamespace(uint32(namespaceId))
+}
+
+// FormatNamespace -
+func (d *nvmeDevice) FormatNamespace(namespaceID nvme.NamespaceIdentifier) error {
+	return d.dev.FormatNamespace(uint32(namespaceID))
+}
+
+// WaitFormatComplete -
+func (d *nvmeDevice) WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error {
+	return d.dev.WaitFormatComplete(uint32(namespaceID))
 }
 
 // AttachNamespace -

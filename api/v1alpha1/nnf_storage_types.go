@@ -85,6 +85,12 @@ type NnfStorageSpec struct {
 	// +kubebuilder:default:=raw
 	FileSystemType string `json:"fileSystemType"`
 
+	// User ID for file system
+	UserID uint32 `json:"userID"`
+
+	// Group ID for file system
+	GroupID uint32 `json:"groupID"`
+
 	// AllocationSets is a list of different types of storage allocations to make. Each
 	// AllocationSet describes an entire allocation spanning multiple Rabbits. For example,
 	// an AllocationSet could be all of the OSTs in a Lustre filesystem, or all of the raw
@@ -94,10 +100,10 @@ type NnfStorageSpec struct {
 
 // NnfStorageAllocationSetStatus contains the status information for an allocation set
 type NnfStorageAllocationSetStatus struct {
-	// Status reflects the status of this NNF Storage
+	// Status reflects the status of this allocation set
 	Status NnfResourceStatusType `json:"status,omitempty"`
 
-	// Health reflects the health of this NNF Storage
+	// Health reflects the health of this allocation set
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
 	// Error is the human readable error string
@@ -120,6 +126,9 @@ type NnfStorageStatus struct {
 	AllocationSets []NnfStorageAllocationSetStatus `json:"allocationSets,omitempty"`
 
 	dwsv1alpha1.ResourceError `json:",inline"`
+
+	// Status reflects the status of this NNF Storage
+	Status NnfResourceStatusType `json:"status,omitempty"`
 
 	// TODO: Conditions
 }

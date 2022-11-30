@@ -429,19 +429,11 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		return Requeue("allocation").after(2 * time.Second).withObject(nnfStorage), nil
 	}
 
-	var complete bool = true
-	// Status section should be usable now, check for Ready
-	for _, set := range nnfStorage.Status.AllocationSets {
-		if set.Status != "Ready" {
-			complete = false
-		}
-	}
-
 	if nnfStorage.Status.Error != nil {
 		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(nnfStorage.Status.Error)
 	}
 
-	if !complete {
+	if nnfStorage.Status.Status != nnfv1alpha1.ResourceReady {
 		// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
 		return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
 	}

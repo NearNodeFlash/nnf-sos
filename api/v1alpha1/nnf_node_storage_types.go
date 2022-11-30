@@ -37,6 +37,15 @@ type NnfNodeStorageSpec struct {
 	// +kubebuilder:validation:Minimum:=0
 	Count int `json:"count"`
 
+	// User ID for file system
+	UserID uint32 `json:"userID"`
+
+	// Group ID for file system
+	GroupID uint32 `json:"groupID"`
+
+	// +kubebuilder:default:=false
+	SetOwnerGroup bool `json:"setOwnerGroup"`
+
 	// Capacity defines the capacity, in bytes, of this storage specification. The NNF Node itself
 	// may split the storage among the available drives operating in the NNF Node.
 	Capacity int64 `json:"capacity,omitempty"`
@@ -100,6 +109,10 @@ type NnfNodeStorageStatus struct {
 
 	// LustreStorageStatus describes the Lustre targets created here.
 	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`
+
+	// OwnerGroupStatus is the status of the operation for setting the owner and group
+	// of a file system
+	OwnerGroupStatus NnfResourceStatusType `json:"ownerGroupStatus,omitempty"`
 }
 
 // NnfNodeStorageNVMeStatus provides a way to uniquely identify an NVMe namespace

@@ -80,6 +80,10 @@ spec:
                 - gfs2
                 - lustre
                 type: string
+              groupID:
+                description: Group ID for file system
+                format: int32
+                type: integer
               lustreStorage:
                 description: LustreStorageSpec describes the Lustre target created
                   here, if FileSystemType specifies a Lustre target.
@@ -116,10 +120,20 @@ spec:
                     - OST
                     type: string
                 type: object
+              setOwnerGroup:
+                default: false
+                type: boolean
+              userID:
+                description: User ID for file system
+                format: int32
+                type: integer
             required:
             - clientEndpoints
             - count
             - fileSystemType
+            - groupID
+            - setOwnerGroup
+            - userID
             type: object
           status:
             description: NnfNodeStorageStatus defines the status for NnfNodeStorage
@@ -369,6 +383,10 @@ spec:
                       is populated on MGS nodes only.
                     type: string
                 type: object
+              ownerGroupStatus:
+                description: OwnerGroupStatus is the status of the operation for setting
+                  the owner and group of a file system
+                type: string
             type: object
         type: object
     served: true

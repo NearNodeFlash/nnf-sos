@@ -22,6 +22,7 @@ package server
 import (
 	"fmt"
 	"regexp"
+	"os"
 
 	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
@@ -86,7 +87,7 @@ func (*FileSystemGfs2) Type() string                  { return "gfs2" }
 
 func (f *FileSystemGfs2) Name() string { return f.name }
 
-func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error {
+func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) (err error) {
 
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
 		return err
@@ -101,6 +102,27 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 	mkfsArgs := varHandler.ReplaceAll(f.MkfsMount.Mkfs)
 
 	if _, err := f.run(fmt.Sprintf("mkfs.gfs2 -O %s", mkfsArgs)); err != nil {
+		return err
+	}
+
+	userID := 0
+	if _, exists := opts[UserID]; exists {
+		userID = opts[UserID].(int)
+	}
+
+	groupID := 0
+	if _, exists := opts[GroupID]; exists {
+		groupID = opts[GroupID].(int)
+	}
+
+	mountpath := "/mnt/nnf/client/" + f.name
+	if err := f.Mount(mountpath); err != nil {
+		return err
+	}
+
+	defer func() { err = f.Unmount(mountpath) }()
+
+	if err := os.Chown(mountpath, userID, groupID); err != nil {
 		return err
 	}
 
