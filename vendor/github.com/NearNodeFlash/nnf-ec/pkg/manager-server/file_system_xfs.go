@@ -52,7 +52,7 @@ func (*FileSystemXfs) IsMockable() bool              { return false }
 func (*FileSystemXfs) Type() string   { return "xfs" }
 func (f *FileSystemXfs) Name() string { return f.name }
 
-func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
+func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) (err error) {
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	return nil
+	return setFileSystemPermissions(f, opts)
 }
 
 func (f *FileSystemXfs) Mount(mountpoint string) error {

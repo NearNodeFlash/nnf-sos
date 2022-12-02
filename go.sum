@@ -94,10 +94,8 @@ github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA4
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0 h1:upOQcpaEDmgLxoK7SZeqzGOQs8raxd9/paJYmBS/3/M=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0/go.mod h1:1SLPG4mFeuISXS/GoPtHV541AqR6e9n1Fd9KEnuTDIU=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20221115142605-90bfe8d47356 h1:FqFGyLOV25NQJCh3d0xwr+L6o7UOUvO+MEIKI1XCPkI=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20221115142605-90bfe8d47356/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20221130153605-fcd6e4455053 h1:2GwOMCBTZnfLv15pCFVYbnJDHj0esIXu9ijWLhUFCd4=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20221130153605-fcd6e4455053/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20221202193435-f20e8a858a2a h1:mbdG6bkfMrjaN0bZepzlGLd5JGfQW85QB3VLaATqhYY=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20221202193435-f20e8a858a2a/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/VividCortex/mysqlerr v1.0.0/go.mod h1:xERx8E4tBhLvpjzdUyQiSfUxeMcATEQrflDAfXsqcAE=

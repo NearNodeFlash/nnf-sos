@@ -147,11 +147,12 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Initialize the status section of the NnfStorage if it hasn't been done already.
-	if len(storage.Status.AllocationSets) == 0 {
+	if len(storage.Status.AllocationSets) != len(storage.Spec.AllocationSets) {
 		storage.Status.AllocationSets = make([]nnfv1alpha1.NnfStorageAllocationSetStatus, len(storage.Spec.AllocationSets))
 		for i := range storage.Status.AllocationSets {
 			storage.Status.AllocationSets[i].Status = nnfv1alpha1.ResourceStarting
 		}
+		storage.Status.Status = nnfv1alpha1.ResourceStarting
 
 		return ctrl.Result{}, nil
 	}
@@ -183,6 +184,33 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	// Wait for all the allocation sets to be ready
+	for _, allocationSet := range storage.Status.AllocationSets {
+		if allocationSet.Status != nnfv1alpha1.ResourceReady {
+			return ctrl.Result{}, nil
+		}
+	}
+
+	// For Lustre, the owner and group have to be set once all the Lustre targets
+	// have completed. This is done on the Rabbit node that hosts OST 0.
+	for i, allocationSet := range storage.Spec.AllocationSets {
+		if allocationSet.TargetType != "OST" {
+			continue
+		}
+
+		res, err := r.setLustreOwnerGroup(ctx, storage, i)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if res != nil {
+			return *res, nil
+		}
+	}
+
+	// All allocation sets are ready and the owner/group is set
+	storage.Status.Status = nnfv1alpha1.ResourceReady
+
 	return ctrl.Result{}, nil
 }
 
@@ -212,6 +240,8 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 				labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
 				nnfNodeStorage.SetLabels(labels)
 
+				nnfNodeStorage.Spec.UserID = storage.Spec.UserID
+				nnfNodeStorage.Spec.GroupID = storage.Spec.GroupID
 				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.Count = node.Count
 				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
@@ -336,6 +366,42 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	allocationSet.Health = health
 	allocationSet.Status = status
+
+	return nil, nil
+}
+
+// setLustreOwnerGroup sets the "SetOwnerGroup" field in the NnfNodeStorage for OST 0 in a Lustre
+// file system. This tells the node controller on the Rabbit to mount the Lustre file system and set
+// the owner and group.
+func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, storage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
+	allocationSet := storage.Spec.AllocationSets[allocationSetIndex]
+
+	if len(allocationSet.Nodes) == 0 {
+		return nil, nil
+	}
+
+	nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nnfNodeStorageName(storage, allocationSetIndex, 0),
+			Namespace: allocationSet.Nodes[0].Name,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage); err != nil {
+		return nil, err
+	}
+
+	if !nnfNodeStorage.Spec.SetOwnerGroup {
+		nnfNodeStorage.Spec.SetOwnerGroup = true
+
+		if err := r.Update(ctx, nnfNodeStorage); err != nil {
+			return nil, err
+		}
+	}
+
+	if nnfNodeStorage.Status.OwnerGroupStatus != nnfv1alpha1.ResourceReady {
+		return &ctrl.Result{}, nil
+	}
 
 	return nil, nil
 }

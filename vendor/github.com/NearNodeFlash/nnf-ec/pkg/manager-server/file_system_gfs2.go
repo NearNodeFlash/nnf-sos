@@ -86,7 +86,7 @@ func (*FileSystemGfs2) Type() string                  { return "gfs2" }
 
 func (f *FileSystemGfs2) Name() string { return f.name }
 
-func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error {
+func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) (err error) {
 
 	if err := f.FileSystemLvm.Create(devices, opts); err != nil {
 		return err
@@ -104,7 +104,7 @@ func (f *FileSystemGfs2) Create(devices []string, opts FileSystemOptions) error 
 		return err
 	}
 
-	return nil
+	return setFileSystemPermissions(f, opts)
 }
 
 func (f *FileSystemGfs2) Mount(mountpoint string) error {
