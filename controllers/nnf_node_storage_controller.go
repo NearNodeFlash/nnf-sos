@@ -601,7 +601,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) setLustreOwnerGroup(nodeStorage *nnfv1alpha1.NnfNodeStorage) error {
+func (r *NnfNodeStorageReconciler) setLustreOwnerGroup(nodeStorage *nnfv1alpha1.NnfNodeStorage) (err error) {
 	log := r.Log.WithValues("NnfNodeStorage", types.NamespacedName{Name: nodeStorage.Name, Namespace: nodeStorage.Namespace})
 
 	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
@@ -634,7 +634,12 @@ func (r *NnfNodeStorageReconciler) setLustreOwnerGroup(nodeStorage *nnfv1alpha1.
 			return err
 		}
 	}
-	defer func() { err = mounter.Unmount(target) }()
+	defer func() {
+		unmountErr := mounter.Unmount(target)
+		if err == nil {
+			err = unmountErr
+		}
+	}()
 
 	if err := os.Chown(target, int(nodeStorage.Spec.UserID), int(nodeStorage.Spec.GroupID)); err != nil {
 		log.Error(err, "Chown failed")
