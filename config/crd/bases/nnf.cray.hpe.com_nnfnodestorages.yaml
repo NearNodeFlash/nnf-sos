@@ -122,6 +122,9 @@ spec:
                 type: object
               setOwnerGroup:
                 default: false
+                description: Set the owner and group permissions specified by UserID
+                  and GroupID. This is for Lustre file systems only, and should be
+                  set only after all Lustre targets are created.
                 type: boolean
               userID:
                 description: User ID for file system

@@ -31,11 +31,6 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/logging"
 )
 
-const (
-	UserID = "userID"
-	GroupID = "groupID"
-)
-
 type FileSystemControllerApi interface {
 	NewFileSystem(oem FileSystemOem) (FileSystemApi, error)
 }
@@ -273,4 +268,42 @@ func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) (FileSystemApi, er
 	}
 
 	return nil, nil
+}
+
+func setFileSystemPermissions(f FileSystemApi, opts FileSystemOptions) (err error) {
+	const (
+		UserID = "userID"
+		GroupID = "groupID"
+	)
+
+	userID := 0
+	if _, exists := opts[UserID]; exists {
+		userID = opts[UserID].(int)
+	}
+
+	groupID := 0
+	if _, exists := opts[GroupID]; exists {
+		groupID = opts[GroupID].(int)
+	}
+
+	// The owner/group of the file system has to be set while the file system is mounted.
+	// We mount the file system here at a temporary location and then immediately unmount
+	// it after the Chown() call.
+	mountpath := "/mnt/nnf/client/" + f.Name()
+	if err := f.Mount(mountpath); err != nil {
+		return err
+	}
+
+	defer func() {
+		unmountErr := f.Unmount(mountpath)
+		if err == nil {
+			err = unmountErr
+		}
+	}()
+
+	if err := os.Chown(mountpath, userID, groupID); err != nil {
+		return err
+	}
+
+	return nil
 }

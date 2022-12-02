@@ -21,7 +21,6 @@ package server
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
@@ -67,33 +66,7 @@ func (f *FileSystemXfs) Create(devices []string, opts FileSystemOptions) (err er
 		return err
 	}
 
-	userID := 0
-	if _, exists := opts[UserID]; exists {
-		userID = opts[UserID].(int)
-	}
-
-	groupID := 0
-	if _, exists := opts[GroupID]; exists {
-		groupID = opts[GroupID].(int)
-	}
-
-	mountpath := "/mnt/nnf/client/" + f.name
-	if err := f.Mount(mountpath); err != nil {
-		return err
-	}
-
-	defer func() {
-		unmountErr := f.Unmount(mountpath)
-		if err == nil {
-			err = unmountErr
-		}
-	}()
-
-	if err := os.Chown(mountpath, userID, groupID); err != nil {
-		return err
-	}
-
-	return nil
+	return setFileSystemPermissions(f, opts)
 }
 
 func (f *FileSystemXfs) Mount(mountpoint string) error {
