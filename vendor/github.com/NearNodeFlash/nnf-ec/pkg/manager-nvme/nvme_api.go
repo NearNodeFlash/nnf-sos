@@ -53,7 +53,7 @@ type NvmeDeviceApi interface {
 	ListNamespaces(controllerId uint16) ([]nvme.NamespaceIdentifier, error)
 	ListAttachedControllers(namespaceId nvme.NamespaceIdentifier) ([]uint16, error)
 
-	CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error)
+	CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error)
 	DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error
 
 	FormatNamespace(namespaceID nvme.NamespaceIdentifier) error

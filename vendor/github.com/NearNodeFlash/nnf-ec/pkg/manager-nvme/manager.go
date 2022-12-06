@@ -101,7 +101,7 @@ type Storage struct {
 	// zero as the basis for all other controllers - technically the spec supports uinque
 	// LBA Formats per controller, but this is not done in practice by drive vendors.)
 	lbaFormatIndex uint8
-	blockSizeBytes uint32
+	blockSizeBytes uint64
 
 	state sf.ResourceState
 
@@ -142,6 +142,11 @@ type Volume struct {
 	capacityBytes uint64
 
 	storage *Storage
+}
+
+type ProvidingVolume struct {
+	Storage  *Storage
+	VolumeId string
 }
 
 // TODO: We may want to put this manager under a resource block
@@ -189,6 +194,25 @@ func findStorageVolume(storageId, volumeId string) (*Storage, *Volume) {
 
 func findStoragePool(storageId, storagePoolId string) (*Storage, *interface{}) {
 	return nil, nil
+}
+
+func CleanupVolumes(providingVolumes []ProvidingVolume) {
+	for _, storage := range mgr.storage {
+		if !storage.IsEnabled() {
+			continue
+		}
+
+		var volIdsToKeep []string
+		for _, vol := range providingVolumes {
+			if vol.Storage.serialNumber == storage.serialNumber {
+				volIdsToKeep = append(volIdsToKeep, vol.VolumeId)
+			}
+		}
+
+		if err := storage.purgeVolumes(volIdsToKeep); err != nil {
+			log.Errorf("Cleanup Volumes: Failed to remove abandoned volumes on storage %s: %v", storage.id, err)
+		}
+	}
 }
 
 func (m *Manager) fmt(format string, a ...interface{}) string {
@@ -247,10 +271,6 @@ func GetStorage() []*Storage {
 
 func EnumerateStorage(storageHandlerFunc func(odataId string, capacityBytes uint64, unallocatedBytes uint64)) error {
 	for _, s := range mgr.storage {
-		if err := s.refreshCapacity(); err != nil {
-			return err
-		}
-
 		storageHandlerFunc(s.OdataId()+"/StoragePools", s.capacityBytes, s.unallocatedBytes)
 	}
 
@@ -390,6 +410,10 @@ func (s *Storage) initialize() error {
 }
 
 func (s *Storage) purge() error {
+	if s.device == nil {
+		return fmt.Errorf("Storage %s has no device", s.id)
+	}
+
 	namespaces, err := s.device.ListNamespaces(0)
 	if err != nil {
 		return err
@@ -397,6 +421,34 @@ func (s *Storage) purge() error {
 
 	for _, nsid := range namespaces {
 		if err := s.device.DeleteNamespace(nsid); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Delete all the volumes on this storage device except for the volumes that we want to keep
+func (s *Storage) purgeVolumes(volIdsToKeep []string) error {
+	if s.device == nil {
+		return fmt.Errorf("Storage %s has no device", s.id)
+	}
+
+	var volIdsToDelete []string
+
+vol_loop:
+	for _, vol := range s.volumes {
+		for _, volIdToKeep := range volIdsToKeep {
+			if volIdToKeep == vol.id {
+				continue vol_loop
+			}
+		}
+		volIdsToDelete = append(volIdsToDelete, vol.id)
+	}
+
+	for _, volId := range volIdsToDelete {
+		log.Infof("Storage %s Volume ID %s is being removed", s.id, volId)
+		if err := s.deleteVolume(volId); err != nil {
 			return err
 		}
 	}
@@ -426,59 +478,27 @@ func (s *Storage) getStatus() (stat sf.ResourceStatus) {
 	return stat
 }
 
-func (s *Storage) refreshCapacity() error {
-	if s.getStatus().State != sf.ENABLED_RST {
-		return nil
+func (s *Storage) createVolume(desiredCapacityInBytes uint64) (*Volume, error) {
+
+	roundUpToMultiple := func(n, m uint64) uint64 { // Round 'n' up to a multiple of 'm'
+		return ((n + m - 1) / m) * m
 	}
 
-	ctrl, err := s.device.IdentifyController(0)
-	if err != nil {
-		return err
-	}
+	actualCapacityBytes := roundUpToMultiple(desiredCapacityInBytes, s.blockSizeBytes)
 
-	capacityToUnit64 := func(c [16]byte) (lo uint64, hi uint64) {
-		lo, hi = 0, 0
-		for i := 0; i < 8; i++ {
-			lo, hi = lo<<8, hi<<8
-			lo += uint64(c[7-i])
-			hi += uint64(c[15-i])
-		}
-
-		return lo, hi
-	}
-
-	totalCapacityLo, totalCapacityHi := capacityToUnit64(ctrl.TotalNVMCapacity)
-
-	s.capacityBytes = totalCapacityLo
-	if totalCapacityHi != 0 {
-		return fmt.Errorf("Unsupported Capacity 0x%x_%x: will overflow uint64", totalCapacityHi, totalCapacityLo)
-	}
-
-	unallocatedCapacityLo, unallocatedCapacityHi := capacityToUnit64(ctrl.UnallocatedNVMCapacity)
-	if unallocatedCapacityHi != 0 {
-		return fmt.Errorf("Unsupported Capacity 0x%x_%x: will overflow uint64", unallocatedCapacityHi, unallocatedCapacityLo)
-	}
-
-	s.unallocatedBytes = unallocatedCapacityLo
-
-	return nil
-}
-
-func (s *Storage) createVolume(capacityBytes uint64) (*Volume, error) {
-	namespaceId, guid, err := s.device.CreateNamespace(capacityBytes, uint64(s.blockSizeBytes), s.lbaFormatIndex)
-	// TODO: CreateNamespace can round up the requested capacity
-	// Need to pass in a pointer here and then get the updated capacity
-	// bytes programmed into the volume.
+	namespaceId, guid, err := s.device.CreateNamespace(actualCapacityBytes/s.blockSizeBytes, s.lbaFormatIndex)
 	if err != nil {
 		return nil, err
 	}
+
+	s.unallocatedBytes -= actualCapacityBytes
 
 	id := strconv.Itoa(int(namespaceId))
 	s.volumes = append(s.volumes, Volume{
 		id:            id,
 		namespaceId:   namespaceId,
 		guid:          guid,
-		capacityBytes: capacityBytes,
+		capacityBytes: actualCapacityBytes,
 		storage:       s,
 	})
 
@@ -491,6 +511,8 @@ func (s *Storage) deleteVolume(volumeId string) error {
 			if err := s.device.DeleteNamespace(volume.namespaceId); err != nil {
 				return err
 			}
+
+			s.unallocatedBytes += volume.capacityBytes
 
 			// remove the volume from the array
 			copy(s.volumes[idx:], s.volumes[idx+1:]) // shift left 1 at idx
@@ -549,7 +571,7 @@ func (s *Storage) recoverVolumes() error {
 			log.WithError(err).Errorf("Storage %s Failed to identify namespaces %d", s.id, nsid)
 		}
 
-		blockSizeBytes := uint64(1) << uint64(ns.LBAFormats[ns.FormattedLBASize.Format].LBADataSize)
+		blockSizeBytes := uint64(1 << ns.LBAFormats[ns.FormattedLBASize.Format].LBADataSize)
 
 		s.volumes = append(s.volumes, Volume{
 			id:            strconv.Itoa(int(nsid)),
@@ -970,10 +992,6 @@ func (mgr *Manager) StorageIdStoragePoolsStoragePoolIdGet(storageId, storagePool
 	s := findStorage(storageId)
 	if s == nil {
 		return ec.NewErrNotFound().WithCause(fmt.Sprintf("storage %s not found", storageId))
-	}
-
-	if err := s.refreshCapacity(); err != nil {
-		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("storage %s read capacity failed", storageId))
 	}
 
 	model.CapacityBytes = int64(s.capacityBytes)
