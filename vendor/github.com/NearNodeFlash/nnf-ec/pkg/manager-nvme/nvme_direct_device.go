@@ -114,8 +114,8 @@ func (d *nvmeDirectDevice) ListAttachedControllers(namespaceId nvme.NamespaceIde
 	return d.cliDevice.ListAttachedControllers(namespaceId)
 }
 
-func (d *nvmeDirectDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
-	return d.cliDevice.CreateNamespace(capacityBytes, sectorSizeBytes, sectorSizeIndex)
+func (d *nvmeDirectDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
+	return d.cliDevice.CreateNamespace(sizeInSectors, sectorSizeIndex)
 }
 
 func (d *nvmeDirectDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error {

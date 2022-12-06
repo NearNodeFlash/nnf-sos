@@ -41,7 +41,7 @@ type StoragePool struct {
 	policy AllocationPolicy
 
 	allocatedVolume  AllocatedVolume
-	providingVolumes []ProvidingVolume
+	providingVolumes []nvme.ProvidingVolume
 
 	storageGroupIds []string
 	fileSystemId    string
@@ -54,14 +54,9 @@ type AllocatedVolume struct {
 	capacityBytes uint64
 }
 
-type ProvidingVolume struct {
-	storage  *nvme.Storage
-	volumeId string
-}
-
 func (p *StoragePool) GetCapacityBytes() (capacityBytes uint64) {
 	for _, pv := range p.providingVolumes {
-		capacityBytes += pv.storage.FindVolume(pv.volumeId).GetCapaityBytes()
+		capacityBytes += pv.Storage.FindVolume(pv.VolumeId).GetCapaityBytes()
 	}
 	return capacityBytes
 }
@@ -134,9 +129,9 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, 
 			return err
 		}
 
-		p.providingVolumes = append(p.providingVolumes, ProvidingVolume{
-			storage:  storage,
-			volumeId: volume.Id(),
+		p.providingVolumes = append(p.providingVolumes, nvme.ProvidingVolume{
+			Storage:  storage,
+			VolumeId: volume.Id(),
 		})
 
 	}
@@ -153,14 +148,18 @@ func (p *StoragePool) deallocateVolumes() error {
 	// In order to speed up deleting volumes, we format them first.
 	// Format runs asynchronously on each namespace. Launch format for each namespace
 	// and wait all format operations to complete.
-	for _, pv := range p.providingVolumes {
-		if err := nvme.FormatVolumeAndWaitForComplete(pv.storage.FindVolume(pv.volumeId)); err != nil {
-			return err
+
+	/*
+		TEMP: Can't do this just yet - the format must be attached to a controller
+		for _, pv := range p.providingVolumes {
+			if err := nvme.FormatVolumeAndWaitForComplete(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
+				return err
+			}
 		}
-	}
+	*/
 
 	for _, pv := range p.providingVolumes {
-		if err := nvme.DeleteVolume(pv.storage.FindVolume(pv.volumeId)); err != nil {
+		if err := nvme.DeleteVolume(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
 			return err
 		}
 	}
@@ -217,8 +216,8 @@ func (p *StoragePool) GenerateStateData(state uint32) ([]byte, error) {
 
 		for idx, pv := range p.providingVolumes {
 			entry.Volumes[idx] = storagePoolPersistentVolumeInfo{
-				SerialNumber: pv.storage.SerialNumber(),
-				NamespaceId:  pv.storage.FindVolume(pv.volumeId).GetNamespaceId(),
+				SerialNumber: pv.Storage.SerialNumber(),
+				NamespaceId:  pv.Storage.FindVolume(pv.VolumeId).GetNamespaceId(),
 			}
 		}
 
@@ -325,7 +324,7 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 		// defer to the storage service to automatically clean up abandoned namespaces after all
 		// storage pools have been initialized.
 
-		// TODO: Delete any NVMe Namespaces that are abandoned
+		// TODO: delete storage pool
 
 	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
 		// Case 1. Create Complete: In this case, we've fully created the storage pool and it should be

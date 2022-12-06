@@ -126,7 +126,7 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachController(pv.storage.FindVolume(pv.volumeId), sg.endpoint.controllerId); err != nil {
+			if err := nvme.DetachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -140,7 +140,7 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.AttachController(pv.storage.FindVolume(pv.volumeId), sg.endpoint.controllerId); err != nil {
+			if err := nvme.AttachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -206,7 +206,7 @@ func (rh *storageGroupRecoveryReplyHandler) Done() (bool, error) {
 
 		sp := rh.storageService.findStoragePool(sg.storagePoolId)
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachController(pv.storage.FindVolume(pv.volumeId), sg.endpoint.controllerId); err != nil {
+			if err := nvme.DetachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
 				return false, err
 			}
 		}

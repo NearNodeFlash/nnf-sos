@@ -300,8 +300,9 @@ func (d *mockDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifie
 }
 
 // CreateNamespace -
-func (d *mockDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
+func (d *mockDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
 
+	capacityBytes := sizeInSectors * mockSectorSizeInBytes
 	if capacityBytes > (d.capacity - d.allocatedCapacity) {
 		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("Insufficient capacity: Requested: %d Available: %d", capacityBytes, (d.capacity - d.allocatedCapacity))
 	}
@@ -312,7 +313,7 @@ func (d *mockDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint6
 	}
 
 	ns.id = nvme.NamespaceIdentifier(ns.idx)
-	ns.capacity = capacityBytes / mockSectorSizeInBytes
+	ns.capacity = capacityBytes
 	ns.guid = [16]byte{
 		0, 0, 0, 0,
 		0, 0, 0, 0,

@@ -74,7 +74,7 @@ func (s *Store) Replay() error {
 					return err
 				}
 
-				delete, err := s.runReply(r, key, value)
+				delete, err := s.runReplay(r, key, value)
 				if err != nil {
 					return err
 				}
@@ -174,7 +174,7 @@ type Registry interface {
 	NewReplay(id string) ReplayHandler
 }
 
-func (s *Store) runReply(registry Registry, key string, data []byte) (delete bool, err error) {
+func (s *Store) runReplay(registry Registry, key string, data []byte) (delete bool, err error) {
 	id := string(key[len(registry.Prefix()):])
 	it := newIterator(data)
 	replay := registry.NewReplay(string(id))

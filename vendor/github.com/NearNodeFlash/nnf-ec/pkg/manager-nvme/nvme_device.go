@@ -156,17 +156,11 @@ func (d *nvmeDevice) GetNamespace(namespaceId nvme.NamespaceIdentifier) (*nvme.I
 }
 
 // CreateNamespace -
-func (d *nvmeDevice) CreateNamespace(capacityBytes uint64, sectorSizeBytes uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
-
-	roundUpToMultiple := func(n, m uint64) uint64 {
-		return ((n + m - 1) / m) * m
-	}
-
-	size := roundUpToMultiple(capacityBytes/sectorSizeBytes, sectorSizeBytes)
+func (d *nvmeDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
 
 	id, err := d.dev.CreateNamespace(
-		size,            // Size in Data Size Units (usually 4096)
-		size,            // Capacity in Data Size Units (usually 4096),
+		sizeInSectors,   // Size in Data Size Units (usually 4096)
+		sizeInSectors,   // Capacity in Data Size Units (usually 4096),
 		sectorSizeIndex, // LBA Format Index (see above)
 		0,               // Data Protection Capaiblities (none)
 		0x1,             // Capabilities (sharing = 1b)

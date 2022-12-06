@@ -34,7 +34,7 @@ import (
 type AllocationPolicy interface {
 	Initialize(capacityBytes uint64) error
 	CheckCapacity() error
-	Allocate(guid uuid.UUID) ([]ProvidingVolume, error)
+	Allocate(guid uuid.UUID) ([]nvme.ProvidingVolume, error)
 }
 
 // AllocationPolicyType -
@@ -174,12 +174,12 @@ func (p *SpareAllocationPolicy) CheckCapacity() error {
 	return nil
 }
 
-func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]ProvidingVolume, error) {
+func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]nvme.ProvidingVolume, error) {
 
 	perStorageCapacityBytes := p.capacityBytes / uint64(len(p.storage))
 	remainingCapacityBytes := p.capacityBytes
 
-	volumes := []ProvidingVolume{}
+	volumes := []nvme.ProvidingVolume{}
 	for idx, storage := range p.storage {
 
 		capacityBytes := perStorageCapacityBytes
@@ -198,7 +198,7 @@ func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]ProvidingVolume, erro
 		}
 
 		remainingCapacityBytes = remainingCapacityBytes - volume.GetCapaityBytes()
-		volumes = append(volumes, ProvidingVolume{storage: storage, volumeId: volume.Id()})
+		volumes = append(volumes, nvme.ProvidingVolume{Storage: storage, VolumeId: volume.Id()})
 	}
 
 	return volumes, nil
