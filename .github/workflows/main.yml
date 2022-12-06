@@ -11,7 +11,7 @@ env:
   TEST_TARGET: testing
 
   # DO_TEST - true to build and run unit tests, false to skip the tests
-  DO_TEST: true
+  DO_TEST: false
 
   # DO_PUSH - true to push to the HPE_DEPLOY_REPO, false to not push
   DO_PUSH: true
