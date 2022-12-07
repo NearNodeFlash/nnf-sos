@@ -254,6 +254,10 @@ func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfN
 		return &ctrl.Result{Requeue: true}, nil
 	}
 
+	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
+	allocationStatus.StoragePool.Health = nnfv1alpha1.ResourceHealth(sp.Status)
+	allocationStatus.CapacityAllocated = sp.CapacityBytes
+
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.StoragePool.ID) == 0 {
 		log.Info("Created storage pool", "Id", sp.Id)
@@ -261,11 +265,9 @@ func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfN
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = nnfv1alpha1.ConditionSuccess
 		condition.Message = ""
-	}
 
-	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
-	allocationStatus.StoragePool.Health = nnfv1alpha1.ResourceHealth(sp.Status)
-	allocationStatus.CapacityAllocated = sp.CapacityBytes
+		return &ctrl.Result{}, nil
+	}
 
 	return nil, nil
 }
@@ -381,6 +383,9 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 				return &ctrl.Result{Requeue: true}, nil
 			}
 
+			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
+			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
+
 			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 			if len(allocationStatus.StorageGroup.ID) == 0 {
 				log.Info("Created storage group", "storageGroupID", storageGroupID)
@@ -389,10 +394,9 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 				condition.Status = metav1.ConditionFalse // we are finished with this state
 				condition.Reason = nnfv1alpha1.ConditionSuccess
 				condition.Message = ""
-			}
 
-			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
-			allocationStatus.StorageGroup.Health = nnfv1alpha1.ResourceHealth(sg.Status)
+				return &ctrl.Result{}, nil
+			}
 		}
 	}
 
@@ -524,6 +528,9 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
 	}
 
+	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
+	allocationStatus.FileSystem.Health = nnfv1alpha1.ResourceOkay
+
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.FileSystem.ID) == 0 {
 		log.Info("Created filesystem", "Id", fs.Id)
@@ -532,10 +539,9 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = nnfv1alpha1.ConditionSuccess
 		condition.Message = ""
-	}
 
-	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
-	allocationStatus.FileSystem.Health = nnfv1alpha1.ResourceOkay
+		return &ctrl.Result{}, nil
+	}
 
 	// Create the FileShare
 	condition = &allocationStatus.Conditions[nnfv1alpha1.ConditionIndexCreateFileShare]
@@ -582,6 +588,10 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		}
 	}
 
+	allocationStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
+	allocationStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
+	nodeStorage.Status.LustreStorage.Nid = nid
+
 	// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 	if len(allocationStatus.FileShare.ID) == 0 {
 		log.Info("Created file share", "Id", sh.Id)
@@ -592,11 +602,9 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = nnfv1alpha1.ConditionSuccess
 		condition.Message = ""
-	}
 
-	allocationStatus.FileShare.Status = nnfv1alpha1.ResourceStatus(sh.Status)
-	allocationStatus.FileShare.Health = nnfv1alpha1.ResourceHealth(sh.Status)
-	nodeStorage.Status.LustreStorage.Nid = nid
+		return &ctrl.Result{}, nil
+	}
 
 	return nil, nil
 }
