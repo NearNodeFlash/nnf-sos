@@ -650,18 +650,6 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 		panic(fmt.Sprint("unhandled NnfAccess suffix", accessSuffix))
 	}
 
-	if accessSuffix == "servers" {
-		// Check if we should also wait on the NnfAccess for the servers
-		fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
-		if err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
-		}
-
-		if !(fsType == "gfs2" || fsType == "lustre") {
-			return nil, nil
-		}
-	}
-
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index) + "-" + accessSuffix,
