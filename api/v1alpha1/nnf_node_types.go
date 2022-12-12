@@ -97,6 +97,7 @@ type NnfDriveStatus struct {
 //+kubebuilder:printcolumn:name="HEALTH",type="string",JSONPath=".status.health",description="Health of node"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Current status of node"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="POD",type="string",JSONPath=".spec.pod",description="Parent pod name",priority=1
 
 // NnfNode is the Schema for the NnfNode API
 type NnfNode struct {

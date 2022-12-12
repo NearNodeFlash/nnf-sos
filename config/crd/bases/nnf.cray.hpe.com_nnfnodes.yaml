@@ -31,6 +31,11 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
+    - description: Parent pod name
+      jsonPath: .spec.pod
+      name: POD
+      priority: 1
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
