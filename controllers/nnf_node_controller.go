@@ -110,7 +110,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 		node := &nnfv1alpha1.NnfNode{}
 		if err := r.Get(ctx, r.NamespacedName, node); err != nil {
-			
+
 			if !errors.IsNotFound(err) {
 				log.Error(err, "get node failed")
 				return err
@@ -138,13 +138,13 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 				// but the pod name will change. Ensure the pod name is current.
 				if node.Spec.Pod != os.Getenv("NNF_POD_NAME") {
 					node.Spec.Pod = os.Getenv("NNF_POD_NAME")
-					
+
 					if err := r.Update(ctx, node); err != nil {
 						return err
 					}
 				}
 
-				// Mark the node status as starting
+				// Mark the node's status as starting
 				if node.Status.Status != nnfv1alpha1.ResourceStarting {
 					node.Status.Status = nnfv1alpha1.ResourceStarting
 
@@ -158,6 +158,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 			if err != nil {
 				log.Error(err, "failed to initialize node")
+				return err
 			}
 		}
 	}
