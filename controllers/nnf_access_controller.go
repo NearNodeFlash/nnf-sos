@@ -313,6 +313,9 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 			return nil
 		}
 
+		// Only unlock the NnfStorage if this NnfAccess was the one that
+		// added the lock. The value of the annotation is the name/namespace
+		// of the NnfAccess that applied the lock.
 		if value != access.Name+"/"+access.Namespace {
 			return nil
 		}
