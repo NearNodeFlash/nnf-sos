@@ -34,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -90,46 +91,73 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 		// Create a namespace unique to this node based on the node's x-name.
 		namespace := &corev1.Namespace{}
 		if err := r.Get(ctx, types.NamespacedName{Name: r.Namespace}, namespace); err != nil {
-			if errors.IsNotFound(err) {
-				log.Info("Creating Namespace...")
-				namespace = r.createNamespace()
 
-				if err := r.Create(ctx, namespace); err != nil {
-					log.Error(err, "Create Namespace failed")
-					return err
-				}
-
-				log.Info("Created Namespace")
-			} else if !errors.IsAlreadyExists(err) {
-				log.Error(err, "Get Namespace failed")
+			if !errors.IsNotFound(err) {
+				log.Error(err, "get namespace failed")
 				return err
 			}
+
+			log.Info("Creating Namespace...")
+			namespace = r.createNamespace()
+
+			if err := r.Create(ctx, namespace); err != nil {
+				log.Error(err, "create namespace failed")
+				return err
+			}
+
+			log.Info("Created Namespace")
 		}
 
 		node := &nnfv1alpha1.NnfNode{}
 		if err := r.Get(ctx, r.NamespacedName, node); err != nil {
-			if errors.IsNotFound(err) {
-				log.Info("Creating NNF Node...")
-				node = r.createNode()
-
-				if err := r.Create(ctx, node); err != nil {
-					log.Error(err, "Create Node failed")
-					return err
-				}
-
-				log.Info("Created Node")
-			} else if !errors.IsAlreadyExists(err) {
-				log.Error(err, "Get Node failed")
+			
+			if !errors.IsNotFound(err) {
+				log.Error(err, "get node failed")
 				return err
 			}
+
+			log.Info("Creating NNF Node...")
+			node = r.createNode()
+
+			if err := r.Create(ctx, node); err != nil {
+				log.Error(err, "create node failed")
+				return err
+			}
+
+			log.Info("Created NNF Node")
+
 		} else {
-			// If the pod were to crash and restart, the NNF Node resource will persist
-			// but the pod name will change. Ensure the pod name is current.
-			if node.Spec.Pod != os.Getenv("NNF_POD_NAME") {
-				node.Spec.Pod = os.Getenv("NNF_POD_NAME")
-				if err := r.Update(ctx, node); err != nil {
+
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				node := &nnfv1alpha1.NnfNode{}
+				if err := r.Get(ctx, r.NamespacedName, node); err != nil {
 					return err
 				}
+
+				// If the pod were to crash and restart, the NNF Node resource will persist
+				// but the pod name will change. Ensure the pod name is current.
+				if node.Spec.Pod != os.Getenv("NNF_POD_NAME") {
+					node.Spec.Pod = os.Getenv("NNF_POD_NAME")
+					
+					if err := r.Update(ctx, node); err != nil {
+						return err
+					}
+				}
+
+				// Mark the node status as starting
+				if node.Status.Status != nnfv1alpha1.ResourceStarting {
+					node.Status.Status = nnfv1alpha1.ResourceStarting
+
+					if err := r.Status().Update(ctx, node); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				log.Error(err, "failed to initialize node")
 			}
 		}
 	}
@@ -193,12 +221,12 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
+	node.Status.Status = nnfv1alpha1.ResourceStatus(storageService.Status)
+	node.Status.Health = nnfv1alpha1.ResourceHealth(storageService.Status)
+
 	if storageService.Status.State != sf.ENABLED_RST {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-
-	node.Status.Status = nnfv1alpha1.ResourceStatus(storageService.Status)
-	node.Status.Health = nnfv1alpha1.ResourceHealth(storageService.Status)
 
 	// Update the capacity and capacity allocated to reflect the current values.
 	capacitySource := &sf.CapacityCapacitySource{}
