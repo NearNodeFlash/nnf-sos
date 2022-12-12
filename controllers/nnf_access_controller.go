@@ -217,6 +217,13 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Info("State achieved", "State", access.Status.State)
 	}
 
+	if access.Status.State == "unmounted" {
+		// Unlock the NnfStorage so it can be used by another NnfAccess
+		if err = r.unlockStorage(ctx, access); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	access.Status.Ready = true
 	access.Status.Error = nil
 
@@ -301,8 +308,15 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
-		_, exists := annotations[NnfAccessAnnotation]
+		value, exists := annotations[NnfAccessAnnotation]
 		if !exists {
+			return nil
+		}
+
+		// Only unlock the NnfStorage if this NnfAccess was the one that
+		// added the lock. The value of the annotation is the name/namespace
+		// of the NnfAccess that applied the lock.
+		if value != access.Name+"/"+access.Namespace {
 			return nil
 		}
 
