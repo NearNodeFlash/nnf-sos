@@ -907,9 +907,16 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 		}
 	}
 
-	// Unmount the NnfAccess for the server nodes if necessary
-	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers"); result != nil || err != nil {
-		return result, err
+	// Unmount the NnfAccess for the servers resource if necessary.
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+	}
+
+	if fsType == "gfs2" || fsType == "lustre" {
+		if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers"); result != nil || err != nil {
+			return result, err
+		}
 	}
 
 	return nil, nil
