@@ -7,7 +7,6 @@ switches:
     metadata:
       name: PAX 0
     pciGen: 4
-    slotPrefix: J
     ports:
       - name: Interswitch Fabric
         type: InterswitchPort
@@ -98,7 +97,6 @@ switches:
     metadata:
       name: PAX 1
     pciGen: 4
-    slotPrefix: J
     ports:
       - name: Interswitch Fabric
         type: InterswitchPort

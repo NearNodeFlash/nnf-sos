@@ -21,7 +21,9 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 
@@ -129,6 +131,10 @@ func (f *FileSystem) Unmount(mountpoint string) error {
 	mounter := mount.New("")
 	mounted, err := mounter.IsMountPoint(mountpoint)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil
+		}
+
 		return err
 	}
 
@@ -272,7 +278,7 @@ func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) (FileSystemApi, er
 
 func setFileSystemPermissions(f FileSystemApi, opts FileSystemOptions) (err error) {
 	const (
-		UserID = "userID"
+		UserID  = "userID"
 		GroupID = "groupID"
 	)
 
