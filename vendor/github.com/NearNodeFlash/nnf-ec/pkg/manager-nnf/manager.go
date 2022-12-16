@@ -40,8 +40,9 @@ import (
 )
 
 var storageService = StorageService{
-	id:    DefaultStorageServiceId,
-	state: sf.DISABLED_RST,
+	id:     DefaultStorageServiceId,
+	state:  sf.DISABLED_RST,
+	health: sf.CRITICAL_RH,
 }
 
 func NewDefaultStorageService() StorageServiceApi {
@@ -389,8 +390,9 @@ func (s *StorageService) cleanupVolumes() {
 func (*StorageService) Initialize(ctrl NnfControllerInterface) error {
 
 	storageService = StorageService{
-		id:    DefaultStorageServiceId,
-		state: sf.STARTING_RST,
+		id:     DefaultStorageServiceId,
+		state:  sf.STARTING_RST,
+		health: sf.CRITICAL_RH,
 
 		// Dynamic controllers for managing objects. These are typically programmed via command line arguments
 		// the the NNF Controller Interface is created
