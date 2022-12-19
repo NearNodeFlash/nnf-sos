@@ -173,3 +173,4 @@ VERSION: 0.0.1-20220131231031_11b401a
 # Deploy the freshly built docker image to your cluster
 make deploy
 ```
+
