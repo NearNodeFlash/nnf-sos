@@ -67,8 +67,8 @@ func (ctrl *MockNvmeDeviceController) Close() error {
 func (ctrl MockNvmeDeviceController) NewNvmeDevice(fabricId, switchId, portId string) (NvmeDeviceApi, error) {
 	dev := &mockDevice{
 		virtualizationManagement: true,
-		capacity:                 mockCapacityInBytes,
-		allocatedCapacity:        0,
+		capacityInBytes:          mockCapacityInBytes,
+		allocatedCapacityInBytes: 0,
 
 		// identification data
 		fabricId: fabricId,
@@ -117,8 +117,9 @@ type mockDevice struct {
 	virtualizationManagement bool
 	controllers              [1 + mockSecondaryControllerCount]mockController // +1 for PF
 	namespaces               [1 + mockMaximumNamespaceCount]mockNamespace     // +1 for CommonNamespaceId = 0xFFFFFFFF
-	capacity                 uint64
-	allocatedCapacity        uint64
+
+	capacityInBytes          uint64
+	allocatedCapacityInBytes uint64
 
 	fabricId string
 	switchId string
@@ -128,19 +129,18 @@ type mockDevice struct {
 }
 
 type mockController struct {
-	id                uint16
-	online            bool
-	capacity          uint64
-	allocatedCapacity uint64
-	vqresources       uint32
-	viresources       uint32
+	id       uint16
+	online   bool
+	capacity uint64
+	//allocatedCapacity uint64
+	vqresources uint32
+	viresources uint32
 }
 
 type mockNamespace struct {
 	id                  nvme.NamespaceIdentifier
 	idx                 int
-	size                uint64
-	capacity            uint64
+	capacityInBytes     uint64
 	guid                [16]byte
 	attachedControllers [1 + mockSecondaryControllerCount]*mockController // +1 for PF
 	metadata            []byte
@@ -199,8 +199,8 @@ func (d *mockDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, erro
 		return nil, err
 	}
 
-	binary.LittleEndian.PutUint64(ctrl.TotalNVMCapacity[:], d.capacity)
-	binary.LittleEndian.PutUint64(ctrl.UnallocatedNVMCapacity[:], d.capacity-d.allocatedCapacity)
+	binary.LittleEndian.PutUint64(ctrl.TotalNVMCapacity[:], d.capacityInBytes)
+	binary.LittleEndian.PutUint64(ctrl.UnallocatedNVMCapacity[:], d.capacityInBytes-d.allocatedCapacityInBytes)
 
 	ctrl.OptionalAdminCommandSupport = nvme.VirtualiztionManagementSupport
 
@@ -216,8 +216,9 @@ func (d *mockDevice) IdentifyNamespace(namespaceId nvme.NamespaceIdentifier) (*n
 
 	idns := new(nvme.IdNs)
 
-	idns.Size = ns.capacity
-	idns.Capacity = ns.capacity
+	idns.Size = ns.capacityInBytes / mockSectorSizeInBytes     // NOTE: Namespace Size is in Sectors
+	idns.Capacity = ns.capacityInBytes / mockSectorSizeInBytes // NOTE: Namespace Capacity is in Sectors
+
 	idns.MultiPathIOSharingCapabilities.Sharing = 1
 	idns.FormattedLBASize = nvme.FormattedLBASize{Format: 0}
 
@@ -302,9 +303,10 @@ func (d *mockDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifie
 // CreateNamespace -
 func (d *mockDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
 
-	capacityBytes := sizeInSectors * mockSectorSizeInBytes
-	if capacityBytes > (d.capacity - d.allocatedCapacity) {
-		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("Insufficient capacity: Requested: %d Available: %d", capacityBytes, (d.capacity - d.allocatedCapacity))
+	capacityInBytes := sizeInSectors * mockSectorSizeInBytes
+	unallocatedCapacityInBytes := d.capacityInBytes - d.allocatedCapacityInBytes
+	if capacityInBytes > unallocatedCapacityInBytes {
+		return 0, nvme.NamespaceGloballyUniqueIdentifier{}, fmt.Errorf("Insufficient capacity: Requested: %d Unallocated: %d", capacityInBytes, unallocatedCapacityInBytes)
 	}
 
 	ns := d.findNamespace(invalidNamespaceId) // find a free namespace
@@ -313,7 +315,7 @@ func (d *mockDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8
 	}
 
 	ns.id = nvme.NamespaceIdentifier(ns.idx)
-	ns.capacity = capacityBytes
+	ns.capacityInBytes = capacityInBytes
 	ns.guid = [16]byte{
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -328,7 +330,7 @@ func (d *mockDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8
 		ns.attachedControllers[idx] = nil
 	}
 
-	d.allocatedCapacity += (ns.capacity * mockSectorSizeInBytes)
+	d.allocatedCapacityInBytes += capacityInBytes
 
 	if d.persistenceMgr != nil {
 		d.persistenceMgr.recordCreateNamespace(d, ns)
@@ -358,13 +360,15 @@ func (d *mockDevice) DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error
 		}
 	}
 
-	d.allocatedCapacity -= (ns.capacity * mockSectorSizeInBytes)
+	d.allocatedCapacityInBytes -= ns.capacityInBytes
 
 	if d.persistenceMgr != nil {
 		d.persistenceMgr.recordDeleteNamespace(d, ns)
 	}
 
 	ns.id = invalidNamespaceId
+	ns.capacityInBytes = 0
+
 	return nil
 }
 

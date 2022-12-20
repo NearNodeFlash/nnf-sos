@@ -24,8 +24,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
+	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 )
 
 // NVME Mock Persistence - Handles the various persistent aspects of an NVMe device, specifically namespaces
@@ -78,7 +78,7 @@ func (mgr *MockNvmePersistenceManager) close() error {
 // all the NVMe Namespaces with the attached Controllers.
 func (mgr *MockNvmePersistenceManager) load(dev *mockDevice) error {
 
-	dev.allocatedCapacity = 0
+	dev.allocatedCapacityInBytes = 0
 	for replayIdx := range mgr.replays {
 		replay := &mgr.replays[replayIdx]
 		if dev.id() == replay.id {
@@ -89,14 +89,14 @@ func (mgr *MockNvmePersistenceManager) load(dev *mockDevice) error {
 				}
 
 				ns.id = nvme.NamespaceIdentifier(namespace.NamespaceId)
-				ns.capacity = namespace.Capacity
+				ns.capacityInBytes = namespace.Capacity
 				ns.guid = namespace.GUID
 
 				for _, ctrlId := range namespace.controllerIds {
 					ns.attachedControllers[ctrlId] = &dev.controllers[ctrlId]
 				}
 
-				dev.allocatedCapacity += ns.capacity
+				dev.allocatedCapacityInBytes += ns.capacityInBytes
 			}
 
 			return nil
@@ -124,7 +124,7 @@ func (mgr *MockNvmePersistenceManager) new(dev *mockDevice) error {
 }
 
 func (mgr *MockNvmePersistenceManager) recordCreateNamespace(dev *mockDevice, ns *mockNamespace) {
-	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix+dev.id())
+	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix + dev.id())
 	if err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func (mgr *MockNvmePersistenceManager) recordCreateNamespace(dev *mockDevice, ns
 	data, _ := json.Marshal(&mockNvmeDevicePersistentNamespaceData{
 		NamespaceId: uint32(ns.id),
 		GUID:        ns.guid,
-		Capacity:    ns.capacity,
+		Capacity:    ns.capacityInBytes,
 	})
 
 	if err := ledger.Log(mockNvmePersistenceNamespaceCreate, data); err != nil {
@@ -143,7 +143,7 @@ func (mgr *MockNvmePersistenceManager) recordCreateNamespace(dev *mockDevice, ns
 }
 
 func (mgr *MockNvmePersistenceManager) recordDeleteNamespace(dev *mockDevice, ns *mockNamespace) {
-	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix+dev.id())
+	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix + dev.id())
 	if err != nil {
 		panic(err)
 	}
@@ -162,7 +162,7 @@ func (mgr *MockNvmePersistenceManager) recordDeleteNamespace(dev *mockDevice, ns
 }
 
 func (mgr *MockNvmePersistenceManager) recordAttachController(dev *mockDevice, ns *mockNamespace, ctrlId uint16) {
-	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix+dev.id())
+	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix + dev.id())
 	if err != nil {
 		panic(err)
 	}
@@ -180,7 +180,7 @@ func (mgr *MockNvmePersistenceManager) recordAttachController(dev *mockDevice, n
 }
 
 func (mgr *MockNvmePersistenceManager) recordDetachController(dev *mockDevice, ns *mockNamespace, ctrlId uint16) {
-	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix+dev.id())
+	ledger, err := mgr.store.OpenKey(mockNvmePersistenceRegistryPrefix + dev.id())
 	if err != nil {
 		panic(err)
 	}
