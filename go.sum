@@ -88,6 +88,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/HewlettPackard/dws v0.0.0-20221110142740-abf44bba3b47 h1:OE72Yx1nLW1ZJBbUBTCzgOGg7JcSEY7qAXLymfdLSz4=
 github.com/HewlettPackard/dws v0.0.0-20221110142740-abf44bba3b47/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
+github.com/HewlettPackard/dws v0.0.0-20221220214316-0c35ce5549ed h1:BbKSn1TDJhnpX23BmUu2L8OoUX8Eg029vnDgPVuoi1k=
+github.com/HewlettPackard/dws v0.0.0-20221220214316-0c35ce5549ed/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=

@@ -250,34 +250,22 @@ func (r *NnfNodeSLCReconciler) deleteStorage(ctx context.Context, nnfNode *nnfv1
 	return nil
 }
 
-// Map a DWS storage resource to a NnfNode resource. This is a cross-namespace
-// mapping, so we can't use owner references
-func nnfStorageMapFunc(o client.Object) []reconcile.Request {
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      "nnf-nlc",
-			Namespace: o.GetName(),
-		}},
-	}
-}
-
-// Map a kubernetes Node resource to a NnfNode resource
-func nnfNodeMapFunc(o client.Object) []reconcile.Request {
-	return []reconcile.Request{
-		{NamespacedName: types.NamespacedName{
-			Name:      "nnf-nlc",
-			Namespace: o.GetName(),
-		}},
-	}
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeSLCReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	maxReconciles := runtime.GOMAXPROCS(0)
+
+	mapFunc := func(o client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{
+			Name:      "nnf-nlc",
+			Namespace: o.GetName(),
+		}}}
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfNode{}).
-		Watches(&source.Kind{Type: &dwsv1alpha1.Storage{}}, handler.EnqueueRequestsFromMapFunc(nnfStorageMapFunc)).
-		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
+		Watches(&source.Kind{Type: &dwsv1alpha1.Storage{}}, handler.EnqueueRequestsFromMapFunc(mapFunc)).
+		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(mapFunc)).
 		Complete(r)
 }

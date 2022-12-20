@@ -261,6 +261,8 @@ spec:
                       format: int64
                       type: integer
                     message:
+                      description: Message provides additional details on the current
+                        status of the resource
                       type: string
                     status:
                       description: 'User readable reason. For the CDS driver, this
@@ -300,6 +302,8 @@ spec:
                   - DW_JOB_LDBAL_CACHE - DW_PERSISTENT_STRIPED_{resname}
                 type: object
               message:
+                description: Message provides additional details on the current status
+                  of the resource
                 type: string
               ready:
                 description: Ready can be 'True', 'False' Indicates whether State

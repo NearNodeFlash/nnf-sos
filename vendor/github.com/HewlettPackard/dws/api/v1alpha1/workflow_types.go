@@ -144,6 +144,7 @@ type WorkflowDriverStatus struct {
 	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error;DriverWait
 	Status string `json:"status,omitempty"`
 
+	// Message provides additional details on the current status of the resource
 	Message string `json:"message,omitempty"`
 
 	// Driver error string. This is not rolled up into the workflow's
@@ -166,7 +167,9 @@ type WorkflowStatus struct {
 
 	// User readable reason and status message
 	// +kubebuilder:validation:Enum=Completed;DriverWait;Error
-	Status  string `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
+
+	// Message provides additional details on the current status of the resource
 	Message string `json:"message,omitempty"`
 
 	// Set of DW environment variable settings for WLM to apply to the job.

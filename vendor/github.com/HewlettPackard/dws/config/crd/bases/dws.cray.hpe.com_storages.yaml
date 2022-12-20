@@ -15,7 +15,19 @@ spec:
     singular: storage
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: State of the storage resource
+      jsonPath: .spec.state
+      name: State
+      type: string
+    - description: Status of the storage resource
+      jsonPath: .status.status
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Storage is the Schema for the storages API
@@ -25,7 +37,26 @@ spec:
               of an object. Servers should convert recognized schemas to the latest
               internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
-          data:
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: StorageSpec defines the desired specifications of Storage
+              resource
+            properties:
+              state:
+                default: Enabled
+                description: State describes the desired state of the Storage resource.
+                enum:
+                - Enabled
+                - Disabled
+                type: string
+            type: object
+          status:
             description: StorageData contains the data about the storage
             properties:
               access:
@@ -132,6 +163,10 @@ spec:
                       type: integer
                   type: object
                 type: array
+              message:
+                description: Message provides additional details on the current status
+                  of the resource
+                type: string
               status:
                 description: Status is the overall status of the storage
                 enum:
@@ -150,13 +185,10 @@ spec:
             required:
             - capacity
             type: object
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

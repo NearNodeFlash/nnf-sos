@@ -27,12 +27,15 @@ const (
 	// StorageTypeLabel is the label key used for tagging Storage resources
 	// with a driver specific label. For example: dws.cray.hpe.com/storage=Rabbit
 	StorageTypeLabel = "dws.cray.hpe.com/storage"
-
-	// StoragePoolLabelPrefix is the prefix for the label key used for tagging
-	// Storage resources with a storage pool label.
-	// For example: dws.cray.hpe.com/storage-pool-default=true
-	StoragePoolLabelPrefix = "dws.cray.hpe.com/storage-pool-"
 )
+
+// StorageSpec defines the desired specifications of Storage resource
+type StorageSpec struct {
+	// State describes the desired state of the Storage resource.
+	// +kubebuilder:validation:Enum:=Enabled;Disabled
+	// +kubebuilder:default:=Enabled
+	State string `json:"state,omitempty"`
+}
 
 // StorageDevice contains the details of the storage hardware
 type StorageDevice struct {
@@ -57,7 +60,7 @@ type StorageDevice struct {
 	WearLevel *int64 `json:"wearLevel,omitempty"`
 
 	// Status of the individual device
-	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
+	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
 }
 
@@ -67,29 +70,27 @@ type Node struct {
 	Name string `json:"name,omitempty"`
 
 	// Status of the node
-	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
+	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
 }
 
 // StorageAccess contains nodes and the protocol that may access the storage
 type StorageAccess struct {
 	// Protocol is the method that this storage can be accessed
-	// +kubebuilder:validation:Enum=PCIe
+	// +kubebuilder:validation:Enum:=PCIe
 	Protocol string `json:"protocol,omitempty"`
 
-	// Servers is the list of non-compute nodes that have access to
-	// the storage
+	// Servers is the list of non-compute nodes that have access to the storage
 	Servers []Node `json:"servers,omitempty"`
 
-	// Computes is the list of compute nodes that have access to
-	// the storage
+	// Computes is the list of compute nodes that have access to the storage
 	Computes []Node `json:"computes,omitempty"`
 }
 
 // StorageData contains the data about the storage
-type StorageData struct {
+type StorageStatus struct {
 	// Type describes what type of storage this is
-	// +kubebuilder:validation:Enum=NVMe
+	// +kubebuilder:validation:Enum:=NVMe
 	Type string `json:"type,omitempty"`
 
 	// Devices is the list of physical devices that make up this storage
@@ -105,17 +106,26 @@ type StorageData struct {
 	Capacity int64 `json:"capacity"`
 
 	// Status is the overall status of the storage
-	// +kubebuilder:validation:Enum=Starting;Ready;Disabled;NotPresent;Offline;Failed
+	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
+
+	// Message provides additional details on the current status of the resource
+	Message string `json:"message,omitempty"`
 }
 
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="State",type="string",JSONPath=".spec.state",description="State of the storage resource"
+//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Status of the storage resource"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+
 // Storage is the Schema for the storages API
-// +kubebuilder:object:root=true
 type Storage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Data StorageData `json:"data,omitempty"`
+	Spec   StorageSpec   `json:"spec"`
+	Status StorageStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
