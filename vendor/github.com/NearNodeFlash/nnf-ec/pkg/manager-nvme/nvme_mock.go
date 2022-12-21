@@ -129,10 +129,9 @@ type mockDevice struct {
 }
 
 type mockController struct {
-	id       uint16
-	online   bool
-	capacity uint64
-	//allocatedCapacity uint64
+	id          uint16
+	online      bool
+	capacity    uint64
 	vqresources uint32
 	viresources uint32
 }
