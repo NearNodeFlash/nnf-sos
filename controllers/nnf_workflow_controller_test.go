@@ -604,7 +604,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Name:      "rabbit-node",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Data: dwsv1alpha1.StorageData{
+				Status: dwsv1alpha1.StorageStatus{
 					Capacity: 100000000000,
 					Access: dwsv1alpha1.StorageAccess{
 						Protocol: "PCIe",

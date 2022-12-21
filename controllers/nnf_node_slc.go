@@ -125,7 +125,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Look through the node conditions to determine if the node is up
 	nodeStatus := "Offline"
 	for _, condition := range node.Status.Conditions {
-		if condition.Type == "Ready" && condition.Status == "True" {
+		if condition.Type == corev1.NodeReady && condition.Status == "True" {
 			nodeStatus = "Ready"
 			break
 		}
@@ -139,14 +139,21 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		},
 	}
 
+	// Here we need to get the DWS Storage resource;
+	// If the Spec.State is Disabled, then we need to taint the node so no pods are run from it.
+	//
+	// If the Spec.State is Enabled, then we need to clear the taint on the node and clear out
+	// the message field
+
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, storage,
 		func() error {
-			storage.Data.Type = "NVMe"
-			storage.Data.Capacity = nnfNode.Status.Capacity
+
+			storage.Status.Type = "NVMe"
+			storage.Status.Capacity = nnfNode.Status.Capacity
 			if nodeStatus == "Ready" {
-				storage.Data.Status = string(nnfNode.Status.Status)
+				storage.Status.Status = string(nnfNode.Status.Status)
 			} else {
-				storage.Data.Status = nodeStatus
+				storage.Status.Status = nodeStatus
 			}
 
 			// Add a label for a storage type of Rabbit. Don't overwrite the
@@ -159,14 +166,14 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.SetLabels(labels)
 
 			// Access information for how to get to the storage
-			storage.Data.Access.Protocol = "PCIe"
+			storage.Status.Access.Protocol = "PCIe"
 
 			// Wait until the servers array has been filled in with the Rabbit info
 			if len(nnfNode.Status.Servers) == 0 {
 				return nil
 			}
 
-			storage.Data.Access.Servers = []dwsv1alpha1.Node{{
+			storage.Status.Access.Servers = []dwsv1alpha1.Node{{
 				// The Rabbit node is the name of the nnfNode namespace
 				Name:   nnfNode.Namespace,
 				Status: string(nnfNode.Status.Servers[0].Status),
@@ -189,7 +196,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				computes = append(computes, compute)
 			}
-			storage.Data.Access.Computes = computes
+			storage.Status.Access.Computes = computes
 
 			devices := []dwsv1alpha1.StorageDevice{}
 			for _, d := range nnfNode.Status.Drives {
@@ -209,7 +216,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}
 				devices = append(devices, device)
 			}
-			storage.Data.Devices = devices
+			storage.Status.Devices = devices
 
 			return nil
 		})
