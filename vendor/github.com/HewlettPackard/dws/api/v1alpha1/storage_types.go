@@ -106,8 +106,12 @@ type StorageStatus struct {
 	Capacity int64 `json:"capacity"`
 
 	// Status is the overall status of the storage
-	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
+	// +kubebuilder:validation:Enum:=Starting;Ready;Degraded;Disabled;NotPresent;Offline;Failed
 	Status string `json:"status,omitempty"`
+
+	// Reboot Required is true if the node requires a reboot and false otherwise. A reboot my be
+	// necessary to recover from certain hardware failures or high-availability clustering events.
+	RebootRequired bool `json:"rebootRequired,omitempty"`
 
 	// Message provides additional details on the current status of the resource
 	Message string `json:"message,omitempty"`
