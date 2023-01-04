@@ -192,11 +192,6 @@ func (d *nvmeDevice) FormatNamespace(namespaceID nvme.NamespaceIdentifier) error
 	return d.dev.FormatNamespace(uint32(namespaceID))
 }
 
-// WaitFormatComplete -
-func (d *nvmeDevice) WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error {
-	return d.dev.WaitFormatComplete(uint32(namespaceID))
-}
-
 // AttachNamespace -
 func (d *nvmeDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
 	return d.dev.AttachNamespace(uint32(namespaceId), controllers)

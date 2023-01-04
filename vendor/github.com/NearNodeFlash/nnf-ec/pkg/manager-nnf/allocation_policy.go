@@ -114,6 +114,9 @@ func NewAllocationPolicy(config AllocationConfig, oem map[string]interface{}) Al
 
 /* ------------------------------ Spare Allocation Policy --------------------- */
 
+// Required number of drives for the Spare Allocation Policy
+const SpareAllocationPolicyRequiredDriveCount = 16
+
 type SpareAllocationPolicy struct {
 	compliance     AllocationComplianceType
 	storage        []*nvme.Storage
@@ -125,7 +128,7 @@ func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 
 	storage := []*nvme.Storage{}
 	for _, s := range nvme.GetStorage() {
-		if s.IsEnabled() {
+		if s.IsEnabled() && s.UnallocatedBytes() > 0 {
 			storage = append(storage, s)
 		}
 	}
@@ -135,7 +138,7 @@ func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 		return !!!(storage[i].UnallocatedBytes() < storage[j].UnallocatedBytes())
 	})
 
-	count := 16
+	count := SpareAllocationPolicyRequiredDriveCount
 	if len(storage) < count {
 		count = len(storage)
 	}
@@ -148,7 +151,7 @@ func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 
 func (p *SpareAllocationPolicy) CheckCapacity() error {
 	if p.capacityBytes == 0 {
-		return fmt.Errorf("Requested capacity %#x is invalid", p.capacityBytes)
+		return fmt.Errorf("Requested capacity must be non-zero")
 	}
 
 	var availableBytes = uint64(0)
@@ -157,17 +160,27 @@ func (p *SpareAllocationPolicy) CheckCapacity() error {
 	}
 
 	if availableBytes < p.capacityBytes {
-		return fmt.Errorf("Insufficient capacity available. Requested: %#x Available: %#x", p.capacityBytes, availableBytes)
+		return fmt.Errorf("Insufficient capacity available. Requested: %d Available: %d", p.capacityBytes, availableBytes)
 	}
 
 	if p.compliance != RelaxedAllocationComplianceType {
 
-		if len(p.storage) != 16 {
-			return fmt.Errorf("Insufficient drive count. Available %d", len(p.storage))
+		if len(p.storage) != SpareAllocationPolicyRequiredDriveCount {
+			return fmt.Errorf("Insufficient drive count. Required: %d Available: %d", SpareAllocationPolicyRequiredDriveCount, len(p.storage))
 		}
 
-		if p.capacityBytes%uint64(len(p.storage)) != 0 {
-			return fmt.Errorf("Requested capacity is a non-multiple of available storage")
+		roundUpToMultiple := func(n, m uint64) uint64 { // Round 'n' up to a multiple of 'm'
+			return ((n + m - 1) / m) * m
+		}
+
+		// Validate each drive can contribute sufficient capacity towards the entire pool.
+		poolCapacityBytes := roundUpToMultiple(p.capacityBytes, SpareAllocationPolicyRequiredDriveCount)
+		driveCapacityBytes := roundUpToMultiple(poolCapacityBytes/SpareAllocationPolicyRequiredDriveCount, 4096)
+
+		for _, s := range p.storage {
+			if driveCapacityBytes > s.UnallocatedBytes() {
+				return fmt.Errorf("Insufficient drive capacity available. Requested: %d Available: %d", driveCapacityBytes, s.UnallocatedBytes())
+			}
 		}
 	}
 

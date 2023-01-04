@@ -725,36 +725,6 @@ func (dev *Device) FormatNamespace(namespaceID uint32) error {
 	return dev.ops.submitAdminPassthru(dev, &cmd, nil)
 }
 
-// WaitFormatComplete polls the namespace waiting for the Utilization to reach 0.
-func (dev *Device) WaitFormatComplete(namespaceID uint32) error {
-	idns, err := dev.IdentifyNamespace(namespaceID, true /* namespace present */)
-	if err != nil {
-		return err
-	}
-
-	lastUtilization := idns.Utilization
-
-	// As the format command runs, the Utilization should decrease to 0
-	for lastUtilization > 0 {
-		// Pause briefly to for format to make progress
-		delay := 100 * time.Millisecond
-		time.Sleep(delay)
-		idns, err = dev.IdentifyNamespace(namespaceID, true /* namespace present */)
-		if err != nil {
-			return err
-		}
-
-		// Fail if format is stuck
-		if lastUtilization == idns.Utilization {
-			return fmt.Errorf("Format is not progressing after %s", delay.String())
-		}
-
-		lastUtilization = idns.Utilization
-	}
-
-	return nil
-}
-
 func (dev *Device) manageNamespace(namespaceID uint32, controllers []uint16, attach bool) error {
 
 	list := CtrlList{
