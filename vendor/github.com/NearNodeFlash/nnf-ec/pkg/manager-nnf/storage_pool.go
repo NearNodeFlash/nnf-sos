@@ -145,23 +145,34 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, 
 }
 
 func (p *StoragePool) deallocateVolumes() error {
-	// In order to speed up deleting volumes, we format them first.
-	// Format runs asynchronously on each namespace. Launch format for each namespace
-	// and wait all format operations to complete.
+	// In order to speed up deleting volumes, we format them first. Format runs asynchronously, so after
+	// each format call, wait for completion before deleting the volume.
 
-	/*
-		TEMP: Can't do this just yet - the format must be attached to a controller
+	runOnProvidingVolumes := func(volFn func(*nvme.Volume) error) error {
 		for _, pv := range p.providingVolumes {
-			if err := nvme.FormatVolumeAndWaitForComplete(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return fmt.Errorf("Volume %s not found", pv.VolumeId)
+			}
+
+			if err := volFn(volume); err != nil {
 				return err
 			}
 		}
-	*/
 
-	for _, pv := range p.providingVolumes {
-		if err := nvme.DeleteVolume(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
-			return err
-		}
+		return nil
+	}
+
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.Format() }); err != nil {
+		return fmt.Errorf("Failed to format volumes: %v", err)
+	}
+
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.WaitFormatComplete() }); err != nil {
+		return fmt.Errorf("Failed to wait on format completions: %v", err)
+	}
+
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.Delete() }); err != nil {
+		return fmt.Errorf("Failed to delete volumes: %v", err)
 	}
 
 	return nil

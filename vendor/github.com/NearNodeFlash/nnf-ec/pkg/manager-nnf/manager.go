@@ -985,7 +985,12 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 
 	updateFunc := func() error {
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.AttachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithCause(fmt.Sprintf("Storage group '%s' attach volume '%s' not found", sg.id, pv.VolumeId))
+			}
+
+			if err := volume.AttachController(sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -1079,7 +1084,12 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 
 		// Detach the endpoint from the NVMe namespaces
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithCause(fmt.Sprintf("Storage group '%s' detach volume '%s' not found", storageGroupId, pv.VolumeId))
+			}
+
+			if err := volume.DetachController(sg.endpoint.controllerId); err != nil {
 				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
 			}
 		}
