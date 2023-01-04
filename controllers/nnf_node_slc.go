@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -115,21 +116,8 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
-	// The kubelet has a heartbeat mechanism, so we can determine node failures from this resource.
-	node := &corev1.Node{}
-	if err := r.Get(ctx, types.NamespacedName{Name: nnfNode.Namespace}, node); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Look through the node conditions to determine if the node is up
-	nodeStatus := "Offline"
-	for _, condition := range node.Status.Conditions {
-		if condition.Type == corev1.NodeReady && condition.Status == "True" {
-			nodeStatus = "Ready"
-			break
-		}
-	}
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](nnfNode)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Create a DWS Storage resource based on the information from the NNFNode and Node resources
 	storage := &dwsv1alpha1.Storage{
@@ -150,10 +138,48 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 			storage.Status.Type = "NVMe"
 			storage.Status.Capacity = nnfNode.Status.Capacity
-			if nodeStatus == "Ready" {
-				storage.Status.Status = string(nnfNode.Status.Status)
+
+			if storage.Spec.State == dwsv1alpha1.DisabledState {
+				// TODO: Fencing Agent Phase #2: Pause Rabbit NLC pods, wait for pods to be
+				//       removed, then change Node Status to Disabled
+
+				storage.Status.Status = dwsv1alpha1.DisabledStatus
+				storage.Status.Message = "Storage node was manually disabled"
+
+			} else if storage.Spec.State == dwsv1alpha1.EnabledState {
+
+				// Clear the fenced status if the node is enabled from a disabled status
+				if storage.Status.Status == dwsv1alpha1.DisabledStatus {
+					nnfNode.Status.Fenced = false
+					storage.Status.RebootRequired = false
+					storage.Status.Message = ""
+
+					// TODO: Fencing Agent Phase #2: Resume Rabbit NLC pods, wait for the pods to
+					//       resume, then change Node Status to Enabled
+				}
+
+				if nnfNode.Status.Fenced {
+					storage.Status.Status = dwsv1alpha1.DegradedStatus
+					storage.Status.RebootRequired = true
+					storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
+				} else {
+
+					// Check if the kubernetes node itself is offline
+					ready, err := r.isKubernetesNodeReady(ctx, nnfNode)
+					if err != nil {
+						return err
+					}
+
+					if !ready {
+						storage.Status.Status = dwsv1alpha1.OfflineStatus
+						storage.Status.Message = "Kubernetes node is offline"
+					} else {
+						storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
+					}
+				}
+
 			} else {
-				storage.Status.Status = nodeStatus
+				log.Info("unhandled storage state", "state", storage.Spec.State)
 			}
 
 			// Add a label for a storage type of Rabbit. Don't overwrite the
@@ -176,7 +202,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Access.Servers = []dwsv1alpha1.Node{{
 				// The Rabbit node is the name of the nnfNode namespace
 				Name:   nnfNode.Namespace,
-				Status: string(nnfNode.Status.Servers[0].Status),
+				Status: nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
 			}}
 
 			// Wait until the servers array has been filled in with the compute node info
@@ -192,7 +218,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 				compute := dwsv1alpha1.Node{
 					Name:   c.Hostname,
-					Status: string(c.Status),
+					Status: c.Status.ConvertToDWSResourceStatus(),
 				}
 				computes = append(computes, compute)
 			}
@@ -210,7 +236,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 					SerialNumber:    d.SerialNumber,
 					FirmwareVersion: d.FirmwareVersion,
 					Capacity:        d.Capacity,
-					Status:          string(d.Status),
+					Status:          d.Status.ConvertToDWSResourceStatus(),
 					WearLevel:       &wearLevel,
 					Slot:            d.Slot,
 				}
@@ -255,6 +281,24 @@ func (r *NnfNodeSLCReconciler) deleteStorage(ctx context.Context, nnfNode *nnfv1
 	}
 
 	return nil
+}
+
+func (r *NnfNodeSLCReconciler) isKubernetesNodeReady(ctx context.Context, nnfNode *nnfv1alpha1.NnfNode) (bool, error) {
+	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
+	// The kubelet has a heartbeat mechanism, so we can determine node failures from this resource.
+	node := &corev1.Node{}
+	if err := r.Get(ctx, types.NamespacedName{Name: nnfNode.Namespace}, node); err != nil {
+		return false, err
+	}
+
+	// Look through the node conditions to determine if the node is up.
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

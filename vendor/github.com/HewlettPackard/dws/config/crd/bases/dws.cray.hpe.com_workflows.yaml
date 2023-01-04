@@ -281,6 +281,14 @@ spec:
                     watchState:
                       description: WorkflowState is the enumeration of the state of
                         the workflow
+                      enum:
+                      - Proposal
+                      - Setup
+                      - DataIn
+                      - PreRun
+                      - PostRun
+                      - DataOut
+                      - Teardown
                       type: string
                   required:
                   - completed
@@ -317,6 +325,14 @@ spec:
               state:
                 description: The state the resource is currently transitioning to.
                   Updated by the controller once started.
+                enum:
+                - Proposal
+                - Setup
+                - DataIn
+                - PreRun
+                - PostRun
+                - DataOut
+                - Teardown
                 type: string
               status:
                 description: User readable reason and status message
@@ -327,7 +343,6 @@ spec:
                 type: string
             required:
             - ready
-            - state
             type: object
         type: object
     served: true

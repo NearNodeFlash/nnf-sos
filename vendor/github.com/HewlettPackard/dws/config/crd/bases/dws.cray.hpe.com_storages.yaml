@@ -49,7 +49,6 @@ spec:
               resource
             properties:
               state:
-                default: Enabled
                 description: State describes the desired state of the Storage resource.
                 enum:
                 - Enabled
@@ -82,6 +81,8 @@ spec:
                           - NotPresent
                           - Offline
                           - Failed
+                          - Degraded
+                          - Unknown
                           type: string
                       type: object
                     type: array
@@ -109,6 +110,8 @@ spec:
                           - NotPresent
                           - Offline
                           - Failed
+                          - Degraded
+                          - Unknown
                           type: string
                       type: object
                     type: array
@@ -154,6 +157,8 @@ spec:
                       - NotPresent
                       - Offline
                       - Failed
+                      - Degraded
+                      - Unknown
                       type: string
                     wearLevel:
                       description: WearLevel in percent for SSDs. A value of 100 indicates
@@ -177,11 +182,12 @@ spec:
                 enum:
                 - Starting
                 - Ready
-                - Degraded
                 - Disabled
                 - NotPresent
                 - Offline
                 - Failed
+                - Degraded
+                - Unknown
                 type: string
               type:
                 description: Type describes what type of storage this is

@@ -149,13 +149,22 @@ spec:
                 - all
                 type: string
               teardownState:
+                allOf:
+                - enum:
+                  - Proposal
+                  - Setup
+                  - DataIn
+                  - PreRun
+                  - PostRun
+                  - DataOut
+                  - Teardown
+                - enum:
+                  - DataIn
+                  - PreRun
+                  - PostRun
+                  - DataOut
                 description: TeardownState is the desired state of the workflow for
                   this NNF Access resource to be torn down and deleted.
-                enum:
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
                 type: string
             required:
             - desiredState

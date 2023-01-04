@@ -32,9 +32,8 @@ const (
 // StorageSpec defines the desired specifications of Storage resource
 type StorageSpec struct {
 	// State describes the desired state of the Storage resource.
-	// +kubebuilder:validation:Enum:=Enabled;Disabled
 	// +kubebuilder:default:=Enabled
-	State string `json:"state,omitempty"`
+	State ResourceState `json:"state,omitempty"`
 }
 
 // StorageDevice contains the details of the storage hardware
@@ -60,8 +59,7 @@ type StorageDevice struct {
 	WearLevel *int64 `json:"wearLevel,omitempty"`
 
 	// Status of the individual device
-	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
-	Status string `json:"status,omitempty"`
+	Status ResourceStatus `json:"status,omitempty"`
 }
 
 // Node provides the status of either a compute or a server
@@ -70,15 +68,21 @@ type Node struct {
 	Name string `json:"name,omitempty"`
 
 	// Status of the node
-	// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed
-	Status string `json:"status,omitempty"`
+	Status ResourceStatus `json:"status,omitempty"`
 }
+
+// StorageAccessProtocol is the enumeration of supported protocols.
+// +kubebuilder:validation:Enum:=PCIe
+type StorageAccessProtocol string
+
+const (
+	PCIe StorageAccessProtocol = "PCIe"
+)
 
 // StorageAccess contains nodes and the protocol that may access the storage
 type StorageAccess struct {
 	// Protocol is the method that this storage can be accessed
-	// +kubebuilder:validation:Enum:=PCIe
-	Protocol string `json:"protocol,omitempty"`
+	Protocol StorageAccessProtocol `json:"protocol,omitempty"`
 
 	// Servers is the list of non-compute nodes that have access to the storage
 	Servers []Node `json:"servers,omitempty"`
@@ -87,11 +91,18 @@ type StorageAccess struct {
 	Computes []Node `json:"computes,omitempty"`
 }
 
+// StorageType is the enumeration of storage types.
+// +kubebuilder:validation:Enum:=NVMe
+type StorageType string
+
+const (
+	NVMe StorageType = "NVMe"
+)
+
 // StorageData contains the data about the storage
 type StorageStatus struct {
 	// Type describes what type of storage this is
-	// +kubebuilder:validation:Enum:=NVMe
-	Type string `json:"type,omitempty"`
+	Type StorageType `json:"type,omitempty"`
 
 	// Devices is the list of physical devices that make up this storage
 	Devices []StorageDevice `json:"devices,omitempty"`
@@ -106,8 +117,7 @@ type StorageStatus struct {
 	Capacity int64 `json:"capacity"`
 
 	// Status is the overall status of the storage
-	// +kubebuilder:validation:Enum:=Starting;Ready;Degraded;Disabled;NotPresent;Offline;Failed
-	Status string `json:"status,omitempty"`
+	Status ResourceStatus `json:"status,omitempty"`
 
 	// Reboot Required is true if the node requires a reboot and false otherwise. A reboot my be
 	// necessary to recover from certain hardware failures or high-availability clustering events.

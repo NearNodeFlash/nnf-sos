@@ -87,7 +87,7 @@ func (w *Workflow) ValidateCreate() error {
 		return field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
 	}
 	if w.Status.State != "" {
-		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set")
+		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set on creation")
 	}
 
 	return checkDirectives(w, &ValidatingRuleParser{})
