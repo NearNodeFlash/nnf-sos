@@ -92,6 +92,12 @@ github.com/HewlettPackard/dws v0.0.0-20230103221621-3ddba3d818ed h1:fkTNMUhY9AVY
 github.com/HewlettPackard/dws v0.0.0-20230103221621-3ddba3d818ed/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
 github.com/HewlettPackard/dws v0.0.0-20230104151937-fc882a72469a h1:emYNSAkP0Nb9CRfrMGGMy7PRTqNISTYkbbqEHx/LY5c=
 github.com/HewlettPackard/dws v0.0.0-20230104151937-fc882a72469a/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
+github.com/HewlettPackard/dws v0.0.0-20230104161449-b57ee6b0744b h1:3nbllp+Fw6K8oiYg8x3Ctoz3oYEcJLtCwyKxyVPCl9Y=
+github.com/HewlettPackard/dws v0.0.0-20230104161449-b57ee6b0744b/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
+github.com/HewlettPackard/dws v0.0.0-20230104182823-40864bb5d259 h1:MysF14Ceu52QJPvAlHp6RQCEfSs2EfiDJl1jgFizgKE=
+github.com/HewlettPackard/dws v0.0.0-20230104182823-40864bb5d259/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
+github.com/HewlettPackard/dws v0.0.0-20230104194155-1f78117736f5 h1:J+ok11bmTTSAc4ZURVSGstjFYpQg0nN8lFIWoEhUzXA=
+github.com/HewlettPackard/dws v0.0.0-20230104194155-1f78117736f5/go.mod h1:OxTK/qLMVBktON5wHI6zGuKEsoT8iLpPtUX+y02/m10=
 github.com/HewlettPackard/structex v1.0.2 h1:p2EH/p6zvUd5fSa0onudAUvLWdKsvQSRP0jGKeblA5E=
 github.com/HewlettPackard/structex v1.0.2/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/Masterminds/squirrel v1.5.0/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=

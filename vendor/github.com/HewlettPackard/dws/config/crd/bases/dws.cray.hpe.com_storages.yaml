@@ -49,6 +49,7 @@ spec:
               resource
             properties:
               state:
+                default: Enabled
                 description: State describes the desired state of the Storage resource.
                 enum:
                 - Enabled

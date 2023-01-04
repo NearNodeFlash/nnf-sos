@@ -62,7 +62,7 @@ var _ = Describe("System Level Controller Test", func() {
 			return k8sClient.Get(context.TODO(), types.NamespacedName{Name: nnfNode.Namespace, Namespace: corev1.NamespaceDefault}, storage)
 		}).Should(Succeed(), "Create the DWS Storage object")
 
-		Expect(storage.Status.Status).To(Equal("Offline"))
+		Expect(storage.Status.Status).To(Equal(dwsv1alpha1.OfflineStatus))
 
 		By("Deleting the NNF Node")
 		Expect(k8sClient.Delete(context.TODO(), nnfNode)).To(Succeed())

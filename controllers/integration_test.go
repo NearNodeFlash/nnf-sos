@@ -360,7 +360,7 @@ var _ = Describe("Integration Test", func() {
 					},
 					Spec: nnfv1alpha1.NnfNodeSpec{
 						Name:  nodeName,
-						State: "Enable",
+						State: nnfv1alpha1.ResourceEnable,
 					},
 					Status: nnfv1alpha1.NnfNodeStatus{},
 				}

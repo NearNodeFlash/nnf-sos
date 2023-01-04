@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	"github.com/HewlettPackard/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -140,6 +141,10 @@ type Storage struct {
 
 	Spec   StorageSpec   `json:"spec"`
 	Status StorageStatus `json:"status,omitempty"`
+}
+
+func (s *Storage) GetStatus() updater.Status[*StorageStatus] {
+	return &s.Status
 }
 
 //+kubebuilder:object:root=true
