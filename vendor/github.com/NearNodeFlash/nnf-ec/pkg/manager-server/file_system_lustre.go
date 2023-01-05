@@ -187,7 +187,7 @@ func (f *FileSystemLustre) zfsTargType() string {
 }
 
 func (f *FileSystemLustre) zfsPoolName() string {
-	return fmt.Sprintf("%s-%spool", f.name, f.zfsTargType())
+	return fmt.Sprintf("%s-%spool-%d", f.name, f.zfsTargType(), f.Oem.Index)
 }
 
 func (f *FileSystemLustre) zfsVolName() string {

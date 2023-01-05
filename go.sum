@@ -110,6 +110,8 @@ github.com/NearNodeFlash/nnf-ec v0.0.0-20221220173628-96d6a3bab9d1 h1:f09Nvmieia
 github.com/NearNodeFlash/nnf-ec v0.0.0-20221220173628-96d6a3bab9d1/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20221221152437-83d47b38ec80 h1:Eg/6n0p/qGbFhL1w+zxiPj2jjK+5rAEM3q7+vO0CWy4=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20221221152437-83d47b38ec80/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230105221007-3282bfd76a70 h1:Sycdy92vRX6oSmb/BbvGEKOTcnLd9fWCsbCPOWmGfug=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230105221007-3282bfd76a70/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/VividCortex/mysqlerr v1.0.0/go.mod h1:xERx8E4tBhLvpjzdUyQiSfUxeMcATEQrflDAfXsqcAE=

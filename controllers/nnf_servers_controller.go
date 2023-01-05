@@ -237,6 +237,8 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 			ready = false
 		}
 
+		capacityAllocatedMap := make(map[string]int64)
+
 		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 			// There can be multiple allocations per Rabbit. Add them all up and present a
 			// single size for the servers resource
@@ -248,7 +250,15 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 				allocationSize += nnfNodeAllocation.CapacityAllocated
 			}
 
-			servers.Status.AllocationSets[serversIndex].Storage[nnfNodeStorage.Namespace] = dwsv1alpha1.ServersStatusStorage{AllocationSize: allocationSize}
+			if _, exists := capacityAllocatedMap[nnfNodeStorage.Namespace]; exists {
+				capacityAllocatedMap[nnfNodeStorage.Namespace] += allocationSize
+			} else {
+				capacityAllocatedMap[nnfNodeStorage.Namespace] = allocationSize
+			}
+		}
+
+		for name, capacityAllocated := range capacityAllocatedMap {
+			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha1.ServersStatusStorage{AllocationSize: capacityAllocated}
 		}
 
 		for _, storageStatus := range servers.Status.AllocationSets[serversIndex].Storage {

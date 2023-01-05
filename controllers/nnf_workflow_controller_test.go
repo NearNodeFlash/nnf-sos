@@ -547,6 +547,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		)
 
 		JustBeforeEach(func() {
+			Expect(k8sClient.Update(context.TODO(), storageProfile)).To(Succeed())
+
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
 			Eventually(func(g Gomega) bool {
@@ -663,6 +665,37 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}
 					for i := range servers.Spec.AllocationSets {
 						if servers.Spec.AllocationSets[i].Label != "ost" {
+							continue
+						}
+
+						// Make four allocations, each with one quarter the size
+						servers.Spec.AllocationSets[i].AllocationSize /= 4
+						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
+						servers.Spec.AllocationSets[i].Storage[1].AllocationCount = 3
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup
+				}).Should(BeTrue(), "waiting for ready after setup")
+			})
+
+			It("Succeeds with multiple mdts", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "mdt" {
 							continue
 						}
 
@@ -858,6 +891,70 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
+		})
+
+		When("Using a Lustre file system with combined mgtmdt", func() {
+			BeforeEach(func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test type=lustre capacity=1GiB",
+				}
+
+				storageProfile.Data.LustreStorage.CombinedMGTMDT = true
+			})
+
+			It("Succeeds with multiple mdts", func() {
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+					if len(servers.Spec.AllocationSets) == 0 {
+						return fmt.Errorf("Waiting for cache to update")
+					}
+					for i := range servers.Spec.AllocationSets {
+						if servers.Spec.AllocationSets[i].Label != "mgtmdt" {
+							continue
+						}
+
+						// Make four allocations, each with one quarter the size. 3 allocations are on the first storage
+						// and one is on a second storage
+						servers.Spec.AllocationSets[i].AllocationSize /= 4
+						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
+						servers.Spec.AllocationSets[i].Storage[0].AllocationCount = 3
+					}
+					return k8sClient.Update(context.TODO(), servers)
+				}).Should(Succeed(), "Set multiple allocations")
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					workflow.Spec.DesiredState = dwsv1alpha1.StateSetup
+					return k8sClient.Update(context.TODO(), workflow)
+				}).Should(Succeed(), "update to Setup")
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateSetup
+				}).Should(BeTrue(), "waiting for ready after setup")
+
+				nnfStorage := &nnfv1alpha1.NnfStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      servers.Name,
+						Namespace: servers.Namespace,
+					},
+				}
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfStorage), nnfStorage)).To(Succeed())
+					for _, allocationSet := range nnfStorage.Spec.AllocationSets {
+						if allocationSet.Name != "mgtmdt" {
+							continue
+						}
+
+						// Check that there are 3 nodes listed in the mgtmdt allocation set. The first node should
+						// only have a single allocation.
+						return len(allocationSet.Nodes) == 3 && allocationSet.Nodes[0].Count == 1
+					}
+
+					return false
+				}).Should(BeTrue(), "waiting for ready after setup")
+			})
 		})
 
 		When("Using an XFS file system", func() {
