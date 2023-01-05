@@ -60,6 +60,7 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/finalizers,verbs=update
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=storages,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=storages/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
@@ -149,6 +150,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storageStatusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.StorageStatus](storage)
 	defer func() { err = storageStatusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
+	// Populate the status of the storage resource.
 	storage.Status.Type = dwsv1alpha1.NVMe
 	storage.Status.Capacity = nnfNode.Status.Capacity
 
@@ -157,6 +159,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Clear the fenced status if the node is enabled from a disabled status
 		if storage.Status.Status == dwsv1alpha1.DisabledStatus {
 			nnfNode.Status.Fenced = false
+
 			storage.Status.RebootRequired = false
 			storage.Status.Message = ""
 
