@@ -496,7 +496,7 @@ func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy 
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
-	a.Constraints.Labels = []string{"dws.cray.hpe.com/storage=Rabbit"}
+	a.Constraints.Labels = []string{dwsv1alpha1.StorageTypeLabel + "=Rabbit"}
 	if constraint != nil {
 		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{*constraint}
 	}
