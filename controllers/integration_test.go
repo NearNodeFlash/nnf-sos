@@ -735,8 +735,8 @@ var _ = Describe("Integration Test", func() {
 						}
 						Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
 						Expect(clientMount.Status.Mounts).To(HaveLen(1))
-						Expect(clientMount.Labels["dws.cray.hpe.com/workflow.name"]).To(Equal(workflow.Name))
-						Expect(clientMount.Labels["dws.cray.hpe.com/workflow.namespace"]).To(Equal(workflow.Namespace))
+						Expect(clientMount.Labels[dwsv1alpha1.WorkflowNameLabel]).To(Equal(workflow.Name))
+						Expect(clientMount.Labels[dwsv1alpha1.WorkflowNamespaceLabel]).To(Equal(workflow.Namespace))
 						Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
 					}
 
