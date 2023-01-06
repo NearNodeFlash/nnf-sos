@@ -40,10 +40,12 @@ then
         sleep 1
     done
     kubectl apply -f config/samples/placeholder_nnfstorageprofile.yaml
+    # TODO Placeholder Container Profile
 fi
 
 if [[ $CMD == 'undeploy' ]]
 then
 	kubectl delete -f config/samples/placeholder_nnfstorageprofile.yaml || true
+    # TODO Placeholder Container Profile
 	$KUSTOMIZE build config/$OVERLAY | kubectl delete -f -
 fi

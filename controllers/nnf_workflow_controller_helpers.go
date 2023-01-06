@@ -107,6 +107,11 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 			if err := r.validatePersistentInstanceDirective(ctx, wf, directive); err != nil {
 				return nnfv1alpha1.NewWorkflowError("Could not validate persistent instance: " + directive).WithFatal().WithError(err)
 			}
+
+		case "container":
+			if err := r.validateContainerDirective(ctx, wf, directive); err != nil {
+				return nnfv1alpha1.NewWorkflowError("Could not validate container directive: " + directive).WithFatal().WithError(err)
+			}
 		}
 	}
 
@@ -168,6 +173,44 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	return nil
 }
 
+// validateContainerDirective validates the container directive.
+func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
+	args, err := dwdparse.BuildArgsMap(directive)
+	if err != nil {
+		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
+	}
+
+	// Find the wildcard JOB_DW and PERSISTENT_DW arguments
+	for arg, val := range args {
+		// log.Log.Info("BLAKE: arg", "arg", arg)
+		switch arg {
+		case "command", "name", "profile":
+		default:
+			name := val
+			// log.Log.Info("BLAKE: ", "arg", arg, "fsname", name)
+			if strings.HasPrefix(arg, "$JOB_DW_") {
+				if findDirectiveIndexByName(wf, name) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
+				}
+			} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
+				if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
+				}
+				if findDirectiveIndexByName(wf, name) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
+				}
+			}
+			// TODO: just ignore anything that doesn't start with JOB_DW/PERSISTENT_DW?
+			// TODO: global lustre?
+		}
+	}
+
+	// TODO: validate profile exists
+	// TODO: validate that supplied storage directives are in the profile storages
+
+	return nil
+}
+
 // validatePersistentInstance validates the persistentdw directive.
 func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	// Validate that the persistent instance is available and not in the process of being deleted
@@ -219,12 +262,23 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 	// "#DW jobdw              type=lustre capacity=9TB name=thisIsLustre"
 	// "#DW create_persistent  type=lustre capacity=9TB name=thisIsPersistent"
 	// "#DW persistentdw       name=thisIsPersistent"
+	//
+	// Container directives need to be accompanied by jobdw and/or persistentdw directives prior
+	// to the container directive. The names of those jobdw/persistentdw directives must match
+	// what is then supplied to the container directive as key value arguments.
+	//
+	// #DW jobdw name=my-gfs2 type=gfs2 capacity=1TB
+	// #DW persistentdw name=some-lustre
+	// #DW container name=my-foo profile=foo
+	//     JOB_DW_foo-local-storage=my-gfs2
+	//     PERSISTENT_DW_foo-persistent-storage=some-lustre
 
 	// #DW commands that require a dwDirectiveBreakdown
 	breakDownCommands := []string{
 		"jobdw",
 		"create_persistent",
 		"persistentdw",
+		"container",
 	}
 
 	directive := workflow.Spec.DWDirectives[dwIndex]

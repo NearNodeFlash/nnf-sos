@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
@@ -82,12 +84,11 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Workflow object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
@@ -281,8 +282,11 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 		return nil, nnfv1alpha1.NewWorkflowError("Unable to validate DW directives").WithFatal().WithError(err)
 	}
 
-	// only jobdw, persistentdw, and create_persistent need a directive breakdown
-	if dwArgs["command"] != "jobdw" && dwArgs["command"] != "persistentdw" && dwArgs["command"] != "create_persistent" {
+	// only jobdw, persistentdw, create_persistent, and container need a directive breakdown
+	switch dwArgs["command"] {
+	case "jobdw", "persistentdw", "create_persistent", "container":
+		break
+	default:
 		return nil, nil
 	}
 
@@ -849,17 +853,24 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		}
 	}
 
+	readyResult, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'mounted' state").WithError(err).WithFatal()
+	} else if readyResult != nil {
+		return readyResult, nil
+	}
+
+	// TODO: Create container DS or Job. Need to determine which is the best route to handle communication and termination of the container.
+	if dwArgs["command"] == "container" {
+		if err := r.createOrUpdateDaemonSetIfNecessary(ctx, workflow); err != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container DaemonSet").WithError(err)
+		}
+	}
+
 	return nil, nil
 }
 
 func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
-
-	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
-	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'mounted' state").WithError(err).WithFatal()
-	} else if result != nil {
-		return result, nil
-	}
 
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -882,6 +893,90 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	workflow.Status.Env[envName] = buildMountPath(workflow, index)
 
 	return nil, nil
+}
+
+func (r *NnfWorkflowReconciler) createOrUpdateDaemonSetIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+	log := log.FromContext(ctx)
+
+	// TODO: check the directive or the workflow itself to determine if containers are requested
+	// I would imagine a change to dws (workflow type) would be necessary here but perhaps we can
+	// skirt around it with the directivebreakdown?
+
+	// TODO move this to helpers and use pinned profiles like storage profiles
+	// TODO: name is hardcoded
+	container := &nnfv1alpha1.NnfContainerProfile{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nnfcontainerprofile-sample"}, container); err != nil {
+		return err
+	}
+
+	ds := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nnfcontainerprofile-sample-12345",
+			Namespace: "nnf-system",
+		},
+	}
+
+	mutateFn := func() error {
+		podTemplateSpec := container.Spec.Template.DeepCopy()
+		// podTemplateSpec.Labels = manager.Spec.Selector.DeepCopy().MatchLabels
+
+		// if podTemplateSpec.Labels == nil {
+		// 	podTemplateSpec.Labels = make(map[string]string)
+		// }
+		// podTemplateSpec.Labels[dmv1alpha1.DataMovementWorkerLabel] = "true"
+		podTemplateSpec.Labels = map[string]string{
+			"cray.nnf.node": "true",
+		}
+
+		podSpec := &podTemplateSpec.Spec
+		// podSpec.NodeSelector = manager.Spec.Selector.MatchLabels
+		podSpec.NodeSelector = map[string]string{"cray.nnf.node": "true"}
+		// podSpec.Subdomain = serviceName
+
+		// setupSSHAuthVolumes(manager, podSpec)
+		// setupLustreVolumes(ctx, manager, podSpec, filesystems.Items)
+
+		ds.Spec = appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"cray.nnf.node": "true",
+			}},
+			Template: *podTemplateSpec,
+		}
+		// ds.Spec = appsv1.DaemonSetSpec{
+		// 	Selector: &manager.Spec.Selector,
+		// 	Template: *podTemplateSpec,
+		// }
+
+		dwsv1alpha1.InheritParentLabels(ds, workflow)
+		dwsv1alpha1.AddOwnerLabels(ds, workflow)
+		// labels := ds.GetLabels()
+		// labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
+		// nnfNodeStorage.SetLabels(labels)
+
+		// TODO: add Volumes to DS, append if customer specifies; check for conflicts
+		vol := corev1.Volume{
+			Name: "foo-local-storage",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/path/to/thing"}}}
+		podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, vol)
+		// TODO: get mounts from workflow
+
+		return nil
+	}
+
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, ds, mutateFn)
+	if err != nil {
+		return err
+	}
+
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
+	} else if result == controllerutil.OperationResultUpdated {
+		log.Info("Updated DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
+	}
+
+	return nil
 }
 
 func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
