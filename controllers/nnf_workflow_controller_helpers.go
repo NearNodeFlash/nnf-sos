@@ -33,6 +33,7 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NNF Workflow stages all return a `result` structure when successful that describes
@@ -876,6 +878,90 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) createOrUpdateContainerDaemonSetIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+	log := log.FromContext(ctx)
+
+	// TODO: check the directive or the workflow itself to determine if containers are requested
+	// I would imagine a change to dws (workflow type) would be necessary here but perhaps we can
+	// skirt around it with the directivebreakdown?
+
+	// TODO move this to helpers and use pinned profiles like storage profiles
+	// TODO: name is hardcoded
+	container := &nnfv1alpha1.NnfContainerProfile{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nnfcontainerprofile-sample"}, container); err != nil {
+		return err
+	}
+
+	ds := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nnfcontainerprofile-sample-12345",
+			Namespace: "nnf-system",
+		},
+	}
+
+	mutateFn := func() error {
+		podTemplateSpec := container.Spec.Template.DeepCopy()
+		// podTemplateSpec.Labels = manager.Spec.Selector.DeepCopy().MatchLabels
+
+		// if podTemplateSpec.Labels == nil {
+		// 	podTemplateSpec.Labels = make(map[string]string)
+		// }
+		// podTemplateSpec.Labels[dmv1alpha1.DataMovementWorkerLabel] = "true"
+		podTemplateSpec.Labels = map[string]string{
+			"cray.nnf.node": "true",
+		}
+
+		podSpec := &podTemplateSpec.Spec
+		// podSpec.NodeSelector = manager.Spec.Selector.MatchLabels
+		podSpec.NodeSelector = map[string]string{"cray.nnf.node": "true"}
+		// podSpec.Subdomain = serviceName
+
+		// setupSSHAuthVolumes(manager, podSpec)
+		// setupLustreVolumes(ctx, manager, podSpec, filesystems.Items)
+
+		ds.Spec = appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"cray.nnf.node": "true",
+			}},
+			Template: *podTemplateSpec,
+		}
+		// ds.Spec = appsv1.DaemonSetSpec{
+		// 	Selector: &manager.Spec.Selector,
+		// 	Template: *podTemplateSpec,
+		// }
+
+		dwsv1alpha1.InheritParentLabels(ds, workflow)
+		dwsv1alpha1.AddOwnerLabels(ds, workflow)
+		// labels := ds.GetLabels()
+		// labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
+		// nnfNodeStorage.SetLabels(labels)
+
+		// TODO: add Volumes to DS, append if customer specifies; check for conflicts
+		vol := corev1.Volume{
+			Name: "foo-local-storage",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/path/to/thing"}}}
+		podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, vol)
+		// TODO: get mounts from workflow
+
+		return nil
+	}
+
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, ds, mutateFn)
+	if err != nil {
+		return err
+	}
+
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
+	} else if result == controllerutil.OperationResultUpdated {
+		log.Info("Updated DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
 	}
 
 	return nil
