@@ -52,6 +52,9 @@ type NnfNodeStatus struct {
 
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
+	// Fenced is true when the NNF Node is fenced by the STONITH agent, and false otherwise.
+	Fenced bool `json:"fenced,omitempty"`
+
 	Capacity          int64 `json:"capacity,omitempty"`
 	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 

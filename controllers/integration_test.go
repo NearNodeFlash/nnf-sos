@@ -360,7 +360,7 @@ var _ = Describe("Integration Test", func() {
 					},
 					Spec: nnfv1alpha1.NnfNodeSpec{
 						Name:  nodeName,
-						State: "Enable",
+						State: nnfv1alpha1.ResourceEnable,
 					},
 					Status: nnfv1alpha1.NnfNodeStatus{},
 				}
@@ -380,7 +380,7 @@ var _ = Describe("Integration Test", func() {
 
 				Eventually(func() bool {
 					Expect(k8sClient.Get(context.TODO(), namespacedName, storage)).To(Succeed())
-					return len(storage.Data.Access.Computes) == 16
+					return len(storage.Status.Access.Computes) == 16
 				}).Should(BeTrue())
 
 				// Check that a namespace was created for each compute node

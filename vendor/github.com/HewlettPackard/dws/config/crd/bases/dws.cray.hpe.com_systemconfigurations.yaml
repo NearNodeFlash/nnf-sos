@@ -88,8 +88,6 @@ spec:
                       type: string
                     type:
                       description: Type is the type of server
-                      enum:
-                      - Rabbit
                       type: string
                   required:
                   - name

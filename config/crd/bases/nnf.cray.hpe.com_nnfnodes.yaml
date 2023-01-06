@@ -126,6 +126,10 @@ spec:
                       type: integer
                   type: object
                 type: array
+              fenced:
+                description: Fenced is true when the NNF Node is fenced by the STONITH
+                  agent, and false otherwise.
+                type: boolean
               health:
                 description: NnfResourceHealthType defines the health of an NNF resource.
                 type: string

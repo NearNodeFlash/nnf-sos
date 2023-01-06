@@ -42,7 +42,6 @@ type SystemConfigurationComputeNodeReference struct {
 // SystemConfigurationStorageNode describes a storage node in the system
 type SystemConfigurationStorageNode struct {
 	// Type is the type of server
-	// +kubebuilder:validation:Enum=Rabbit
 	Type string `json:"type"`
 
 	// Name of the server node

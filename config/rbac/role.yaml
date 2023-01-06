@@ -203,6 +203,14 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
+  - storages/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
   - systemconfigurations
   verbs:
   - get

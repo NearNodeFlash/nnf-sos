@@ -315,11 +315,11 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 	// Build a list of all nodes with access to the storage
 	clients := []string{}
-	for _, server := range storage.Data.Access.Servers {
+	for _, server := range storage.Status.Access.Servers {
 		clients = append(clients, server.Name)
 	}
 
-	for _, compute := range storage.Data.Access.Computes {
+	for _, compute := range storage.Status.Access.Computes {
 		clients = append(clients, compute.Name)
 	}
 

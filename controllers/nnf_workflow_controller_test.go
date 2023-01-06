@@ -538,6 +538,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	}) // When("Using copy_in directives", func()
 
 	When("Using server allocation input", func() {
+		const nodeName = "rabbit-node"
+
 		var (
 			storage            *dwsv1alpha1.Storage
 			directiveBreakdown *dwsv1alpha1.DirectiveBreakdown
@@ -574,7 +576,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					AllocationSize: directiveAllocationSet.MinimumCapacity,
 					Storage: []dwsv1alpha1.ServersSpecStorage{
 						{
-							Name:            "rabbit-node",
+							Name:            nodeName,
 							AllocationCount: 1,
 						},
 					},
@@ -591,7 +593,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		BeforeEach(func() {
 			ns := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "rabbit-node",
+					Name: nodeName,
 				},
 			}
 
@@ -601,23 +603,31 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		BeforeEach(func() {
 			storage = &dwsv1alpha1.Storage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbit-node",
+					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
 				},
-				Data: dwsv1alpha1.StorageData{
+			}
+
+			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+
+				storage.Status = dwsv1alpha1.StorageStatus{
 					Capacity: 100000000000,
 					Access: dwsv1alpha1.StorageAccess{
-						Protocol: "PCIe",
+						Protocol: dwsv1alpha1.PCIe,
 						Servers: []dwsv1alpha1.Node{
 							{
-								Name:   "rabbit-node",
-								Status: "Ready",
+								Name:   nodeName,
+								Status: dwsv1alpha1.ReadyStatus,
 							},
 						},
 					},
-				},
-			}
-			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
+				}
+
+				return k8sClient.Status().Update(context.TODO(), storage)
+			}).Should(Succeed())
 		})
 
 		AfterEach(func() {
