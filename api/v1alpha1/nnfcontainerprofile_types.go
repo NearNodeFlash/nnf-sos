@@ -39,13 +39,10 @@ type NnfContainerProfileStorage struct {
 	// Name specifies the name of the mounted filesystem; must match the user supplied #DW directive
 	Name string `json:"name"`
 
-	// Type optionally defines the filesystem type of the mount point
-	Type string `json:"type,omitempty"`
-
 	// Optional designates that this filesystem is available to be mounted, but can be ignored by
 	// the user not supplying this filesystem in the #DW directives
 	//+kubebuilder:default:=false
-	Optional *bool `json:"optional"`
+	Optional bool `json:"optional"`
 }
 
 // NnfContainerProfileStatus defines the observed state of NnfContainerProfile

@@ -53,10 +53,6 @@ spec:
                         to be mounted, but can be ignored by the user not supplying
                         this filesystem in the #DW directives'
                       type: boolean
-                    type:
-                      description: Type optionally defines the filesystem type of
-                        the mount point
-                      type: string
                   required:
                   - name
                   - optional
