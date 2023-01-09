@@ -25,7 +25,7 @@ import (
 )
 
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
-type NnfContainerProfileSpec struct {
+type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
@@ -45,23 +45,14 @@ type NnfContainerProfileStorage struct {
 	Optional bool `json:"optional"`
 }
 
-// NnfContainerProfileStatus defines the observed state of NnfContainerProfile
-type NnfContainerProfileStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// TODO
-}
-
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 
 // NnfContainerProfile is the Schema for the nnfcontainerprofiles API
 type NnfContainerProfile struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NnfContainerProfileSpec   `json:"spec,omitempty"`
-	Status NnfContainerProfileStatus `json:"status,omitempty"`
+	Data NnfContainerProfileData `json:"data,omitempty"`
 }
 
 // +kubebuilder:object:root=true

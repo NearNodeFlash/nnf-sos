@@ -905,7 +905,7 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerDaemonSetIfNecessary(ctx 
 	}
 
 	mutateFn := func() error {
-		podTemplateSpec := container.Spec.Template.DeepCopy()
+		podTemplateSpec := container.Data.Template.DeepCopy()
 		// podTemplateSpec.Labels = manager.Spec.Selector.DeepCopy().MatchLabels
 
 		// if podTemplateSpec.Labels == nil {
