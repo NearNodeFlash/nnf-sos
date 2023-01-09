@@ -1,3 +1,22 @@
+/*
+ * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package controllers
 
 import (
@@ -14,6 +33,7 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +41,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NNF Workflow stages all return a `result` structure when successful that describes
@@ -107,6 +128,11 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 			if err := r.validatePersistentInstanceDirective(ctx, wf, directive); err != nil {
 				return nnfv1alpha1.NewWorkflowError("Could not validate persistent instance: " + directive).WithFatal().WithError(err)
 			}
+
+		case "container":
+			if err := r.validateContainerDirective(ctx, wf, directive); err != nil {
+				return nnfv1alpha1.NewWorkflowError("Could not validate container directive: " + directive).WithFatal().WithError(err)
+			}
 		}
 	}
 
@@ -183,6 +209,44 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	return nil
 }
 
+// validateContainerDirective validates the container directive.
+func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
+	args, err := dwdparse.BuildArgsMap(directive)
+	if err != nil {
+		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
+	}
+
+	// Find the wildcard JOB_DW and PERSISTENT_DW arguments
+	for arg, val := range args {
+		// log.Log.Info("BLAKE: arg", "arg", arg)
+		switch arg {
+		case "command", "name", "profile":
+		default:
+			name := val
+			// log.Log.Info("BLAKE: ", "arg", arg, "fsname", name)
+			if strings.HasPrefix(arg, "$JOB_DW_") {
+				if findDirectiveIndexByName(wf, name) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
+				}
+			} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
+				if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
+				}
+				if findDirectiveIndexByName(wf, name) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
+				}
+			}
+			// TODO: just ignore anything that doesn't start with JOB_DW/PERSISTENT_DW?
+			// TODO: global lustre?
+		}
+	}
+
+	// TODO: validate profile exists
+	// TODO: validate that supplied storage directives are in the profile storages
+
+	return nil
+}
+
 // validatePersistentInstance validates the persistentdw directive.
 func (r *NnfWorkflowReconciler) validatePersistentInstanceForStaging(ctx context.Context, name string, namespace string) error {
 	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
@@ -243,12 +307,23 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 	// "#DW jobdw              type=lustre capacity=9TB name=thisIsLustre"
 	// "#DW create_persistent  type=lustre capacity=9TB name=thisIsPersistent"
 	// "#DW persistentdw       name=thisIsPersistent"
+	//
+	// Container directives need to be accompanied by jobdw and/or persistentdw directives prior
+	// to the container directive. The names of those jobdw/persistentdw directives must match
+	// what is then supplied to the container directive as key value arguments.
+	//
+	// #DW jobdw name=my-gfs2 type=gfs2 capacity=1TB
+	// #DW persistentdw name=some-lustre
+	// #DW container name=my-foo profile=foo
+	//     JOB_DW_foo-local-storage=my-gfs2
+	//     PERSISTENT_DW_foo-persistent-storage=some-lustre
 
 	// #DW commands that require a dwDirectiveBreakdown
 	breakDownCommands := []string{
 		"jobdw",
 		"create_persistent",
 		"persistentdw",
+		"container",
 	}
 
 	directive := workflow.Spec.DWDirectives[dwIndex]
@@ -845,6 +920,90 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) createOrUpdateContainerDaemonSetIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+	log := log.FromContext(ctx)
+
+	// TODO: check the directive or the workflow itself to determine if containers are requested
+	// I would imagine a change to dws (workflow type) would be necessary here but perhaps we can
+	// skirt around it with the directivebreakdown?
+
+	// TODO move this to helpers and use pinned profiles like storage profiles
+	// TODO: name is hardcoded
+	container := &nnfv1alpha1.NnfContainerProfile{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "nnfcontainerprofile-sample"}, container); err != nil {
+		return err
+	}
+
+	ds := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nnfcontainerprofile-sample-12345",
+			Namespace: "nnf-system",
+		},
+	}
+
+	mutateFn := func() error {
+		podTemplateSpec := container.Data.Template.DeepCopy()
+		// podTemplateSpec.Labels = manager.Spec.Selector.DeepCopy().MatchLabels
+
+		// if podTemplateSpec.Labels == nil {
+		// 	podTemplateSpec.Labels = make(map[string]string)
+		// }
+		// podTemplateSpec.Labels[dmv1alpha1.DataMovementWorkerLabel] = "true"
+		podTemplateSpec.Labels = map[string]string{
+			"cray.nnf.node": "true",
+		}
+
+		podSpec := &podTemplateSpec.Spec
+		// podSpec.NodeSelector = manager.Spec.Selector.MatchLabels
+		podSpec.NodeSelector = map[string]string{"cray.nnf.node": "true"}
+		// podSpec.Subdomain = serviceName
+
+		// setupSSHAuthVolumes(manager, podSpec)
+		// setupLustreVolumes(ctx, manager, podSpec, filesystems.Items)
+
+		ds.Spec = appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+				"cray.nnf.node": "true",
+			}},
+			Template: *podTemplateSpec,
+		}
+		// ds.Spec = appsv1.DaemonSetSpec{
+		// 	Selector: &manager.Spec.Selector,
+		// 	Template: *podTemplateSpec,
+		// }
+
+		dwsv1alpha1.InheritParentLabels(ds, workflow)
+		dwsv1alpha1.AddOwnerLabels(ds, workflow)
+		// labels := ds.GetLabels()
+		// labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
+		// nnfNodeStorage.SetLabels(labels)
+
+		// TODO: add Volumes to DS, append if customer specifies; check for conflicts
+		vol := corev1.Volume{
+			Name: "foo-local-storage",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/path/to/thing"}}}
+		podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, vol)
+		// TODO: get mounts from workflow
+
+		return nil
+	}
+
+	result, err := ctrl.CreateOrUpdate(ctx, r.Client, ds, mutateFn)
+	if err != nil {
+		return err
+	}
+
+	if result == controllerutil.OperationResultCreated {
+		log.Info("Created DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
+	} else if result == controllerutil.OperationResultUpdated {
+		log.Info("Updated DaemonSet", "object", client.ObjectKeyFromObject(ds).String())
 	}
 
 	return nil
