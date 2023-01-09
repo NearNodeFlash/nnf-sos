@@ -92,3 +92,23 @@ spec:
         type: "string"
         isRequired: true
         isValueRequired: true
+  - command: "container"
+    watchStates: Proposal,PreRun,PostRun,Teardown
+    ruleDefs:
+      - key: "name"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "profile"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+        # TODO: add a regex type to support wildcards (e.g. foo-local-storage) in the key
+      - key: "JOB_DW_foo-local-storage"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "PERSISTENT_DW_foo-persistent-storage"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
