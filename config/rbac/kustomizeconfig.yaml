@@ -1,0 +1,4 @@
+namePrefix:
+- path: metadata/annotations/kubernetes.io\/service-account.name
+namespace:
+- path: metadata/annotations/kubernetes.io\/service-account.namespace
