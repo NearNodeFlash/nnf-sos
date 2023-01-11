@@ -33,4 +33,12 @@ const (
 	// PinnedStorageProfileLabelNameSpace is a label applied to NnfStorage objects to show
 	// which pinned storage profile is being used.
 	PinnedStorageProfileLabelNameSpace = "nnf.cray.hpe.com/pinned_storage_profile_namespace"
+
+	// PinnedContainerProfileLabelName is a label applied to NnfStorage objects to show
+	// which pinned container profile is being used.
+	PinnedContainerProfileLabelName = "nnf.cray.hpe.com/pinned_container_profile_name"
+
+	// PinnedContainerProfileLabelNameSpace is a label applied to NnfStorage objects to show
+	// which pinned container profile is being used.
+	PinnedContainerProfileLabelNameSpace = "nnf.cray.hpe.com/pinned_container_profile_namespace"
 )

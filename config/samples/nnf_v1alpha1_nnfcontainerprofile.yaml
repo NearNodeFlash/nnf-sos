@@ -2,12 +2,14 @@ apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfContainerProfile
 metadata:
   name: nnfcontainerprofile-sample
-spec:
+  namespace: nnf-system
+data:
+  # default: true
   storages:
     - name: JOB_DW_foo-local-storage
-      type: gfs2
+      optional: false
     - name: PERSISTENT_DW_foo-persistent-storage
-      type: lustre
+      optional: false
   template:
     spec:
       # TODO: non-root
@@ -28,8 +30,6 @@ spec:
           #   mountPath: /foo/persistent
           # - name: nnf-config
           #   mountPath: /nnf/config
-          securityContext:
-            allowPrivilegeEscalation: false
       tolerations:
         - effect: NoSchedule
           key: cray.nnf.node
