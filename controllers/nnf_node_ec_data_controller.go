@@ -78,10 +78,10 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 				return err
 			}
 		}
-	}
 
-	// This resource acts as the storage provider for the NNF Element Controller
-	persistent.StorageProvider = r
+		// This resource acts as the storage provider for the NNF Element Controller
+		persistent.StorageProvider = r
+	}
 
 	// Start the NNF Element Controller
 	c := nnfec.NewController(r.Options)
