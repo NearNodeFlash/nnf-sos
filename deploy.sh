@@ -44,6 +44,6 @@ fi
 
 if [[ $CMD == 'undeploy' ]]
 then
-	kubectl delete -f config/samples/placeholder_nnfstorageprofile.yaml || true
-	$KUSTOMIZE build config/$OVERLAY | kubectl delete -f -
+	kubectl delete --ignore-not-found -f config/samples/placeholder_nnfstorageprofile.yaml
+	$KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
 fi
