@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -532,6 +531,15 @@ func (s *StorageService) EventHandler(e event.Event) error {
 	if e.Is(msgreg.FabricReadyNnf("")) {
 		log.Infof("Storage Service: Event Received %+v", e)
 
+		if err := s.store.Replay(); err != nil {
+			log.WithError(err).Errorf("Failed to replay storage database")
+			return err
+		}
+
+		// Remove any namespaces that are not part of a Storage Pool
+		log.Infof("Storage Service: Removing Volumes that are not allocated as part of a Storage Pool")
+		s.cleanupVolumes()
+
 		s.state = sf.ENABLED_RST
 		s.health = sf.OK_RH
 
@@ -549,14 +557,7 @@ func (s *StorageService) EventHandler(e event.Event) error {
 			s.health = f.Status.Health
 		}
 
-		if err := s.store.Replay(); err != nil {
-			log.WithError(err).Errorf("Failed to replay storage database")
-			return err
-		}
-
-		// Remove any namespaces that are not part of a Storage Pool
-		log.Infof("Storage Service: Removing Volumes that are not allocated as part of a Storage Pool")
-		s.cleanupVolumes()
+		log.Infof("Storage Service Enabled: Health %s", s.health)
 	}
 
 	return nil
@@ -963,6 +964,8 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolId))
 	}
 
+	// TODO RABSW-1110: Ensure storage pool is operational before creating a storage group
+
 	fields = strings.Split(model.Links.ServerEndpoint.OdataId, "/")
 	if len(fields) != s.resourceIndex+1 {
 		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.InvalidURIBase(model.Links.ServerEndpoint.OdataId))
@@ -1342,16 +1345,12 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StorageGroupOdataType, endpointId))
 	}
 
-refreshState:
-	switch sg.status().State {
-	case sf.ENABLED_RST:
-		break
-	case sf.STARTING_RST:
-		log.Infof("Storage group starting, delay 1s")
-		time.Sleep(time.Second)
-		goto refreshState
-	default:
-		return ec.NewErrNotAcceptable()
+	// Wait for the storage group to be ready (enabled) to ensure the disks are present on the system
+	state := sg.status().State
+	if state == sf.STARTING_RST {
+		return ec.NewErrorNotReady().WithResourceType(StorageGroupOdataType).WithCause(fmt.Sprintf("Storage group '%s' is starting", sg.id))
+	} else if state != sf.ENABLED_RST {
+		return ec.NewErrNotAcceptable().WithResourceType(StorageGroupOdataType).WithCause(fmt.Sprintf("Storage group '%s' is not ready: state %s", sg.id, state))
 	}
 
 	sh := fs.createFileShare(model.Id, sg, model.FileSharePath)
