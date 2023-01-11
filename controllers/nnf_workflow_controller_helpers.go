@@ -401,9 +401,19 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				}
 
 				// Create Nodes for this allocation set.
-				for _, storage := range s.Spec.AllocationSets[i].Storage {
-					node := nnfv1alpha1.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount}
-					nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
+				for k, storage := range s.Spec.AllocationSets[i].Storage {
+					if s.Spec.AllocationSets[i].Label == "mgtmdt" && k == 0 && storage.AllocationCount > 1 {
+						// If there are multiple allocations on the first MGTMDT node, split it out into two seperate
+						// node entries. The first is a single allocation that will be used for the MGTMDT. The remaining
+						// allocations on the node will be MDTs only.
+						node := nnfv1alpha1.NnfStorageAllocationNodes{Name: storage.Name, Count: 1}
+						nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
+						node = nnfv1alpha1.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount - 1}
+						nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
+					} else {
+						node := nnfv1alpha1.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount}
+						nnfAllocSet.Nodes = append(nnfAllocSet.Nodes, node)
+					}
 				}
 
 				nnfStorage.Spec.AllocationSets = append(nnfStorage.Spec.AllocationSets, nnfAllocSet)
