@@ -82,6 +82,7 @@ type NnfNodeStorageReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 
+	log := r.Log.WithValues("NnfNodeStorage", req.NamespacedName)
 	metrics.NnfNodeStorageReconcilesTotal.Inc()
 
 	nodeStorage := &nnfv1alpha1.NnfNodeStorage{}
@@ -210,6 +211,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, err
 		}
 		if result != nil {
+			log.Info("formatFileSystem returned non-nil result", "Result", *result)
 			return *result, nil
 		}
 	}

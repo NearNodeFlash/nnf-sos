@@ -1312,6 +1312,8 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesGet(storageServ
 	return nil
 }
 
+var injectError bool = true
+
 // StorageServiceIdFileSystemIdExportedSharesPost -
 func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageServiceId, fileSystemId string, model *sf.FileShareV120FileShare) error {
 	s, fs := findFileSystem(storageServiceId, fileSystemId)
@@ -1356,6 +1358,10 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 	sh := fs.createFileShare(model.Id, sg, model.FileSharePath)
 
 	createFunc := func() error {
+		if injectError {
+			injectError = false
+			return fmt.Errorf("mattr injected error")
+		}
 		if err := sg.serverStorage.CreateFileSystem(fs.fsApi, model.Oem); err != nil {
 			log.WithError(err).Errorf("Failed to create file share for path %s", model.FileSharePath)
 			return err
