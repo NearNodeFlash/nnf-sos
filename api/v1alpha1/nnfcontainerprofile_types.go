@@ -26,10 +26,6 @@ import (
 
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
 type NnfContainerProfileData struct {
-	// Default is true if this instance is the default resource to use
-	// +kubebuilder:default:=false
-	Default bool `json:"default,omitempty"`
-
 	// Pinned is true if this instance is an immutable copy
 	// +kubebuilder:default:=false
 	Pinned bool `json:"pinned,omitempty"`

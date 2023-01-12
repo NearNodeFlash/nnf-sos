@@ -204,11 +204,11 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 	// Ensure the supplied profile exists or use the default
 	profile, err := findContainerProfileToUse(ctx, r.Client, args)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError(err.Error())
+		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 	}
 
-	// Check to see if the directive argument is in the list of storages in the container profile
-	checkDirectiveIsInProfile := func(storageName string) error {
+	// Check to see if the container storage argument is in the list of storages in the container profile
+	checkStorageIsInProfile := func(storageName string) error {
 		for _, storage := range profile.Data.Storages {
 			if storage.Name == storageName {
 				return nil
@@ -217,9 +217,10 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		return fmt.Errorf("storage '%s' not found in container profile '%s'", storageName, profile.Name)
 	}
 
-	// Find the wildcard JOB_DW and PERSISTENT_DW arguments and verify that JOB_DW and PERSISTENT_DW
-	// instances exist and that they are found in the container profile
-	var directiveStorages []string // use this list later to validate non-optional storages
+	// Find the wildcard JOB_DW and PERSISTENT_DW arguments. Verify that they exist in the
+	// preceeding directives and in the container profile. For persistent arguments, ensure there
+	// is a persistent storage instance.
+	var suppliedStorageArguments []string // use this list later to validate non-optional storages
 	for arg, storageName := range args {
 		switch arg {
 		case "command", "name", "profile":
@@ -228,10 +229,10 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				if findDirectiveIndexByName(wf, storageName) == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
 				}
-				if err := checkDirectiveIsInProfile(arg); err != nil {
+				if err := checkStorageIsInProfile(arg); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 				}
-				directiveStorages = append(directiveStorages, arg)
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
 			} else if strings.HasPrefix(arg, "PERSISTENT_DW_") {
 				if err := r.validatePersistentInstanceByName(ctx, storageName, wf.Namespace); err != nil {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
@@ -239,38 +240,40 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				if findDirectiveIndexByName(wf, storageName) == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", storageName)).WithFatal()
 				}
-				if err := checkDirectiveIsInProfile(arg); err != nil {
+				if err := checkStorageIsInProfile(arg); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 				}
-				directiveStorages = append(directiveStorages, arg)
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
+			} else {
+				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("unrecognized container argument: %s", arg)).WithFatal()
 			}
-			// TODO: just ignore anything that doesn't start with JOB_DW/PERSISTENT_DW?
 		}
 	}
 
-	// Ensure that any storage in the profile that isn't marked as optional is present in the directives
-	checkNonOptionalStorages := func(directiveStorageNames []string) error {
+	// Ensure that any storage in the profile that is non-optional is present in the supplied storage arguments
+	checkNonOptionalStorages := func(storageArguments []string) error {
+		findInStorageArguments := func(name string) bool {
+			for _, directive := range storageArguments {
+				if name == directive {
+					return true
+				}
+			}
+			return false
+		}
+
 		for _, storage := range profile.Data.Storages {
 			if !storage.Optional {
-				foundInDirectives := false
-
-				for _, directive := range directiveStorageNames {
-					if storage.Name == directive {
-						foundInDirectives = true
-						break
-					}
-				}
-
-				if !foundInDirectives {
-					return fmt.Errorf("storage '%s' in container profile '%s' is not optional: directive mentioning '%s' not found",
-						storage.Name, profile.Name, storage.Name)
+				if !findInStorageArguments(storage.Name) {
+					return fmt.Errorf("storage '%s' in container profile '%s' is not optional: storage argument not found in the supplied arguments",
+						storage.Name, profile.Name)
 				}
 			}
 		}
+
 		return nil
 	}
 
-	if err := checkNonOptionalStorages(directiveStorages); err != nil {
+	if err := checkNonOptionalStorages(suppliedStorageArguments); err != nil {
 		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 	}
 

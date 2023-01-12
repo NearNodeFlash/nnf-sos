@@ -4,7 +4,6 @@ metadata:
   name: nnfcontainerprofile-sample
   namespace: nnf-system
 data:
-  # default: true
   storages:
     - name: JOB_DW_foo-local-storage
       optional: false

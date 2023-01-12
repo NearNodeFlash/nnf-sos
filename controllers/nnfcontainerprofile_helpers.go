@@ -47,32 +47,12 @@ func findContainerProfileToUse(ctx context.Context, clnt client.Client, args map
 
 	profileNamespace := os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE")
 
-	// If a profile is named then verify that it exists.  Otherwise, verify
-	// that a default profile can be found.
+	// If a profile is named then verify that it exists.
 	profileName, present := args["profile"]
-	if present == false {
-		NnfContainerProfiles := &nnfv1alpha1.NnfContainerProfileList{}
-		if err := clnt.List(ctx, NnfContainerProfiles, &client.ListOptions{Namespace: profileNamespace}); err != nil {
-			return nil, err
-		}
-		profilesFound := make([]string, 0, len(NnfContainerProfiles.Items))
-		for _, profile := range NnfContainerProfiles.Items {
-			if profile.Data.Default {
-				objkey := client.ObjectKeyFromObject(&profile)
-				profilesFound = append(profilesFound, objkey.Name)
-			}
-		}
-		// Require that there be one and only one default.
-		if len(profilesFound) == 0 {
-			return nil, fmt.Errorf("Unable to find a default NnfContainerProfile to use")
-		} else if len(profilesFound) > 1 {
-			return nil, fmt.Errorf("More than one default NnfContainerProfile found; unable to pick one: %v", profilesFound)
-		}
-		profileName = profilesFound[0]
+	if !present {
+		return nil, fmt.Errorf("no profile argument supplied")
 	}
-	if len(profileName) == 0 {
-		return nil, fmt.Errorf("Unable to find an NnfContainerProfile name")
-	}
+
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, NnfContainerProfile)
 	if err != nil {
 		return nil, err
@@ -121,7 +101,6 @@ func createPinnedContainerProfile(ctx context.Context, clnt client.Client, clntS
 		Namespace: owner.GetNamespace(),
 	}
 	newProfile.Data.Pinned = true
-	newProfile.Data.Default = false
 	controllerutil.SetControllerReference(owner, newProfile, clntScheme)
 
 	dwsv1alpha1.AddOwnerLabels(newProfile, owner)
