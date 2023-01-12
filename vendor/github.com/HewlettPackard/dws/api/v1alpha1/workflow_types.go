@@ -51,6 +51,8 @@ const (
 // Next reports the next state after state s
 func (s WorkflowState) next() WorkflowState {
 	switch s {
+	case "":
+		return StateProposal
 	case StateProposal:
 		return StateSetup
 	case StateSetup:

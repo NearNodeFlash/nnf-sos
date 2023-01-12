@@ -119,8 +119,8 @@ spec:
               state:
                 description: Desired state of the PersistentStorageInstance
                 enum:
-                - active
-                - destroying
+                - Active
+                - Destroying
                 type: string
               userID:
                 description: User ID of the user that created the persistent storage
@@ -196,9 +196,9 @@ spec:
               state:
                 description: Current state of the PersistentStorageInstance
                 enum:
-                - creating
-                - active
-                - destroying
+                - Creating
+                - Active
+                - Destroying
                 type: string
             required:
             - state
