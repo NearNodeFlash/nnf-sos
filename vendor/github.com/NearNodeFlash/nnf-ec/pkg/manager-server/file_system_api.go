@@ -252,9 +252,9 @@ func (oem *FileSystemOem) IsEmpty() bool {
 
 func (oem *FileSystemOem) LoadDefaults(fs FileSystemApi) {
 	oem.LvmCmd = FileSystemOemLvm{
-		PvCreate: "--nolocking $DEVICE",
-		VgCreate: "--nolocking $VG_NAME $DEVICE_LIST",
-		LvCreate: "--nolocking --extents 100%VG --stripes $DEVICE_NUM --stripesize 32KiB --name $LV_NAME $VG_NAME",
+		PvCreate: "$DEVICE",
+		VgCreate: "$VG_NAME $DEVICE_LIST",
+		LvCreate: "--extents 100%VG --stripes $DEVICE_NUM --stripesize 32KiB --name $LV_NAME $VG_NAME",
 	}
 
 	oem.Gfs2 = FileSystemOemGfs2{

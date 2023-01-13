@@ -172,7 +172,7 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	// Ensure that the Logical Volume exists prior returning; otherwise a future 'mkfs' command may fail.
+	// Ensure that the Logical Volume exists prior to returning; otherwise a future 'mkfs' command may fail.
 	/*
 		NJT: Can't do this yet since to Persistent() controller all errors are fatal and perform a Rollback.
 		if _, err := os.Stat(f.devPath()); os.IsNotExist(err) {
@@ -181,12 +181,10 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	*/
 
 	// HACK: Wait up to 10 seconds for the path to come ready
-	for i := 0; i < 10; i++ {
+	for start := time.Now(); time.Since(start) < 10*time.Second; time.Sleep(time.Second) {
 		if _, err := os.Stat(f.devPath()); !os.IsNotExist(err) {
 			return nil
 		}
-
-		time.Sleep(time.Second)
 	}
 
 	return fmt.Errorf("logical volume path '%s' does not exist after 10s", f.devPath())
@@ -198,7 +196,7 @@ func (f *FileSystemLvm) Delete() error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgchange --nolocking --activate n %s", f.vgName)); err != nil {
+	if _, err := f.run(fmt.Sprintf("vgchange --activate n %s", f.vgName)); err != nil {
 		return err
 	}
 

@@ -138,7 +138,7 @@ func NewErrNotImplemented() *ControllerError {
 	return NewControllerError(http.StatusNotImplemented)
 }
 
-// IsRetryable returns true and the retry delay if ANY errors eminating from the supplied error
+// IsRetryable returns true and the retry delay if ANY errors emanating from the supplied error
 // is an ec.ControllerError that is Retryable, and false otherwise.
 func IsRetryable(err error) (bool, time.Duration) {
 
