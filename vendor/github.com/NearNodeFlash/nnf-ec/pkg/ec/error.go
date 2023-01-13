@@ -21,6 +21,7 @@ package ec
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -135,6 +136,22 @@ func NewErrInternalServerError() *ControllerError {
 
 func NewErrNotImplemented() *ControllerError {
 	return NewControllerError(http.StatusNotImplemented)
+}
+
+// IsRetryable returns true and the retry delay if ANY errors eminating from the supplied error
+// is an ec.ControllerError that is Retryable, and false otherwise.
+func IsRetryable(err error) (bool, time.Duration) {
+
+	for err != nil {
+		var ctrlErr *ControllerError
+		if errors.As(err, &ctrlErr) && ctrlErr.IsRetryable() {
+			return true, ctrlErr.RetryDelay()
+		}
+
+		err = errors.Unwrap(err)
+	}
+
+	return false, time.Duration(0)
 }
 
 type ErrorResponse struct {

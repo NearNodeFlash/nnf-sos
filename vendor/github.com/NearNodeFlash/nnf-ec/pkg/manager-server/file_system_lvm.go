@@ -22,8 +22,9 @@ package server
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
+	"time"
 
 	"github.com/NearNodeFlash/nnf-ec/pkg/var_handler"
 )
@@ -54,11 +55,13 @@ func (*FileSystemLvm) New(oem FileSystemOem) (FileSystemApi, error) {
 	}, nil
 }
 
-func (*FileSystemLvm) IsType(oem FileSystemOem) bool { return oem.Type == "lvm" }
-func (*FileSystemLvm) IsMockable() bool              { return false }
+func (*FileSystemLvm) IsType(oem *FileSystemOem) bool { return oem.Type == "lvm" }
+func (*FileSystemLvm) IsMockable() bool               { return false }
+func (*FileSystemLvm) Type() string                   { return "lvm" }
 
-func (*FileSystemLvm) Type() string   { return "lvm" }
 func (f *FileSystemLvm) Name() string { return f.name }
+
+func (f *FileSystemLvm) MkfsDefault() string { return "" }
 
 func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 
@@ -83,10 +86,7 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", f.vgName))
-	if len(rsp) != 0 && !strings.Contains(string(rsp), "not found") {
-		// Volume Group is present, activate the volume. This is for the case where another
-		// node created the volume group and we just want to share it.
+	activateVolumeGroup := func() error {
 		shared := ""
 		if f.shared {
 			// Activate the shared lock
@@ -102,6 +102,13 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		}
 
 		return nil
+	}
+
+	rsp, _ := f.run(fmt.Sprintf("lvdisplay %s || echo 'not found'", f.vgName))
+	if len(rsp) != 0 && !strings.Contains(string(rsp), "not found") {
+		// Volume Group is present, activate the volume. This is for the case where another
+		// node created the volume group and we just want to share it.
+		return activateVolumeGroup()
 	}
 
 	varHandler := var_handler.NewVarHandler(map[string]string{
@@ -135,17 +142,12 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 		return err
 	}
 
-	shared = ""
-	if f.shared {
-		if _, err := f.run(fmt.Sprintf("vgchange --lockstart %s", f.vgName)); err != nil {
-			return err
-		}
-
-		shared = "s"
+	if err := activateVolumeGroup(); err != nil {
+		return err
 	}
 
 	// Create the logical volume
-	// -Zn - don't zero the volume, it will fail.
+	// --zero n - don't zero the volume, it will fail.
 	// We are depending on the drive behavior for newly allocated blocks to track
 	// NVM Command Set spec, Section 3.2.3.2.1 Deallocated or Unwritten Logical Blocks
 	// The Kioxia drives support DLFEAT=001b
@@ -159,23 +161,35 @@ func (f *FileSystemLvm) Create(devices []string, opts FileSystemOptions) error {
 	// error is not enabled, the values read from a deallocated or unwritten block and its metadata (excluding protection information)
 	// shall be:
 	// • all bytes cleared to 0h if bits 2:0 in the DLFEAT field are set to 001b;
-	zeroOpt := "-Zn"
+	zeroOpt := "--zero n"
 	if _, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
 		// On non-NVMe, let the zeroing happen so devices can be reused.
-		zeroOpt = "--yes"
+		zeroOpt = "--zero y"
 	}
 
 	lvArgs := varHandler.ReplaceAll(f.CmdArgs.LvCreate)
-	if _, err := f.run(fmt.Sprintf("lvcreate %s %s", zeroOpt, lvArgs)); err != nil {
+	if _, err := f.run(fmt.Sprintf("lvcreate --yes %s %s", zeroOpt, lvArgs)); err != nil {
 		return err
 	}
 
-	// Activate the volume group.
-	if _, err := f.run(fmt.Sprintf("vgchange --activate %sy %s", shared, f.vgName)); err != nil {
-		return err
+	// Ensure that the Logical Volume exists prior returning; otherwise a future 'mkfs' command may fail.
+	/*
+		NJT: Can't do this yet since to Persistent() controller all errors are fatal and perform a Rollback.
+		if _, err := os.Stat(f.devPath()); os.IsNotExist(err) {
+			return ec.NewErrorNotReady().WithCause(fmt.Sprintf("logical volume '%s' does not exist", f.devPath()))
+		}
+	*/
+
+	// HACK: Wait up to 10 seconds for the path to come ready
+	for i := 0; i < 10; i++ {
+		if _, err := os.Stat(f.devPath()); !os.IsNotExist(err) {
+			return nil
+		}
+
+		time.Sleep(time.Second)
 	}
 
-	return nil
+	return fmt.Errorf("logical volume path '%s' does not exist after 10s", f.devPath())
 }
 
 func (f *FileSystemLvm) Delete() error {
@@ -184,7 +198,7 @@ func (f *FileSystemLvm) Delete() error {
 		return err
 	}
 
-	if _, err := f.run(fmt.Sprintf("vgchange --activate n %s", f.vgName)); err != nil {
+	if _, err := f.run(fmt.Sprintf("vgchange --nolocking --activate n %s", f.vgName)); err != nil {
 		return err
 	}
 
@@ -218,5 +232,5 @@ func (f *FileSystemLvm) LoadRecoveryData(data map[string]string) {
 }
 
 func (f *FileSystemLvm) devPath() string {
-	return filepath.Join("/dev", f.vgName, f.lvName)
+	return path.Join("/dev", f.vgName, f.lvName)
 }
