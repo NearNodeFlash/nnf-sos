@@ -29,6 +29,15 @@ spec:
           data:
             description: NnfContainerProfileSpec defines the desired state of NnfContainerProfile
             properties:
+              default:
+                default: false
+                description: Default is true if this instance is the default resource
+                  to use
+                type: boolean
+              pinned:
+                default: false
+                description: Pinned is true if this instance is an immutable copy
+                type: boolean
               storages:
                 description: List of possible filesystems supported by this container
                   profile
