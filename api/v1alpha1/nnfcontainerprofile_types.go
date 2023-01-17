@@ -26,6 +26,10 @@ import (
 
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
 type NnfContainerProfileData struct {
+	// Pinned is true if this instance is an immutable copy
+	// +kubebuilder:default:=false
+	Pinned bool `json:"pinned,omitempty"`
+
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
