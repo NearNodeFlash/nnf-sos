@@ -160,18 +160,18 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 		name, _ := splitStagingArgumentIntoNameAndPath(arg)
 		if strings.HasPrefix(arg, "$DW_JOB_") {
 			if findDirectiveIndexByName(wf, name) == -1 {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
+				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", name)).WithFatal()
 			}
 		} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
 			if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
+				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", name)).WithFatal()
 			}
 			if findDirectiveIndexByName(wf, name) == -1 {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
 			}
 		} else {
 			if r.findLustreFileSystemForPath(ctx, arg, r.Log) == nil {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Global Lustre file system containing '%s' not found", arg)).WithFatal()
+				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("global Lustre file system containing '%s' not found", arg)).WithFatal()
 			}
 		}
 
@@ -198,36 +198,84 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	args, err := dwdparse.BuildArgsMap(directive)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
+		return nnfv1alpha1.NewWorkflowError("invalid DW directive: " + directive).WithFatal()
 	}
 
-	// Find the wildcard JOB_DW and PERSISTENT_DW arguments
-	for arg, val := range args {
-		// log.Log.Info("BLAKE: arg", "arg", arg)
+	// Ensure the supplied profile exists or use the default
+	profile, err := findContainerProfileToUse(ctx, r.Client, args)
+	if err != nil {
+		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+	}
+
+	// Check to see if the container storage argument is in the list of storages in the container profile
+	checkStorageIsInProfile := func(storageName string) error {
+		for _, storage := range profile.Data.Storages {
+			if storage.Name == storageName {
+				return nil
+			}
+		}
+		return fmt.Errorf("storage '%s' not found in container profile '%s'", storageName, profile.Name)
+	}
+
+	// Find the wildcard JOB_DW and PERSISTENT_DW arguments. Verify that they exist in the
+	// preceeding directives and in the container profile. For persistent arguments, ensure there
+	// is a persistent storage instance.
+	var suppliedStorageArguments []string // use this list later to validate non-optional storages
+	for arg, storageName := range args {
 		switch arg {
 		case "command", "name", "profile":
 		default:
-			name := val
-			// log.Log.Info("BLAKE: ", "arg", arg, "fsname", name)
-			if strings.HasPrefix(arg, "$JOB_DW_") {
-				if findDirectiveIndexByName(wf, name) == -1 {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
+			if strings.HasPrefix(arg, "JOB_DW_") {
+				if findDirectiveIndexByName(wf, storageName) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
 				}
-			} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
-				if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
+				if err := checkStorageIsInProfile(arg); err != nil {
+					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 				}
-				if findDirectiveIndexByName(wf, name) == -1 {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
+			} else if strings.HasPrefix(arg, "PERSISTENT_DW_") {
+				if err := r.validatePersistentInstanceByName(ctx, storageName, wf.Namespace); err != nil {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
 				}
+				if findDirectiveIndexByName(wf, storageName) == -1 {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", storageName)).WithFatal()
+				}
+				if err := checkStorageIsInProfile(arg); err != nil {
+					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+				}
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
+			} else {
+				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("unrecognized container argument: %s", arg)).WithFatal()
 			}
-			// TODO: just ignore anything that doesn't start with JOB_DW/PERSISTENT_DW?
-			// TODO: global lustre?
 		}
 	}
 
-	// TODO: validate profile exists
-	// TODO: validate that supplied storage directives are in the profile storages
+	// Ensure that any storage in the profile that is non-optional is present in the supplied storage arguments
+	checkNonOptionalStorages := func(storageArguments []string) error {
+		findInStorageArguments := func(name string) bool {
+			for _, directive := range storageArguments {
+				if name == directive {
+					return true
+				}
+			}
+			return false
+		}
+
+		for _, storage := range profile.Data.Storages {
+			if !storage.Optional {
+				if !findInStorageArguments(storage.Name) {
+					return fmt.Errorf("storage '%s' in container profile '%s' is not optional: storage argument not found in the supplied arguments",
+						storage.Name, profile.Name)
+				}
+			}
+		}
+
+		return nil
+	}
+
+	if err := checkNonOptionalStorages(suppliedStorageArguments); err != nil {
+		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+	}
 
 	return nil
 }
