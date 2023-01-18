@@ -143,10 +143,6 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Create a pair of updaters for updating the NNF Node status and Storage status
-	nnfNodeStatusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](nnfNode)
-	defer func() { err = nnfNodeStatusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
-
 	storageStatusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.StorageStatus](storage)
 	defer func() { err = storageStatusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
@@ -156,18 +152,31 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	switch storage.Spec.State {
 	case dwsv1alpha1.EnabledState:
+
 		// Clear the fenced status if the node is enabled from a disabled status
 		if storage.Status.Status == dwsv1alpha1.DisabledStatus {
-			nnfNode.Status.Fenced = false
 
-			storage.Status.RebootRequired = false
-			storage.Status.Message = ""
+			if nnfNode.Status.Fenced {
+				log.Info("Clearing fencing status")
+
+				nnfNode.Status.Fenced = false
+
+				if err := r.Status().Update(ctx, nnfNode); err != nil {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{Requeue: true}, nil
+			}
 
 			// TODO: Fencing Agent Phase #2: Resume Rabbit NLC pods, wait for the pods to
 			//       resume, then change Node Status to Enabled
+
+			storage.Status.RebootRequired = false
+			storage.Status.Message = ""
 		}
 
 		if nnfNode.Status.Fenced {
+			log.Info("Fencing storage node")
 			storage.Status.Status = dwsv1alpha1.DegradedStatus
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
