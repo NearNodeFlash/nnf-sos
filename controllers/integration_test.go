@@ -1096,7 +1096,7 @@ var _ = Describe("Integration Test", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
-					"#DW copy_in source=/lus/maui/file destination=$JOB_DW_test-dm-0/file",
+					"#DW copy_in source=/lus/maui/file destination=$DW_JOB_test-dm-0/file",
 				}
 			})
 
@@ -1119,7 +1119,7 @@ var _ = Describe("Integration Test", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
-					"#DW copy_out source=$JOB_DW_test-dm-0/file destination=/lus/maui/file",
+					"#DW copy_out source=$DW_JOB_test-dm-0/file destination=/lus/maui/file",
 				}
 			})
 
@@ -1146,8 +1146,8 @@ var _ = Describe("Integration Test", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=test-dm-0 type=gfs2 capacity=1GiB",
-					"#DW copy_in source=/lus/maui/file destination=$JOB_DW_test-dm-0/file",
-					"#DW copy_out source=$JOB_DW_test-dm-0/file destination=/lus/maui/file",
+					"#DW copy_in source=/lus/maui/file destination=$DW_JOB_test-dm-0/file",
+					"#DW copy_out source=$DW_JOB_test-dm-0/file destination=/lus/maui/file",
 				}
 			})
 
@@ -1555,7 +1555,7 @@ var _ = Describe("Integration Test", func() {
 			})
 			BeforeEach(func() {
 				directives = []string{
-					"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_notThere/my-file.out",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_notThere/my-file.out",
 				}
 			})
 
@@ -1592,7 +1592,7 @@ var _ = Describe("Integration Test", func() {
 
 			BeforeEach(func() {
 				directives = []string{
-					"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_mpi/my-persistent-file.out",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_mpi/my-persistent-file.out",
 				}
 			})
 
