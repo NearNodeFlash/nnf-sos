@@ -80,6 +80,11 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	log = log.WithValues("gen", nnfNode.ObjectMeta.Generation)
+
+	log.Info("Starting Reconcile...")
+	defer log.Info("Ending Reconcile...")
+
 	// Check if the object is being deleted
 	if !nnfNode.GetDeletionTimestamp().IsZero() {
 		if !controllerutil.ContainsFinalizer(nnfNode, finalizerNnfNodeSLC) {
@@ -154,15 +159,19 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage.Status.Type = dwsv1alpha1.NVMe
 	storage.Status.Capacity = nnfNode.Status.Capacity
 
+	log.Info("Storage node", "state", storage.Spec.State, "status", storage.Status.Status, "fenced", nnfNode.Status.Fenced)
 	switch storage.Spec.State {
 	case dwsv1alpha1.EnabledState:
-		log.Info("Storage node enabled")
 
 		// Clear the fenced status if the node is enabled from a disabled status
 		if storage.Status.Status == dwsv1alpha1.DisabledStatus {
-			log.Info("Clearing fencing status")
 
-			nnfNode.Status.Fenced = false
+			if nnfNode.Status.Fenced {
+				log.Info("Clearing fencing status")
+				nnfNode.Status.Fenced = false
+
+				return ctrl.Result{Requeue: true}, nil
+			}
 
 			storage.Status.RebootRequired = false
 			storage.Status.Message = ""
@@ -172,7 +181,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		if nnfNode.Status.Fenced {
-			log.Info("Storage node fenced")
+			log.Info("Storage node is fenced")
 
 			storage.Status.Status = dwsv1alpha1.DegradedStatus
 			storage.Status.RebootRequired = true
@@ -186,7 +195,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			if !ready {
-				log.Info("Storage node offline")
+				log.Info("Storage node is offline")
 				storage.Status.Status = dwsv1alpha1.OfflineStatus
 				storage.Status.Message = "Kubernetes node is not ready"
 			} else {
@@ -196,7 +205,6 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	case dwsv1alpha1.DisabledState:
 		// TODO: Fencing Agent Phase #2: Pause Rabbit NLC pods, wait for pods to be
 		//       removed, then change Node Status to Disabled
-		log.Info("Storage node disabled")
 
 		storage.Status.Status = dwsv1alpha1.DisabledStatus
 		storage.Status.Message = "Storage node was manually disabled"
