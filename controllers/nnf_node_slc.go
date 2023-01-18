@@ -156,8 +156,12 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	switch storage.Spec.State {
 	case dwsv1alpha1.EnabledState:
+		log.Info("Storage node enabled")
+
 		// Clear the fenced status if the node is enabled from a disabled status
 		if storage.Status.Status == dwsv1alpha1.DisabledStatus {
+			log.Info("Clearing fencing status")
+
 			nnfNode.Status.Fenced = false
 
 			storage.Status.RebootRequired = false
@@ -168,6 +172,8 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		if nnfNode.Status.Fenced {
+			log.Info("Storage node fenced")
+
 			storage.Status.Status = dwsv1alpha1.DegradedStatus
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
@@ -180,6 +186,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			}
 
 			if !ready {
+				log.Info("Storage node offline")
 				storage.Status.Status = dwsv1alpha1.OfflineStatus
 				storage.Status.Message = "Kubernetes node is not ready"
 			} else {
@@ -189,6 +196,7 @@ func (r *NnfNodeSLCReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	case dwsv1alpha1.DisabledState:
 		// TODO: Fencing Agent Phase #2: Pause Rabbit NLC pods, wait for pods to be
 		//       removed, then change Node Status to Disabled
+		log.Info("Storage node disabled")
 
 		storage.Status.Status = dwsv1alpha1.DisabledStatus
 		storage.Status.Message = "Storage node was manually disabled"
