@@ -127,16 +127,16 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	//   #DW copy_out source=[SOURCE] destination=[DESTINATION]
 
 	// For each copy_in/copy_out directive
-	//   Make sure all $JOB_DW_ references point to job storage instance names
-	//   Make sure all $PERSISTENT_DW references an existing persistentdw instance
+	//   Make sure all $DW_JOB references point to job storage instance names
+	//   Make sure all $DW_PERSISTENT references an existing persistentdw instance
 	//   Otherwise, make sure source/destination is prefixed with a valid global lustre file system
 	validateStagingArgument := func(arg string) error {
 		name, _ := splitStagingArgumentIntoNameAndPath(arg)
-		if strings.HasPrefix(arg, "$JOB_DW_") {
+		if strings.HasPrefix(arg, "$DW_JOB_") {
 			if findDirectiveIndexByName(wf, name) == -1 {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
 			}
-		} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
+		} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
 			if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
 			}
@@ -576,7 +576,7 @@ func findCopyOutDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string
 		if strings.HasPrefix(directive, "#DW copy_out") {
 			parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
 
-			srcName, _ := splitStagingArgumentIntoNameAndPath(parameters["source"]) // i.e. source=$JOB_DW_[name]
+			srcName, _ := splitStagingArgumentIntoNameAndPath(parameters["source"]) // i.e. source=$DW_JOB_[name]
 			if srcName == name {
 				return idx
 			}
@@ -587,14 +587,14 @@ func findCopyOutDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string
 }
 
 // Returns a <name, path> pair for the given staging argument (typically source or destination)
-// i.e. $JOB_DW_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
+// i.e. $DW_JOB_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
 func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
 	var name = ""
-	if strings.HasPrefix(arg, "$JOB_DW_") {
-		name = strings.SplitN(strings.Replace(arg, "$JOB_DW_", "", 1), "/", 2)[0]
-	} else if strings.HasPrefix(arg, "$PERSISTENT_DW_") {
-		name = strings.SplitN(strings.Replace(arg, "$PERSISTENT_DW_", "", 1), "/", 2)[0]
+	if strings.HasPrefix(arg, "$DW_JOB_") {
+		name = strings.SplitN(strings.Replace(arg, "$DW_JOB_", "", 1), "/", 2)[0]
+	} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
+		name = strings.SplitN(strings.Replace(arg, "$DW_PERSISTENT_", "", 1), "/", 2)[0]
 	}
 	var path = "/"
 	if strings.Count(arg, "/") >= 1 {

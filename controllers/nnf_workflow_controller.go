@@ -450,13 +450,13 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	}
 
 	// NOTE: We don't need to check for the occurrence of a source or destination parameters since these are required fields and validated through the webhook
-	// NOTE: We don't need to validate destination has $JOB_DW_ since this is done during the proposal stage
+	// NOTE: We don't need to validate destination has $DW_JOB_ since this is done during the proposal stage
 
 	// copy_in needs to handle four cases
-	// 1. Lustre to JobStorageInstance                              #DW copy_in source=[path] destination=$JOB_DW_[name]/[path]
-	// 2. Lustre to PersistentStorageInstance                       #DW copy_in source=[path] destination=$PERSISTENT_DW_[name]/[path]
-	// 3. PersistentStorageInstance to JobStorageInstance           #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$JOB_DW_[name]/[path]
-	// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$PERSISTENT_DW_[name]/[path] destination=$PERSISTENT_DW_[name]/[path]
+	// 1. Lustre to JobStorageInstance                              #DW copy_in source=[path] destination=$DW_JOB_[name]/[path]
+	// 2. Lustre to PersistentStorageInstance                       #DW copy_in source=[path] destination=$DW_PERSISTENT_[name]/[path]
+	// 3. PersistentStorageInstance to JobStorageInstance           #DW copy_in source=$DW_PERSISTENT_[name]/[path] destination=$DW_JOB_[name]/[path]
+	// 4. PersistentStorageInstance to PersistentStorageInstance    #DW copy_in source=$DW_PERSISTENT_[name]/[path] destination=$DW_PERSISTENT_[name]/[path]
 	// copy_out is the same, but typically source and destination are reversed
 
 	// Prepare the provided staging parameter for data-movement. Param is the source/destination value from the #DW copy_in/copy_out directive; based
@@ -468,7 +468,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		// If param refers to a Job or Persistent storage type, find the NNF Storage that is backing
 		// this directive line.
-		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
+		if strings.HasPrefix(param, "$DW_JOB_") || strings.HasPrefix(param, "$DW_PERSISTENT_") {
 
 			// Find the parent directive index that corresponds to this copy_in/copy_out directive
 			parentDwIndex := findDirectiveIndexByName(workflow, name)
@@ -479,7 +479,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			// If directive specifies a persistent storage instance, `name` will be the nnfStorageName
 			// Otherwise it matches the workflow with the directive index as a suffix
 			var nnfStorageName string
-			if strings.HasPrefix(param, "$PERSISTENT_DW_") {
+			if strings.HasPrefix(param, "$DW_PERSISTENT_") {
 				nnfStorageName = name
 			} else {
 				nnfStorageName = indexedResourceName(workflow, parentDwIndex)
@@ -739,7 +739,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	unmountIfNecessary := func(param string) (*result, error) {
 		name, _ := splitStagingArgumentIntoNameAndPath(param)
 
-		if strings.HasPrefix(param, "$JOB_DW_") || strings.HasPrefix(param, "$PERSISTENT_DW_") {
+		if strings.HasPrefix(param, "$DW_JOB_") || strings.HasPrefix(param, "$DW_PERSISTENT_") {
 			parentDwIndex := findDirectiveIndexByName(workflow, name)
 			if parentDwIndex < 0 {
 				return nil, nnfv1alpha1.NewWorkflowErrorf("No directive matching '%s' found in workflow", name).WithFatal()
@@ -818,7 +818,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// Create an NnfAccess for the servers resources if necessary. Shared storage like
 	// that of GFS2 provides access to the Rabbit for the lifetime of the user's job.
 	// NnfAccess may already be present if a data_in directive was specified for the
-	// particular $JOB_DW_[name]; in this case we only need to recreate the resource
+	// particular $DW_JOB_[name]; in this case we only need to recreate the resource
 
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {

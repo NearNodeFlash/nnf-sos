@@ -256,7 +256,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		It("Fails missing or malformed jobdw reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW jobdw name=test type=lustre capacity=1GiB",
-				"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_INCORRECT/my-file.out",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_INCORRECT/my-file.out",
 			}
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
@@ -272,7 +272,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		It("Fails missing or malformed persistentdw reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW create_persistent name=test type=lustre capacity=1GiB",
-				"#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_INCORRECT/my-file.out",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_INCORRECT/my-file.out",
 			}
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
@@ -287,7 +287,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		It("Fails missing or malformed global lustre reference", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW jobdw name=test type=lustre capacity=1GiB",
-				"#DW copy_in source=/lus/INCORRECT/my-file.in destination=$JOB_DW_test/my-file.out",
+				"#DW copy_in source=/lus/INCORRECT/my-file.in destination=$DW_JOB_test/my-file.out",
 			}
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
@@ -354,12 +354,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
 		})
 
-		When("using $JOB_DW_ references", func() {
+		When("using $DW_JOB_ references", func() {
 
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=test type=lustre capacity=1GiB",
-					"#DW copy_in source=/lus/maui/my-file.in destination=$JOB_DW_test/my-file.out",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test/my-file.out",
 				}
 			})
 
@@ -404,7 +404,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 
-		When("using $PERSISTENT_DW_ references", func() {
+		When("using $DW_PERSISTENT_ references", func() {
 			persistentStorageName := "my-persistent-storage"
 
 			createPersistentStorageInstance := func() {
@@ -473,7 +473,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
-					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$PERSISTENT_DW_%s/my-persistent-file.out", persistentStorageName),
+					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", persistentStorageName),
 				}
 
 				createPersistentStorageInstance()
