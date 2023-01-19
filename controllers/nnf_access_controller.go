@@ -553,6 +553,9 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 					mountInfo.Type = "none"
 					mountInfo.TargetType = "file"
 					mountInfo.Options = "bind"
+					mountInfo.UserID = access.Spec.UserID
+					mountInfo.GroupID = access.Spec.GroupID
+					mountInfo.SetPermissions = true
 				} else {
 					mountInfo.TargetType = "directory"
 					mountInfo.Type = nnfStorage.Spec.FileSystemType

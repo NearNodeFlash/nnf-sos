@@ -782,6 +782,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 			access.Spec.TeardownState = dwsv1alpha1.StatePostRun
 			access.Spec.DesiredState = "mounted"
+			access.Spec.UserID = workflow.Spec.UserID
+			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
 			access.Spec.MountPath = buildMountPath(workflow, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
