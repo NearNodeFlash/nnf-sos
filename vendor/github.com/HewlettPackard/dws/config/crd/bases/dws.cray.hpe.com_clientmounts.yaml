@@ -170,12 +170,20 @@ spec:
                       required:
                       - type
                       type: object
+                    groupID:
+                      description: GroupID to set for the mount
+                      format: int32
+                      type: integer
                     mountPath:
                       description: Client path for mount target
                       type: string
                     options:
                       description: Options for the file system mount
                       type: string
+                    setPermissions:
+                      description: SetPermissions will set UserID and GroupID on the
+                        mount if true
+                      type: boolean
                     targetType:
                       description: TargetType determines whether the mount target
                         is a file or a directory
@@ -191,10 +199,15 @@ spec:
                       - gfs2
                       - none
                       type: string
+                    userID:
+                      description: UserID to set for the mount
+                      format: int32
+                      type: integer
                   required:
                   - device
                   - mountPath
                   - options
+                  - setPermissions
                   - targetType
                   - type
                   type: object

@@ -96,6 +96,10 @@ spec:
                 - mounted
                 - unmounted
                 type: string
+              groupID:
+                description: GroupID for the new mount. Currently only used for raw
+                format: int32
+                type: integer
               mountPath:
                 description: MountPath for the storage target on the client
                 type: string
@@ -166,11 +170,17 @@ spec:
                 description: TeardownState is the desired state of the workflow for
                   this NNF Access resource to be torn down and deleted.
                 type: string
+              userID:
+                description: UserID for the new mount. Currently only used for raw
+                format: int32
+                type: integer
             required:
             - desiredState
+            - groupID
             - storageReference
             - target
             - teardownState
+            - userID
             type: object
           status:
             description: NnfAccessStatus defines the observed state of NnfAccess

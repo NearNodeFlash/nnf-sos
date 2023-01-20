@@ -45,6 +45,12 @@ type NnfAccessSpec struct {
 	// +kubebuilder:validation:Enum=single;all
 	Target string `json:"target"`
 
+	// UserID for the new mount. Currently only used for raw
+	UserID uint32 `json:"userID"`
+
+	// GroupID for the new mount. Currently only used for raw
+	GroupID uint32 `json:"groupID"`
+
 	// ClientReference is for a client resource. (DWS) Computes is the only client
 	// resource type currently supported
 	ClientReference corev1.ObjectReference `json:"clientReference,omitempty"`
