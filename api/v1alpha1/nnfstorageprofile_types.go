@@ -105,8 +105,29 @@ type NnfStorageProfileCmdLines struct {
 	// VgCreate specifies the vgcreate commandline, minus the "vgcreate".
 	VgCreate string `json:"vgCreate,omitempty"`
 
+	// VgChange specifies the various vgchange commandlines, minus the "vgchange"
+	VgChange NnfStorageProfileLVMVgChangeCmdLines `json:"vgChange,omitempty"`
+
+	// VgCreate specifies the vgcreate commandline, minus the "vgremove".
+	VgRemove string `json:"vgRemove,omitempty"`
+
 	// LvCreate specifies the lvcreate commandline, minus the "lvcreate".
 	LvCreate string `json:"lvCreate,omitempty"`
+
+	// LvRemove specifies the lvcreate commandline, minus the "lvremove".
+	LvRemove string `json:"lvRemove,omitempty"`
+}
+
+// NnfStorageProfileLVMVgChangeCmdLines
+type NnfStorageProfileLVMVgChangeCmdLines struct {
+	// The vgchange commandline for activation, minus the "vgchange" command
+	Activate string `json:"activate,omitempty"`
+
+	// The vgchange commandline for deactivation, minus the "vgchange" command
+	Deactivate string `json:"deactivate,omitempty"`
+
+	// The vgchange commandline for lockStart, minus the "vgchange" command
+	LockStart string `json:"lockStart,omitempty"`
 }
 
 // NnfStorageProfileMiscOptions defines options to use for the mount library, and other utilities.

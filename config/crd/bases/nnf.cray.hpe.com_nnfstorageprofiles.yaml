@@ -52,6 +52,10 @@ spec:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
                         type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -60,9 +64,30 @@ spec:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
                         type: string
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          activate:
+                            description: The vgchange commandline for activation,
+                              minus the "vgchange" command
+                            type: string
+                          deactivate:
+                            description: The vgchange commandline for deactivation,
+                              minus the "vgchange" command
+                            type: string
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
                       vgCreate:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
                         type: string
                     type: object
                   options:
@@ -257,6 +282,10 @@ spec:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
                         type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -265,9 +294,30 @@ spec:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
                         type: string
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          activate:
+                            description: The vgchange commandline for activation,
+                              minus the "vgchange" command
+                            type: string
+                          deactivate:
+                            description: The vgchange commandline for deactivation,
+                              minus the "vgchange" command
+                            type: string
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
                       vgCreate:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
                         type: string
                     type: object
                 type: object
@@ -282,6 +332,10 @@ spec:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
                         type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -290,9 +344,30 @@ spec:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
                         type: string
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          activate:
+                            description: The vgchange commandline for activation,
+                              minus the "vgchange" command
+                            type: string
+                          deactivate:
+                            description: The vgchange commandline for deactivation,
+                              minus the "vgchange" command
+                            type: string
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
                       vgCreate:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
                         type: string
                     type: object
                   options:

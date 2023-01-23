@@ -482,7 +482,14 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		oem.MkfsMount.Mkfs = c.Mkfs
 		oem.LvmCmd.PvCreate = c.PvCreate
 		oem.LvmCmd.VgCreate = c.VgCreate
+		oem.LvmCmd.VgChange = nnfserver.FileSystemOemVgChange{
+			Activate:   c.VgChange.Activate,
+			Deactivate: c.VgChange.Deactivate,
+			LockStart:  c.VgChange.LockStart,
+		}
+		oem.LvmCmd.VgRemove = c.VgRemove
 		oem.LvmCmd.LvCreate = c.LvCreate
+		oem.LvmCmd.LvRemove = c.LvRemove
 	}
 
 	setOpts := func(c *nnfv1alpha1.NnfStorageProfileMiscOptions) {
