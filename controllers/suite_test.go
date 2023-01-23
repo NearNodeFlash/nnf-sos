@@ -246,9 +246,9 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&NnfNodeSLCReconciler{
+	err = (&DWSStorageReconciler{
 		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeSLC"),
+		Log:    ctrl.Log.WithName("controllers").WithName("Storage"),
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

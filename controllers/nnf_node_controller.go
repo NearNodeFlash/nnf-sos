@@ -161,6 +161,29 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 				return err
 			}
 		}
+
+		storage := &dwsv1alpha1.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.Namespace,
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			log := r.Log.WithValues("resource", client.ObjectKeyFromObject(storage))
+
+			if !errors.IsNotFound(err) {
+				log.Error(err, "get storage resource failed")
+				return err
+			}
+
+			if err := r.Create(ctx, storage); err != nil {
+				log.Error(err, "create storage resource failed")
+				return err
+			}
+
+			log.Info("created storage resource")
+		}
 	}
 
 	// Subscribe to the NNF Event Manager
