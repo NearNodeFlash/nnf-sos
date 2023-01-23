@@ -133,14 +133,29 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 	validateStagingArgument := func(arg string) error {
 		name, _ := splitStagingArgumentIntoNameAndPath(arg)
 		if strings.HasPrefix(arg, "$DW_JOB_") {
-			if findDirectiveIndexByName(wf, name) == -1 {
+			index := findDirectiveIndexByName(wf, name, "jobdw")
+			if index == -1 {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
 			}
+
+			args, err := dwdparse.BuildArgsMap(wf.Spec.DWDirectives[index])
+			if err != nil {
+				return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + wf.Spec.DWDirectives[index]).WithFatal()
+			}
+
+			fsType, exists := args["type"]
+			if !exists {
+				return nnfv1alpha1.NewWorkflowError("Invalid DW directive match for staging argument")
+			}
+
+			if fsType == "raw" {
+				return nnfv1alpha1.NewWorkflowError("Data movement can not be used with raw allocations").WithFatal()
+			}
 		} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
-			if err := r.validatePersistentInstanceByName(ctx, name, wf.Namespace); err != nil {
+			if err := r.validatePersistentInstanceForStaging(ctx, name, wf.Namespace); err != nil {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
 			}
-			if findDirectiveIndexByName(wf, name) == -1 {
+			if findDirectiveIndexByName(wf, name, "persistentdw") == -1 {
 				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
 			}
 		} else {
@@ -169,6 +184,20 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 }
 
 // validatePersistentInstance validates the persistentdw directive.
+func (r *NnfWorkflowReconciler) validatePersistentInstanceForStaging(ctx context.Context, name string, namespace string) error {
+	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
+	if err != nil {
+		return err
+	}
+
+	if psi.Spec.FsType == "raw" {
+		return nnfv1alpha1.NewWorkflowError("Data movement can not be used with raw allocations").WithFatal()
+	}
+
+	return nil
+}
+
+// validatePersistentInstance validates the persistentdw directive.
 func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
 	// Validate that the persistent instance is available and not in the process of being deleted
 	args, err := dwdparse.BuildArgsMap(directive)
@@ -176,18 +205,13 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.
 		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
 	}
 
-	return r.validatePersistentInstanceByName(ctx, args["name"], wf.Namespace)
-}
-
-// validatePersistentInstance validates the persistentdw directive.
-func (r *NnfWorkflowReconciler) validatePersistentInstanceByName(ctx context.Context, name string, namespace string) error {
-	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
+	psi, err := r.getPersistentStorageInstance(ctx, args["name"], wf.Namespace)
 	if err != nil {
 		return err
 	}
 
 	if !psi.DeletionTimestamp.IsZero() {
-		return nnfv1alpha1.NewWorkflowError("Persistent storage instance " + name + " is deleting").WithFatal()
+		return nnfv1alpha1.NewWorkflowError("Persistent storage instance " + args["name"] + " is deleting").WithFatal()
 	}
 
 	return nil
@@ -559,10 +583,10 @@ func handleWorkflowError(err error, driverStatus *dwsv1alpha1.WorkflowDriverStat
 }
 
 // Returns the directive index with the 'name' argument matching name, or -1 if not found
-func findDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
+func findDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string, command string) int {
 	for idx, directive := range workflow.Spec.DWDirectives {
 		parameters, _ := dwdparse.BuildArgsMap(directive)
-		if parameters["name"] == name {
+		if parameters["name"] == name && parameters["command"] == command {
 			return idx
 		}
 	}
