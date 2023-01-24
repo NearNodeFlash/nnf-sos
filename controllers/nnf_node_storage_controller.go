@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -388,7 +389,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 			if len(allocationStatus.StorageGroup.ID) == 0 {
-				log.Info("Created storage group", "storageGroupID", storageGroupID)
+				log.Info("Created storage group", "Id", storageGroupID)
 				allocationStatus.StorageGroup.ID = sg.Id
 				condition.LastTransitionTime = metav1.Now()
 				condition.Status = metav1.ConditionFalse // we are finished with this state
@@ -583,8 +584,16 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		updateError(condition, &allocationStatus.FileShare, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err).WithFatal()
+		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err)
 		log.Info(nodeStorage.Status.Error.Error())
+
+		ecErr := &ec.ControllerError{}
+		if errors.As(err, &ecErr) && ecErr.IsRetryable() {
+			return &ctrl.Result{RequeueAfter: ecErr.RetryDelay()}, nil
+		}
+
+		// NJT: If this is really Fatal, we shouldn't retry. Are all the nnf-ec errors reporting Retryable correctly?
+		nodeStorage.Status.Error = nodeStorage.Status.Error.WithFatal()
 
 		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
 	}
