@@ -471,7 +471,14 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		if strings.HasPrefix(param, "$DW_JOB_") || strings.HasPrefix(param, "$DW_PERSISTENT_") {
 
 			// Find the parent directive index that corresponds to this copy_in/copy_out directive
-			parentDwIndex := findDirectiveIndexByName(workflow, name)
+			parentDwIndex := 0
+
+			if strings.HasPrefix(param, "$DW_PERSISTENT_") {
+				parentDwIndex = findDirectiveIndexByName(workflow, name, "persistentdw")
+			} else {
+				parentDwIndex = findDirectiveIndexByName(workflow, name, "jobdw")
+			}
+
 			if parentDwIndex < 0 {
 				return nil, nil, nil, nnfv1alpha1.NewWorkflowError("No directive matching '" + name + "' found in workflow").WithFatal()
 			}
@@ -740,7 +747,13 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		name, _ := splitStagingArgumentIntoNameAndPath(param)
 
 		if strings.HasPrefix(param, "$DW_JOB_") || strings.HasPrefix(param, "$DW_PERSISTENT_") {
-			parentDwIndex := findDirectiveIndexByName(workflow, name)
+			parentDwIndex := 0
+			if strings.HasPrefix(param, "$DW_PERSISTENT_") {
+				parentDwIndex = findDirectiveIndexByName(workflow, name, "persistentdw")
+			} else {
+				parentDwIndex = findDirectiveIndexByName(workflow, name, "jobdw")
+			}
+
 			if parentDwIndex < 0 {
 				return nil, nnfv1alpha1.NewWorkflowErrorf("No directive matching '%s' found in workflow", name).WithFatal()
 			}
