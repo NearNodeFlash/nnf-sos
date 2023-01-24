@@ -26,6 +26,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/mount-utils"
@@ -33,8 +34,13 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/logging"
 )
 
+const (
+	UserID  = "userID"
+	GroupID = "groupID"
+)
+
 type FileSystemControllerApi interface {
-	NewFileSystem(oem FileSystemOem) (FileSystemApi, error)
+	NewFileSystem(oem *FileSystemOem) (FileSystemApi, error)
 }
 
 func NewFileSystemController(config *ConfigFile) FileSystemControllerApi {
@@ -46,7 +52,7 @@ type fileSystemController struct {
 }
 
 // NewFileSystem -
-func (c *fileSystemController) NewFileSystem(oem FileSystemOem) (FileSystemApi, error) {
+func (c *fileSystemController) NewFileSystem(oem *FileSystemOem) (FileSystemApi, error) {
 	return FileSystemRegistry.NewFileSystem(oem)
 }
 
@@ -74,8 +80,8 @@ type FileSystemOptions = map[string]interface{}
 type FileSystemApi interface {
 	New(oem FileSystemOem) (FileSystemApi, error)
 
-	IsType(oem FileSystemOem) bool // Returns true if the provided oem fields match the file system type, false otherwise
-	IsMockable() bool              // Returns true if the file system can be instantiated by the mock server, false otherwise
+	IsType(oem *FileSystemOem) bool // Returns true if the provided oem fields match the file system type, false otherwise
+	IsMockable() bool   // Returns true if the file system can be instantiated by the mock server, false otherwise
 
 	Type() string
 	Name() string
@@ -83,6 +89,8 @@ type FileSystemApi interface {
 	Create(devices []string, opts FileSystemOptions) error
 	Delete() error
 
+	MkfsDefault() string
+	
 	Mount(mountpoint string) error
 	Unmount(mountpoint string) error
 
@@ -117,6 +125,7 @@ func (f *FileSystem) mount(source string, target string, fstype string, options 
 	if !mounted {
 		if err := mounter.Mount(source, target, fstype, options); err != nil {
 			log.Errorf("Mount failed: %v", err)
+			return err
 		}
 	}
 
@@ -232,14 +241,39 @@ type FileSystemOemGfs2 struct {
 // File System OEM defines the structure that is expected to be included inside a
 // Redfish / Swordfish FileSystemV122FileSystem
 type FileSystemOem struct {
-	Type   string              `json:"Type"`
-	Name   string              `json:"Name"`
+	Type string `json:"Type"`
+	Name string `json:"Name"`
+
 	Lustre FileSystemOemLustre `json:"Lustre,omitempty"`
 	Gfs2   FileSystemOemGfs2   `json:"Gfs2,omitempty"`
 
 	LvmCmd    FileSystemOemLvm       `json:"Lvm,omitempty"`
 	MkfsMount FileSystemOemMkfsMount `json:"MkfsMount,omitempty"`
 	ZfsCmd    FileSystemOemZfs       `json:"Zfs,omitempty"`
+}
+
+func (oem *FileSystemOem) IsEmpty() bool {
+	return reflect.DeepEqual(oem, &FileSystemOem{Type: oem.Type, Name: oem.Name})
+}
+
+func (oem *FileSystemOem) LoadDefaults(fs FileSystemApi) {
+	oem.LvmCmd = FileSystemOemLvm{
+		PvCreate: "$DEVICE",
+		VgCreate: "$VG_NAME $DEVICE_LIST",
+		LvCreate: "--extents 100%VG --stripes $DEVICE_NUM --stripesize 32KiB --name $LV_NAME $VG_NAME",
+	}
+
+	oem.Gfs2 = FileSystemOemGfs2{
+		ClusterName: "$CLUSTER_NAME",
+	}
+
+	oem.ZfsCmd = FileSystemOemZfs{
+		ZpoolCreate: "-O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST",
+	}
+
+	oem.MkfsMount = FileSystemOemMkfsMount{
+		Mkfs: fs.MkfsDefault(),
+	}
 }
 
 // File System Registry - Maintains a list of eligible file systems registered in the system.
@@ -266,22 +300,22 @@ func (r *fileSystemRegistry) RegisterFileSystem(fileSystem FileSystemApi) {
 	*r = append(*r, fileSystem)
 }
 
-func (r *fileSystemRegistry) NewFileSystem(oem FileSystemOem) (FileSystemApi, error) {
+func (r *fileSystemRegistry) NewFileSystem(oem *FileSystemOem) (FileSystemApi, error) {
 	for _, fs := range *r {
 		if fs.IsType(oem) {
-			return fs.New(oem)
+
+			if oem.IsEmpty() {
+				oem.LoadDefaults(fs)
+			}
+
+			return fs.New(*oem)
 		}
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("file systems '%s' not supported", oem.Type)
 }
 
 func setFileSystemPermissions(f FileSystemApi, opts FileSystemOptions) (err error) {
-	const (
-		UserID  = "userID"
-		GroupID = "groupID"
-	)
-
 	userID := 0
 	if _, exists := opts[UserID]; exists {
 		userID = opts[UserID].(int)

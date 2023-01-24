@@ -246,7 +246,7 @@ func (r *DefaultApiRouter) Routes() ec.Routes {
 		},
 		{
 			Name:        "RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdDelete",
-			Method:      ec.GET_METHOD,
+			Method:      ec.DELETE_METHOD,
 			Path:        "/redfish/v1/StorageServices/{StorageServiceId}/FileSystems/{FileSystemsId}/ExportedFileShares/{ExportedFileSharesId}",
 			HandlerFunc: s.RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesExportedFileSharesIdDelete,
 		},
