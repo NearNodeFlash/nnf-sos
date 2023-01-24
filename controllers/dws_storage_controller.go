@@ -134,12 +134,20 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Populate compute status'
 	if len(node.Status.Servers) > 1 {
-		storage.Status.Access.Computes = make([]dwsv1alpha1.Node, len(node.Status.Servers)-1)
-		for idx, server := range node.Status.Servers[1:] /*Skip Rabbit*/ {
-			compute := &storage.Status.Access.Computes[idx]
+		storage.Status.Access.Computes = make([]dwsv1alpha1.Node, 0)
+		for _, server := range node.Status.Servers[1:] /*Skip Rabbit*/ {
 
-			compute.Name = server.Hostname
-			compute.Status = server.Status.ConvertToDWSResourceStatus()
+			// Servers that are unassigned in the system configuration will
+			// not have a hostname and should be skipped.
+			if len(server.Hostname) == 0 {
+				continue
+			}
+
+			storage.Status.Access.Computes = append(storage.Status.Access.Computes,
+				dwsv1alpha1.Node{
+					Name:   server.Hostname,
+					Status: server.Status.ConvertToDWSResourceStatus(),
+				})
 		}
 	}
 
@@ -151,7 +159,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		device.Slot = drive.Slot
 		device.Status = drive.Status.ConvertToDWSResourceStatus()
 
-		if drive.Status == nnfv1alpha1.ResourceEnabled {
+		if drive.Status == nnfv1alpha1.ResourceReady {
 			wearLevel := drive.WearLevel
 			device.Model = drive.Model
 			device.SerialNumber = drive.SerialNumber
