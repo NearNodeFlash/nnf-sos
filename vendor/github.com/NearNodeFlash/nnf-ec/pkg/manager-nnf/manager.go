@@ -1202,7 +1202,7 @@ func (*StorageService) StorageServiceIdFileSystemsPost(storageServiceId string, 
 		return ec.NewErrBadRequest().WithResourceType(FileSystemOdataType).WithError(err).WithEvent(msgreg.MalformedJSONBase())
 	}
 
-	fsApi, err := server.FileSystemController.NewFileSystem(oem)
+	fsApi, err := server.FileSystemController.NewFileSystem(&oem)
 	if err != nil {
 		return ec.NewErrNotAcceptable().WithResourceType(FileSystemOdataType).WithError(err).WithCause("File system '%s' failed to allocate").WithEvent(msgreg.InternalErrorBase())
 	}
@@ -1408,7 +1408,6 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedShareIdPut(storageSer
 	ep := s.findEndpoint(endpointId)
 	if ep == nil {
 		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.ResourceNotFoundBase(EndpointOdataType, endpointId))
-
 	}
 
 	sp := s.findStoragePool(fs.storagePoolId)

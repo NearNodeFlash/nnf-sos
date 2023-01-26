@@ -442,14 +442,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		condition.LastTransitionTime = metav1.Now()
 	}
 
-	var fsType string
-	if nodeStorage.Spec.FileSystemType == "raw" {
-		fsType = "lvm"
-	} else {
-		fsType = nodeStorage.Spec.FileSystemType
-	}
 	oem := nnfserver.FileSystemOem{
-		Type: fsType,
+		Type: nodeStorage.Spec.FileSystemType,
 	}
 
 	if oem.Type == "lustre" {
@@ -514,7 +508,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		setOpts(&nnfStorageProfile.Data.XFSStorage.Options)
 	}
 
-	if oem.Type == "lvm" {
+	if oem.Type == "raw" {
 		setCmdLines(&nnfStorageProfile.Data.RawStorage.CmdLines)
 	}
 
