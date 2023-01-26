@@ -86,6 +86,10 @@ func (*FileSystemGfs2) Type() string                   { return "gfs2" }
 
 func (f *FileSystemGfs2) Name() string { return f.name }
 
+func (*FileSystemGfs2) VgChangeActivateDefault() string {
+	return "--activate sy $VG_NAME"
+}
+
 func (*FileSystemGfs2) MkfsDefault() string {
 	return "-j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE"
 }

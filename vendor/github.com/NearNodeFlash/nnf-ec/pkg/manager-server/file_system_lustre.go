@@ -88,6 +88,8 @@ func (*FileSystemLustre) Type() string     { return "lustre" }
 
 func (f *FileSystemLustre) Name() string { return f.name }
 
+func (f *FileSystemLustre) VgChangeActivateDefault() string { return "" }
+
 func (f *FileSystemLustre) MkfsDefault() string {
 	return map[string]string{
 		TargetMGT:    "--mgs $VOL_NAME",

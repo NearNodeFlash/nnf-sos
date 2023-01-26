@@ -43,6 +43,7 @@ func (*FileSystemZfs) Type() string                   { return "zfs" }
 
 func (f *FileSystemZfs) Name() string { return f.name }
 
+func (f *FileSystemZfs) VgChangeActivateDefault() string { return "" }
 func (f *FileSystemZfs) MkfsDefault() string { return "" }
 
 func (f *FileSystemZfs) Create(devices []string, options FileSystemOptions) error {
