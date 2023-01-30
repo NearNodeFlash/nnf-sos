@@ -695,7 +695,7 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 	// find it in the cache and it really does exist, we'll eventually get an event from the API server and
 	// do the unmount then.
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-		return nil, nil
+		return nil, client.IgnoreNotFound(err)
 	}
 
 	teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
