@@ -35,7 +35,7 @@ type NnfAccessSpec struct {
 
 	// TeardownState is the desired state of the workflow for this NNF Access resource to
 	// be torn down and deleted.
-	// +kubebuilder:validation:Enum:=DataIn;PreRun;PostRun;DataOut
+	// +kubebuilder:validation:Enum:=PreRun;PostRun;Teardown
 	// +kubebuilder:validation:Type:=string
 	TeardownState dwsv1alpha1.WorkflowState `json:"teardownState"`
 

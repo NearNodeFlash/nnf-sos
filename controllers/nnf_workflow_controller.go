@@ -515,17 +515,17 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			// when to teardown an NNF Access for the servers
 			var teardownState dwsv1alpha1.WorkflowState
 			if dwArgs["command"] == "copy_in" {
-				teardownState = dwsv1alpha1.StateDataIn
+				teardownState = dwsv1alpha1.StatePreRun
 
 				if fsType == "gfs2" || fsType == "lustre" {
 					teardownState = dwsv1alpha1.StatePostRun
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
-						teardownState = dwsv1alpha1.StateDataOut
+						teardownState = dwsv1alpha1.StateTeardown
 					}
 				}
 			} else if dwArgs["command"] == "copy_out" {
-				teardownState = dwsv1alpha1.StateDataOut
+				teardownState = dwsv1alpha1.StateTeardown
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
@@ -736,48 +736,24 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 		}
 	}
 
-	// Unmount any NNF Accesses that are no longer needed and cannot be shared (i.e. an XFS volume)
-	// These NNF Accesses should have a teardown label with the current data_in/data_out state.
-	dwArgs, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("Invalid DW directive index %d: %s", index, workflow.Spec.DWDirectives[index]).WithFatal()
-	}
-
-	unmountIfNecessary := func(param string) (*result, error) {
-		name, _ := splitStagingArgumentIntoNameAndPath(param)
-
-		if strings.HasPrefix(param, "$DW_JOB_") || strings.HasPrefix(param, "$DW_PERSISTENT_") {
-			parentDwIndex := 0
-			if strings.HasPrefix(param, "$DW_PERSISTENT_") {
-				parentDwIndex = findDirectiveIndexByName(workflow, name, "persistentdw")
-			} else {
-				parentDwIndex = findDirectiveIndexByName(workflow, name, "jobdw")
-			}
-
-			if parentDwIndex < 0 {
-				return nil, nnfv1alpha1.NewWorkflowErrorf("No directive matching '%s' found in workflow", name).WithFatal()
-			}
-
-			return r.unmountNnfAccessIfNecessary(ctx, workflow, parentDwIndex, "servers")
-		}
-
-		return nil, nil
-	}
-
-	if result, err := unmountIfNecessary(dwArgs["source"]); result != nil || err != nil {
-		return result, err
-	}
-
-	if result, err := unmountIfNecessary(dwArgs["destination"]); result != nil || err != nil {
-		return result, err
-	}
-
 	return nil, nil
 }
 
 func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	// If there's an NnfAccess for the servers that needs to be unmounted, do it now. This is
+	// required for XFS mounts where the compute node and Rabbit can't be mounted at the same
+	// time.
+	unmountResult, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers")
+	if err != nil {
+		return nil, err
+	}
+
+	if unmountResult != nil {
+		return unmountResult, nil
+	}
 
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
@@ -855,7 +831,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		// DataOut.
 		teardownState := dwsv1alpha1.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
-			teardownState = dwsv1alpha1.StateDataOut
+			teardownState = dwsv1alpha1.StateTeardown
 		}
 
 		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)

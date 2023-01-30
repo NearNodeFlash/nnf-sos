@@ -691,9 +691,11 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 		},
 	}
 
+	// Check if the NnfAccess exists. If it doesn't, then we don't need to unmount anything. If we didn't
+	// find it in the cache and it really does exist, we'll eventually get an event from the API server and
+	// do the unmount then.
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-		err = fmt.Errorf("Could not get NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
-		return nil, nnfv1alpha1.NewWorkflowError("Unable to find compute node mount information").WithError(err)
+		return nil, nil
 	}
 
 	teardownState, found := access.Labels[nnfv1alpha1.DataMovementTeardownStateLabel]
@@ -709,6 +711,10 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 
 				return Requeue("conflict").withObject(access), nil
 			}
+		}
+
+		if access.Status.State != "unmounted" || !access.Status.Ready {
+			return Requeue("pending unmount").withObject(access), nil
 		}
 	}
 

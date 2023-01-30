@@ -1130,11 +1130,11 @@ var _ = Describe("Integration Test", func() {
 				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun, workflow)
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateTeardown)
 
 				By("Advancing to post run, ensure NNF Access is still set for deletion in data-out")
 				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun, workflow)
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateTeardown)
 
 				By("Advancing to data-out, ensure NNF Access is deleted")
 				advanceStateAndCheckReady(dwsv1alpha1.StateDataOut, workflow)
@@ -1155,7 +1155,7 @@ var _ = Describe("Integration Test", func() {
 				Expect(workflow.Status.State).To(Equal(dwsv1alpha1.StateDataIn))
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateDataOut)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha1.StateTeardown)
 
 				advanceStateAndCheckReady(dwsv1alpha1.StatePreRun, workflow)
 				advanceStateAndCheckReady(dwsv1alpha1.StatePostRun, workflow)
