@@ -25,7 +25,7 @@ data:
       vgChange:
         activate: --activate ys $VG_NAME
         deactivate: --activate n $VG_NAME
-        lockstart: --lock-start $VG_NAME
+        lockStart: --lock-start $VG_NAME
       vgRemove: $VG_NAME
       lvCreate: -l 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
       lvRemove: $VG_NAME
