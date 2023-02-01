@@ -103,7 +103,7 @@ spec:
         type: "string"
         isRequired: true
         isValueRequired: true
-      - key: "^(DW_JOB_|DW_PERSISTENT_)[\\w-]+$"
+      - key: '^(DW_JOB_|DW_PERSISTENT_)[A-Za-z][A-Za-z0-9-]+$'
         type: "string"
         isRequired: false
         isValueRequired: true
