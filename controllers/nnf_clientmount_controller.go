@@ -57,9 +57,8 @@ const (
 // NnfClientMountReconciler contains the pieces used by the reconciler
 type NnfClientMountReconciler struct {
 	client.Client
-	Log       logr.Logger
-	Scheme    *kruntime.Scheme
-	FakeMount bool
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
@@ -196,7 +195,7 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
 func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, shouldMount bool, log logr.Logger) error {
 
-	if r.FakeMount {
+	if os.Getenv("ENVIRONMENT") == "kind" {
 		if shouldMount {
 			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
 				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
