@@ -277,7 +277,16 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 	case "container":
-		// TODO
+		pinnedContainerProfile, err := createPinnedContainerProfile(ctx, r.Client, r.Scheme, argsMap, dbd, commonResourceName)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if pinnedContainerProfile == nil {
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// TODO: refer to the job/persistent servers
 	default:
 	}
 
