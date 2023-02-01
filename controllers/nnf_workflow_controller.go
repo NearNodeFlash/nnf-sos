@@ -83,7 +83,8 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -764,6 +765,18 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		},
 	}
 
+	// Create container service and jobs
+	if dwArgs["command"] == "container" {
+		if err := r.createOrUpdateContainerServiceIfNecessary(ctx, workflow); err != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
+		}
+		if err := r.createOrUpdateContainerJobsIfNecessary(ctx, workflow); err != nil {
+			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
+		}
+
+		return nil, nil
+	}
+
 	// Create an NNFAccess for the compute clients
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, access,
 		func() error {
@@ -849,13 +862,6 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		return readyResult, nil
 	}
 
-	// TODO: Create container DS or Job. Need to determine which is the best route to handle communication and termination of the container.
-	if dwArgs["command"] == "container" {
-		if err := r.createOrUpdateContainerDaemonSetIfNecessary(ctx, workflow); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container DaemonSet").WithError(err)
-		}
-	}
-
 	return nil, nil
 }
 
@@ -875,6 +881,8 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		envName = "DW_JOB_" + dwArgs["name"]
 	case "persistentdw":
 		envName = "DW_PERSISTENT_" + dwArgs["name"]
+	case "container":
+		// TODO: set env variables for containers; job names? ports? container storage args?
 	default:
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
 	}
@@ -885,6 +893,30 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 }
 
 func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	if dwArgs["command"] == "container" {
+		// TODO: This is definitely half baked. This area will need some work once we get approval
+		// on the container RFC. More time can be spent on this once we get confirmation on the approach.
+
+		// TODO: I think these errors are going to need to be Fatal errors in order to set the Status.
+		done, result, err := r.checkContainerJobs(ctx, workflow)
+		if err != nil {
+			return nil, nnfv1alpha1.NewWorkflowErrorf("failed to check the container Jobs").WithError(err)
+		}
+
+		// TODO: Not sure if this requeue is working.
+		if !done {
+			return Requeue("waiting for container jobs to finish"), nil
+		}
+
+		if !result {
+			return nil, nnfv1alpha1.NewWorkflowErrorf("one or more container jobs were not successful: ").WithError(err)
+		}
+
+		return nil, nil
+	}
 
 	// Unmount the NnfAccess for the compute nodes. This will free the compute nodes to be used
 	// in a different job even if there is data movement happening on the Rabbits.
@@ -923,6 +955,12 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 }
 
 func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	if dwArgs["command"] == "container" {
+		// TODO: anything to do here for container? Report Job incompletion as errors to the workflow like DM below?
+		return nil, nil
+	}
 
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "unmounted")
 	if err != nil {
@@ -1055,6 +1093,9 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		if err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Could not remove persistent storage reference").WithError(err)
 		}
+	case "container":
+		// TODO delete pinned profile?
+		// TODO: remove service, jobs, pods
 	default:
 	}
 
