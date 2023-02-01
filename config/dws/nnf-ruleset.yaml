@@ -103,12 +103,7 @@ spec:
         type: "string"
         isRequired: true
         isValueRequired: true
-        # TODO: add a regex type to support wildcards (e.g. foo-local-storage) in the key
-      - key: "DW_JOB_foo-local-storage"
-        type: "string"
-        isRequired: false
-        isValueRequired: true
-      - key: "DW_PERSISTENT_foo-persistent-storage"
+      - key: "^(DW_JOB_|DW_PERSISTENT_)[\\w-]+$"
         type: "string"
         isRequired: false
         isValueRequired: true
