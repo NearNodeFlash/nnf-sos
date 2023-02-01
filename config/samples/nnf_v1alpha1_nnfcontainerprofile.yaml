@@ -4,10 +4,11 @@ metadata:
   name: nnfcontainerprofile-sample
   namespace: nnf-system
 data:
+  backoffLimit: 6
   storages:
-    - name: JOB_DW_foo-local-storage
+    - name: DW_JOB_foo-local-storage
       optional: false
-    - name: PERSISTENT_DW_foo-persistent-storage
+    - name: DW_PERSISTENT_foo-persistent-storage
       optional: false
   template:
     spec:
@@ -19,8 +20,15 @@ data:
       containers:
         - name: foo
           image: alpine:latest
-          command: ["/bin/sh", "-c", "--"]
-          args: ["while true; do sleep 30; done;"]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "starting..."
+              sleep 30
+              x=$(($RANDOM % 2))
+              echo "exiting: $x"
+              exit $x
           # TODO get volumes working
           # volumeMounts:
           # - name: foo-local-storage

@@ -24,6 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ContainerLabel = "nnf.cray.hpe.com/container"
+)
+
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
 type NnfContainerProfileData struct {
 	// Pinned is true if this instance is an immutable copy
@@ -32,6 +36,20 @@ type NnfContainerProfileData struct {
 
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
+
+	// TODO: This is a development option for now. This will most likely be renamed or removed in
+	// order to hide the k8s job implementation from the user.
+	// Specifies the duration in seconds relative to the startTime that the job may be continuously
+	// active before the system tries to terminate it; value must be positive integer. If a Job is
+	// suspended (at creation or through an update), this timer will effectively be stopped and
+	// reset when the Job is resumed again. +optional
+	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
+
+	// TODO: This is a development option for now. This will most likely be renamed or removed in
+	// order to hide the k8s job implementation from the user.
+	// Specifies the number of retries before marking this job failed. Defaults to 6 by Kubernetes itself.
+	// +kubebuilder:default:=6
+	BackoffLimit int32 `json:"backoffLimit"`
 
 	// Template defines the containers that will be created from container profile
 	Template corev1.PodTemplateSpec `json:"template"`
