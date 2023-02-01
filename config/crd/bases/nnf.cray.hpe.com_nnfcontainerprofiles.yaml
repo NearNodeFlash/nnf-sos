@@ -29,11 +29,25 @@ spec:
           data:
             description: NnfContainerProfileSpec defines the desired state of NnfContainerProfile
             properties:
-              default:
-                default: false
-                description: Default is true if this instance is the default resource
-                  to use
-                type: boolean
+              activeDeadlineSeconds:
+                description: 'TODO: This is a development option for now. This will
+                  most likely be renamed or removed in order to hide the k8s job implementation
+                  from the user. Specifies the duration in seconds relative to the
+                  startTime that the job may be continuously active before the system
+                  tries to terminate it; value must be positive integer. If a Job
+                  is suspended (at creation or through an update), this timer will
+                  effectively be stopped and reset when the Job is resumed again.
+                  +optional'
+                format: int64
+                type: integer
+              backoffLimit:
+                default: 6
+                description: 'TODO: This is a development option for now. This will
+                  most likely be renamed or removed in order to hide the k8s job implementation
+                  from the user. Specifies the number of retries before marking this
+                  job failed. Defaults to 6 by Kubernetes itself.'
+                format: int32
+                type: integer
               pinned:
                 default: false
                 description: Pinned is true if this instance is an immutable copy
@@ -7241,6 +7255,7 @@ spec:
                     type: object
                 type: object
             required:
+            - backoffLimit
             - template
             type: object
           kind:
