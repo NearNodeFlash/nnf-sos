@@ -192,7 +192,16 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	if os.Getenv("ENVIRONMENT") != "kind" {
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		if err := (&controllers.NnfClientMountReconciler{
+			Client:    mgr.GetClient(),
+			Log:       ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+			Scheme:    mgr.GetScheme(),
+			FakeMount: true,
+		}).SetupWithManager(mgr); err != nil {
+			return err
+		}
+	} else {
 		if err := (&controllers.NnfClientMountReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),

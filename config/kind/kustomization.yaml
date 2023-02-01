@@ -2,5 +2,7 @@ bases:
 - ../top
 
 patchesStrategicMerge:
+# Let the node-manager daemonset mount host dir for /mnt
+- manager_volumes_patch.yaml
 # Arguments for the controller manager that are specific to kind
 - manager_environment_patch.yaml
