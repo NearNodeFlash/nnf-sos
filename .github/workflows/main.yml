@@ -10,6 +10,7 @@ on:
     branches:
       - 'master'
       - 'releases/v*'
+      - 'feature/*'
 
 env:
   # TEST_TARGET: Name of the testing target in the Dockerfile
