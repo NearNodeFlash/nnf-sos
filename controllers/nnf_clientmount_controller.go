@@ -195,6 +195,30 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
 func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, shouldMount bool, log logr.Logger) error {
 
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		if shouldMount {
+			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
+			}
+
+			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
+		} else {
+			if err := os.Remove(clientMountInfo.MountPath); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
+			}
+
+			log.Info("Fake unmounted file system", "Mount path", clientMountInfo.MountPath)
+		}
+
+		if clientMountInfo.SetPermissions {
+			if err := os.Chown(clientMountInfo.MountPath, int(clientMountInfo.UserID), int(clientMountInfo.GroupID)); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Chown failed: %s", clientMountInfo.MountPath), err)
+			}
+		}
+
+		return nil
+	}
+
 	switch clientMountInfo.Device.Type {
 	case dwsv1alpha1.ClientMountDeviceTypeLustre:
 		mountPath := clientMountInfo.MountPath

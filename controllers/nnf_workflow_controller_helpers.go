@@ -499,8 +499,10 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 				DesiredState:    "mounted",
 				TeardownState:   teardownState,
 				Target:          "all",
-				MountPath:       buildMountPath(workflow, index),
-				MountPathPrefix: buildMountPath(workflow, index),
+				UserID:          workflow.Spec.UserID,
+				GroupID:         workflow.Spec.GroupID,
+				MountPath:       buildMountPath(workflow, parentDwIndex),
+				MountPathPrefix: buildMountPath(workflow, parentDwIndex),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{

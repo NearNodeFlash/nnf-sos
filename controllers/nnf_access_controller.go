@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -475,6 +476,12 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 			ObjectReference: access.Spec.StorageReference,
 		}
 
+		if os.Getenv("ENVIRONMENT") == "kind" {
+			mountInfo.UserID = access.Spec.UserID
+			mountInfo.GroupID = access.Spec.GroupID
+			mountInfo.SetPermissions = true
+		}
+
 		storageMapping[client] = append(storageMapping[client], mountInfo)
 	}
 
@@ -559,6 +566,12 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 				} else {
 					mountInfo.TargetType = "directory"
 					mountInfo.Type = nnfStorage.Spec.FileSystemType
+				}
+
+				if os.Getenv("ENVIRONMENT") == "kind" {
+					mountInfo.UserID = access.Spec.UserID
+					mountInfo.GroupID = access.Spec.GroupID
+					mountInfo.SetPermissions = true
 				}
 
 				// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
