@@ -568,7 +568,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, fileShareID)
 		if err != nil {
 			updateError(condition, &allocationStatus.FileShare, err)
-			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err)
+			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("could not get VG/LV names", err).WithFatal()
 			log.Info(nodeStorage.Status.Error.Error())
 
 			return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
@@ -720,12 +720,12 @@ func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nn
 
 	workflowName, ok := labels[dwsv1alpha1.WorkflowNameLabel]
 	if !ok {
-		return "", "", fmt.Errorf("Missing Workflow label on NnfNodeStorage")
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
 	}
 
 	workflowNamespace, ok := labels[dwsv1alpha1.WorkflowNamespaceLabel]
 	if !ok {
-		return "", "", fmt.Errorf("Missing Workflow label on NnfNodeStorage")
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
 	}
 
 	workflow := &dwsv1alpha1.Workflow{
@@ -735,7 +735,7 @@ func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nn
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(workflow), workflow); err != nil {
-		return "", "", dwsv1alpha1.NewResourceError("Could get workflow", err)
+		return "", "", dwsv1alpha1.NewResourceError("could get workflow", err)
 	}
 
 	// Truncate the id to 65 characters since LVM has a name length limit
