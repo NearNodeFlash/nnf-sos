@@ -560,12 +560,22 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	}
 
 	shareOptions := make(map[string]interface{})
+	var volumeGroupName, logicalVolumeName string
 	if nodeStorage.Spec.FileSystemType == "lustre" {
 		targetIndex := nodeStorage.Spec.LustreStorage.StartIndex + index
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
 	} else {
-		shareOptions["volumeGroupName"] = volumeGroupName(fileShareID)
-		shareOptions["logicalVolumeName"] = logicalVolumeName(fileShareID)
+		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, fileShareID)
+		if err != nil {
+			updateError(condition, &allocationStatus.FileShare, err)
+			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("could not get VG/LV names", err).WithFatal()
+			log.Info(nodeStorage.Status.Error.Error())
+
+			return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		}
+
+		shareOptions["volumeGroupName"] = volumeGroupName
+		shareOptions["logicalVolumeName"] = logicalVolumeName
 		shareOptions["userID"] = int(nodeStorage.Spec.UserID)
 		shareOptions["groupID"] = int(nodeStorage.Spec.GroupID)
 	}
@@ -597,8 +607,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	if len(allocationStatus.FileShare.ID) == 0 {
 		log.Info("Created file share", "Id", sh.Id)
 		allocationStatus.FileShare.ID = sh.Id
-		allocationStatus.VolumeGroup = volumeGroupName(fileShareID)
-		allocationStatus.LogicalVolume = logicalVolumeName(fileShareID)
+		allocationStatus.VolumeGroup = volumeGroupName
+		allocationStatus.LogicalVolume = logicalVolumeName
 		condition.LastTransitionTime = metav1.Now()
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = nnfv1alpha1.ConditionSuccess
@@ -705,12 +715,36 @@ func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNod
 	return &ctrl.Result{}, nil
 }
 
-func volumeGroupName(id string) string {
-	return fmt.Sprintf("%s_vg", id)
-}
+func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, id string) (string, string, error) {
+	labels := nodeStorage.GetLabels()
 
-func logicalVolumeName(id string) string {
-	return fmt.Sprintf("%s_lv", id)
+	workflowName, ok := labels[dwsv1alpha1.WorkflowNameLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
+	}
+
+	workflowNamespace, ok := labels[dwsv1alpha1.WorkflowNamespaceLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
+	}
+
+	workflow := &dwsv1alpha1.Workflow{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      workflowName,
+			Namespace: workflowNamespace,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(workflow), workflow); err != nil {
+		return "", "", dwsv1alpha1.NewResourceError("could get workflow", err)
+	}
+
+	// Truncate the id to 65 characters since LVM has a name length limit
+	maxIDLength := 65
+	if len(id) > maxIDLength {
+		id = id[:maxIDLength]
+	}
+
+	return fmt.Sprintf("%s_%s", id, workflow.GetUID()), "lv", nil
 }
 
 func (r *NnfNodeStorageReconciler) isSpecComplete(nodeStorage *nnfv1alpha1.NnfNodeStorage) bool {
