@@ -36,7 +36,6 @@ import (
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -46,10 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const (
-	containerServiceName = "container"
-)
-
 // NNF Workflow stages all return a `result` structure when successful that describes
 // the result of an operation at each stage of the workflow.
 type result struct {
@@ -57,6 +52,16 @@ type result struct {
 	reason       string
 	object       client.Object
 	deleteStatus *dwsv1alpha1.DeleteStatus
+}
+
+// This struct contains all the necessary information for mounting container storages
+type nnfContainerVolume struct {
+	name           string
+	command        string
+	directiveName  string
+	directiveIndex int
+	mountPath      string
+	envVarName     string
 }
 
 // When workflow stages cannot advance they return a Requeue result with a particular reason.
@@ -246,6 +251,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		switch arg {
 		case "command", "name", "profile":
 		default:
+			// TODO: restrict access to xfs and raw filesystem types since they cannot be mounted on both the rabbit and compute nodejk
 			if strings.HasPrefix(arg, "DW_JOB_") {
 				if findDirectiveIndexByName(workflow, storageName, "jobdw") == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
@@ -483,7 +489,7 @@ func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, d
 			}
 		}
 
-		if found == false {
+		if !found {
 			err := fmt.Errorf("Allocation set %s not found in Servers resource", breakdownAllocationSet.Label)
 			return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
 		}
@@ -986,7 +992,7 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 // 	return nil
 // }
 
-func (r *NnfWorkflowReconciler) createOrUpdateContainerServiceIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+func (r *NnfWorkflowReconciler) createContainerService(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
 	log := log.FromContext(ctx)
 
 	service := &corev1.Service{
@@ -996,35 +1002,30 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerServiceIfNecessary(ctx co
 		},
 	}
 
-	mutateFn := func() error {
-		service.Spec.Selector = map[string]string{
-			nnfv1alpha1.ContainerLabel: workflow.Name,
-		}
-
-		service.Spec.ClusterIP = corev1.ClusterIPNone
-
-		if err := ctrl.SetControllerReference(workflow, service, r.Scheme); err != nil {
-			return fmt.Errorf("setting Service controller reference failed for '%s': %w", service.Name, err)
-		}
-
-		return nil
+	service.Spec.Selector = map[string]string{
+		nnfv1alpha1.ContainerLabel: workflow.Name,
 	}
 
-	result, err := ctrl.CreateOrUpdate(ctx, r.Client, service, mutateFn)
+	service.Spec.ClusterIP = corev1.ClusterIPNone
+
+	if err := ctrl.SetControllerReference(workflow, service, r.Scheme); err != nil {
+		return fmt.Errorf("setting Service controller reference failed for '%s': %w", service.Name, err)
+	}
+
+	err := r.Create(ctx, service)
 	if err != nil {
-		return err
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+		log.Info("Service already exists", "object", client.ObjectKeyFromObject(service).String())
 	}
 
-	if result == controllerutil.OperationResultCreated {
-		log.Info("Created Service", "object", client.ObjectKeyFromObject(service).String())
-	} else if result == controllerutil.OperationResultUpdated {
-		log.Info("Updated Service", "object", client.ObjectKeyFromObject(service).String())
-	}
+	log.Info("Created Service", "object", client.ObjectKeyFromObject(service).String())
 
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, index int) error {
 	log := log.FromContext(ctx)
 
 	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
@@ -1057,106 +1058,50 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx conte
 			},
 		}
 
-		// Apply Job Labels
-		// TODO: confirm labels here; any missing?
+		// Apply Job Labels/Owners
 		dwsv1alpha1.InheritParentLabels(job, workflow)
 		dwsv1alpha1.AddOwnerLabels(job, workflow)
 		dwsv1alpha1.AddWorkflowLabels(job, workflow)
 		labels := job.GetLabels()
 		labels[nnfv1alpha1.ContainerLabel] = workflow.Name
 		job.SetLabels(labels)
-
 		if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
-			return fmt.Errorf("setting Job controller reference failed for '%s': %w", job.Name, err)
+			return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.Name).WithError(err)
 		}
 
-		// ###NJT: Why are we using CreateOrUpdate here? Nothing input to this routine
-		//         is mutable; so I think just using r.Create() is sufficient, while
-		//         ignoring errors.IsAlreadyExists() errors in case of requeues.
-
-		mutateFn := func() error {
-			// The template is immutable, so only do this on creation
-
-			if job.ObjectMeta.CreationTimestamp.IsZero() {
-
-				profile.Data.Template.DeepCopyInto(&job.Spec.Template)
-
-				podSpec := &job.Spec.Template.Spec
-
-				// We want to keep the restart policy to Never. This way, any pods that failed are
-				// kept around for inspection. The job attempts to retry pods until the number of
-				// completions are hit or the number of max retries (BackoffLimit) have been hit.
-				// A retry with a restart policy of Never will not restart the pod, but spin up a new one
-				// with a new IP. A retry is not the same as a restart.  If we set this to
-				// OnFailure, the pods will truly restart but we will lose any log history outside
-				// of (kubectl logs --previous).
-				//
-				// TODO: consider allowing `OnFailure` as well and make it configurable via the
-				// containerprofile. However, it might be a good idea not to allow this for the
-				// reasons above.
-				podSpec.RestartPolicy = corev1.RestartPolicyNever
-
-				// Because the IP changes, we need to have deterministic hostname for the pod
-				podSpec.Hostname = nnfNode
-				podSpec.Subdomain = workflow.Name // service name == workflow name
-
-				// In our case, the target is only 1 node for the job, so a restartPolicy of Never
-				// is ok because any retry (i.e. new pod) will land on the same node.
-				podSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNode}
-				podSpec.Tolerations = []corev1.Toleration{
-					{
-						Effect:   "NoSchedule",
-						Key:      "cray.nnf.node",
-						Operator: "Equal",
-						Value:    "true",
-					},
-				}
-
-				// TODO Volumes
-				// podSpec.Volumes
-				// ssh is necessary for mpi
-				// setupSSHAuthVolumes(manager, podSpec)
-				// setupLustreVolumes(ctx, manager, podSpec, filesystems.Items)
-				// TODO: add Volumes to DS, append if customer specifies; check for conflicts
-				// vol := corev1.Volume{
-				// 	Name: "foo-local-storage",
-				// 	VolumeSource: corev1.VolumeSource{
-				// 		HostPath: &corev1.HostPathVolumeSource{
-				// 			Path: "/path/to/thing"}}}
-				// podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, vol)
-				// TODO: get mounts from workflow
-			}
-
-			// This is a timeout for the job, if set, when the deadline hits, the job will kill all
-			// pods and fail the job.
-			if profile.Data.ActiveDeadlineSeconds > 0 {
-				job.Spec.ActiveDeadlineSeconds = &profile.Data.ActiveDeadlineSeconds
-			}
-
-			// This defaults to 6 and is the maximum number of pod started before considering the
-			// job failed. I don't believe this can be turned off.
-			job.Spec.BackoffLimit = &profile.Data.BackoffLimit
-
-			return nil
-		}
-
-		result, err := ctrl.CreateOrUpdate(ctx, r.Client, job, mutateFn)
+		// Get the volumes to mount into the containers
+		volumes, err := r.getContainerVolumes(ctx, workflow, dwArgs, nnfNode)
 		if err != nil {
-			return err
+			return nnfv1alpha1.NewWorkflowErrorf("could not determine the list of volumes need to create container job %s:", job.Name).WithError(err).WithFatal()
 		}
 
-		if result == controllerutil.OperationResultCreated {
-			log.Info("Created Job", "object", client.ObjectKeyFromObject(job).String())
-		} else if result == controllerutil.OperationResultUpdated {
-			log.Info("Updated Job", "object", client.ObjectKeyFromObject(job).String())
+		// Set the job's podspec from the container profile and add in volumes
+		r.setContainerJobPodSpec(ctx, workflow.Name, job, *profile, nnfNode, volumes)
+
+		// This is a timeout for the job, if set, when the deadline hits, the job will kill all
+		// pods and fail the job.
+		if profile.Data.ActiveDeadlineSeconds > 0 {
+			job.Spec.ActiveDeadlineSeconds = &profile.Data.ActiveDeadlineSeconds
 		}
+		// This defaults to 6 and is the maximum number of pod started before considering the
+		// job failed. I don't believe this can be turned off.
+		job.Spec.BackoffLimit = &profile.Data.BackoffLimit
+
+		err = r.Create(ctx, job)
+		if err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+			log.Info("Job already exists", "object", client.ObjectKeyFromObject(job).String())
+		}
+		log.Info("Created Job", "object", client.ObjectKeyFromObject(job).String())
 	}
 
 	return nil
 }
 
+// Retrieve the computes for the workflow and find their local nnf nodes
 func (r *NnfWorkflowReconciler) getNnfNodesForContainers(ctx context.Context, workflow *dwsv1alpha1.Workflow) ([]string, error) {
-	// return []string{"kind-worker2", "kind-worker3"}, nil
 
 	var nnfNodes []string
 	var computeNodes []string
@@ -1283,13 +1228,13 @@ func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workfl
 func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
 
 	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	if profile != nil {
 		if !profile.Data.Pinned {
-			return fmt.Errorf("Expected pinned container profile, but it was not pinned: %s", profile.Name)
+			return fmt.Errorf("expected pinned container profile, but it was not pinned: %s", profile.Name)
 		}
 
 		return nil
@@ -1324,4 +1269,144 @@ func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx cont
 	}
 
 	return nil
+}
+
+// Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
+func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, nnfNodeName string) ([]nnfContainerVolume, error) {
+	volumes := []nnfContainerVolume{}
+
+	// TODO: ssh is necessary for mpi see setupSSHAuthVolumes(manager, podSpec) in nnf-dm
+
+	for arg, val := range dwArgs {
+		volName, cmd := "", ""
+
+		// Find any DW_(JOB|PERSISTENT) arguments
+		if strings.HasPrefix(arg, "DW_JOB_") {
+			volName = strings.TrimPrefix(arg, "DW_JOB_")
+			cmd = "jobdw"
+		} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
+			volName = strings.TrimPrefix(arg, "DW_PERSISTENT_")
+			cmd = "persistentdw"
+		} else {
+			continue
+		}
+
+		vol := nnfContainerVolume{
+			name:           volName,
+			command:        cmd,
+			directiveName:  val,
+			directiveIndex: -1,
+			envVarName:     arg,
+		}
+
+		// Find the directive index for the given name so we can retrieve its ClientMount
+		vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
+		if vol.directiveIndex < 0 {
+			return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s' on node %s", vol.directiveName, nnfNodeName)
+		}
+
+		// Get the matching ClientMount for this workflow, nnfNode, and directive index
+		clientMountList := &dwsv1alpha1.ClientMountList{}
+		matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(vol.directiveIndex)
+		listOptions := []client.ListOption{
+			matchLabels,
+			client.InNamespace(nnfNodeName),
+		}
+		if err := r.List(ctx, clientMountList, listOptions...); err != nil {
+			return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the ClientMount for '%s' on node %s", vol.directiveName, nnfNodeName)
+		}
+
+		// We should only expect 1
+		if len(clientMountList.Items) > 1 {
+			return nil, nnfv1alpha1.NewWorkflowErrorf("ClientMount lookup for '%s' on node %s returned extra results", vol.directiveName, nnfNodeName)
+		}
+
+		// If mounted, add it to the list of mount points
+		for _, clientMount := range clientMountList.Items {
+			for i, mount := range clientMount.Status.Mounts {
+				if mount.State != "mounted" {
+					return nil, nnfv1alpha1.NewWorkflowErrorf("ClientMount '%s' is not ready to be mounted into container", clientMount.Name)
+				}
+
+				vol.mountPath = clientMount.Spec.Mounts[i].MountPath
+
+				volumes = append(volumes, vol)
+			}
+		}
+	}
+
+	return volumes, nil
+}
+
+func (r *NnfWorkflowReconciler) setContainerJobPodSpec(ctx context.Context, workflowName string, job *batchv1.Job, profile nnfv1alpha1.NnfContainerProfile, nnfNodeName string, volumes []nnfContainerVolume) {
+	log := log.FromContext(ctx)
+
+	// Copy the data from the container profile
+	// podTemplateSpec := profile.Data.Template.DeepCopy()
+	profile.Data.Template.DeepCopyInto(&job.Spec.Template)
+
+	// // Use the same labels as the job for the pods
+	// podTemplateSpec.Labels = job.DeepCopy().Labels
+	job.Spec.Template.Labels = job.DeepCopy().Labels
+
+	// podSpec := &podTemplateSpec.Spec
+	podSpec := &job.Spec.Template.Spec
+
+	// We want to keep the restart policy to Never. This way, any pods that failed are
+	// kept around for inspection. The job attempts to retry pods until the number of
+	// completions are hit or the number of max retries (BackoffLimit) have been hit.
+	// A retry with a restart policy of Never will not restart the pod, but spin up a new one
+	// with a new IP. A retry is not the same as a restart.  If we set this to
+	// OnFailure, the pods will truly restart but we will lose any log history outside
+	// of (kubectl logs --previous).
+	podSpec.RestartPolicy = corev1.RestartPolicyNever
+
+	// Because the IP changes, we need to have deterministic hostname for the pod
+	podSpec.Hostname = job.Name
+	podSpec.Subdomain = workflowName // service name == workflow name
+
+	// In our case, the target is only 1 node for the job, so a restartPolicy of Never
+	// is ok because any retry (i.e. new pod) will land on the same node.
+	podSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNodeName}
+	podSpec.Tolerations = []corev1.Toleration{
+		{
+			Effect:   "NoSchedule",
+			Key:      "cray.nnf.node",
+			Operator: "Equal",
+			Value:    "true",
+		},
+	}
+
+	// Add Volumes/VolumeMounts
+	for _, vol := range volumes {
+		log.Info("Adding volume to podspec", "volName", vol.name, "path", vol.mountPath)
+
+		// Volumes
+		hostPathType := corev1.HostPathDirectory
+		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
+			Name: vol.name,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: vol.mountPath,
+					Type: &hostPathType,
+				},
+			},
+		})
+
+		// Volume Mounts
+		for idx := range podSpec.Containers {
+			container := &podSpec.Containers[idx]
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      vol.name,
+				MountPath: vol.mountPath,
+			})
+
+			// TODO: put this in config map and mount the configmap as env vars?
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  vol.envVarName,
+				Value: vol.mountPath,
+			})
+		}
+	}
 }
