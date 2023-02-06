@@ -87,24 +87,12 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if !controllerutil.ContainsFinalizer(storage, finalizerStorage) {
 		controllerutil.AddFinalizer(storage, finalizerStorage)
 
-		// Add a label for the Rabbit storage type
-		labels := storage.GetLabels()
-		if labels == nil {
-			labels = make(map[string]string)
-		}
-
-		labels[dwsv1alpha1.StorageTypeLabel] = "Rabbit"
-		storage.SetLabels(labels)
-
 		if err := r.Update(ctx, storage); err != nil {
 			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{Requeue: true}, nil
 	}
-
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.StorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
 	node := &nnfv1alpha1.NnfNode{
@@ -117,6 +105,30 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// Now that it is confirmed an NNF Node resource exists for this Storage resource,
+	// ensure the proper labels are set on the resource
+	labels := storage.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	const rabbitStorageType = "Rabbit"
+	if label, found := labels[dwsv1alpha1.StorageTypeLabel]; !found || label != rabbitStorageType {
+		labels[dwsv1alpha1.StorageTypeLabel] = rabbitStorageType
+		storage.SetLabels(labels)
+
+		if err := r.Update(ctx, storage); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Create a new status
+
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.StorageStatus](storage)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
 
 	storage.Status.Type = dwsv1alpha1.NVMe
 	storage.Status.Capacity = node.Status.Capacity
