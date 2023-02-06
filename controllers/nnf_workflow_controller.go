@@ -283,6 +283,8 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 
 	// only jobdw, persistentdw, and create_persistent need a directive breakdown
 	switch dwArgs["command"] {
+	case "container":
+		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
 	case "jobdw", "persistentdw", "create_persistent":
 		break
 	default:
@@ -322,8 +324,11 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	// only jobdw, persistentdw, and create_persistent need a directive breakdown
-	if dwArgs["command"] != "jobdw" && dwArgs["command"] != "persistentdw" && dwArgs["command"] != "create_persistent" {
+	// only jobdw, persistentdw, and create_persistent have a directive breakdown
+	switch dwArgs["command"] {
+	case "jobdw", "persistentdw", "create_persistent":
+		break
+	default:
 		return nil, nil
 	}
 
@@ -361,8 +366,6 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		return nil, nil
 	case "persistentdw":
 		return nil, r.addPersistentStorageReference(ctx, workflow, index)
-	case "container":
-		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
 	case "jobdw", "create_persistent":
 		// Chain through the DirectiveBreakdown to the Servers object
 		dbd := &dwsv1alpha1.DirectiveBreakdown{
@@ -412,12 +415,6 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 }
 
 func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
-
-	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-	if dwArgs["command"] == "container" {
-		return nil, nil
-	}
-
 	name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 	// Check whether the NnfStorage has finished creating the storage.
