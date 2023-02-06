@@ -12,11 +12,6 @@ data:
       optional: false
   template:
     spec:
-      # TODO: non-root
-      securityContext:
-        runAsUser: 0
-        runAsGroup: 0
-        fsGroup: 0
       containers:
         - name: foo
           image: alpine:latest
@@ -37,8 +32,19 @@ data:
           #   mountPath: /foo/persistent
           # - name: nnf-config
           #   mountPath: /nnf/config
-      tolerations:
-        - effect: NoSchedule
-          key: cray.nnf.node
-          operator: Equal
-          value: "true"
+---
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfContainerProfile
+metadata:
+  name: forever
+  namespace: nnf-system
+data:
+  template:
+    spec:
+      containers:
+      - name: forever
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - "while true; do date && sleep 5; done"
