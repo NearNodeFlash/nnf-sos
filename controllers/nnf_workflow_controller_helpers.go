@@ -1280,7 +1280,7 @@ func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workfl
 	return profile, nil
 }
 
-func (r *NnfWorkflowReconciler) createPinnedContainerProfileInNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
 
 	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
 	if err != nil && !errors.IsNotFound(err) {

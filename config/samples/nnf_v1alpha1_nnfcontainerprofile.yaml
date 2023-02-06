@@ -5,6 +5,11 @@ metadata:
   namespace: nnf-system
 data:
   backoffLimit: 6
+  storages:
+    - name: DW_JOB_foo-local-storage
+      optional: false
+    - name: DW_PERSISTENT_foo-persistent-storage
+      optional: false
   template:
     spec:
       containers:

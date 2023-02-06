@@ -362,7 +362,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 	case "persistentdw":
 		return nil, r.addPersistentStorageReference(ctx, workflow, index)
 	case "container":
-		return nil, r.createPinnedContainerProfileInNecessary(ctx, workflow, index)
+		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
 	case "jobdw", "create_persistent":
 		// Chain through the DirectiveBreakdown to the Servers object
 		dbd := &dwsv1alpha1.DirectiveBreakdown{

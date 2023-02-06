@@ -276,7 +276,6 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		// TODO: refer to the job/persistent servers
 	default:
 	}
 
