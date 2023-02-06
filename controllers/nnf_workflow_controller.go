@@ -281,9 +281,11 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 		return nil, nnfv1alpha1.NewWorkflowError("Unable to validate DW directives").WithFatal().WithError(err)
 	}
 
-	// only jobdw, persistentdw, create_persistent, and container need a directive breakdown
+	// only jobdw, persistentdw, and create_persistent need a directive breakdown
 	switch dwArgs["command"] {
-	case "jobdw", "persistentdw", "create_persistent", "container":
+	case "container":
+		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
+	case "jobdw", "persistentdw", "create_persistent":
 		break
 	default:
 		return nil, nil
@@ -322,8 +324,11 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	// only jobdw, persistentdw, and create_persistent need a directive breakdown
-	if dwArgs["command"] != "jobdw" && dwArgs["command"] != "persistentdw" && dwArgs["command"] != "create_persistent" {
+	// only jobdw, persistentdw, and create_persistent have a directive breakdown
+	switch dwArgs["command"] {
+	case "jobdw", "persistentdw", "create_persistent":
+		break
+	default:
 		return nil, nil
 	}
 
@@ -356,56 +361,54 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	if dwArgs["command"] == "persistentdw" {
-		return nil, r.addPersistentStorageReference(ctx, workflow, index)
-	}
-
-	// Only jobdw and create_persistent need to create an NnfStorage resource
-	if dwArgs["command"] != "create_persistent" && dwArgs["command"] != "jobdw" {
+	switch dwArgs["command"] {
+	default:
 		return nil, nil
-	}
-
-	// Chain through the DirectiveBreakdown to the Servers object
-	dbd := &dwsv1alpha1.DirectiveBreakdown{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index),
-			Namespace: workflow.Namespace,
-		},
-	}
-	err := r.Get(ctx, client.ObjectKeyFromObject(dbd), dbd)
-	if err != nil {
-		log.Info("Unable to get directiveBreakdown", "dbd", client.ObjectKeyFromObject(dbd), "Message", err)
-		err = fmt.Errorf("Unable to get DirectiveBreakdown %v: %w", client.ObjectKeyFromObject(dbd), err)
-		return nil, nnfv1alpha1.NewWorkflowError("Could not read allocation request").WithError(err)
-	}
-
-	s := &dwsv1alpha1.Servers{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dbd.Status.Storage.Reference.Name,
-			Namespace: dbd.Status.Storage.Reference.Namespace,
-		},
-	}
-	err = r.Get(ctx, client.ObjectKeyFromObject(s), s)
-	if err != nil {
-		log.Info("Unable to get servers", "servers", client.ObjectKeyFromObject(s), "Message", err)
-		err = fmt.Errorf("Unable to get Servers %v: %w", client.ObjectKeyFromObject(s), err)
-		return nil, nnfv1alpha1.NewWorkflowError("Could not read allocation request").WithError(err)
-	}
-
-	if _, present := os.LookupEnv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"); !present {
-		if err := r.validateServerAllocations(ctx, dbd, s); err != nil {
-			return nil, err
+	case "persistentdw":
+		return nil, r.addPersistentStorageReference(ctx, workflow, index)
+	case "jobdw", "create_persistent":
+		// Chain through the DirectiveBreakdown to the Servers object
+		dbd := &dwsv1alpha1.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      indexedResourceName(workflow, index),
+				Namespace: workflow.Namespace,
+			},
 		}
-	}
-
-	if storage, err := r.createNnfStorage(ctx, workflow, s, index, log); err != nil {
-		if apierrors.IsConflict(err) {
-			return Requeue("conflict").withObject(storage), nil
+		err := r.Get(ctx, client.ObjectKeyFromObject(dbd), dbd)
+		if err != nil {
+			log.Info("Unable to get directiveBreakdown", "dbd", client.ObjectKeyFromObject(dbd), "Message", err)
+			err = fmt.Errorf("Unable to get DirectiveBreakdown %v: %w", client.ObjectKeyFromObject(dbd), err)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not read allocation request").WithError(err)
 		}
 
-		log.Info("Failed to create nnf storage", "Message", err)
-		err = fmt.Errorf("Could not create NnfStorage %w", err)
-		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(err)
+		s := &dwsv1alpha1.Servers{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      dbd.Status.Storage.Reference.Name,
+				Namespace: dbd.Status.Storage.Reference.Namespace,
+			},
+		}
+		err = r.Get(ctx, client.ObjectKeyFromObject(s), s)
+		if err != nil {
+			log.Info("Unable to get servers", "servers", client.ObjectKeyFromObject(s), "Message", err)
+			err = fmt.Errorf("Unable to get Servers %v: %w", client.ObjectKeyFromObject(s), err)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not read allocation request").WithError(err)
+		}
+
+		if _, present := os.LookupEnv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"); !present {
+			if err := r.validateServerAllocations(ctx, dbd, s); err != nil {
+				return nil, err
+			}
+		}
+
+		if storage, err := r.createNnfStorage(ctx, workflow, s, index, log); err != nil {
+			if apierrors.IsConflict(err) {
+				return Requeue("conflict").withObject(storage), nil
+			}
+
+			log.Info("Failed to create nnf storage", "Message", err)
+			err = fmt.Errorf("Could not create NnfStorage %w", err)
+			return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(err)
+		}
 	}
 
 	return nil, nil
@@ -422,8 +425,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-		err = fmt.Errorf("Could not get NnfStorage %v: %w", client.ObjectKeyFromObject(nnfStorage), err)
-		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("failed to get NNF storage resource '%s", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
 	}
 
 	// If the Status section has not been filled in yet, exit and wait.
@@ -433,7 +435,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	}
 
 	if nnfStorage.Status.Error != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Could not create allocation").WithError(nnfStorage.Status.Error)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("storage resource '%s' has error", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error)
 	}
 
 	if nnfStorage.Status.Status != nnfv1alpha1.ResourceReady {
@@ -770,7 +772,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		if err := r.createOrUpdateContainerServiceIfNecessary(ctx, workflow); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
 		}
-		if err := r.createOrUpdateContainerJobsIfNecessary(ctx, workflow); err != nil {
+		if err := r.createOrUpdateContainerJobsIfNecessary(ctx, workflow, index); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
 		}
 
