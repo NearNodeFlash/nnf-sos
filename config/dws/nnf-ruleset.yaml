@@ -93,7 +93,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "container"
-    watchStates: Proposal,PreRun,PostRun,Teardown
+    watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
       - key: "name"
         type: "string"
