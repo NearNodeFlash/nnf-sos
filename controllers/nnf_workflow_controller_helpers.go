@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -35,6 +36,7 @@ import (
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -107,7 +109,7 @@ func (r *result) info() []interface{} {
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
 
 	var createPersistentCount, deletePersistentCount, directiveCount int
-	for _, directive := range wf.Spec.DWDirectives {
+	for index, directive := range wf.Spec.DWDirectives {
 
 		directiveCount++
 		// The webhook validated directives, ignore errors
@@ -134,7 +136,7 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 			}
 
 		case "container":
-			if err := r.validateContainerDirective(ctx, wf, directive); err != nil {
+			if err := r.validateContainerDirective(ctx, wf, index); err != nil {
 				return nnfv1alpha1.NewWorkflowError("Could not validate container directive: " + directive).WithFatal().WithError(err)
 			}
 		}
@@ -214,14 +216,14 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 }
 
 // validateContainerDirective validates the container directive.
-func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, wf *dwsv1alpha1.Workflow, directive string) error {
-	args, err := dwdparse.BuildArgsMap(directive)
+func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("invalid DW directive: " + directive).WithFatal()
+		return nnfv1alpha1.NewWorkflowError("invalid DW directive: " + workflow.Spec.DWDirectives[index]).WithFatal()
 	}
 
 	// Ensure the supplied profile exists or use the default
-	profile, err := findContainerProfileToUse(ctx, r.Client, args)
+	profile, err := r.findContainerProfile(ctx, workflow, index)
 	if err != nil {
 		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 	}
@@ -245,7 +247,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		case "command", "name", "profile":
 		default:
 			if strings.HasPrefix(arg, "DW_JOB_") {
-				if findDirectiveIndexByName(wf, storageName, "jobdw") == -1 {
+				if findDirectiveIndexByName(workflow, storageName, "jobdw") == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
@@ -253,10 +255,10 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				}
 				suppliedStorageArguments = append(suppliedStorageArguments, arg)
 			} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
-				if err := r.validatePersistentInstanceForStaging(ctx, storageName, wf.Namespace); err != nil {
+				if err := r.validatePersistentInstanceForStaging(ctx, storageName, workflow.Namespace); err != nil {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
 				}
-				if findDirectiveIndexByName(wf, storageName, "persistentdw") == -1 {
+				if findDirectiveIndexByName(workflow, storageName, "persistentdw") == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", storageName)).WithFatal()
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
@@ -375,7 +377,6 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 		"jobdw",
 		"create_persistent",
 		"persistentdw",
-		"container",
 	}
 
 	directive := workflow.Spec.DWDirectives[dwIndex]
@@ -1023,16 +1024,20 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerServiceIfNecessary(ctx co
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
+func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
 	log := log.FromContext(ctx)
 
-	// TODO: name is hardcoded to the non-pinned profile
-	// TODO Use pinned profiles like storage profiles; however, storage
-	// profiles use <workflow-name>-<directive breakdown index> (e.g. blake-container-2). I think
-	// we'll want to just have these named after the workflow
-	containerProfile := &nnfv1alpha1.NnfContainerProfile{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: "nnf-system", Name: "nnfcontainerprofile-sample"}, containerProfile); err != nil {
+	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
+	if err != nil {
 		return err
+	}
+
+	if profile == nil {
+		return nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
+	}
+
+	if !profile.Data.Pinned {
+		return nnfv1alpha1.NewWorkflowErrorf("expected pinned container profile '%s'", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	// Get the targeted NNF nodes for the container jobs
@@ -1065,15 +1070,18 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx conte
 			return fmt.Errorf("setting Job controller reference failed for '%s': %w", job.Name, err)
 		}
 
+		// ###NJT: Why are we using CreateOrUpdate here? Nothing input to this routine
+		//         is mutable; so I think just using r.Create() is sufficient, while
+		//         ignoring errors.IsAlreadyExists() errors in case of requeues.
+
 		mutateFn := func() error {
 			// The template is immutable, so only do this on creation
+
 			if job.ObjectMeta.CreationTimestamp.IsZero() {
-				podTemplateSpec := containerProfile.Data.Template.DeepCopy()
 
-				// Use the same labels as the job
-				podTemplateSpec.Labels = job.DeepCopy().Labels
+				profile.Data.Template.DeepCopyInto(&job.Spec.Template)
 
-				podSpec := &podTemplateSpec.Spec
+				podSpec := &job.Spec.Template.Spec
 
 				// We want to keep the restart policy to Never. This way, any pods that failed are
 				// kept around for inspection. The job attempts to retry pods until the number of
@@ -1089,7 +1097,7 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx conte
 				podSpec.RestartPolicy = corev1.RestartPolicyNever
 
 				// Because the IP changes, we need to have deterministic hostname for the pod
-				podSpec.Hostname = jobName
+				podSpec.Hostname = nnfNode
 				podSpec.Subdomain = workflow.Name // service name == workflow name
 
 				// In our case, the target is only 1 node for the job, so a restartPolicy of Never
@@ -1117,18 +1125,17 @@ func (r *NnfWorkflowReconciler) createOrUpdateContainerJobsIfNecessary(ctx conte
 				// 			Path: "/path/to/thing"}}}
 				// podTemplateSpec.Spec.Volumes = append(podTemplateSpec.Spec.Volumes, vol)
 				// TODO: get mounts from workflow
-
-				job.Spec.Template = *podTemplateSpec
 			}
 
 			// This is a timeout for the job, if set, when the deadline hits, the job will kill all
 			// pods and fail the job.
-			if containerProfile.Data.ActiveDeadlineSeconds > 0 {
-				job.Spec.ActiveDeadlineSeconds = &containerProfile.Data.ActiveDeadlineSeconds
+			if profile.Data.ActiveDeadlineSeconds > 0 {
+				job.Spec.ActiveDeadlineSeconds = &profile.Data.ActiveDeadlineSeconds
 			}
+
 			// This defaults to 6 and is the maximum number of pod started before considering the
 			// job failed. I don't believe this can be turned off.
-			job.Spec.BackoffLimit = &containerProfile.Data.BackoffLimit
+			job.Spec.BackoffLimit = &profile.Data.BackoffLimit
 
 			return nil
 		}
@@ -1231,4 +1238,90 @@ func (r *NnfWorkflowReconciler) checkContainerJobs(ctx context.Context, workflow
 	// once that timeout is hit.
 
 	return true, true, nil
+}
+
+func (r *NnfWorkflowReconciler) findPinnedContainerProfile(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
+	profile := &nnfv1alpha1.NnfContainerProfile{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(workflow, index),
+			Namespace: workflow.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
+		return nil, err
+	}
+
+	return profile, nil
+}
+
+func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
+	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+	if err != nil {
+		return nil, err
+	}
+
+	name, found := args["profile"]
+	if !found {
+		return nil, fmt.Errorf("container directive '%s' has no profile key", workflow.Spec.DWDirectives[index])
+	}
+
+	profile := &nnfv1alpha1.NnfContainerProfile{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE"),
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
+		return nil, err
+	}
+
+	return profile, nil
+}
+
+func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
+
+	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	if profile != nil {
+		if !profile.Data.Pinned {
+			return fmt.Errorf("Expected pinned container profile, but it was not pinned: %s", profile.Name)
+		}
+
+		return nil
+	}
+
+	profile, err = r.findContainerProfile(ctx, workflow, index)
+	if err != nil {
+		return err
+	}
+
+	pinnedProfile := &nnfv1alpha1.NnfContainerProfile{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(workflow, index),
+			Namespace: workflow.Namespace,
+		},
+	}
+
+	profile.Data.DeepCopyInto(&pinnedProfile.Data)
+
+	pinnedProfile.Data.Pinned = true
+
+	dwsv1alpha1.AddOwnerLabels(pinnedProfile, workflow)
+
+	if err := controllerutil.SetControllerReference(workflow, pinnedProfile, r.Scheme); err != nil {
+		r.Log.Error(err, "failed to set controller reference on profile", "profile", pinnedProfile)
+		return fmt.Errorf("failed to set controller reference on profile %s", client.ObjectKeyFromObject(pinnedProfile))
+	}
+
+	r.Log.Info("Creating pinned container profile", "resource", client.ObjectKeyFromObject(pinnedProfile))
+	if err := r.Create(ctx, pinnedProfile); err != nil {
+		return err
+	}
+
+	return nil
 }
