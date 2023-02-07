@@ -1062,6 +1062,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 		dwsv1alpha1.InheritParentLabels(job, workflow)
 		dwsv1alpha1.AddOwnerLabels(job, workflow)
 		dwsv1alpha1.AddWorkflowLabels(job, workflow)
+		addPinnedContainerProfileLabel(job, profile)
 		labels := job.GetLabels()
 		labels[nnfv1alpha1.ContainerLabel] = workflow.Name
 		job.SetLabels(labels)
@@ -1271,6 +1272,17 @@ func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx cont
 	return nil
 }
 
+func addPinnedContainerProfileLabel(object metav1.Object, nnfContainerProfile *nnfv1alpha1.NnfContainerProfile) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[nnfv1alpha1.PinnedContainerProfileLabelName] = nnfContainerProfile.GetName()
+	labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = nnfContainerProfile.GetNamespace()
+	object.SetLabels(labels)
+}
+
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
 func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, nnfNodeName string) ([]nnfContainerVolume, error) {
 	volumes := []nnfContainerVolume{}
@@ -1363,7 +1375,7 @@ func (r *NnfWorkflowReconciler) setContainerJobPodSpec(ctx context.Context, work
 	podSpec.RestartPolicy = corev1.RestartPolicyNever
 
 	// Because the IP changes, we need to have deterministic hostname for the pod
-	podSpec.Hostname = job.Name
+	podSpec.Hostname = nnfNodeName
 	podSpec.Subdomain = workflowName // service name == workflow name
 
 	// In our case, the target is only 1 node for the job, so a restartPolicy of Never
