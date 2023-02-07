@@ -1042,7 +1042,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	}
 
 	// Get the targeted NNF nodes for the container jobs
-	nnfNodes, err := r.getNnfNodesForContainers(ctx, workflow)
+	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil {
 		return nnfv1alpha1.NewWorkflowError("error obtaining the target NNF nodes for containers:").WithError(err).WithFatal()
 	}
@@ -1084,8 +1084,10 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 		if profile.Data.ActiveDeadlineSeconds > 0 {
 			job.Spec.ActiveDeadlineSeconds = &profile.Data.ActiveDeadlineSeconds
 		}
-		// This defaults to 6 and is the maximum number of pod started before considering the
+		// This defaults to 6 and is the maximum number of pod retries before considering the
 		// job failed. I don't believe this can be turned off.
+		// See the comments in setContainerJobPodSpec() regarding the restartPolicy and also see
+		// https://github.com/NearNodeFlash/NearNodeFlash.github.io/pull/26#discussion_r1089460308.
 		job.Spec.BackoffLimit = &profile.Data.BackoffLimit
 
 		err = r.Create(ctx, job)
@@ -1102,7 +1104,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 }
 
 // Retrieve the computes for the workflow and find their local nnf nodes
-func (r *NnfWorkflowReconciler) getNnfNodesForContainers(ctx context.Context, workflow *dwsv1alpha1.Workflow) ([]string, error) {
+func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, workflow *dwsv1alpha1.Workflow) ([]string, error) {
 
 	var nnfNodes []string
 	var computeNodes []string
@@ -1372,6 +1374,7 @@ func (r *NnfWorkflowReconciler) setContainerJobPodSpec(ctx context.Context, work
 	// with a new IP. A retry is not the same as a restart.  If we set this to
 	// OnFailure, the pods will truly restart but we will lose any log history outside
 	// of (kubectl logs --previous).
+	// See https://github.com/NearNodeFlash/NearNodeFlash.github.io/pull/26#discussion_r1089460308
 	podSpec.RestartPolicy = corev1.RestartPolicyNever
 
 	// Because the IP changes, we need to have deterministic hostname for the pod
