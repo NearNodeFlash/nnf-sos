@@ -41,10 +41,6 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
-const (
-	finalizerStorage = "nnf.cray.hpe.com/storage"
-)
-
 type DWSStorageReconciler struct {
 	client.Client
 	Log    logr.Logger
@@ -69,29 +65,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
-		if !controllerutil.ContainsFinalizer(storage, finalizerStorage) {
-			return ctrl.Result{}, nil
-		}
-
-		// TODO: Delete NNF Node resource?
-
-		controllerutil.RemoveFinalizer(storage, finalizerStorage)
-		if err := r.Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
-
 		return ctrl.Result{}, nil
-	}
-
-	// Add a finalizer to ensure resource is properly deleted
-	if !controllerutil.ContainsFinalizer(storage, finalizerStorage) {
-		controllerutil.AddFinalizer(storage, finalizerStorage)
-
-		if err := r.Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
