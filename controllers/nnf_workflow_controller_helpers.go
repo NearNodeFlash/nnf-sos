@@ -984,17 +984,7 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 	return nil
 }
 
-// func (r *NnfWorkflowReconciler) createOrUpdateContainerServiceIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
-
-// 	log := log.FromContext(ctx)
-// 	log.Info("TODO: createOrUpdateContainerServiceIfNecessary() not implemented")
-
-// 	return nil
-// }
-
 func (r *NnfWorkflowReconciler) createContainerService(ctx context.Context, workflow *dwsv1alpha1.Workflow) error {
-	log := log.FromContext(ctx)
-
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workflow.Name,
@@ -1017,17 +1007,12 @@ func (r *NnfWorkflowReconciler) createContainerService(ctx context.Context, work
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		log.Info("Service already exists", "object", client.ObjectKeyFromObject(service).String())
 	}
-
-	log.Info("Created Service", "object", client.ObjectKeyFromObject(service).String())
 
 	return nil
 }
 
 func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, index int) error {
-	log := log.FromContext(ctx)
-
 	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
 	if err != nil {
 		return err
@@ -1062,10 +1047,13 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 		dwsv1alpha1.InheritParentLabels(job, workflow)
 		dwsv1alpha1.AddOwnerLabels(job, workflow)
 		dwsv1alpha1.AddWorkflowLabels(job, workflow)
-		addPinnedContainerProfileLabel(job, profile)
+
 		labels := job.GetLabels()
 		labels[nnfv1alpha1.ContainerLabel] = workflow.Name
+		labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
+		labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
 		job.SetLabels(labels)
+
 		if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
 			return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.Name).WithError(err)
 		}
@@ -1095,9 +1083,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
-			log.Info("Job already exists", "object", client.ObjectKeyFromObject(job).String())
 		}
-		log.Info("Created Job", "object", client.ObjectKeyFromObject(job).String())
 	}
 
 	return nil
@@ -1272,17 +1258,6 @@ func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx cont
 	}
 
 	return nil
-}
-
-func addPinnedContainerProfileLabel(object metav1.Object, nnfContainerProfile *nnfv1alpha1.NnfContainerProfile) {
-	labels := object.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	labels[nnfv1alpha1.PinnedContainerProfileLabelName] = nnfContainerProfile.GetName()
-	labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = nnfContainerProfile.GetNamespace()
-	object.SetLabels(labels)
 }
 
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
