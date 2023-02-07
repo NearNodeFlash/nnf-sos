@@ -197,13 +197,23 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 	if os.Getenv("ENVIRONMENT") == "kind" {
 		if shouldMount {
+			// Return if the directory already exists
+			if _, err := os.Stat(clientMountInfo.MountPath); !os.IsNotExist(err) {
+				return nil
+			}
+
 			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
 				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
 			}
 
 			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
 		} else {
-			if err := os.Remove(clientMountInfo.MountPath); err != nil {
+			// Return if the directory was already removed
+			if _, err := os.Stat(clientMountInfo.MountPath); os.IsNotExist(err) {
+				return nil
+			}
+
+			if err := os.RemoveAll(clientMountInfo.MountPath); err != nil {
 				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
 			}
 

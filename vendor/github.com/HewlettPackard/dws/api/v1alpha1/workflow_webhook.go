@@ -217,38 +217,16 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 		return nil
 	}
 
-	err := ruleParser.ReadRules()
-	if err != nil {
+	if err := ruleParser.ReadRules(); err != nil {
 		return err
 	}
 
-	uniqueMap := make(map[string]bool)
-
-	for i, directive := range workflow.Spec.DWDirectives {
-		validDirective := false
-		for _, rule := range ruleParser.GetRuleList() {
-			// validate #DW syntax
-			const rejectUnsupportedCommands bool = true
-
-			valid, err := dwdparse.ValidateDWDirective(rule, directive, uniqueMap, rejectUnsupportedCommands)
-			if err != nil {
-				// #DW parser validation failed
-				workflowlog.Info("dwDirective validation failed", "Error", err)
-				return err
-			}
-
-			if valid {
-				validDirective = true
-				ruleParser.MatchedDirective(workflow, rule.WatchStates, i, rule.DriverLabel)
-			}
-		}
-
-		if !validDirective {
-			return fmt.Errorf("invalid directive found: '%s'", directive)
-		}
+	// Forward the rule and directive index to the rule parsers matched directive handling
+	onValidDirectiveFunc := func(index int, rule dwdparse.DWDirectiveRuleSpec) {
+		ruleParser.MatchedDirective(workflow, rule.WatchStates, index, rule.DriverLabel)
 	}
 
-	return nil
+	return dwdparse.Validate(ruleParser.GetRuleList(), workflow.Spec.DWDirectives, onValidDirectiveFunc)
 }
 
 // RuleParser defines the interface a rule parser must provide
