@@ -352,7 +352,7 @@ var _ = Describe("Integration Test", func() {
 
 				Expect(k8sClient.Create(context.TODO(), node)).To(Succeed())
 
-				// Create the NNF Node
+				// Create the NNF Node resource
 				nnfNode := &nnfv1alpha1.NnfNode{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "nnf-nlc",
@@ -367,19 +367,24 @@ var _ = Describe("Integration Test", func() {
 
 				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
-				// Check that the DWS storage resource was updated with the compute node information
-				storage := &dwsv1alpha1.Storage{}
-				namespacedName := types.NamespacedName{
-					Name:      nodeName,
-					Namespace: corev1.NamespaceDefault,
+				// Create the DWS Storage resource
+				storage := &dwsv1alpha1.Storage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nodeName,
+						Namespace: corev1.NamespaceDefault,
+					},
 				}
 
+				Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
+
+				// Check that the DWS storage resource was updated with the compute node information
+
 				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), namespacedName, storage)
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
 				}).Should(Succeed())
 
 				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), namespacedName, storage)).To(Succeed())
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
 					return len(storage.Status.Access.Computes) == 16
 				}).Should(BeTrue())
 
