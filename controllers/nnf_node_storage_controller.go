@@ -945,7 +945,7 @@ func (r *NnfNodeStorageReconciler) handleCreateError(storage *nnfv1alpha1.NnfNod
 	// If this is really Fatal, we should not retry. But not all of nnf-ec is supports the
 	// retryable classification of errors. Instead we mark the error as Fatal() but continue
 	// to retry with a modest delay. If the resource creation error occurs perpetually, an
-	// external entity should timeout the operation and therefore future create attempts.
+	// external entity should timeout the operation and therefore prevent future create attempts.
 	// Once nnf-ec has correctly classified all errors, there should be no need to requeue.
 
 	return &ctrl.Result{RequeueAfter: time.Minute}, nil
