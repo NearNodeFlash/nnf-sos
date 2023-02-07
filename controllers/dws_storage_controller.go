@@ -31,7 +31,6 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -39,10 +38,6 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
-)
-
-const (
-	finalizerStorage = "nnf.cray.hpe.com/storage"
 )
 
 type DWSStorageReconciler struct {
@@ -69,29 +64,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
-		if !controllerutil.ContainsFinalizer(storage, finalizerStorage) {
-			return ctrl.Result{}, nil
-		}
-
-		// TODO: Delete NNF Node resource?
-
-		controllerutil.RemoveFinalizer(storage, finalizerStorage)
-		if err := r.Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
-
 		return ctrl.Result{}, nil
-	}
-
-	// Add a finalizer to ensure resource is properly deleted
-	if !controllerutil.ContainsFinalizer(storage, finalizerStorage) {
-		controllerutil.AddFinalizer(storage, finalizerStorage)
-
-		if err := r.Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
