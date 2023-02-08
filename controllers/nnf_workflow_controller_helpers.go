@@ -1360,7 +1360,7 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			command:        cmd,
 			directiveName:  val,
 			directiveIndex: -1,
-			envVarName:     strings.Replace(arg, "-", "_", -1), // env vars can't have hyphens
+			envVarName:     strings.ReplaceAll(arg, "-", "_"), // env vars can't have hyphens
 		}
 
 		// Find the directive index for the given name so we can retrieve its NnfAccess
