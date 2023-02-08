@@ -1112,15 +1112,15 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 			},
 		})
 
-		// VolumeMounts
+		// Add VolumeMounts and Volume environment variables for all containers
 		for idx := range podSpec.Containers {
 			container := &podSpec.Containers[idx]
+
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
 				Name:      vol.name,
 				MountPath: vol.mountPath,
 			})
 
-			// TODO: put this in config map and mount the configmap as env vars?
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  vol.envVarName,
 				Value: vol.mountPath,
@@ -1132,6 +1132,16 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil {
 		return nnfv1alpha1.NewWorkflowError("error obtaining the target NNF nodes for containers:").WithError(err).WithFatal()
+	}
+
+	// Add in non-volume environment variables for all containers
+	for idx := range podSpec.Containers {
+		container := &podSpec.Containers[idx]
+
+		container.Env = append(container.Env,
+			corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: podSpec.Subdomain},
+			corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: workflow.Namespace + ".svc.cluster.local"},
+			corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(nnfNodes, " ")})
 	}
 
 	// Finally, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
@@ -1350,7 +1360,7 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			command:        cmd,
 			directiveName:  val,
 			directiveIndex: -1,
-			envVarName:     arg,
+			envVarName:     strings.Replace(arg, "-", "_", -1), // env vars can't have hyphens
 		}
 
 		// Find the directive index for the given name so we can retrieve its NnfAccess
