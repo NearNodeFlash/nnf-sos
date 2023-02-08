@@ -769,10 +769,10 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
-		if err := r.createOrUpdateContainerServiceIfNecessary(ctx, workflow); err != nil {
+		if err := r.createContainerService(ctx, workflow); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
 		}
-		if err := r.createOrUpdateContainerJobsIfNecessary(ctx, workflow, index); err != nil {
+		if err := r.createContainerJobs(ctx, workflow, dwArgs, index); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
 		}
 
@@ -885,6 +885,8 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		envName = "DW_PERSISTENT_" + dwArgs["name"]
 	case "container":
 		// TODO: set env variables for containers; job names? ports? container storage args?
+		// TODO: Check to see that jobs and pods have started. Example: pod volumes aren't ready -
+		// we shouldn't go ready in that case
 	default:
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
 	}
