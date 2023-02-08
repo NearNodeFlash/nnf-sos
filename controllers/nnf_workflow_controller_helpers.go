@@ -1217,6 +1217,29 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 	return nnfNodes, nil
 }
 
+func (r *NnfWorkflowReconciler) checkIfContainerJobsStarted(ctx context.Context, workflow *dwsv1alpha1.Workflow) (*result, error) {
+	jobList := &batchv1.JobList{}
+	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
+
+	if err := r.List(ctx, jobList, matchLabels); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for workflow '%s'", workflow.Name).WithError(err)
+	}
+
+	for _, job := range jobList.Items {
+		// If we have any conditions, the job already finished
+		if len(job.Status.Conditions) > 0 {
+			continue
+		}
+
+		// Ready should be non-zero to indicate the a pod is running for the job
+		if *job.Status.Ready < 1 {
+			return Requeue("pending container start").after(2 * time.Second), nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (r *NnfWorkflowReconciler) checkContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow) (done bool, result bool, error error) {
 	jobList := &batchv1.JobList{}
 	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
@@ -1290,7 +1313,6 @@ func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workfl
 }
 
 func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) error {
-
 	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
