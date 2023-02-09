@@ -1236,7 +1236,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 
 		// Ready should be non-zero to indicate the a pod is running for the job
 		if job.Status.Ready == nil || *job.Status.Ready < 1 {
-			return Requeue("pending container start").after(2 * time.Second), nil
+			return Requeue(fmt.Sprintf("pending container start for job '%s'", job.Name)).after(2 * time.Second), nil
 		}
 	}
 
