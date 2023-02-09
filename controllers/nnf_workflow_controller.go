@@ -213,13 +213,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
-		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
 			log.Info("Start wait", result.info()...)
+			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
+		driverStatus.Message = ""
 
 		log.Info("Start done")
 	}
@@ -251,13 +252,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
-		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
 			log.Info("Finish wait", result.info()...)
+			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
+		driverStatus.Message = ""
 
 		log.Info("Finish done")
 
@@ -885,7 +887,6 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		envName = "DW_PERSISTENT_" + dwArgs["name"]
 	case "container":
 		return r.waitForContainersToStart(ctx, workflow, index)
-
 	default:
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
 	}
