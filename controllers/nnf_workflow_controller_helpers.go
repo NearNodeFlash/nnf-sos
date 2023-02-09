@@ -1041,6 +1041,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	labels[nnfv1alpha1.ContainerLabel] = workflow.Name
 	labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
 	labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
+	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
@@ -1217,12 +1218,14 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 	return nnfNodes, nil
 }
 
-func (r *NnfWorkflowReconciler) checkIfContainerJobsStarted(ctx context.Context, workflow *dwsv1alpha1.Workflow) (*result, error) {
+func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
 	jobList := &batchv1.JobList{}
-	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
 
+	// Get the jobs for this workflow and directive index
+	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
+	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for workflow '%s'", workflow.Name).WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for index %d", index).WithError(err)
 	}
 
 	for _, job := range jobList.Items {
@@ -1232,7 +1235,7 @@ func (r *NnfWorkflowReconciler) checkIfContainerJobsStarted(ctx context.Context,
 		}
 
 		// Ready should be non-zero to indicate the a pod is running for the job
-		if *job.Status.Ready < 1 {
+		if job.Status.Ready == nil || *job.Status.Ready < 1 {
 			return Requeue("pending container start").after(2 * time.Second), nil
 		}
 	}

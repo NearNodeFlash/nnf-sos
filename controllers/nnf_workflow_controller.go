@@ -884,7 +884,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	case "persistentdw":
 		envName = "DW_PERSISTENT_" + dwArgs["name"]
 	case "container":
-		return r.checkIfContainerJobsStarted(ctx, workflow)
+		return r.waitForContainersToStart(ctx, workflow, index)
 
 	default:
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
