@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -248,10 +249,7 @@ func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfN
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
 		updateError(condition, &allocationStatus.StoragePool, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create StoragePool", err)
-		log.Info(nodeStorage.Status.Error.Error())
-
-		return &ctrl.Result{Requeue: true}, nil
+		return r.handleCreateError(nodeStorage, "could not create storage pool", err)
 	}
 
 	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
@@ -377,10 +375,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
 				updateError(condition, &allocationStatus.StorageGroup, err)
-				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create storage group", err).WithFatal()
-				log.Info(nodeStorage.Status.Error.Error())
-
-				return &ctrl.Result{Requeue: true}, nil
+				return r.handleCreateError(nodeStorage, "could not create storage group", err)
 			}
 
 			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
@@ -388,7 +383,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 			if len(allocationStatus.StorageGroup.ID) == 0 {
-				log.Info("Created storage group", "storageGroupID", storageGroupID)
+				log.Info("Created storage group", "Id", storageGroupID)
 				allocationStatus.StorageGroup.ID = sg.Id
 				condition.LastTransitionTime = metav1.Now()
 				condition.Status = metav1.ConditionFalse // we are finished with this state
@@ -523,10 +518,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	fs, err := r.createFileSystem(ss, fileSystemID, allocationStatus.StoragePool.ID, oem)
 	if err != nil {
 		updateError(condition, &allocationStatus.FileSystem, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file system", err).WithFatal()
-		log.Info(nodeStorage.Status.Error.Error())
 
-		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		return r.handleCreateError(nodeStorage, "could not create file system", err)
 	}
 
 	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
@@ -583,10 +576,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		updateError(condition, &allocationStatus.FileShare, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err).WithFatal()
-		log.Info(nodeStorage.Status.Error.Error())
-
-		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		return r.handleCreateError(nodeStorage, "could not create file share", err)
 	}
 
 	nid := ""
@@ -935,6 +925,30 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 	}
 
 	return fs, nil
+}
+
+func (r *NnfNodeStorageReconciler) handleCreateError(storage *nnfv1alpha1.NnfNodeStorage, message string, err error) (*ctrl.Result, error) {
+
+	resourceError := dwsv1alpha1.NewResourceError(message, err)
+	defer func() {
+		r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(storage).String()).Info(resourceError.Error())
+		storage.Status.Error = resourceError
+	}()
+
+	controllerError := &ec.ControllerError{}
+	if errors.As(err, &controllerError) && controllerError.IsRetryable() {
+		return &ctrl.Result{RequeueAfter: controllerError.RetryDelay()}, nil
+	}
+
+	resourceError = resourceError.WithFatal()
+
+	// If this is really Fatal, we should not retry. But not all of nnf-ec supports the
+	// retryable classification of errors. Instead we mark the error as Fatal() but continue
+	// to retry with a modest delay. If the resource creation error occurs perpetually, an
+	// external entity should timeout the operation and therefore prevent future create attempts.
+	// Once nnf-ec has correctly classified all errors, there should be no need to requeue.
+
+	return &ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 func updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {
