@@ -51,6 +51,8 @@ type StorageV190Storage struct {
 
 	Links StorageV190Links `json:"Links,omitempty"`
 
+	Location ResourceLocation `json:"Location,omitempty"`
+
 	// The name of the resource or array member.
 	Name string `json:"Name"`
 

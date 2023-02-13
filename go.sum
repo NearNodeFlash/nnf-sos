@@ -96,6 +96,8 @@ github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0 h
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0/go.mod h1:1SLPG4mFeuISXS/GoPtHV541AqR6e9n1Fd9KEnuTDIU=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20230126164635-a87929e88089 h1:ZxXh6YNmnH50yHi0O5uOSNVG/7lI+pqDCB9wGMf9INU=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20230126164635-a87929e88089/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230213215749-ca497539590c h1:4uTFUTm+upmdfkB1wROa+ApZqqA7s5yxI1yYAUYnIIE=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230213215749-ca497539590c/go.mod h1:s6Gp5d88rhMFcqrkF/Ds8D+n6GMAv9iw004YhAL3Neo=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/VividCortex/mysqlerr v1.0.0/go.mod h1:xERx8E4tBhLvpjzdUyQiSfUxeMcATEQrflDAfXsqcAE=

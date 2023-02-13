@@ -11,6 +11,7 @@ switches:
       - name: Interswitch Fabric
         type: InterswitchPort
         port: 0
+        slot: -1
         width: 16
       - name: Rabbit
         type: ManagementPort
@@ -19,34 +20,42 @@ switches:
       - name: Compute 0
         type: UpstreamPort
         port: 32
+        slot: 0
         width: 4
       - name: Compute 1
         type: UpstreamPort
         port: 34
+        slot: 1
         width: 4
       - name: Compute 2
         type: UpstreamPort
         port: 36
+        slot: 2
         width: 4
       - name: Compute 3
         type: UpstreamPort
         port: 38
+        slot: 3
         width: 4
       - name: Compute 4
         type: UpstreamPort
         port: 40
+        slot: 4
         width: 4
       - name: Compute 5
         type: UpstreamPort
         port: 42
+        slot: 5
         width: 4
       - name: Compute 6
         type: UpstreamPort
         port: 44
+        slot: 6
         width: 4
       - name: Compute 7
         type: UpstreamPort
         port: 46
+        slot: 7
         width: 4
       - name: SSD 0
         type: DownstreamPort
@@ -101,42 +110,52 @@ switches:
       - name: Interswitch Fabric
         type: InterswitchPort
         port: 0
+        slot: -1
         width: 16
       - name: Rabbit
         type: ManagementPort
         port: 24
+        slot: -1
         width: 16
       - name: Compute 8
         type: UpstreamPort
         port: 32
+        slot: 8
         width: 4
       - name: Compute 9
         type: UpstreamPort
         port: 34
+        slot: 9
         width: 4
       - name: Compute 10
         type: UpstreamPort
         port: 36
+        slot: 10
         width: 4
       - name: Compute 11
         type: UpstreamPort
         port: 38
+        slot: 11
         width: 4
       - name: Compute 12
         type: UpstreamPort
         port: 40
+        slot: 12
         width: 4
       - name: Compute 13
         type: UpstreamPort
         port: 42
+        slot: 13
         width: 4
       - name: Compute 14
         type: UpstreamPort
         port: 44
+        slot: 14
         width: 4
       - name: Compute 15
         type: UpstreamPort
         port: 46
+        slot: 15
         width: 4
       - name: SSD 9
         type: DownstreamPort
