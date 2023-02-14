@@ -845,11 +845,11 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			},
 		}
 
-		// Set the teardown state to post run. If there is a copy_out directive that uses
-		// this storage instance, set the teardown state so NNF Access is preserved through
+		// Set the teardown state to post run. If there is a copy_out or container directive that
+		// uses this storage instance, set the teardown state so NNF Access is preserved through
 		// DataOut.
 		teardownState := dwsv1alpha1.StatePostRun
-		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
+		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 || findContainerDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
 			teardownState = dwsv1alpha1.StateTeardown
 		}
 
@@ -901,25 +901,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	if dwArgs["command"] == "container" {
-		// TODO: This is definitely half baked. This area will need some work once we get approval
-		// on the container RFC. More time can be spent on this once we get confirmation on the approach.
-
-		// TODO: I think these errors are going to need to be Fatal errors in order to set the Status.
-		done, result, err := r.checkContainerJobs(ctx, workflow)
-		if err != nil {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("failed to check the container Jobs").WithError(err)
-		}
-
-		// TODO: Not sure if this requeue is working.
-		if !done {
-			return Requeue("pending container finish").after(2 * time.Second), nil
-		}
-
-		if !result {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("one or more container jobs were not successful: ").WithError(err)
-		}
-
-		return nil, nil
+		return r.waitForContainersToFinish(ctx, workflow, index)
 	}
 
 	// Unmount the NnfAccess for the compute nodes. This will free the compute nodes to be used
@@ -962,8 +944,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	if dwArgs["command"] == "container" {
-		// TODO: anything to do here for container? Report Job incompletion as errors to the workflow like DM below?
-		return nil, nil
+		return r.checkContainersResults(ctx, workflow, index)
 	}
 
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "unmounted")

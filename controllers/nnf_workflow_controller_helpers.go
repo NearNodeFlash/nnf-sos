@@ -39,6 +39,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -745,6 +746,26 @@ func findCopyOutDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string
 	return -1
 }
 
+// Returns the directive index matching the container directive whose storage field(s) reference
+// the provided name argument, or -1 if not found.
+func findContainerDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
+	for idx, directive := range workflow.Spec.DWDirectives {
+		if strings.HasPrefix(directive, "#DW container") {
+			parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
+
+			for k, v := range parameters {
+				if strings.HasPrefix(k, "DW_JOB_") || strings.HasPrefix(k, "DW_PERSISTENT_") {
+					if v == name {
+						return idx
+					}
+				}
+			}
+		}
+	}
+
+	return -1
+}
+
 // Returns a <name, path> pair for the given staging argument (typically source or destination)
 // i.e. $DW_JOB_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
 func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
@@ -1012,17 +1033,9 @@ func (r *NnfWorkflowReconciler) createContainerService(ctx context.Context, work
 }
 
 func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, index int) error {
-	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
+	profile, err := r.getContainerProfile(ctx, workflow, index)
 	if err != nil {
 		return err
-	}
-
-	if profile == nil {
-		return nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
-	}
-
-	if !profile.Data.Pinned {
-		return nnfv1alpha1.NewWorkflowErrorf("expected pinned container profile '%s'", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	// Create one master job that will be used for all the jobs on all the NnfNodes. Most of the Job's Data will be the same.
@@ -1042,27 +1055,18 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
 	labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
 		return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.Name).WithError(err)
 	}
 
-	// TODO: BackoffLimit and ActiveDeadlineSeconds are currently exposed directly to the user via
-	// container profiles. The plan is to only expose the backofflimit directly and give it a better
-	// name.
-
-	// This is a timeout for the job, if set, when the deadline hits, the job will kill all
-	// pods and fail the job.
-	if profile.Data.ActiveDeadlineSeconds > 0 {
-		job.Spec.ActiveDeadlineSeconds = &profile.Data.ActiveDeadlineSeconds
-	}
-
 	// This defaults to 6 and is the maximum number of pod retries before considering the
 	// job failed. I don't believe this can be turned off.
 	// See the comments below regarding the restartPolicy and also see
 	// https://github.com/NearNodeFlash/NearNodeFlash.github.io/pull/26#discussion_r1089460308.
-	job.Spec.BackoffLimit = &profile.Data.BackoffLimit
+	job.Spec.BackoffLimit = &profile.Data.RetryLimit
 
 	// Copy the container template from the profile
 	profile.Data.Template.DeepCopyInto(&job.Spec.Template)
@@ -1219,13 +1223,9 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 }
 
 func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
-	jobList := &batchv1.JobList{}
-
-	// Get the jobs for this workflow and directive index
-	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
-	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for index %d", index).WithError(err)
+	jobList, err := r.getContainerJobs(ctx, workflow, index)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, job := range jobList.Items {
@@ -1243,36 +1243,107 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) checkContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow) (done bool, result bool, error error) {
-	jobList := &batchv1.JobList{}
-	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
-
-	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return false, false, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for workflow '%s'", workflow.Name).WithError(err)
+func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+	jobList, err := r.getContainerJobs(ctx, workflow, index)
+	if err != nil {
+		return nil, err
 	}
 
-	// TODO: There seems like there's a better way of doing this with Pod failure policies: https://kubernetes.io/docs/concepts/workloads/controllers/job/#pod-failure-policy
+	if len(jobList.Items) < 1 {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow %s", workflow.Name)
+	}
+
+	// Retrieve the profile to extract the PostRun timeout
+	profile, err := r.getContainerProfile(ctx, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+	timeout := time.Duration(profile.Data.PostRunTimeoutSeconds) * time.Second
 
 	// Ensure all the jobs are done running before we check the conditions.
 	for _, job := range jobList.Items {
+		// Jobs will have conditions when finished
 		if len(job.Status.Conditions) <= 0 {
-			return false, false, nil
+
+			// If desired, set the ActiveDeadline on the job to kill pods. Use the job's creation
+			// timestamp to determine how long the job/pod has been running at this point. Then, add
+			// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
+			// terminate the pods once the deadline is hit.
+			if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
+				deadline := int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
+
+				// Update the job with the deadline
+				err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					j := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace}}
+					if err := r.Get(ctx, client.ObjectKeyFromObject(j), j); err != nil {
+						return client.IgnoreNotFound(err)
+					}
+
+					j.Spec.ActiveDeadlineSeconds = &deadline
+					return r.Update(ctx, j)
+				})
+
+				if err != nil {
+					return nil, nnfv1alpha1.NewWorkflowErrorf("error updating job '%s' activeDeadlineSeconds:", job.Name)
+				}
+			}
+
+			return Requeue("pending container finish").after(2 * time.Second).withObject(&job), nil
 		}
 	}
 
-	// Once we know everything is done, we can check the conditions
+	return nil, nil
+}
+
+func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+	jobList, err := r.getContainerJobs(ctx, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobList.Items) < 1 {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow %s", workflow.Name)
+	}
+
 	for _, job := range jobList.Items {
 		for _, condition := range job.Status.Conditions {
 			if condition.Type != batchv1.JobComplete {
-				return true, false, nnfv1alpha1.NewWorkflowErrorf("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message)
+				return nil, nnfv1alpha1.NewWorkflowErrorf("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message)
 			}
 		}
 	}
 
-	// TODO: Once postrun starts, we will want a timeout that starts and eventually kills/fails job pods
-	// once that timeout is hit.
+	return nil, nil
+}
 
-	return true, true, nil
+func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*batchv1.JobList, error) {
+	jobList := &batchv1.JobList{}
+
+	// Get the jobs for this workflow and directive index
+	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
+	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	if err := r.List(ctx, jobList, matchLabels); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for index %d", index).WithError(err)
+	}
+
+	return jobList, nil
+}
+
+func (r *NnfWorkflowReconciler) getContainerProfile(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
+	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	if profile == nil {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
+	}
+
+	if !profile.Data.Pinned {
+		return nil, nnfv1alpha1.NewWorkflowErrorf("expected pinned container profile '%s'", indexedResourceName(workflow, index)).WithFatal()
+	}
+
+	return profile, nil
 }
 
 func (r *NnfWorkflowReconciler) findPinnedContainerProfile(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
