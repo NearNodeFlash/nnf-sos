@@ -362,6 +362,26 @@ func (dev *Device) IdentifyNamespaceControllerList(namespaceId uint32) (*CtrlLis
 	return ctrlList, nil
 }
 
+func (dev *Device) IdentifyPrimaryControllerCapabilities(controllerId uint16) (*CtrlCaps, error) {
+
+	caps := new(CtrlCaps)
+	buf := structex.NewBuffer(caps)
+
+	var cdw10 uint32
+	cdw10 = uint32(controllerId) << 16
+	cdw10 |= uint32(PrimaryControllerCapabilities_CNS)
+
+	if err := dev.IdentifyRaw(0, cdw10, 0, buf.Bytes()); err != nil {
+		return nil, err
+	}
+
+	if err := structex.Decode(buf, caps); err != nil {
+		return nil, err
+	}
+
+	return caps, nil
+}
+
 // Identify -
 func (dev *Device) Identify(namespaceId uint32, cns IdentifyControllerOrNamespaceType, data []byte) error {
 	return dev.IdentifyRaw(namespaceId, uint32(cns), 0, data)
@@ -639,6 +659,27 @@ type NamespaceCapabilities struct {
 type CtrlList struct {
 	Num         uint16 `countOf:"Identifiers"`
 	Identifiers [2047]uint16
+}
+
+type CtrlCaps struct {
+	ControllerId                           uint16 // CNTLID
+	PortId                                 uint16 // PORTID
+	ControllerResourceType                 uint8  // CRT
+	Reserved5                              [27]uint8
+	VQResourcesFlexibleTotal               uint32 // VQFRT
+	VQResourcesFlexibleAssigned            uint32 // VQRFA
+	VQResourcesFlexibleAllocatedToPrimary  uint16 // VQRFAP
+	VQResourcesPrivateTotal                uint16 // VQPRT
+	VQResourcesFlexibleSecondaryMaximum    uint16 // VQFRSM
+	VQFlexibleResourcePreferredGranularity uint16 // VQGRAN
+	Reserved48                             [16]uint8
+	VIResourcesFlexibleTotal               uint32 // VIFRT
+	VIResourcesFlexibleAssigned            uint32 // VIRFA
+	VIResourcesFlexibleAllocatedToPrimary  uint16 // VIRFAP
+	VIResourcesPrivateTotal                uint16 // VIPRT
+	VIResourcesFlexibleSecondaryMaximum    uint16 // VIFRSM
+	VIFlexibleResourcePreferredGranularity uint16 // VIGRAN
+	Reserved90                             [4016]uint8
 }
 
 // CreateNamespace creates a new namespace with the specified parameters

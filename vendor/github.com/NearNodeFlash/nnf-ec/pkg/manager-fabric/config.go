@@ -63,7 +63,6 @@ type SwitchConfig struct {
 		Name string
 	}
 	PciGen     int32  `yaml:"pciGen"`
-	SlotPrefix string `yaml:"slotPrefix"`
 	Ports      []PortConfig
 
 	ManagementPortCount int

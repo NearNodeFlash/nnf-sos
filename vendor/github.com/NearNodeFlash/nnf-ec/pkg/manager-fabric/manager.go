@@ -85,6 +85,8 @@ type Port struct {
 	id       string
 	fabricId string
 
+	slot int64
+
 	portType sf.PortV130PortType
 	portStatus
 
@@ -568,6 +570,7 @@ func (s *Switch) findPortByPhysicalPortId(id uint8) *Port {
 }
 
 func (p *Port) GetBaseEndpointIndex() int { return p.endpoints[0].index }
+func (p *Port) GetSlot() int64            { return p.slot }
 
 func (p *Port) findEndpoint(functionId string) *Endpoint {
 	id, err := strconv.Atoi(functionId)
@@ -617,6 +620,10 @@ func (p *Port) Initialize() error {
 
 				if epPort.Ep.Functions == nil {
 					panic(fmt.Sprintf("No EP Functions received for port %+v", port))
+				}
+
+				if len(epPort.Ep.Functions) == 1 {
+					return fmt.Errorf("Port %s: Single Root I/O Virtualization (SR-IOV) not supported", port.id)
 				}
 
 				f := port.swtch.fabric
@@ -898,6 +905,7 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 			s.ports[portIdx] = Port{
 				id:       strconv.Itoa(portIdx),
 				fabricId: strconv.Itoa(fabricPortId),
+				slot:     int64(portConf.Slot),
 				portType: portType,
 				portStatus: portStatus{
 					cfgLinkWidth:    0,
@@ -1549,17 +1557,4 @@ func (f *Fabric) GetSwitchPort(switchId, portId string) (*Port, error) {
 	}
 
 	return p, nil
-}
-
-func (f *Fabric) GetPortPartLocation(switchId, portId string) (*openapi.PartLocation, error) {
-	p, err := f.GetSwitchPort(switchId, portId)
-	if err != nil {
-		return nil, err
-	}
-
-	return &openapi.PartLocation{
-		ServiceLabel:         p.swtch.config.SlotPrefix,
-		LocationOrdinalValue: int64(p.config.Slot),
-		LocationType:         sf.SLOT_RV1100LT,
-	}, nil
 }
