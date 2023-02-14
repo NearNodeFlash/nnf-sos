@@ -213,13 +213,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
-		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
 			log.Info("Start wait", result.info()...)
+			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
+		driverStatus.Message = ""
 
 		log.Info("Start done")
 	}
@@ -251,13 +252,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
-		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
 			log.Info("Finish wait", result.info()...)
+			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
+		driverStatus.Message = ""
 
 		log.Info("Finish done")
 
@@ -884,9 +886,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	case "persistentdw":
 		envName = "DW_PERSISTENT_" + dwArgs["name"]
 	case "container":
-		// TODO: set env variables for containers; job names? ports? container storage args?
-		// TODO: Check to see that jobs and pods have started. Example: pod volumes aren't ready -
-		// we shouldn't go ready in that case
+		return r.waitForContainersToStart(ctx, workflow, index)
 	default:
 		return nil, nnfv1alpha1.NewWorkflowErrorf("Unexpected directive %v", dwArgs["command"])
 	}
@@ -912,7 +912,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 		// TODO: Not sure if this requeue is working.
 		if !done {
-			return Requeue("waiting for container jobs to finish"), nil
+			return Requeue("pending container finish").after(2 * time.Second), nil
 		}
 
 		if !result {
