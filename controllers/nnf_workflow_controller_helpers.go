@@ -750,9 +750,8 @@ func findCopyOutDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string
 // the provided name argument, or -1 if not found.
 func findContainerDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name string) int {
 	for idx, directive := range workflow.Spec.DWDirectives {
-		if strings.HasPrefix(directive, "#DW container") {
-			parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
-
+		parameters, _ := dwdparse.BuildArgsMap(directive) // ignore error, directives are validated in proposal
+		if parameters["command"] == "container" {
 			for k, v := range parameters {
 				if strings.HasPrefix(k, "DW_JOB_") || strings.HasPrefix(k, "DW_PERSISTENT_") {
 					if v == name {
@@ -1317,11 +1316,11 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 }
 
 func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*batchv1.JobList, error) {
-	jobList := &batchv1.JobList{}
-
 	// Get the jobs for this workflow and directive index
 	matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
 	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+
+	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
 		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for index %d", index).WithError(err)
 	}

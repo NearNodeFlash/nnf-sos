@@ -846,8 +846,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		}
 
 		// Set the teardown state to post run. If there is a copy_out or container directive that
-		// uses this storage instance, set the teardown state so NNF Access is preserved through
-		// DataOut.
+		// uses this storage instance, set the teardown state so NNF Access is preserved up until
+		// Teardown
 		teardownState := dwsv1alpha1.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 || findContainerDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
 			teardownState = dwsv1alpha1.StateTeardown
