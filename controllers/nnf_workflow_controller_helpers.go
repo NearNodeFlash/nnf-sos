@@ -1054,7 +1054,6 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
 	labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
