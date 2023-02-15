@@ -37,19 +37,13 @@ type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
-	// TODO: This is a development option for now. This will most likely be renamed or removed in
-	// order to hide the k8s job implementation from the user.
-	// Specifies the duration in seconds relative to the startTime that the job may be continuously
-	// active before the system tries to terminate it; value must be positive integer. If a Job is
-	// suspended (at creation or through an update), this timer will effectively be stopped and
-	// reset when the Job is resumed again. +optional
-	ActiveDeadlineSeconds int64 `json:"activeDeadlineSeconds,omitempty"`
+	// Stop any containers after X seconds once a workflow has transitioned to PostRun. A value of 0 disables this behavior.
+	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
 
-	// TODO: This is a development option for now. This will most likely be renamed or removed in
-	// order to hide the k8s job implementation from the user.
-	// Specifies the number of retries before marking this job failed. Defaults to 6 by Kubernetes itself.
+	// Specifies the number of times a container will be retried upon a failure. A new pod is deployed on each retry.
+	// Defaults to 6 by kubernetes itself and must be set. A value of 0 disables retries.
 	// +kubebuilder:default:=6
-	BackoffLimit int32 `json:"backoffLimit"`
+	RetryLimit int32 `json:"retryLimit"`
 
 	// Template defines the containers that will be created from container profile
 	Template corev1.PodTemplateSpec `json:"template"`
