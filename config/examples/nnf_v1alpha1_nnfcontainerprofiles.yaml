@@ -1,0 +1,41 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfContainerProfile
+metadata:
+  name: randomly-fail
+data:
+  retryLimit: 6
+  # postRunTimeoutSeconds: 0
+  storages:
+    - name: DW_JOB_foo-local-storage
+      optional: false
+    - name: DW_PERSISTENT_foo-persistent-storage
+      optional: false
+  template:
+    spec:
+      containers:
+        - name: foo
+          image: alpine:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "starting..."
+              sleep 30
+              x=$(($RANDOM % 2))
+              echo "exiting: $x"
+              exit $x
+---
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfContainerProfile
+metadata:
+  name: forever
+data:
+  template:
+    spec:
+      containers:
+      - name: forever
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - "while true; do date && sleep 5; done"
