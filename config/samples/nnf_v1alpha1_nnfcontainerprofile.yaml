@@ -4,7 +4,8 @@ metadata:
   name: nnfcontainerprofile-sample
   namespace: nnf-system
 data:
-  backoffLimit: 6
+  retryLimit: 6
+  # postRunTimeoutSeconds: 0
   storages:
     - name: DW_JOB_foo-local-storage
       optional: false
@@ -24,14 +25,6 @@ data:
               x=$(($RANDOM % 2))
               echo "exiting: $x"
               exit $x
-          # TODO get volumes working
-          # volumeMounts:
-          # - name: foo-local-storage
-          #   mountPath: /foo/local
-          # - name: foo-persistent-storage
-          #   mountPath: /foo/persistent
-          # - name: nnf-config
-          #   mountPath: /nnf/config
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfContainerProfile
