@@ -254,7 +254,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found -f -
 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
