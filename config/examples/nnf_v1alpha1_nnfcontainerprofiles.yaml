@@ -11,7 +11,7 @@ data:
   template:
     spec:
       containers:
-      - name: forever
+      - name: example-success
         image: alpine:latest
         command:
         - /bin/sh
@@ -31,7 +31,7 @@ data:
   template:
     spec:
       containers:
-        - name: foo
+        - name: example-randomly-fail
           image: alpine:latest
           command:
             - /bin/sh
@@ -51,7 +51,7 @@ data:
   template:
     spec:
       containers:
-      - name: forever
+      - name: example-forever
         image: alpine:latest
         command:
         - /bin/sh

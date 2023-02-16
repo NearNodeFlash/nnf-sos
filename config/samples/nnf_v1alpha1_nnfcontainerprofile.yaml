@@ -1,7 +1,7 @@
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfContainerProfile
 metadata:
-  name: nnfcontainerprofile-sample
+  name: sample-nnfcontainerprofile
   namespace: nnf-system
 data:
   # Specifies the number of times a container will be retried upon a failure. A
@@ -31,7 +31,7 @@ data:
   template:
     spec:
       containers:
-        - name: foo
+        - name: sample-nnfcontainerprofile
           image: alpine:latest
           command:
             - /bin/sh
