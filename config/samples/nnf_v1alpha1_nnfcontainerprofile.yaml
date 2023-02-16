@@ -4,13 +4,30 @@ metadata:
   name: nnfcontainerprofile-sample
   namespace: nnf-system
 data:
+  # Specifies the number of times a container will be retried upon a failure. A
+  # new pod is deployed on each retry. Defaults to 6 by kubernetes itself and
+  # must be set. A value of 0 disables retries.
   retryLimit: 6
-  # postRunTimeoutSeconds: 0
+
+  # Stop any containers after X seconds once a workflow has transitioned to
+  # PostRun. A value of 0 disables this behavior.
+  postRunTimeoutSeconds: 0
+
+  # List of possible filesystems supported by this container profile. These
+  # storages are mounted inside of the container. Any non-optional storage must
+  # be supplied with the container directive as an argument and must reference
+  # a valid jobdw or persistentdw directive's name.
+  #
+  # Example:
+  #   DW jobdw name=my-gfs2 type=gfs2 capacity=50GB
+  #   DW container name=my-container profile=nnfcontainerprofile-sample DW_JOB_foo-local-storage=my-gfs2
   storages:
     - name: DW_JOB_foo-local-storage
       optional: false
     - name: DW_PERSISTENT_foo-persistent-storage
-      optional: false
+      optional: true
+
+  # Template defines the containers that will be created from container profile.
   template:
     spec:
       containers:
@@ -25,19 +42,3 @@ data:
               x=$(($RANDOM % 2))
               echo "exiting: $x"
               exit $x
----
-apiVersion: nnf.cray.hpe.com/v1alpha1
-kind: NnfContainerProfile
-metadata:
-  name: forever
-  namespace: nnf-system
-data:
-  template:
-    spec:
-      containers:
-      - name: forever
-        image: alpine:latest
-        command:
-        - /bin/sh
-        - -c
-        - "while true; do date && sleep 5; done"
