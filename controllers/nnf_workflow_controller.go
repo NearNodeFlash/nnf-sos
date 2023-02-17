@@ -1078,9 +1078,6 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		if err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Could not remove persistent storage reference").WithError(err)
 		}
-	case "container":
-		// TODO delete pinned profile?
-		// TODO: remove service, jobs, pods
 	default:
 	}
 

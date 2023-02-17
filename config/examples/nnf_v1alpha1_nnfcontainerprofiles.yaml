@@ -1,19 +1,37 @@
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfContainerProfile
 metadata:
-  name: randomly-fail
+  name: example-success
 data:
-  retryLimit: 6
-  # postRunTimeoutSeconds: 0
   storages:
     - name: DW_JOB_foo-local-storage
       optional: false
     - name: DW_PERSISTENT_foo-persistent-storage
-      optional: false
+      optional: true
   template:
     spec:
       containers:
-        - name: foo
+      - name: example-success
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - "sleep 15 && exit 0"
+---
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfContainerProfile
+metadata:
+  name: example-randomly-fail
+data:
+  storages:
+    - name: DW_JOB_foo-local-storage
+      optional: false
+    - name: DW_PERSISTENT_foo-persistent-storage
+      optional: true
+  template:
+    spec:
+      containers:
+        - name: example-randomly-fail
           image: alpine:latest
           command:
             - /bin/sh
@@ -28,12 +46,12 @@ data:
 apiVersion: nnf.cray.hpe.com/v1alpha1
 kind: NnfContainerProfile
 metadata:
-  name: forever
+  name: example-forever
 data:
   template:
     spec:
       containers:
-      - name: forever
+      - name: example-forever
         image: alpine:latest
         command:
         - /bin/sh
