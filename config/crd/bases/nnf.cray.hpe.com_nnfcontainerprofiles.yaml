@@ -35,7 +35,8 @@ spec:
                 type: boolean
               postRunTimeoutSeconds:
                 description: Stop any containers after X seconds once a workflow has
-                  transitioned to PostRun. A value of 0 disables this behavior.
+                  transitioned to PostRun. Defaults to 0. A value of 0 disables this
+                  behavior.
                 format: int64
                 type: integer
               retryLimit:

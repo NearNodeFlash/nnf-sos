@@ -37,7 +37,8 @@ type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
-	// Stop any containers after X seconds once a workflow has transitioned to PostRun. A value of 0 disables this behavior.
+	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to 0.
+	// A value of 0 disables this behavior.
 	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
 
 	// Specifies the number of times a container will be retried upon a failure. A new pod is deployed on each retry.

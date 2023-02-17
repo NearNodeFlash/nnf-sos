@@ -83,8 +83,8 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -213,6 +213,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
+		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
@@ -220,7 +221,6 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
-		driverStatus.Message = ""
 
 		log.Info("Start done")
 	}
@@ -252,6 +252,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 
 		driverStatus.Status = dwsv1alpha1.StatusRunning
+		driverStatus.Message = ""
 		driverStatus.Error = ""
 
 		if result != nil {
@@ -259,7 +260,6 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			driverStatus.Message = result.reason
 			return result.Result, nil
 		}
-		driverStatus.Message = ""
 
 		log.Info("Finish done")
 

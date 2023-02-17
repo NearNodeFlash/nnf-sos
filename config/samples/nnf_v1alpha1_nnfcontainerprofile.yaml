@@ -10,7 +10,7 @@ data:
   retryLimit: 6
 
   # Stop any containers after X seconds once a workflow has transitioned to
-  # PostRun. A value of 0 disables this behavior.
+  # PostRun. Defaults to 0. A value of 0 disables this behavior.
   postRunTimeoutSeconds: 0
 
   # List of possible filesystems supported by this container profile. These
@@ -34,11 +34,6 @@ data:
         - name: sample-nnfcontainerprofile
           image: alpine:latest
           command:
-            - /bin/sh
-            - -c
-            - |
-              echo "starting..."
-              sleep 30
-              x=$(($RANDOM % 2))
-              echo "exiting: $x"
-              exit $x
+          - /bin/sh
+          - -c
+          - "sleep 15 && exit 0"
