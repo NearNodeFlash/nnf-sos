@@ -558,7 +558,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		targetIndex := nodeStorage.Spec.LustreStorage.StartIndex + index
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
 	} else {
-		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, fileShareID)
+		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, index)
 		if err != nil {
 			updateError(condition, &allocationStatus.FileShare, err)
 			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("could not get VG/LV names", err).WithFatal()
@@ -705,7 +705,7 @@ func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNod
 	return &ctrl.Result{}, nil
 }
 
-func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, id string) (string, string, error) {
+func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, string, error) {
 	labels := nodeStorage.GetLabels()
 
 	workflowName, ok := labels[dwsv1alpha1.WorkflowNameLabel]
@@ -718,6 +718,11 @@ func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nn
 		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
 	}
 
+	directiveIndex, ok := labels[nnfv1alpha1.DirectiveIndexLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing directive index label on NnfNodeStorage")
+	}
+
 	workflow := &dwsv1alpha1.Workflow{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workflowName,
@@ -728,13 +733,7 @@ func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nn
 		return "", "", dwsv1alpha1.NewResourceError("could get workflow", err)
 	}
 
-	// Truncate the id to 65 characters since LVM has a name length limit
-	maxIDLength := 65
-	if len(id) > maxIDLength {
-		id = id[:maxIDLength]
-	}
-
-	return fmt.Sprintf("%s_%s", id, workflow.GetUID()), "lv", nil
+	return fmt.Sprintf("%s_%s_%d", workflow.GetUID(), directiveIndex, index), "lv", nil
 }
 
 func (r *NnfNodeStorageReconciler) isSpecComplete(nodeStorage *nnfv1alpha1.NnfNodeStorage) bool {
