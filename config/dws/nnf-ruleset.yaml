@@ -95,11 +95,11 @@ spec:
   - command: "container"
     watchStates: Proposal,PreRun,PostRun,Teardown
     ruleDefs:
-      - key: "name"
+      - key: "^name$"
         type: "string"
         isRequired: true
         isValueRequired: true
-      - key: "profile"
+      - key: "^profile$"
         type: "string"
         isRequired: true
         isValueRequired: true
