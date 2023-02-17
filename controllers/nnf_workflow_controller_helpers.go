@@ -1248,7 +1248,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	}
 
 	if len(jobList.Items) < 1 {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow %s", workflow.Name)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow '%s', index: %d", workflow.Name, index)
 	}
 
 	// Retrieve the profile to extract the PostRun timeout
@@ -1300,7 +1300,7 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	}
 
 	if len(jobList.Items) < 1 {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow %s", workflow.Name)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow '%s', index: %d", workflow.Name, index)
 	}
 
 	for _, job := range jobList.Items {
