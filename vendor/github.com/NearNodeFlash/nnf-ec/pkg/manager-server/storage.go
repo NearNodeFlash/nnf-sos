@@ -20,8 +20,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/google/uuid"
 
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
@@ -51,16 +49,19 @@ type Storage struct {
 
 // Storage Namespace represents an NVMe Namespace present on the host.
 type StorageNamespace struct {
-	Id   nvme.NamespaceIdentifier               `json:"Id"`
-	Guid nvme.NamespaceGloballyUniqueIdentifier `json:"Guid"`
+	// The drive serial number
+	SerialNumber string `json:"SerialNumber"`
+
+	// The NVMe Namespace Identifer
+	Id nvme.NamespaceIdentifier `json:"Id"`
 
 	// Path refers to the system path for this particular NVMe Namespace. On unix
-	// variants, the path is of the form `/dev/nvme[CTRL]n[INDEX]` where CTRL is the
-	// parent NVMe Controller and INDEX is assigned by the operating system. INDEX
-	// does _not_ refer to the namespace ID (NSID)
+	// variants, the path is of the form `/dev/nvme[A]n[B]` where A is a number
+	// assigned by the OS for any particular NVMe controller, and B is a number
+	// assigned by the OS for any NVMe Namespace
+	// "A" does _not_ refer to the Controller ID (CNTL ID)
+	// "B" does _not_ refer to the Namespace ID (NSID)
 	path string
-
-	debug bool // If this storage namespace is in debug mode
 }
 
 func (s *Storage) GetStatus() (StorageStatus, error) {
@@ -95,14 +96,6 @@ func (s *Storage) Devices() []string {
 	}
 
 	return devices
-}
-
-func (a StorageNamespace) String() string {
-	return fmt.Sprintf("NSID: %d GUID: %s", a.Id, a.Guid.String())
-}
-
-func (a StorageNamespace) Equals(b *StorageNamespace) bool {
-	return a.Id == b.Id && a.Guid == b.Guid
 }
 
 type StorageStatus string

@@ -1558,3 +1558,22 @@ func (f *Fabric) GetSwitchPort(switchId, portId string) (*Port, error) {
 
 	return p, nil
 }
+
+func (f *Fabric) ResetEndpoint(switchId, portId string, vfIndex int) error {
+	port, err := f.GetSwitchPort(switchId, portId)
+	if err != nil {
+		return err
+	}
+
+	if port.portType != sf.DOWNSTREAM_PORT_PV130PT {
+		return fmt.Errorf("port type '%s' is not downstream port", port.portType)
+	}
+
+	epIndex := vfIndex + 1 // endpoint index zero is reserved for the PF
+	if epIndex >= len(port.endpoints) {
+		return fmt.Errorf("virtual function index '%d' exceeds number of endpoints", vfIndex)
+	}
+
+	ep := port.endpoints[epIndex]
+	return port.swtch.dev.ResetEndpoint(ep.pdfid)
+}

@@ -917,6 +917,12 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 
 					ctrl.viResources = uint16(s.config.Resources)
 				}
+
+				if sc.SecondaryControllerState&0x01 == 0 {
+					if err := fabric.FabricController.ResetEndpoint(switchId, portId, idx); err != nil {
+						log.WithError(err).Errorf("Secondary Controller %d: Failed to reset controller", sc.SecondaryControllerID)
+					}
+				}
 			}
 
 			if sc.SecondaryControllerState&0x01 == 0 {

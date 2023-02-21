@@ -49,6 +49,7 @@ type SwitchtecDeviceInterface interface {
 	GetEvents() ([]switchtec.GfmsEvent, error)
 
 	EnumerateEndpoint(uint8, func(epPort *switchtec.DumpEpPortDevice) error) error
+	ResetEndpoint(uint16) error
 
 	Bind(uint8, uint8, uint16) error
 }

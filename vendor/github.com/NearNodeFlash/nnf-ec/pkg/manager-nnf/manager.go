@@ -203,8 +203,8 @@ func (s *StorageService) createStorageGroup(id string, sp *StoragePool, endpoint
 	for idx, pv := range sp.providingVolumes {
 		volume := pv.Storage.FindVolume(pv.VolumeId)
 		expectedNamespaces[idx] = server.StorageNamespace{
-			Id:   volume.GetNamespaceId(),
-			Guid: volume.GetGloballyUniqueIdentifier(),
+			SerialNumber: pv.Storage.SerialNumber(),
+			Id:           volume.GetNamespaceId(),
 		}
 	}
 
