@@ -113,6 +113,10 @@ func (d *SwitchtecDevice) EnumerateEndpoint(id uint8, f func(epPort *switchtec.D
 	return d.dev.GfmsEpPortDeviceEnumerate(id, f)
 }
 
+func (d *SwitchtecDevice) ResetEndpoint(pdfid uint16) error {
+	return d.dev.VfReset(pdfid)
+}
+
 func (d *SwitchtecDevice) Bind(hostPhysPortId, hostLogPortId uint8, pdfid uint16) error {
 	return d.dev.Bind(uint8(d.dev.ID()), hostPhysPortId, hostLogPortId, pdfid)
 }

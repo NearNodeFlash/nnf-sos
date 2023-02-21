@@ -283,6 +283,10 @@ func (d *SwitchtecCliDevice) EnumerateEndpoint(physPortId uint8, handlerFunc fun
 	})
 }
 
+func (d *SwitchtecCliDevice) ResetEndpoint(pdfid uint16) error {
+	panic("not yet implemented")
+}
+
 func (d *SwitchtecCliDevice) Bind(hostPhysPortId, hostLogPortId uint8, pdfid uint16) error {
 	// Usage: switchtec fabric gfms-bind <device> --host_sw_idx=<NUM> --phys_port_id=<NUM> --log_port_id=<NUM> --pdfid=<STR> [OPTIONS]
 	rsp, err := d.run(fmt.Sprintf("fabric gfms-bind %s --pax=%d --host_sw_idx=%d --phys_port_id=%d --log_port_id=%d --pdfid=%#04x", d.path, d.id, d.id, hostPhysPortId, hostLogPortId, pdfid))
