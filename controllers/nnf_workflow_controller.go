@@ -859,13 +859,6 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		}
 	}
 
-	readyResult, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
-	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'mounted' state").WithError(err).WithFatal()
-	} else if readyResult != nil {
-		return readyResult, nil
-	}
-
 	return nil, nil
 }
 
@@ -892,6 +885,14 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	}
 
 	workflow.Status.Env[envName] = buildMountPath(workflow, index)
+
+	// Containers do not have NNFAccesses, so only do this after r.waitForContainersToStart() would have returned
+	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
+	if err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("Failed to achieve NnfAccess 'mounted' state").WithError(err).WithFatal()
+	} else if result != nil {
+		return result, nil
+	}
 
 	return nil, nil
 }
