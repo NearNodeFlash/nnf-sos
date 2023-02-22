@@ -113,7 +113,7 @@ func (r *result) info() []interface{} {
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha1.Workflow) error {
 
-	var createPersistentCount, deletePersistentCount, directiveCount int
+	var createPersistentCount, deletePersistentCount, directiveCount, containerCount int
 	for index, directive := range wf.Spec.DWDirectives {
 
 		directiveCount++
@@ -141,6 +141,8 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 			}
 
 		case "container":
+			containerCount++
+
 			if err := r.validateContainerDirective(ctx, wf, index); err != nil {
 				return nnfv1alpha1.NewWorkflowError("Could not validate container directive: " + directive).WithFatal().WithError(err)
 			}
@@ -151,6 +153,11 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 		// Ensure create_persistent or destroy_persistent are singletons in the workflow
 		if createPersistentCount+deletePersistentCount > 0 {
 			return nnfv1alpha1.NewWorkflowError("Only a single create_persistent or destroy_persistent directive is allowed per workflow").WithFatal()
+		}
+
+		// Only allow 1 container directive (for now)
+		if containerCount > 1 {
+			return nnfv1alpha1.NewWorkflowError("Only a single container directive is supported per workflow").WithFatal()
 		}
 	}
 
