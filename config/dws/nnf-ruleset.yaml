@@ -92,3 +92,18 @@ spec:
         type: "string"
         isRequired: true
         isValueRequired: true
+  - command: "container"
+    watchStates: Proposal,PreRun,PostRun,Teardown
+    ruleDefs:
+      - key: "^name$"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "^profile$"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: '^(DW_JOB_|DW_PERSISTENT_)[A-Za-z][A-Za-z0-9-]+$'
+        type: "string"
+        isRequired: false
+        isValueRequired: true

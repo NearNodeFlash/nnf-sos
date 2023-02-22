@@ -6,6 +6,18 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+- apiGroups:
   - ""
   resources:
   - namespaces
@@ -31,6 +43,18 @@ rules:
   verbs:
   - get
   - list
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
   - update
 - apiGroups:
   - cray.hpe.com
@@ -274,6 +298,19 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfcontainerprofiles
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

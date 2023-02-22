@@ -32,18 +32,19 @@ then
 
     $KUSTOMIZE build config/$OVERLAY | kubectl apply -f -
 
-    echo "Waiting for the NnfStorageProfile webhook to become ready..."
+    echo "Waiting for the webhook to become ready..."
     while :
     do
         ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers | awk '{print $2}')
         [[ $ready == "2/2" ]] && break
         sleep 1
     done
-    kubectl apply -f config/samples/placeholder_nnfstorageprofile.yaml
+
+    $KUSTOMIZE build config/examples | kubectl apply -f -
 fi
 
 if [[ $CMD == 'undeploy' ]]
 then
-	kubectl delete --ignore-not-found -f config/samples/placeholder_nnfstorageprofile.yaml
-	$KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build config/examples | kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
 fi
