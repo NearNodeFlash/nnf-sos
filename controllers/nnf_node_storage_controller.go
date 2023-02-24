@@ -372,6 +372,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 				continue
 			}
 
+			log.Info("Create storage %s", storageGroupID)
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
 				updateError(condition, &allocationStatus.StorageGroup, err)
