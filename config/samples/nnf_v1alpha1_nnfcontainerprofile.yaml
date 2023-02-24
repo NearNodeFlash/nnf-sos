@@ -27,6 +27,7 @@ data:
     - name: DW_PERSISTENT_foo-persistent-storage
       optional: true
 
+  retryLimit: 5
   # Template defines the containers that will be created from container profile.
   template:
     spec:

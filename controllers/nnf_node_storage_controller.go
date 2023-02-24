@@ -284,6 +284,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 	if len(allocationStatus.StorageGroup.ID) == 0 {
 		condition.LastTransitionTime = metav1.Now()
 		condition.Status = metav1.ConditionTrue
+	} else {
+		if len(nodeStorage.Spec.ClientEndpoints[index].NodeNames) == 1 && allocationStatus.StorageGroup.Status == nnfv1alpha1.ResourceReady {
+			return nil, nil
+		}
 	}
 
 	// Retrieve the collection of endpoints for us to map

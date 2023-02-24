@@ -3,6 +3,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-success
 data:
+  retryLimit: 5
   storages:
     - name: DW_JOB_foo-local-storage
       optional: false
@@ -23,6 +24,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-randomly-fail
 data:
+  retryLimit: 5
   storages:
     - name: DW_JOB_foo-local-storage
       optional: false
@@ -48,6 +50,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-forever
 data:
+  retryLimit: 5
   template:
     spec:
       containers:
