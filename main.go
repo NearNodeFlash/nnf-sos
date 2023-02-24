@@ -126,6 +126,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.NnfPortManagerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NnfPortManager")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -218,6 +225,14 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemConfiguration"),
 		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.NnfPortManagerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		// Note: Log is built into controller-runtime
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
