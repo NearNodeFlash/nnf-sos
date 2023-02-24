@@ -45,8 +45,7 @@ type NnfPortManagerSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// SystemConfiguration is an object reference to the system configuration. The
-	// Port Manager will use the available ports defined in the system configuration
-	// to use when allocating.
+	// Port Manager will use the available ports defined in the system configuration.
 	SystemConfiguration corev1.ObjectReference `json:"systemConfiguration"`
 
 	// Allocations is a list of allocation requests that the Port Manager will attempt
@@ -101,7 +100,7 @@ type NnfPortManagerStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Allocations is a list of port allocation status'.
-	Allocations []NnfPortManagerAllocationStatus `json:"allocations"`
+	Allocations []NnfPortManagerAllocationStatus `json:"allocations,omitempty"`
 
 	// Status is the current status of the port manager.
 	Status NnfPortManagerStatusStatus `json:"status"`

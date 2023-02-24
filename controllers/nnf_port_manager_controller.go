@@ -124,6 +124,10 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		spec.Requester.DeepCopyInto(allocationStatus.Requester)
 
+		if mgr.Status.Allocations == nil {
+			mgr.Status.Allocations = make([]nnfv1alpha1.NnfPortManagerAllocationStatus, 0)
+		}
+
 		mgr.Status.Allocations = append(mgr.Status.Allocations, allocationStatus)
 	}
 
