@@ -188,6 +188,14 @@ spec:
                       standard output or standard error as captured by the underlying
                       data movement command.
                     type: string
+                  mpiHostfileContents:
+                    description: The contents of the MPI hostfile used for the data
+                      movement command.
+                    type: string
+                  mpiHostfilePath:
+                    description: The path of the MPI hostfile used for the data movement
+                      command.
+                    type: string
                   progress:
                     description: Progress refects the progress of the underlying data
                       movement command as captured from standard output. A best effort

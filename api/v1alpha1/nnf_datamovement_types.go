@@ -81,6 +81,12 @@ type NnfDataMovementCommandStatus struct {
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
 	ElapsedTime metav1.Duration `json:"elapsedTime,omitempty"`
 
+	// The path of the MPI hostfile used for the data movement command.
+	MPIHostfilePath string `json:"mpiHostfilePath,omitempty"`
+
+	// The contents of the MPI hostfile used for the data movement command.
+	MPIHostfileContents string `json:"mpiHostfileContents,omitempty"`
+
 	// Progress refects the progress of the underlying data movement command as captured from standard output.
 	// A best effort is made to parse the command output as a percentage. If no progress has
 	// yet to be measured than this field is omitted. If the latest command output does not
