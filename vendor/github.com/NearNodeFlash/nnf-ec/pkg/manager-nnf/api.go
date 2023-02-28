@@ -22,6 +22,7 @@ package nnf
 import (
 	"net/http"
 
+	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
@@ -30,7 +31,7 @@ import (
 // corresponding Handler method (see below). Each method should respond to the request by
 // updating the http.ResponesWriter.
 type Api interface {
-	Initialize(NnfControllerInterface) error
+	Initialize(ec.Logger, NnfControllerInterface) error
 	Close() error
 
 	Id() string
@@ -76,7 +77,7 @@ type Api interface {
 // Storage Service API defines the interface for the above API methods to call. Each API method must have
 // an equivalent method. Methods take request paramters and a Redfish / Swordfish model to populate.
 type StorageServiceApi interface {
-	Initialize(NnfControllerInterface) error
+	Initialize(ec.Logger, NnfControllerInterface) error
 	Close() error
 
 	Id() string

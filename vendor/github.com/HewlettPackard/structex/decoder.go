@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/bits"
 	"reflect"
 )
 
@@ -40,45 +41,50 @@ type decoder struct {
 func (d *decoder) read(nbits uint64) (uint64, error) {
 
 	if nbits == 0 {
-		return 0, fmt.Errorf("Unsupported zero bit operation")
+		return 0, fmt.Errorf("unsupported zero bit operation")
 	}
 
-	if nbits < 8 {
-		if d.bitOffset == 0 {
-			b, err := d.reader.ReadByte()
-			if err != nil {
-				return 0, err
-			}
-			d.currentByte = b
-		}
-
-		if nbits > uint64(8-d.bitOffset) {
-			return 0, fmt.Errorf("Insufficient bit count for reading")
-		}
-
-		mask := uint(math.Pow(2, float64(nbits)) - 1)
-		value := uint(d.currentByte>>d.bitOffset) & mask
-
-		d.bitOffset += nbits
-		if d.bitOffset >= 8 {
-			d.bitOffset = 0
-		}
-
-		return uint64(value), nil
-	}
-
-	if nbits%8 != 0 {
-		return 0, fmt.Errorf("Unsupported bit span of %d bits", nbits)
+	if nbits > 64 {
+		return 0, fmt.Errorf("bitfield exceeds 64-bit limitation")
 	}
 
 	var value uint64 = 0
-	for i := uint64(0); i < nbits; i += 8 {
+	var offset uint64 = 0
+
+	// Check for carry-over bits from previous bitfields
+	if d.bitOffset != 0 {
+		mask := uint8(math.Pow(2, float64(nbits)) - 1)
+		value = uint64((d.currentByte >> d.bitOffset) & mask)
+
+		if d.bitOffset+nbits < 8 {
+			d.bitOffset += nbits
+			return value, nil
+		} else {
+			offset = 8 - d.bitOffset
+			nbits = nbits - (8 - d.bitOffset)
+			d.bitOffset = 0
+		}
+	}
+
+	for nbits != 0 {
 		b, err := d.reader.ReadByte()
 		if err != nil {
 			return 0, err
 		}
 
-		value |= uint64(b) << i
+		d.currentByte = b
+		d.byteOffset += 1
+
+		if nbits < 8 {
+			mask := uint8(math.Pow(2, float64(nbits)) - 1)
+			value |= uint64(d.currentByte&mask) << offset
+			d.bitOffset += nbits
+			return value, nil
+		} else {
+			value |= uint64(d.currentByte) << offset
+			offset += 8
+			nbits -= 8
+		}
 	}
 
 	return value, nil
@@ -92,7 +98,8 @@ func (d *decoder) readValue(value reflect.Value, tags *tags) (uint64, error) {
 	}
 
 	nbits := uint64(0)
-	if value.Kind() == reflect.Bool {
+	kind := value.Kind()
+	if kind == reflect.Bool {
 		nbits = 1
 	} else {
 		nbits = uint64(value.Type().Bits())
@@ -113,6 +120,17 @@ func (d *decoder) readValue(value reflect.Value, tags *tags) (uint64, error) {
 		return 0, err
 	}
 
+	if tags != nil && tags.endian == big {
+		switch kind {
+		case reflect.Uint16, reflect.Int16:
+			v = uint64(bits.ReverseBytes16(uint16(v)))
+		case reflect.Uint32, reflect.Int32, reflect.Uint, reflect.Int:
+			v = uint64(bits.ReverseBytes32(uint32(v)))
+		case reflect.Uint64, reflect.Int64:
+			v = bits.ReverseBytes64(v)
+		}
+	}
+
 	switch value.Kind() {
 	case reflect.Bool:
 		value.SetBool(v == 1)
@@ -125,6 +143,22 @@ func (d *decoder) readValue(value reflect.Value, tags *tags) (uint64, error) {
 	}
 
 	return v, nil
+}
+
+func (d *decoder) align(val alignment) error {
+	if d.bitOffset != 0 {
+		if _, err := d.read(8 - d.bitOffset); err != nil {
+			return err
+		}
+	}
+
+	for d.byteOffset%uint64(val) != 0 {
+		if _, err := d.read(8); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (d *decoder) field(val reflect.Value, tags *tags) error {

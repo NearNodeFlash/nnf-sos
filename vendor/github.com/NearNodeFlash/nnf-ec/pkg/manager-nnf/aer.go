@@ -63,8 +63,8 @@ func (aer *AerService) c(err error) error {
 	return err
 }
 
-func (aer *AerService) Initialize(ctrl NnfControllerInterface) error {
-	return aer.c(aer.s.Initialize(ctrl))
+func (aer *AerService) Initialize(log ec.Logger, ctrl NnfControllerInterface) error {
+	return aer.c(aer.s.Initialize(log, ctrl))
 }
 
 func (aer *AerService) Close() error {

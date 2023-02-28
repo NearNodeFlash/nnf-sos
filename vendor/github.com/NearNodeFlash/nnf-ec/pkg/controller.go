@@ -33,6 +33,8 @@ import (
 	"flag"
 	"os"
 
+	log "github.com/sirupsen/logrus"
+
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 	fabric "github.com/NearNodeFlash/nnf-ec/pkg/manager-fabric"
@@ -41,7 +43,6 @@ import (
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	telemetry "github.com/NearNodeFlash/nnf-ec/pkg/manager-telemetry"
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -115,12 +116,7 @@ func NewController(opts *Options) *ec.Controller {
 		persistent.StorageProvider = persistent.NewJsonFilePersistentStorageProvider(opts.json)
 	}
 
-	return &ec.Controller{
-		Name:    Name,
-		Port:    Port,
-		Version: Version,
-		Routers: NewDefaultApiRouters(switchCtrl, nvmeCtrl, nnfCtrl),
-	}
+	return ec.NewController(Name, Port, Version, NewDefaultApiRouters(switchCtrl, nvmeCtrl, nnfCtrl))
 }
 
 // NewDefaultApiRouters -

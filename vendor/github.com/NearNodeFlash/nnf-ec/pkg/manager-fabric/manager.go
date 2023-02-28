@@ -24,8 +24,6 @@ import (
 	"os"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/NearNodeFlash/nnf-ec/pkg/api"
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
@@ -39,6 +37,13 @@ import (
 
 const (
 	FabricId = "Rabbit"
+)
+
+const (
+	switchIdKey   = "switchId"
+	portIdKey     = "portId"
+	endpointIdKey = "endpointId"
+	slotKey       = "slot"
 )
 
 type Fabric struct {
@@ -57,6 +62,8 @@ type Fabric struct {
 	managementEndpointCount int
 	upstreamEndpointCount   int
 	downstreamEndpointCount int
+
+	log ec.Logger
 }
 
 type Switch struct {
@@ -79,6 +86,8 @@ type Switch struct {
 	firmwareVersion string
 
 	DEBUG_NEXT_SWITCH_LOG_PORT_ID int
+
+	log ec.Logger
 }
 
 type Port struct {
@@ -94,6 +103,8 @@ type Port struct {
 	config *PortConfig
 
 	endpoints []*Endpoint
+
+	log ec.Logger
 }
 
 type portStatus struct {
@@ -159,7 +170,13 @@ type Connection struct {
 // 	odataid string
 // }
 
-var manager Fabric
+var manager = Fabric{
+	id: FabricId,
+	status: sf.ResourceStatus{
+		State:  sf.UNAVAILABLE_OFFLINE_RST,
+		Health: sf.CRITICAL_RH,
+	},
+}
 
 // Used to provide access to exported functions while protecting the singleton (i.e. manager)
 var FabricController *Fabric
@@ -352,38 +369,42 @@ func (s *Switch) setDown()      { s.path = "" }
 
 func (s *Switch) identify() error {
 	f := s.fabric
+	log := s.log
+
 	for i := 0; i < len(f.switches); i++ {
 
 		path := fmt.Sprintf("/dev/switchtec%d", i)
 
-		log.Debugf("Identify Switch %s: Opening %s", s.id, path)
+		log.V(2).Info("Opening path", "path", path)
+
 		dev, err := f.ctrl.Open(path)
 		if os.IsNotExist(err) {
-			log.WithError(err).Debugf("path %s", path)
 			continue
 		} else if err != nil {
-			log.WithError(err).Warnf("Identify Switch %s: Open Error", s.id)
+			log.Error(err, "Error opening path")
 			return err
 		}
 
 		paxId, err := dev.Identify()
 		if err != nil {
-			log.WithError(err).Warnf("Identify Switch %s: Identify Error", s.id)
+			log.Error(err, "Identify error")
 			return err
 		}
 
-		log.Infof("Identify Switch %s: Device ID: %d", s.id, paxId)
+		log.V(2).Info("Identified switch device", "pax", paxId)
 		if id := strconv.Itoa(int(paxId)); id == s.id {
 			s.dev = dev
 			s.path = path
 			s.paxId = paxId
 
-			log.Infof("Identify Switch %s: Loading Mfg Info", s.id)
-
 			s.model = s.getModel()
 			s.manufacturer = s.getManufacturer()
 			s.serialNumber = s.getSerialNumber()
 			s.firmwareVersion = s.getFirmwareVersion()
+
+			log.Info("Identified switch", "path", path,
+				"model", s.model, "manufacturer", s.manufacturer,
+				"serialNumber", s.serialNumber, "firmwareVersion", s.firmwareVersion)
 
 			return nil
 		}
@@ -393,7 +414,7 @@ func (s *Switch) identify() error {
 	// if we're using management routing, which enables forwarding of commands to
 	// the secondary PAX through the primary PAX
 	if f.config.IsManagementRoutingEnabled() {
-		log.Warningf("Switch %d is acting as primary device for switch %d", f.config.ManagementConfig.PrimaryDevice, f.config.ManagementConfig.SecondaryDevice)
+		log.Info("Switch routing enabled")
 		for _, sw := range f.switches {
 			if sw.dev.Device().ID() == f.config.ManagementConfig.PrimaryDevice {
 
@@ -512,7 +533,7 @@ func (s *Switch) getDeviceStringByFunc(f func(dev SwitchtecDeviceInterface) (str
 	if s.dev != nil {
 		ret, err := f(s.dev)
 		if err != nil {
-			log.WithError(err).Warnf("Failed to retrieve device string")
+			s.log.Error(err, "Failed to retrieve device string")
 		}
 
 		return ret
@@ -602,7 +623,8 @@ func (p *Port) getResourceState() sf.ResourceState {
 }
 
 func (p *Port) Initialize() error {
-	log.Infof("Initialize Port %s: Name: %s Physical Port: %d", p.id, p.config.Name, p.config.Port)
+	log := p.log
+	log.V(2).Info("Initialize port")
 
 	switch p.portType {
 	case sf.DOWNSTREAM_PORT_PV130PT:
@@ -628,7 +650,7 @@ func (p *Port) Initialize() error {
 
 				f := port.swtch.fabric
 				if len(epPort.Ep.Functions) < 1 /*PF*/ +f.managementEndpointCount+f.upstreamEndpointCount {
-					log.Warnf("Port %s: Insufficient function count %d", port.id, len(epPort.Ep.Functions))
+					return fmt.Errorf("Port %s: Insufficient function count: Expected: %d Actual: %d", port.id, 1 /*PF*/ +f.managementEndpointCount+f.upstreamEndpointCount, epPort.Ep.Functions)
 				}
 
 				for idx, f := range epPort.Ep.Functions {
@@ -651,25 +673,28 @@ func (p *Port) Initialize() error {
 			}
 		}
 
-		log.Infof("Initialize Port: Switch %s enumerting DSP %d", p.swtch.id, p.config.Port)
+		log.V(2).Info("Initialize downstream port")
 		if err := p.swtch.dev.EnumerateEndpoint(uint8(p.config.Port), processPort(p)); err != nil {
-			log.WithError(err).Warnf("Initialize Port: Port Enumeration Failed: Physical Port %d", p.config.Port)
+			log.Error(err, "Port initialization failed")
 			return err
 		}
 	}
+
+	log.Info("Port initialized")
 
 	return nil
 }
 
 func (p *Port) bind() error {
 	f := p.swtch.fabric
+	log := p.log
 
 	if p.portStatus.linkStatus != sf.LINK_UP_PV130LS {
-		log.Warnf("Port %+v: Port not up, skipping bind operation", p)
+		log.Info("Port not up. Skipping bind operation")
 		return nil
 	}
 
-	log.Debugf("Port %s: Bind Operation Starting: Switch: %s, PAX: %d Physical Port: %d Type: %s", p.id, p.swtch.id, p.swtch.paxId, p.config.Port, p.portType)
+	log.V(2).Info("Starting port bind operation")
 
 	if p.portType != sf.DOWNSTREAM_PORT_PV130PT {
 		panic(fmt.Sprintf("Port %s: Bind operation not allowed for port type %s", p.id, p.portType))
@@ -684,6 +709,8 @@ func (p *Port) bind() error {
 	}
 
 	for _, ep := range p.endpoints[1:] { // Skip PF
+
+		log := log.WithValues(endpointIdKey, ep.id)
 
 		for _, epg := range f.endpointGroups {
 			initiator := *(epg.initiator)
@@ -720,6 +747,8 @@ func (p *Port) bind() error {
 					for _, initiatorPort := range initiator.ports {
 						s := initiatorPort.swtch
 
+						log := log.WithValues("initiatorPort", initiatorPort.config.Port, "logicalPortId", logicalPortId, "pdfid", endpoint.pdfid)
+
 						if initiator.endpointType == sf.PROCESSOR_EV150ET {
 							if !f.config.IsManagementRoutingEnabled() {
 								if p.swtch.id != s.id {
@@ -738,25 +767,29 @@ func (p *Port) bind() error {
 						}
 
 						if endpoint.pdfid == 0 {
-							log.Errorf("Endpoint has no PDFID, skipping bind to initiator port %d (%s)", initiatorPort.config.Port, initiatorPort.config.Name)
+							log.Info("Endpoint has no PDFID, skipping bind to initiator port")
 							continue
 						}
 
 						if endpoint.bound {
-							logFunc := log.Debugf
+
+							log.Info("Endpoint already bound",
+								"paxId", s.paxId, "boundPaxId", endpoint.boundPaxId,
+								"phyPortId", initiatorPort.config.Port, "boundPhyPortId", endpoint.boundHvdPhyId,
+								"logPortId", logicalPortId, "boundLogPortId", endpoint.boundHvdLogId)
+
 							if endpoint.boundPaxId != uint8(s.paxId) ||
 								endpoint.boundHvdPhyId != uint8(initiatorPort.config.Port) ||
 								endpoint.boundHvdLogId != uint8(logicalPortId) {
-								logFunc = log.Errorf
+								panic(fmt.Sprintf("Already Bound: Misconfigured Port: PAX: %d, Physical Port: %d, Logical Port: %d, PDFID: %#04x", endpoint.boundPaxId, endpoint.boundHvdPhyId, endpoint.boundHvdLogId, endpoint.pdfid))
 							}
 
-							logFunc("Already Bound: PAX: %d, Physical Port: %d, Logical Port: %d, PDFID: %#04x", endpoint.boundPaxId, endpoint.boundHvdPhyId, endpoint.boundHvdLogId, endpoint.pdfid)
 							break
 						}
 
-						log.Infof("Bind: Switch: %s, PAX: %d, Physical Port: %d, Logical Port: %d, PDFID %#04x", s.id, s.paxId, initiatorPort.config.Port, logicalPortId, endpoint.pdfid)
+						log.Info("Binding Port")
 						if err := s.dev.Bind(uint8(initiatorPort.config.Port), uint8(logicalPortId), endpoint.pdfid); err != nil {
-							log.WithError(err).Errorf("Bind Failed: Switch %s: PAX: %d Port: %d, Logical Port: %d, PDFID: %#04x", s.id, s.paxId, initiatorPort.config.Port, logicalPortId, endpoint.pdfid)
+							log.Error(err, "Bind Failed")
 						}
 
 						break
@@ -832,80 +865,66 @@ func (c *Connection) fmt(format string, a ...interface{}) string {
 }
 
 // Initialize
-func Initialize(ctrl SwitchtecControllerInterface) error {
+func Initialize(log ec.Logger, ctrl SwitchtecControllerInterface) error {
+	log.Info("Initialize Fabric Manager")
 
-	manager = Fabric{
-		id:   FabricId,
-		ctrl: ctrl,
-		status: sf.ResourceStatus{
-			State:  sf.UNAVAILABLE_OFFLINE_RST,
-			Health: sf.CRITICAL_RH,
-		},
-	}
+	const name = "fabric"
+	log.V(2).Info("Creating logger", "name", name)
+	log = log.WithName(name)
+
+	manager.log = log
+	manager.ctrl = ctrl
 
 	m := &manager
 
-	log.SetLevel(log.DebugLevel)
-	log.Infof("Fabric Manager %s Initializing", m.id)
-
 	conf, err := loadConfig()
 	if err != nil {
-		log.WithError(err).Errorf("Fabric Manager %s failed to load configuration", m.id)
+		log.Error(err, "Failed to load configuration")
 		return err
 	}
 	m.config = conf
 
-	log.Debugf("Fabric Configuration '%s' Loaded...", conf.Metadata.Name)
-	log.Debugf("  Debug Level: %s", conf.DebugLevel)
-	log.Debugf("  Management Ports: %d", conf.ManagementPortCount)
-	log.Debugf("  Upstream Ports:   %d", conf.UpstreamPortCount)
-	log.Debugf("  Downstream Ports: %d", conf.DownstreamPortCount)
-	for _, switchConf := range conf.Switches {
-		log.Debugf("  Switch %s Configuration: %s", switchConf.Id, switchConf.Metadata.Name)
-		log.Debugf("    Management Ports: %d", switchConf.ManagementPortCount)
-		log.Debugf("    Upstream Ports:   %d", switchConf.UpstreamPortCount)
-		log.Debugf("    Downstream Ports: %d", switchConf.DownstreamPortCount)
-	}
-
-	level, err := log.ParseLevel(conf.DebugLevel)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to parse debug level: %s", conf.DebugLevel)
-		return err
-	}
-
-	log.SetLevel(level)
+	log.V(1).Info("Loaded configuration",
+		"managementPortCount", conf.ManagementPortCount,
+		"upstreamPortCount", conf.UpstreamPortCount,
+		"downstreamPortCount", conf.DownstreamPortCount)
 
 	m.switches = make([]Switch, len(conf.Switches))
 	var fabricPortId = 0
 	for switchIdx := range conf.Switches {
 		switchConf := &conf.Switches[switchIdx]
-		log.Infof("Initialize switch %s", switchConf.Id)
+		log := log.WithName(switchConf.Id).WithValues(switchIdKey, switchConf.Id)
+
 		m.switches[switchIdx] = Switch{
 			id:     switchConf.Id,
 			idx:    switchIdx,
 			fabric: m,
 			config: switchConf,
 			ports:  make([]Port, len(switchConf.Ports)),
+			log:    log,
 		}
 
 		s := &m.switches[switchIdx]
 
 		// TODO: This should probably move to Start() routine, although
 		// if we can't find the switch Start() won't really do anything anyways.
-		log.Infof("identify switch %s", switchConf.Id)
+
+		log.Info("Identify switch")
 		if err := s.identify(); err != nil {
-			log.WithError(err).Warnf("Failed to identify switch %s", s.id)
+			log.Error(err, "Failed to identify switch")
 		}
 
-		log.Infof("Switch %s identified: PAX %d", switchConf.Id, s.paxId)
+		log.Info("Switch identified", "pax", s.paxId)
 
 		for portIdx, portConf := range switchConf.Ports {
 			portType := portConf.getPortType()
+			id := strconv.Itoa(portIdx)
+			slot := int64(portConf.Slot)
 
 			s.ports[portIdx] = Port{
-				id:       strconv.Itoa(portIdx),
+				id:       id,
 				fabricId: strconv.Itoa(fabricPortId),
-				slot:     int64(portConf.Slot),
+				slot:     slot,
 				portType: portType,
 				portStatus: portStatus{
 					cfgLinkWidth:    0,
@@ -918,6 +937,7 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 				swtch:     &m.switches[switchIdx],
 				config:    &switchConf.Ports[portIdx],
 				endpoints: []*Endpoint{},
+				log:       log.WithName(id).WithValues(portIdKey, id, slotKey, slot),
 			}
 
 			fabricPortId++
@@ -948,10 +968,7 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 	m.downstreamEndpointCount = (1 + // PF
 		mangementAndUpstreamEndpointCount) * m.config.DownstreamPortCount
 
-	log.Debugf("Creating Endpoints:")
-	log.Debugf("   Management Endpoints: % 3d", m.managementEndpointCount)
-	log.Debugf("   Upstream Endpoints:   % 3d", m.upstreamEndpointCount)
-	log.Debugf("   Downstream Endpoints: % 3d", m.downstreamEndpointCount)
+	log.V(2).Info("Creating endpoints")
 
 	m.endpoints = make([]Endpoint, mangementAndUpstreamEndpointCount+m.downstreamEndpointCount)
 
@@ -1057,14 +1074,14 @@ func Initialize(ctrl SwitchtecControllerInterface) error {
 	// act accordingly.
 	event.EventManager.Subscribe(m)
 
-	log.Infof("Fabric Manager %s Initialization Finished", m.id)
+	log.Info("Fabric Manager Initialized")
 	return nil
 }
 
 // Start -
 func Start() error {
 	m := &manager
-	log.Infof("Starting Fabric Manager %s", m.id)
+	m.log.V(1).Info("Starting manager")
 
 	m.status.State = sf.STARTING_RST
 
@@ -1074,14 +1091,18 @@ func Start() error {
 		s := &m.switches[switchIdx]
 
 		if !s.isReady() {
-			log.Errorf("Failed to start switch %s: Switch is Down", s.id)
+			s.log.Info("Failed to start switch")
 			continue
 		}
 
 		for portIdx := range s.ports {
 			p := &s.ports[portIdx]
+
 			if err := p.Initialize(); err != nil {
-				log.WithError(err).Errorf("Switch %s Port %s failed to initialize", s.id, p.id)
+				m.log.Error(err, "Port initialization failed")
+
+				// Port initialization is not fatal - the manager can continue
+				// to operate with down ports.
 			}
 		}
 
@@ -1111,7 +1132,7 @@ func (m *Fabric) EventHandler(e event.Event) error {
 
 		if p.portType == sf.DOWNSTREAM_PORT_PV130PT {
 			if err := p.bind(); err != nil {
-				log.WithError(err).Errorf("Port %s (switch: %s port: %d) failed to bind", p.id, p.swtch.id, p.config.Port)
+				m.log.Error(err, "Port bind failed")
 			}
 		}
 	}
