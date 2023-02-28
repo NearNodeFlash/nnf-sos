@@ -222,6 +222,7 @@ var _ = BeforeSuite(func() {
 		Client:  k8sManager.GetClient(),
 		Scheme:  testEnv.Scheme,
 		Options: nnf.NewMockOptions(false),
+		RawLog:  ctrl.Log,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

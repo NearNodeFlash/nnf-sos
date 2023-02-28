@@ -188,6 +188,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Scheme:         mgr.GetScheme(),
 		NamespacedName: types.NamespacedName{Name: controllers.NnfNodeECDataResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 		Options:        opts,
+		RawLog:         ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
