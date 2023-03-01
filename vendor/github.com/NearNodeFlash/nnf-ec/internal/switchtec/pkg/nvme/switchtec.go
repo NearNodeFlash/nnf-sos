@@ -22,6 +22,7 @@ package nvme
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"unsafe"
 
 	"github.com/HewlettPackard/structex"
@@ -35,6 +36,26 @@ type switchOps struct {
 	devPath      string
 	pdfid        uint16
 	tunnelStatus switchtec.EpTunnelStatus
+}
+
+type SwitchtecNvmeCommandError struct {
+	dev *Device
+	cmd *AdminCmd
+	err error
+}
+
+func newSwitchtecNvmeCommandError(dev *Device, cmd *AdminCmd, err error) *SwitchtecNvmeCommandError {
+	return &SwitchtecNvmeCommandError{
+		dev: dev, cmd: cmd, err: err,
+	}
+}
+
+func (e *SwitchtecNvmeCommandError) Error() string {
+	return fmt.Sprintf("Device %s: Failed NVMe Command: %s: Error: %s", e.dev, e.cmd, e.err)
+}
+
+func (e *SwitchtecNvmeCommandError) Unwrap() error {
+	return e.err
 }
 
 func (ops *switchOps) close() error {
@@ -104,7 +125,7 @@ func (ops *switchOps) submitAdminPassthru(dev *Device, cmd *AdminCmd, data []byt
 	rspLen := int(unsafe.Sizeof(rsp.Cqe)) + int(cmd.DataLen)
 	rspData, err := ops.dev.NvmeAdminPassthru(ops.pdfid, reqData, rspLen)
 	if err != nil {
-		return err
+		return newSwitchtecNvmeCommandError(dev, cmd, err)
 	}
 
 	if err := structex.DecodeByteBuffer(bytes.NewBuffer(rspData), rsp); err != nil {
@@ -113,7 +134,7 @@ func (ops *switchOps) submitAdminPassthru(dev *Device, cmd *AdminCmd, data []byt
 
 	status := (0xfffe0000 & rsp.Cqe[3]) >> 17
 	if status != 0 {
-		return NewCommandError(status)
+		return newSwitchtecNvmeCommandError(dev, cmd, newCommandError(status))
 	}
 
 	cmd.Result = rsp.Cqe[0]

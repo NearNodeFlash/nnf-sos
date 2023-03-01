@@ -1,7 +1,6 @@
 version: v1
 metadata:
   name: Rabbit
-debugLevel: info
 switches:
   - id: 0
     metadata:

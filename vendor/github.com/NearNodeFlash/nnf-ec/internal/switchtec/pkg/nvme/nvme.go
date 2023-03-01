@@ -41,6 +41,8 @@ type Device struct {
 	ops  ops
 }
 
+func (dev *Device) String() string { return dev.Path }
+
 // UserIoCmd represents an NVMe User I/O Request
 // This is a copy of the C definition in '/include/linux/nvme_ioctl.h' struct nvme_user_io{}
 type UserIoCmd struct {
@@ -84,6 +86,10 @@ type PassthruCmd struct {
 // AdminCmd aliases the PassthruCmd
 type AdminCmd = PassthruCmd
 
+func (cmd *AdminCmd) String() string {
+	return fmt.Sprintf("OpCode: %s (%#02x)", AdminCommandOpCode(cmd.Opcode), cmd.Opcode)
+}
+
 // AdminCommandOpCode sizes the opcodes listed below
 type AdminCommandOpCode uint8
 
@@ -100,6 +106,33 @@ const (
 	NvmeMiRecv                AdminCommandOpCode = 0x1E
 	FormatNvmOpCode           AdminCommandOpCode = 0x80
 )
+
+func (code AdminCommandOpCode) String() string {
+	switch code {
+	case GetLogPage:
+		return "Get Log Page"
+	case IdentifyOpCode:
+		return "Identify"
+	case SetFeatures:
+		return "Set Features"
+	case GetFeatures:
+		return "Get Features"
+	case NamespaceManagementOpCode:
+		return "Namespace Management"
+	case NamespaceAttachOpCode:
+		return "Namespace Attach/Detach"
+	case VirtualMgmtOpCode:
+		return "Virtualization Management"
+	case NvmeMiSend:
+		return "Management Interface Send"
+	case NvmeMiRecv:
+		return "Management Interface Recv"
+	case FormatNvmOpCode:
+		return "Format"
+	}
+
+	return "UNKNOWN"
+}
 
 // StatusCode sizes the status codes listed below
 type StatusCode uint32
@@ -119,6 +152,17 @@ const (
 	NamespaceNotAttached     StatusCode = 0x11a
 )
 
+func (sc StatusCode) String() string {
+	switch sc {
+	case NamespaceAlreadyAttached:
+		return "Namespace Already Attached"
+	case NamespaceNotAttached:
+		return "Namespace Not Attached"
+	}
+
+	return "UNKNOWN"
+}
+
 // CommandError captures an error and details about handling
 type CommandError struct {
 	StatusCode        StatusCode
@@ -128,11 +172,11 @@ type CommandError struct {
 }
 
 func (e *CommandError) Error() string {
-	return fmt.Sprintf("NVMe Status: %#03x CRD: %d More: %t DNR: %t", e.StatusCode, e.CommandRetryDelay, e.More, e.DoNotRetry)
+	return fmt.Sprintf("NVMe Status: %s (%#03x) CRD: %d More: %t DNR: %t", e.StatusCode, uint32(e.StatusCode), e.CommandRetryDelay, e.More, e.DoNotRetry)
 }
 
 // NewCommandError generates the default CommandError for use
-func NewCommandError(status uint32) error {
+func newCommandError(status uint32) error {
 	return &CommandError{
 		StatusCode:        StatusCode(status & StatusCodeMask),
 		CommandRetryDelay: uint8((status & CommandRetryDelayMask) >> CommandRetryDelayShift),
@@ -195,7 +239,12 @@ func Connect(dev *switchtec.Device, pdfid uint16) (*Device, error) {
 		return nil, err
 	}
 
-	return &Device{ops: &ops}, nil
+	device := &Device{
+		Path: fmt.Sprintf("%#x@%s", pdfid, dev.Path),
+		ops:  &ops,
+	}
+
+	return device, nil
 }
 
 func connectDevice(dev *switchtec.Device, ops *switchOps) (err error) {

@@ -36,8 +36,8 @@ func (*DefaultApiRouter) Name() string {
 	return "NNF Storage Service Manager"
 }
 
-func (r *DefaultApiRouter) Init() error {
-	return r.servicer.Initialize(r.controller)
+func (r *DefaultApiRouter) Init(log ec.Logger) error {
+	return r.servicer.Initialize(log, r.controller)
 }
 
 func (r *DefaultApiRouter) Start() error {
