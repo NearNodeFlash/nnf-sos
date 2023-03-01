@@ -85,7 +85,7 @@ func main() {
 
 	nnfopts := nnf.BindFlags(flag.CommandLine)
 
-	opts := &zap.Options{
+	opts := zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
@@ -93,8 +93,7 @@ func main() {
 
 	flag.Parse()
 
-	logger := zap.New(zap.UseFlagOptions(opts))
-	ctrl.SetLogger(logger)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
 

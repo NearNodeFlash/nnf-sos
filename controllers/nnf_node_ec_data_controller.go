@@ -91,11 +91,13 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 	// only include the INFO and DEBUG levels. You can increase the defaults, by
 	// manually setting the zap.Options.Level, or using the -zap-log-level flag.
 	//
-	// You can decrease the log level of nnf-ec by adding verbosity levels to passed
-	// in logger. For example, `logger = logger.V(1)` would reduce the logging level
-	// by 1 in all nnf-ec logs.
+	// You can decrease the log level of nnf-ec by adding verbosity levels to the
+	// logger. For example, `logger = logger.V(1)` would reduce the logging level
+	// by 1 in all nnf-ec logs. Unfortunately, the inverse is not true; one cannot
+	// increase the log level of nnf-ec as the `logger.V` method does not support
+	// negative values.
 	logger := r.RawLog.WithName("ec")
-	
+
 	// Start the NNF Element Controller
 	c := nnfec.NewController(r.Options).WithLogger(logger)
 
