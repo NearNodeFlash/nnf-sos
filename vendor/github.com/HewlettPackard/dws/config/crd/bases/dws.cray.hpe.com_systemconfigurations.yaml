@@ -59,6 +59,18 @@ spec:
                   - name
                   type: object
                 type: array
+              ports:
+                description: Ports is the list of ports available for communication
+                  between nodes in the system. Valid values are single integers, or
+                  a range of values of the form "START-END" where START is an integer
+                  value that represents the start of a port range and END is an integer
+                  value that represents the end of the port range (inclusive).
+                items:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  x-kubernetes-int-or-string: true
+                type: array
               storageNodes:
                 description: StorageNodes is the list of storage nodes on the system
                 items:

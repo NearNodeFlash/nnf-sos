@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // SystemConfigurationComputeNode describes a compute node in the system
@@ -59,6 +60,12 @@ type SystemConfigurationSpec struct {
 
 	// StorageNodes is the list of storage nodes on the system
 	StorageNodes []SystemConfigurationStorageNode `json:"storageNodes,omitempty"`
+
+	// Ports is the list of ports available for communication between nodes in the system.
+	// Valid values are single integers, or a range of values of the form "START-END" where
+	// START is an integer value that represents the start of a port range and END is an
+	// integer value that represents the end of the port range (inclusive).
+	Ports []intstr.IntOrString `json:"ports,omitempty"`
 }
 
 // SystemConfigurationStatus defines the status of SystemConfiguration

@@ -398,6 +398,32 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfportmanagers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
   - nnfstorageprofiles
   verbs:
   - create

@@ -1,0 +1,27 @@
+# permissions for end users to view nnfportmanagers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: nnfportmanager-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: nnf-sos
+    app.kubernetes.io/part-of: nnf-sos
+    app.kubernetes.io/managed-by: kustomize
+  name: nnfportmanager-viewer-role
+rules:
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers/status
+  verbs:
+  - get
