@@ -250,18 +250,34 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		return fmt.Errorf("storage '%s' not found in container profile '%s'", storageName, profile.Name)
 	}
 
+	checkContainerFs := func(idx int) error {
+		getDirectiveFsType := func(idx int) string {
+			args, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[idx])
+			return args["type"]
+		}
+
+		if t := getDirectiveFsType(idx); strings.ToLower(t) == "raw" || strings.ToLower(t) == "xfs" {
+			return fmt.Errorf("containers can not be used with raw or xfs filesystems")
+		}
+
+		return nil
+	}
+
 	// Find the wildcard DW_JOB and DW_PERSISTENT arguments. Verify that they exist in the
-	// preceeding directives and in the container profile. For persistent arguments, ensure there
+	// preceding directives and in the container profile. For persistent arguments, ensure there
 	// is a persistent storage instance.
 	var suppliedStorageArguments []string // use this list later to validate non-optional storages
 	for arg, storageName := range args {
 		switch arg {
 		case "command", "name", "profile":
 		default:
-			// TODO: restrict access to xfs and raw filesystem types since they cannot be mounted on both the rabbit and compute nodejk
 			if strings.HasPrefix(arg, "DW_JOB_") {
-				if findDirectiveIndexByName(workflow, storageName, "jobdw") == -1 {
+				idx := findDirectiveIndexByName(workflow, storageName, "jobdw")
+				if idx == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
+				}
+				if err := checkContainerFs(idx); err != nil {
+					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
@@ -271,8 +287,12 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				if err := r.validatePersistentInstanceForStaging(ctx, storageName, workflow.Namespace); err != nil {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
 				}
-				if findDirectiveIndexByName(workflow, storageName, "persistentdw") == -1 {
+				idx := findDirectiveIndexByName(workflow, storageName, "persistentdw")
+				if idx == -1 {
 					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", storageName)).WithFatal()
+				}
+				if err := checkContainerFs(idx); err != nil {
+					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
