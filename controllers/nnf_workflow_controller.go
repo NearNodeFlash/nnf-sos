@@ -774,8 +774,12 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		if err := r.createContainerService(ctx, workflow); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
 		}
-		if err := r.createContainerJobs(ctx, workflow, dwArgs, index); err != nil {
+		result, err := r.createContainerJobs(ctx, workflow, dwArgs, index)
+		if err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
+		}
+		if result != nil {
+			return result, nil
 		}
 
 		return nil, nil

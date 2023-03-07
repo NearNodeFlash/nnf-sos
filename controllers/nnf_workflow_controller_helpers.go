@@ -1058,10 +1058,10 @@ func (r *NnfWorkflowReconciler) createContainerService(ctx context.Context, work
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, index int) error {
+func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string, index int) (*result, error) {
 	profile, err := r.getContainerProfile(ctx, workflow, index)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create one master job that will be used for all the jobs on all the NnfNodes. Most of the Job's Data will be the same.
@@ -1084,7 +1084,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
-		return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.Name).WithError(err)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.Name).WithError(err)
 	}
 
 	// This defaults to 6 and is the maximum number of pod retries before considering the
@@ -1137,9 +1137,12 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	podSpec.SecurityContext.RunAsNonRoot = &nonRoot
 
 	// Get the volumes to mount into the containers
-	volumes, err := r.getContainerVolumes(ctx, workflow, dwArgs)
+	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowErrorf("could not determine the list of volumes need to create container job %s:", job.Name).WithError(err).WithFatal()
+		return nil, nnfv1alpha1.NewWorkflowErrorf("could not determine the list of volumes need to create container job %s:", job.Name).WithError(err).WithFatal()
+	}
+	if result != nil {
+		return result, nil
 	}
 
 	// Add Volumes/VolumeMounts
@@ -1175,7 +1178,7 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("error obtaining the target NNF nodes for containers:").WithError(err).WithFatal()
+		return nil, nnfv1alpha1.NewWorkflowError("error obtaining the target NNF nodes for containers:").WithError(err).WithFatal()
 	}
 
 	// Add in non-volume environment variables for all containers
@@ -1197,15 +1200,18 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 		// is ok because any retry (i.e. new pod) will land on the same node.
 		podSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNode}
 
-		err = r.Create(ctx, job)
+		newJob := &batchv1.Job{}
+		job.DeepCopyInto(newJob)
+
+		err = r.Create(ctx, newJob)
 		if err != nil {
 			if !apierrors.IsAlreadyExists(err) {
-				return err
+				return nil, err
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // Retrieve the computes for the workflow and find their local nnf nodes
@@ -1262,9 +1268,15 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 }
 
 func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+
 	jobList, err := r.getContainerJobs(ctx, workflow, index)
 	if err != nil {
 		return nil, err
+	}
+
+	// Jobs may not be queryable yet, so requeue
+	if len(jobList.Items) < 1 {
+		return Requeue(fmt.Sprintf("pending job creation for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 	}
 
 	for _, job := range jobList.Items {
@@ -1289,7 +1301,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	}
 
 	if len(jobList.Items) < 1 {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow '%s', index: %d", workflow.Name, index)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("waitForContainersToFinish: no container jobs found for workflow '%s', index: %d", workflow.Name, index)
 	}
 
 	// Retrieve the profile to extract the PostRun timeout
@@ -1341,7 +1353,7 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	}
 
 	if len(jobList.Items) < 1 {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("no container jobs found for workflow '%s', index: %d", workflow.Name, index)
+		return nil, nnfv1alpha1.NewWorkflowErrorf("checkContainersResults: no container jobs found for workflow '%s', index: %d", workflow.Name, index)
 	}
 
 	for _, job := range jobList.Items {
@@ -1471,7 +1483,7 @@ func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx cont
 }
 
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
-func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string) ([]nnfContainerVolume, error) {
+func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha1.Workflow, dwArgs map[string]string) ([]nnfContainerVolume, *result, error) {
 	volumes := []nnfContainerVolume{}
 
 	// TODO: ssh is necessary for mpi see setupSSHAuthVolumes(manager, podSpec) in nnf-dm
@@ -1501,7 +1513,7 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		// Find the directive index for the given name so we can retrieve its NnfAccess
 		vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
 		if vol.directiveIndex < 0 {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s'", vol.directiveName)
+			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s'", vol.directiveName)
 		}
 
 		nnfAccess := &nnfv1alpha1.NnfAccess{
@@ -1511,16 +1523,16 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			},
 		}
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the NnfAccess '%s'", nnfAccess.Name)
+			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the NnfAccess '%s'", nnfAccess.Name)
 		}
 
 		if !nnfAccess.Status.Ready {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)
+			return nil, Requeue(fmt.Sprintf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)).after(2 * time.Second), nil
 		}
 
 		vol.mountPath = nnfAccess.Spec.MountPath
 		volumes = append(volumes, vol)
 	}
 
-	return volumes, nil
+	return volumes, nil, nil
 }
