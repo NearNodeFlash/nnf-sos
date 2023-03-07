@@ -1102,6 +1102,20 @@ func (r *NnfWorkflowReconciler) createContainerJobs(ctx context.Context, workflo
 		},
 	}
 
+	// Add non-root permissions from the workflow's user/group ID
+	if podSpec.SecurityContext == nil {
+		podSpec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+	uid := int64(workflow.Spec.UserID)
+	gid := int64(workflow.Spec.GroupID)
+	podSpec.SecurityContext.RunAsUser = &uid
+	podSpec.SecurityContext.RunAsGroup = &gid
+	nonRoot := false
+	if uid != 0 {
+		nonRoot = true
+	}
+	podSpec.SecurityContext.RunAsNonRoot = &nonRoot
+
 	// Get the volumes to mount into the containers
 	volumes, err := r.getContainerVolumes(ctx, workflow, dwArgs)
 	if err != nil {
