@@ -656,7 +656,8 @@ func (v *Volume) SetFeature(data []byte) error {
 }
 
 func (v *Volume) runInAttachDetachBlock(fn func() error) error {
-	if err := v.attach(v.storage.physicalFunctionControllerId); err != nil {
+	const controllerIndex uint16 = 0
+	if err := v.attach(controllerIndex); err != nil {
 		return err
 	}
 
@@ -664,10 +665,10 @@ func (v *Volume) runInAttachDetachBlock(fn func() error) error {
 		return err
 	}
 
-	return v.detach(v.storage.physicalFunctionControllerId)
+	return v.detach(controllerIndex)
 }
 
-// Wait for Format Completion by polling on the namespace Utilization value to reach zero.
+// WaitFormatComplete waits for Format Completion by polling until the namespace Utilization reaches zero.
 func (v *Volume) WaitFormatComplete() error {
 	log := v.log
 
@@ -702,33 +703,37 @@ func (v *Volume) WaitFormatComplete() error {
 	return nil
 }
 
-func (v *Volume) attach(controllerId uint16) error {
-	// These are really controller indicies that are passed into the nvme-manager; we've always
-	// just assumed that they map 1-1 to the secondary devices because that is how the Samsung
-	// drives behave. For Kioxia Dual Port drives (not production), the secondary controller IDs
+func (v *Volume) controllerIDFromIndex(controllerIndex uint16) uint16 {
+	// Controller indicies to be passed into the nvme-manager;
+	// For Kioxia Dual Port drives (not production), the secondary controller IDs
 	// start at 3, with controller IDs one and two representing the dual port physical functions.
 	//
 	// For Direct Devices, the Rabbit is controlling the drive through the physical functions; we
 	// still use the secondary controller values for all other ports, but we need to remap the
 	// first index to the physical function.
-	//
-	if controllerId != v.storage.physicalFunctionControllerId {
-		if v.storage.device.IsDirectDevice() {
-			if controllerId == 1 {
-				controllerId = v.storage.physicalFunctionControllerId
-			}
-		} else if v.storage.virtManagementEnabled {
-			controllerId = v.storage.controllers[controllerId].controllerId
-		} else if v.storage.IsKioxiaDualPortConfiguration() {
-			controllerId = controllerId + 2
+
+	var controllerID uint16
+	if v.storage.device.IsDirectDevice() {
+		if controllerIndex == 1 {
+			controllerID = v.storage.physicalFunctionControllerId
 		}
+	} else if v.storage.virtManagementEnabled {
+		controllerID = v.storage.controllers[controllerIndex].controllerId
+	} else if v.storage.IsKioxiaDualPortConfiguration() {
+		// In this case, we don't have virtual management enabled, thus we must determine the controllerID from the index
+		controllerID = controllerIndex + 2
 	}
 
-	log := v.log.WithValues(controllerIdKey, controllerId)
-	log.V(2).Info("Attach namespace")
+	return controllerID
+}
 
-	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerId})
+func (v *Volume) attach(controllerIndex uint16) error {
+	controllerID := v.controllerIDFromIndex(controllerIndex)
 
+	log := v.log.WithValues(controllerIdKey, controllerID)
+	log.V(2).Info("Attach namespace", "controllerIndex", controllerIndex)
+
+	err := v.storage.device.AttachNamespace(v.namespaceId, []uint16{controllerID})
 	if err != nil {
 		log.Error(err, "Attach namespace failed")
 
@@ -747,25 +752,13 @@ func (v *Volume) attach(controllerId uint16) error {
 	return nil
 }
 
-func (v *Volume) detach(controllerId uint16) error {
-	// See the note on "attach" above
+func (v *Volume) detach(controllerIndex uint16) error {
+	controllerID := v.controllerIDFromIndex(controllerIndex)
 
-	if controllerId != v.storage.physicalFunctionControllerId {
-		if v.storage.device.IsDirectDevice() {
-			if controllerId == 1 {
-				controllerId = v.storage.physicalFunctionControllerId
-			}
-		} else if v.storage.virtManagementEnabled {
-			controllerId = v.storage.controllers[controllerId].controllerId
-		} else if v.storage.IsKioxiaDualPortConfiguration() {
-			controllerId = controllerId + 2
-		}
-	}
+	log := v.log.WithValues(controllerIdKey, controllerID)
+	log.V(2).Info("Detach namespace", "controllerIndex", controllerIndex)
 
-	log := v.log.WithValues(controllerIdKey, controllerId)
-	log.V(2).Info("Detach namespace")
-
-	err := v.storage.device.DetachNamespace(v.namespaceId, []uint16{controllerId})
+	err := v.storage.device.DetachNamespace(v.namespaceId, []uint16{controllerID})
 
 	if err != nil {
 		log.Error(err, "Detach namespace failed")
@@ -785,7 +778,7 @@ func (v *Volume) detach(controllerId uint16) error {
 	return nil
 }
 
-// Initialize
+// Initialize the controller
 func Initialize(log ec.Logger, ctrl NvmeController) error {
 	log.Info("Initialize NVMe Manager")
 
