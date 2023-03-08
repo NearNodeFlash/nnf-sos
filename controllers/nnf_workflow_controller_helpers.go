@@ -256,8 +256,8 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 			return args["type"]
 		}
 
-		if t := getDirectiveFsType(idx); strings.ToLower(t) == "raw" || strings.ToLower(t) == "xfs" {
-			return fmt.Errorf("containers can not be used with raw or xfs filesystems")
+		if t := getDirectiveFsType(idx); strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" {
+			return fmt.Errorf("unsupported container filesystem: %s", t)
 		}
 
 		return nil
