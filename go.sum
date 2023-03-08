@@ -59,8 +59,8 @@ github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5r
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0 h1:upOQcpaEDmgLxoK7SZeqzGOQs8raxd9/paJYmBS/3/M=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20220929204230-5dcfe552c9e0/go.mod h1:1SLPG4mFeuISXS/GoPtHV541AqR6e9n1Fd9KEnuTDIU=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20230228220541-47eb7a4dbe07 h1:e2HfGFA3rqAxhLbvfB6A5PeaLUYAsVEV5GyufvmPVys=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20230228220541-47eb7a4dbe07/go.mod h1:ZeU6daZ/sVfzcN1DPmMNmiMwnVJy69bWs14l0u1Va4o=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230308165737-09068457bd09 h1:PLKEOo/5b3PM/qVVRamThoEvKtFt7Odz8ak+A8AXPBc=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230308165737-09068457bd09/go.mod h1:ZeU6daZ/sVfzcN1DPmMNmiMwnVJy69bWs14l0u1Va4o=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
