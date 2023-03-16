@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -1228,6 +1229,98 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 
+	})
+
+	Describe("Test with container directives", func() {
+		var (
+			containerProfile *nnfv1alpha1.NnfContainerProfile
+		)
+
+		BeforeEach(func() {
+			containerProfile = createBasicNnfContainerProfile(nil)
+			Expect(containerProfile).ToNot(BeNil())
+
+			wfName := "container-test"
+			workflow = &dwsv1alpha1.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      wfName,
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha1.WorkflowSpec{
+					DesiredState: dwsv1alpha1.StateProposal,
+					JobID:        1234,
+					WLMID:        "Test WLMID",
+					DWDirectives: []string{
+						fmt.Sprintf("#DW container name=%s profile=%s", wfName, containerProfile.Name),
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+			}).Should(Succeed())
+
+			advanceStateAndCheckReady("Proposal", workflow)
+		})
+
+		AfterEach(func() {
+			if workflow != nil {
+				advanceStateAndCheckReady("Teardown", workflow)
+				Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
+			}
+
+			if containerProfile != nil {
+				Expect(k8sClient.Delete(ctx, containerProfile)).To(Succeed())
+			}
+		})
+
+		When("compute nodes are selected for container directives", func() {
+			It("it should target the local NNF nodes for the container jobs", func() {
+				By("assigning the container directive to compute nodes")
+
+				computes := &dwsv1alpha1.Computes{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      workflow.Status.Computes.Name,
+						Namespace: workflow.Status.Computes.Namespace,
+					},
+				}
+
+				// Add 2 computes across 2 NNF nodes. For containers, this means we should see 2 jobs
+				// These computes are defined in the SystemConfiguration
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+				data := []dwsv1alpha1.ComputesData{
+					{Name: "compute0"},
+					{Name: "compute32"},
+				}
+				computes.Data = append(computes.Data, data...)
+				Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
+
+				By("advancing to the PreRun state")
+				advanceStateAndCheckReady("Setup", workflow)
+				advanceStateAndCheckReady("DataIn", workflow)
+				advanceState("PreRun", workflow, 1)
+
+				By("verifying the number of targeted NNF nodes for the container jobs")
+				matchLabels := dwsv1alpha1.MatchingWorkflow(workflow)
+				matchLabels[nnfv1alpha1.DirectiveIndexLabel] = "0"
+
+				jobList := &batchv1.JobList{}
+				Eventually(func(g Gomega) int {
+					Expect(k8sClient.List(context.TODO(), jobList, matchLabels)).To(Succeed())
+					return len(jobList.Items)
+				}).Should(Equal(2))
+
+				By("verifying the node names of targeted NNF nodes for the container jobs")
+				nodes := []string{}
+				for _, job := range jobList.Items {
+					nodeName, ok := job.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"]
+					Expect(ok).To(BeTrue())
+					nodes = append(nodes, nodeName)
+				}
+				Expect(nodes).To(ContainElements("rabbit-test-node-0", "rabbit-test-node-2"))
+			})
+		})
 	})
 
 	Describe("Test NnfStorageProfile Lustre profile merge with DW directives", func() {
