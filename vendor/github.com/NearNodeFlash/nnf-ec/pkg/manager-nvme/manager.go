@@ -44,6 +44,9 @@ const (
 
 	// TODO: The ALL_CAPS name in nvme package should be renamed to a valid Go name
 	CommonNamespaceIdentifier = nvme.COMMON_NAMESPACE_IDENTIFIER
+
+	// Physical Function controller index
+	PhysicalFunctionControllerIndex = 0
 )
 
 const (
@@ -656,7 +659,7 @@ func (v *Volume) SetFeature(data []byte) error {
 }
 
 func (v *Volume) runInAttachDetachBlock(fn func() error) error {
-	const controllerIndex uint16 = 0
+	const controllerIndex uint16 = PhysicalFunctionControllerIndex
 	if err := v.attach(controllerIndex); err != nil {
 		return err
 	}
@@ -712,6 +715,10 @@ func (v *Volume) controllerIDFromIndex(controllerIndex uint16) uint16 {
 	// still use the secondary controller values for all other ports, but we need to remap the
 	// first index to the physical function.
 
+	if controllerIndex == PhysicalFunctionControllerIndex {
+		return v.storage.physicalFunctionControllerId
+	}
+
 	var controllerID uint16
 	if v.storage.device.IsDirectDevice() {
 		if controllerIndex == 1 {
@@ -720,7 +727,6 @@ func (v *Volume) controllerIDFromIndex(controllerIndex uint16) uint16 {
 	} else if v.storage.virtManagementEnabled {
 		controllerID = v.storage.controllers[controllerIndex].controllerId
 	} else if v.storage.IsKioxiaDualPortConfiguration() {
-		// In this case, we don't have virtual management enabled, thus we must determine the controllerID from the index
 		controllerID = controllerIndex + 2
 	}
 
