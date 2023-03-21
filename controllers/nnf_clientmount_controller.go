@@ -94,7 +94,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ClientMountStatus](clientMount)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {

@@ -91,7 +91,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfAccessStatus](access)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage

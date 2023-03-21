@@ -100,7 +100,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// that we can repeatedly make calls to the internal update method, with the final update
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
