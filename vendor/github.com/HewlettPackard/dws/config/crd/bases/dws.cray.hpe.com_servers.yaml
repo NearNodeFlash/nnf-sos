@@ -118,6 +118,28 @@ spec:
                   - storage
                   type: object
                 type: array
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  internal:
+                    description: Internal or user error
+                    type: string
+                  severity:
+                    description: Indication if the error is likely recoverable or
+                      not
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - internal
+                - severity
+                type: object
               lastUpdate:
                 format: date-time
                 type: string
