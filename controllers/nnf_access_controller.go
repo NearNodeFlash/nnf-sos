@@ -170,24 +170,19 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	var result *ctrl.Result = nil
+
 	if access.Status.State == "mounted" {
-		result, err := r.mount(ctx, access, clientList, storageMapping)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if result != nil {
-			return *result, nil
-		}
+		result, err = r.mount(ctx, access, clientList, storageMapping)
 	} else {
-		result, err := r.unmount(ctx, access, clientList, storageMapping)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		result, err = r.unmount(ctx, access, clientList, storageMapping)
+	}
 
-		if result != nil {
-			return *result, nil
-		}
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if result != nil {
+		return *result, nil
 	}
 
 	if access.Status.Ready == false {
@@ -240,7 +235,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 		return nil, err
 	}
 
-	// Wait for all of the ClientMounts to be ready before setting the Ready field
+	// Wait for all of the ClientMounts to be ready
 	if ready == false {
 		return &ctrl.Result{RequeueAfter: time.Second}, nil
 	}
@@ -261,7 +256,7 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.N
 		return nil, err
 	}
 
-	// Wait for all of the ClientMounts to be ready before setting the Ready field
+	// Wait for all of the ClientMounts to be ready
 	if ready == false {
 		return &ctrl.Result{RequeueAfter: time.Second}, nil
 	}
