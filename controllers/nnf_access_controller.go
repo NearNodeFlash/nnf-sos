@@ -170,65 +170,113 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Lock the NnfStorage by adding an annotation with the name/namespace for this
-	// NnfAccess. This is used for non-clustered file systems that can only be mounted
-	// from a single host.
-	wait, err := r.lockStorage(ctx, access)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	if access.Status.State == "mounted" {
+		result, err := r.mount(ctx, access, clientList, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	if wait {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
-	}
+		if result != nil {
+			return *result, nil
+		}
+	} else {
+		result, err := r.unmount(ctx, access, clientList, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	// Add compute node information to the storage map, if necessary.
-	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Create the ClientMount resources. One ClientMount resource is created per client
-	err = r.createClientMounts(ctx, access, storageMapping, log)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	ready, err := r.getNodeStorageEndpointStatus(ctx, access, storageMapping)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if ready == false {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
-	}
-
-	// Aggregate the status from all the ClientMount resources
-	ready, err = r.getClientMountStatus(ctx, access, clientList)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Wait for all of the ClientMounts to be ready before setting the Ready field
-	if ready == false {
-		return ctrl.Result{RequeueAfter: time.Second}, nil
+		if result != nil {
+			return *result, nil
+		}
 	}
 
 	if access.Status.Ready == false {
 		log.Info("State achieved", "State", access.Status.State)
 	}
 
-	if access.Status.State == "unmounted" {
-		// Unlock the NnfStorage so it can be used by another NnfAccess
-		if err = r.unlockStorage(ctx, access); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
 	access.Status.Ready = true
 	access.Status.Error = nil
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) (*ctrl.Result, error) {
+	// Lock the NnfStorage by adding an annotation with the name/namespace for this
+	// NnfAccess. This is used for non-clustered file systems that can only be mounted
+	// from a single host.
+	wait, err := r.lockStorage(ctx, access)
+	if err != nil {
+		return nil, err
+	}
+
+	if wait {
+		return &ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+
+	// Add compute node information to the storage map, if necessary.
+	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the ClientMount resources. One ClientMount resource is created per client
+	err = r.createClientMounts(ctx, access, storageMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	ready, err := r.getNodeStorageEndpointStatus(ctx, access, storageMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	if ready == false {
+		return &ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+
+	// Aggregate the status from all the ClientMount resources
+	ready, err = r.getClientMountStatus(ctx, access, clientList)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for all of the ClientMounts to be ready before setting the Ready field
+	if ready == false {
+		return &ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+
+	return nil, nil
+}
+
+func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) (*ctrl.Result, error) {
+	// Create the ClientMount resources. One ClientMount resource is created per client
+	err := r.createClientMounts(ctx, access, storageMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	// Aggregate the status from all the ClientMount resources
+	ready, err := r.getClientMountStatus(ctx, access, clientList)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for all of the ClientMounts to be ready before setting the Ready field
+	if ready == false {
+		return &ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+
+	err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unlock the NnfStorage so it can be used by another NnfAccess
+	if err = r.unlockStorage(ctx, access); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // lockStorage applies an annotation to the NnfStorage resource with the name and namespace of the NnfAccess resource.
@@ -855,7 +903,8 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 }
 
 // createClientMounts creates the ClientMount resources based on the information in the storageMapping map.
-func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo, log logr.Logger) error {
+func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 	g := new(errgroup.Group)
 
 	for clientName, storageList := range storageMapping {
