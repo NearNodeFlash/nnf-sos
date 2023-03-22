@@ -167,7 +167,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	}
 
 	deletePersistentStorageInstance := func(name string) {
-		By("Fabricate the nnfStorage as it the persistent storage instance exists")
+		By("Fabricate the nnfStorage as if the persistent storage instance exists")
 
 		// Delete persistent storage instance
 		psi := &dwsv1alpha1.PersistentStorageInstance{
