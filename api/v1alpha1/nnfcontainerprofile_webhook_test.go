@@ -77,11 +77,23 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
+	It("Should allow a zero retryLimit", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.RetryLimit = 0
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
 	It("Should not allow a negative postRunTimeoutSeconds", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.PostRunTimeoutSeconds = -1
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
+	})
+
+	It("Should allow a zero postRunTimeoutSeconds", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.PostRunTimeoutSeconds = 0
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("Should not allow modification of Data in a pinned resource", func() {

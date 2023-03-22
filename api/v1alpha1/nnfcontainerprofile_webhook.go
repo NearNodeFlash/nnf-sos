@@ -47,7 +47,7 @@ var _ webhook.Validator = &NnfContainerProfile{}
 func (r *NnfContainerProfile) ValidateCreate() error {
 	nnfcontainerprofilelog.Info("validate create", "name", r.Name)
 
-	return r.validateContent()
+	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -66,7 +66,7 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 		}
 	}
 
-	return r.validateContent()
+	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -74,17 +74,5 @@ func (r *NnfContainerProfile) ValidateDelete() error {
 	nnfcontainerprofilelog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
-}
-
-func (r *NnfContainerProfile) validateContent() error {
-	if r.Data.RetryLimit < 0 {
-		return fmt.Errorf("retryLimit cannot be less than 0")
-	}
-
-	if r.Data.PostRunTimeoutSeconds < 0 {
-		return fmt.Errorf("postRunTimeoutSeconds cannot be less than 0")
-	}
-
 	return nil
 }
