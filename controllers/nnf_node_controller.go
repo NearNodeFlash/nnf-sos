@@ -233,7 +233,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	// Prepare to update the node's status
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](node)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Access the default storage service running in the NNF Element
 	// Controller. Check for any State/Health change.

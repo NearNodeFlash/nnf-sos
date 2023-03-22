@@ -106,7 +106,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.DirectiveBreakdownStatus](dbd)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { dbd.Status.SetResourceError(err) }()
 
 	// Check if the object is being deleted

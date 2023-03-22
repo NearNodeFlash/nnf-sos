@@ -74,7 +74,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create a resource status updater to ensure the status subresource is updated.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfPortManagerStatus](mgr)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Read in the system configuration which contains the available ports.
 	config := &dwsv1alpha1.SystemConfiguration{
