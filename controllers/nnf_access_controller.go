@@ -836,6 +836,7 @@ func (r *NnfAccessReconciler) getNodeStorageEndpointStatus(ctx context.Context, 
 // compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
 // those compute nodes and remove access to the NVMe namespaces from the computes.
 func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha1.ClientMountInfo) error {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 	// NnfNodeStorage clientReferences only need to be removed for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -884,6 +885,7 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 			nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames = nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames[:1]
 		}
 
+		log.Info("Detching", "Client endpoints", nnfNodeStorage.Spec.ClientEndpoints)
 		if reflect.DeepEqual(oldNnfNodeStorage, *nnfNodeStorage) {
 			continue
 		}
