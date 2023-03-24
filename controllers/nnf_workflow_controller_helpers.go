@@ -251,12 +251,28 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 	}
 
 	checkContainerFs := func(idx int) error {
-		getDirectiveFsType := func(idx int) string {
+		getDirectiveFsType := func(idx int) (string, error) {
 			args, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[idx])
-			return args["type"]
+
+			// For persistent instance
+			if args["command"] == "persistentdw" {
+				psi, err := r.getPersistentStorageInstance(ctx, args["name"], workflow.Namespace)
+				if err != nil {
+					return "", fmt.Errorf("could not retrieve persistent instance '%s' for container directive: %s", args["name"], err)
+				}
+
+				return psi.Spec.FsType, nil
+			}
+
+			return args["type"], nil
 		}
 
-		if t := getDirectiveFsType(idx); strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" {
+		t, err := getDirectiveFsType(idx)
+		if err != nil {
+			return err
+		}
+
+		if strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" {
 			return fmt.Errorf("unsupported container filesystem: %s", t)
 		}
 

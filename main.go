@@ -298,5 +298,9 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		return err
 	}
 
+	if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
+	}
+
 	return nil
 }
