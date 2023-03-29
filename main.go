@@ -43,6 +43,8 @@ import (
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/NearNodeFlash/nnf-sos/controllers"
@@ -68,6 +70,8 @@ func init() {
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(lusv1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

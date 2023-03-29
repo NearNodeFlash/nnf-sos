@@ -20,12 +20,15 @@
 package v1alpha1
 
 import (
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	ContainerLabel = "nnf.cray.hpe.com/container"
+	ContainerLabel   = "nnf.cray.hpe.com/container"
+	ContainerUser    = "user"
+	ContainerMPIUser = "mpiuser"
 )
 
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
@@ -37,19 +40,27 @@ type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
-	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to 0.
-	// A value of 0 disables this behavior.
+	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to
+	// 0.  A value of 0 disables this behavior.
 	// +kubebuilder:validation:Minimum:=0
 	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
 
-	// Specifies the number of times a container will be retried upon a failure. A new pod is deployed on each retry.
-	// Defaults to 6 by kubernetes itself and must be set. A value of 0 disables retries.
+	// Specifies the number of times a container will be retried upon a failure. A new pod is
+	// deployed on each retry.  Defaults to 6 by kubernetes itself and must be set. A value of 0
+	// disables retries.
 	// +kubebuilder:validation:Minimum:=0
 	// +kubebuilder:default:=6
 	RetryLimit int32 `json:"retryLimit"`
 
-	// Template defines the containers that will be created from container profile
-	Template corev1.PodTemplateSpec `json:"template"`
+	// Spec to define the containers created from container profile. This is used for non-MPI
+	// containers.
+	// Either this or MPISpec must be provided, but not both.
+	Spec *corev1.PodSpec `json:"spec,omitempty"`
+
+	// MPIJobSpec to define the containers created from container profile. This is used for MPI
+	// containers via MPIJobs. See mpi-operator for more details.
+	// Either this or Spec must be provided, but not both.
+	MPISpec *mpiv2beta1.MPIJobSpec `json:"mpiSpec,omitempty"`
 }
 
 // NnfContainerProfileStorage defines the mount point information that will be available to the
