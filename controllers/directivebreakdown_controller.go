@@ -336,7 +336,6 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
 				})
 			} else {
-				log.Info("XFS/Raw constraint")
 				// XFS and Raw only require PCIe connection between compute and Rabbit
 				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
 					Type:     dwsv1alpha1.ComputeLocationPhysical,
@@ -345,7 +344,6 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 
 			dbd.Status.Compute.Constraints.Location = append(dbd.Status.Compute.Constraints.Location, constraint)
-			log.Info("Compute constraint", "constraints", dbd.Status.Compute.Constraints)
 		}
 
 	default:

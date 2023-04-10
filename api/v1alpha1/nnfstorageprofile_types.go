@@ -45,7 +45,7 @@ type NnfStorageProfileLustreMiscOptions struct {
 	MountTarget []string `json:"mountTarget,omitempty"`
 
 	// ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
-	// to the compute nodes in a job
+	// to the compute nodes in a workflow
 	// +kubebuilder:default:=false
 	ColocateComputes bool `json:"colocateComputes"`
 

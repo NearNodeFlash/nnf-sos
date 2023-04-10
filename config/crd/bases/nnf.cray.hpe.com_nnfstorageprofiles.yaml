@@ -162,7 +162,7 @@ spec:
                         default: false
                         description: ColocateComputes indicates that the Lustre target
                           should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a job
+                          to the compute nodes in a workflow
                         type: boolean
                       count:
                         description: Count specifies how many Lustre targets to create
@@ -230,7 +230,7 @@ spec:
                         default: false
                         description: ColocateComputes indicates that the Lustre target
                           should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a job
+                          to the compute nodes in a workflow
                         type: boolean
                       count:
                         description: Count specifies how many Lustre targets to create
@@ -263,7 +263,7 @@ spec:
                         default: false
                         description: ColocateComputes indicates that the Lustre target
                           should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a job
+                          to the compute nodes in a workflow
                         type: boolean
                       count:
                         description: Count specifies how many Lustre targets to create
@@ -313,7 +313,7 @@ spec:
                         default: false
                         description: ColocateComputes indicates that the Lustre target
                           should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a job
+                          to the compute nodes in a workflow
                         type: boolean
                       count:
                         description: Count specifies how many Lustre targets to create
