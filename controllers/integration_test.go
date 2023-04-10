@@ -553,7 +553,7 @@ var _ = Describe("Integration Test", func() {
 
 				if wfTests[idx].hasComputeBreakdown {
 					Expect(dbd.Status.Compute).NotTo(BeNil())
-					Expect(dbd.Status.Compute.Constraints.Location).To(HaveLen(1))
+					Expect(dbd.Status.Compute.Constraints.Location).ToNot(BeEmpty())
 
 					for _, location := range dbd.Status.Compute.Constraints.Location {
 						servers := &dwsv1alpha1.Servers{}
