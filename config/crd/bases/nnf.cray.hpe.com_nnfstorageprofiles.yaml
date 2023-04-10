@@ -158,6 +158,16 @@ spec:
                     description: MdtOptions contains options to use for libraries
                       used for an MDT target.
                     properties:
+                      colocateComputes:
+                        default: false
+                        description: ColocateComputes indicates that the Lustre target
+                          should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a job
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
                       mountTarget:
                         description: MountTarget specifies mount options for the mount-utils
                           library to mount a lustre target on the Rabbit. For persistent
@@ -168,6 +178,14 @@ spec:
                         items:
                           type: string
                         type: array
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                    required:
+                    - colocateComputes
                     type: object
                   mgtCommandlines:
                     description: MgtCmdLines contains commands to create an MGT target.
@@ -208,6 +226,16 @@ spec:
                     description: MgtMdtOptions contains options to use for libraries
                       used for a combined MGT/MDT target.
                     properties:
+                      colocateComputes:
+                        default: false
+                        description: ColocateComputes indicates that the Lustre target
+                          should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a job
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
                       mountTarget:
                         description: MountTarget specifies mount options for the mount-utils
                           library to mount a lustre target on the Rabbit. For persistent
@@ -218,11 +246,29 @@ spec:
                         items:
                           type: string
                         type: array
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                    required:
+                    - colocateComputes
                     type: object
                   mgtOptions:
                     description: MgtOptions contains options to use for libraries
                       used for an MGT target.
                     properties:
+                      colocateComputes:
+                        default: false
+                        description: ColocateComputes indicates that the Lustre target
+                          should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a job
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
                       mountTarget:
                         description: MountTarget specifies mount options for the mount-utils
                           library to mount a lustre target on the Rabbit. For persistent
@@ -233,6 +279,14 @@ spec:
                         items:
                           type: string
                         type: array
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                    required:
+                    - colocateComputes
                     type: object
                   ostCommandlines:
                     description: OstCmdLines contains commands to create an OST target.
@@ -255,6 +309,16 @@ spec:
                     description: OstOptions contains options to use for libraries
                       used for an OST target.
                     properties:
+                      colocateComputes:
+                        default: false
+                        description: ColocateComputes indicates that the Lustre target
+                          should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a job
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
                       mountTarget:
                         description: MountTarget specifies mount options for the mount-utils
                           library to mount a lustre target on the Rabbit. For persistent
@@ -265,6 +329,14 @@ spec:
                         items:
                           type: string
                         type: array
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                    required:
+                    - colocateComputes
                     type: object
                 type: object
               pinned:

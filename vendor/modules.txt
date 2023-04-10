@@ -1,4 +1,4 @@
-# github.com/HewlettPackard/dws v0.0.0-20230322150428-080a05f072a6
+# github.com/HewlettPackard/dws v0.0.0-20230410155036-98d980ff4912
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha1
 github.com/HewlettPackard/dws/config/crd/bases
