@@ -23,7 +23,6 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 
@@ -115,14 +114,30 @@ func (r *LustreFileSystem) validateMountRoot() *field.Error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LustreFileSystem) ValidateUpdate(old runtime.Object) error {
+func (r *LustreFileSystem) ValidateUpdate(obj runtime.Object) error {
 	lustrefilesystemlog.Info("validate update", "name", r.Name)
 
-	obj := old.(*LustreFileSystem)
-	// Allow metadata to be updated, for things like finalizers,
-	// ownerReferences, and labels, but do not allow Spec to be updated.
-	if !reflect.DeepEqual(r.Spec, obj.Spec) {
-		return field.Invalid(field.NewPath("spec"), r.Spec, "specification is immutable")
+	old := obj.(*LustreFileSystem)
+
+	// Prevent the immutable fields from being updated
+	immutableError := func(child string) error {
+		return field.Forbidden(field.NewPath("Spec").Child(child), "field is immutable")
+	}
+
+	if r.Spec.Name != old.Spec.Name {
+		return immutableError("Name")
+	}
+
+	if r.Spec.MgsNids != old.Spec.MgsNids {
+		return immutableError("MgsNids")
+	}
+
+	if r.Spec.MountRoot != old.Spec.MountRoot {
+		return immutableError("MountRoot")
+	}
+
+	if r.Spec.StorageClassName != old.Spec.StorageClassName {
+		return immutableError("StorageClassName")
 	}
 
 	return nil

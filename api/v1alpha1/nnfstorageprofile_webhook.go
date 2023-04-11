@@ -102,5 +102,21 @@ func (r *NnfStorageProfile) validateContentLustre() error {
 		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
 	}
 
+	for _, target := range []string{"mgt", "mdt", "mgtmdt", "ost"} {
+		targetMiscOptions := r.GetLustreMiscOptions(target)
+		err := r.validateLustreTargetMiscOptions(targetMiscOptions)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *NnfStorageProfile) validateLustreTargetMiscOptions(targetMiscOptions NnfStorageProfileLustreMiscOptions) error {
+	if targetMiscOptions.Count > 0 && targetMiscOptions.Scale > 0 {
+		return fmt.Errorf("count and scale cannot both be specified in Lustre target options")
+	}
+
 	return nil
 }

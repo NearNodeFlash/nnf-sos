@@ -51,6 +51,11 @@ metadata:
   name: example-forever
 data:
   retryLimit: 6
+  storages:
+    - name: DW_JOB_foo-local-storage
+      optional: false
+    - name: DW_PERSISTENT_foo-persistent-storage
+      optional: true
   template:
     spec:
       containers:

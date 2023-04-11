@@ -125,13 +125,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.NnfPortManagerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NnfPortManager")
-		os.Exit(1)
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -296,6 +289,10 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 	if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
 		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
 		return err
+	}
+
+	if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
 	}
 
 	return nil

@@ -101,7 +101,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Create a new status
 
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.StorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	storage.Status.Type = dwsv1alpha1.NVMe
 	storage.Status.Capacity = node.Status.Capacity

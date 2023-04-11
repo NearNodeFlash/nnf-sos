@@ -11,6 +11,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-nnf-cray-hpe-com-v1alpha1-nnfcontainerprofile
+  failurePolicy: Fail
+  name: vnnfcontainerprofile.kb.io
+  rules:
+  - apiGroups:
+    - nnf.cray.hpe.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nnfcontainerprofiles
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-nnf-cray-hpe-com-v1alpha1-nnfstorageprofile
   failurePolicy: Fail
   name: vnnfstorageprofile.kb.io

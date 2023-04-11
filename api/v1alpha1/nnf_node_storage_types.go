@@ -169,8 +169,6 @@ type NnfNodeStorageAllocationStatus struct {
 	StoragePool NnfResourceStatus `json:"storagePool,omitempty"`
 
 	FileSystem NnfResourceStatus `json:"fileSystem,omitempty"`
-
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // LustreStorageStatus describes the Lustre target created here.

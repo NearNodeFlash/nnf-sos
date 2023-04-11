@@ -79,7 +79,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.PersistentStorageInstanceStatus](persistentStorage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { persistentStorage.Status.SetResourceError(err) }()
 
 	if !persistentStorage.GetDeletionTimestamp().IsZero() {

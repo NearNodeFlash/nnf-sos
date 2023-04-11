@@ -19,6 +19,15 @@ data:
     ostCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --ost --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+    ostOptions:
+      scale: 5
+      colocateComputes: true
+    mdtOptions:
+      count: 1
+    mgtMdtOptions:
+      count: 1
+    mgtOptions:
+      count: 1
   gfs2Storage:
     commandlines:
       pvCreate: $DEVICE

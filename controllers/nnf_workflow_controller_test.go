@@ -1,3 +1,22 @@
+/*
+ * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package controllers
 
 import (
@@ -99,6 +118,70 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 		}
 		return nil
+	}
+
+	createPersistentStorageInstance := func(name string) {
+		By("Fabricate the persistent storage instance")
+
+		// Create a persistent storage instance to be found
+		psi := &dwsv1alpha1.PersistentStorageInstance{
+			TypeMeta:   metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
+			Spec: dwsv1alpha1.PersistentStorageInstanceSpec{
+				Name:   name,
+				FsType: "lustre",
+				// DWDirective: workflow.Spec.DWDirectives[0],
+				DWDirective: "#DW persistentdw name=" + name,
+				State:       dwsv1alpha1.PSIStateActive,
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
+
+		// persistentdw directive checks that the nnfStorage associated with the
+		// PersistentStorageInstance (by name) is present and its Status is 'Ready'
+		// For this test, create such an nnfStorage so the datamovement pieces can
+		// operate.
+		// An alternative is to create a workflow with 'create_persistent'
+		// as its directive and actually create the full-blown persistent instance.. (painful)
+		nnfStorage := &nnfv1alpha1.NnfStorage{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: workflow.Namespace,
+			},
+			Spec: nnfv1alpha1.NnfStorageSpec{
+				FileSystemType: "lustre",
+				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
+			},
+			Status: nnfv1alpha1.NnfStorageStatus{
+				MgsNode: "",
+				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
+					Status:          "Ready",
+					Health:          "OK",
+					Error:           "",
+					AllocationCount: 0,
+				}},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
+	}
+
+	deletePersistentStorageInstance := func(name string) {
+		By("Fabricate the nnfStorage as if the persistent storage instance exists")
+
+		// Delete persistent storage instance
+		psi := &dwsv1alpha1.PersistentStorageInstance{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
+		}
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(psi), psi)).To(Succeed())
+		Expect(k8sClient.Delete(context.TODO(), psi)).Should(Succeed())
+
+		nnfStorage := &nnfv1alpha1.NnfStorage{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
+		}
+
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfStorage), nnfStorage)).To(Succeed())
+		Expect(k8sClient.Delete(context.TODO(), nnfStorage)).Should(Succeed())
 	}
 
 	When("Negative tests for storage profiles", func() {
@@ -407,76 +490,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		When("using $DW_PERSISTENT_ references", func() {
 			persistentStorageName := "my-persistent-storage"
 
-			createPersistentStorageInstance := func() {
-				By("Fabricate the persistent storage instance")
-
-				// Create a persistent storage instance to be found
-				psi := &dwsv1alpha1.PersistentStorageInstance{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{Name: persistentStorageName, Namespace: workflow.Namespace},
-					Spec: dwsv1alpha1.PersistentStorageInstanceSpec{
-						Name:        persistentStorageName,
-						FsType:      "lustre",
-						DWDirective: workflow.Spec.DWDirectives[0],
-						State:       dwsv1alpha1.PSIStateActive,
-					},
-				}
-				Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
-
-				// persistentdw directive checks that the nnfStorage associated with the
-				// PersistentStorageInstance (by name) is present and its Status is 'Ready'
-				// For this test, create such an nnfStorage so the datamovement pieces can
-				// operate.
-				// An alternative is to create a workflow with 'create_persistent'
-				// as its directive and actually create the full-blown persistent instance.. (painful)
-				nnfStorage := &nnfv1alpha1.NnfStorage{
-					TypeMeta: metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      persistentStorageName,
-						Namespace: workflow.Namespace,
-					},
-					Spec: nnfv1alpha1.NnfStorageSpec{
-						FileSystemType: "lustre",
-						AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
-					},
-					Status: nnfv1alpha1.NnfStorageStatus{
-						MgsNode: "",
-						AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
-							Status:          "Ready",
-							Health:          "OK",
-							Error:           "",
-							AllocationCount: 0,
-						}},
-					},
-				}
-				Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
-			}
-
-			deletePersistentStorageInstance := func() {
-				By("Fabricate the nnfStorage as it the persistent storage instance exists")
-
-				// Delete persistent storage instance
-				psi := &dwsv1alpha1.PersistentStorageInstance{
-					ObjectMeta: metav1.ObjectMeta{Name: persistentStorageName, Namespace: workflow.Namespace},
-				}
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(psi), psi)).To(Succeed())
-				Expect(k8sClient.Delete(context.TODO(), psi)).Should(Succeed())
-
-				nnfStorage := &nnfv1alpha1.NnfStorage{
-					ObjectMeta: metav1.ObjectMeta{Name: persistentStorageName, Namespace: workflow.Namespace},
-				}
-
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfStorage), nnfStorage)).To(Succeed())
-				Expect(k8sClient.Delete(context.TODO(), nnfStorage)).Should(Succeed())
-			}
-
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
 					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", persistentStorageName),
 				}
 
-				createPersistentStorageInstance()
+				createPersistentStorageInstance(persistentStorageName)
 			})
 
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
@@ -492,7 +512,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 
 			AfterEach(func() {
-				deletePersistentStorageInstance()
+				deletePersistentStorageInstance(persistentStorageName)
 
 				Expect(k8sClient.Delete(context.TODO(), ns)).Should(Succeed())
 			})
@@ -1003,6 +1023,172 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 
 		})
+	})
+
+	When("Using container directives", func() {
+		var ns *corev1.Namespace
+
+		persistentStorageName := "container-persistent"
+		createPersistent := true
+
+		var containerProfile *nnfv1alpha1.NnfContainerProfile
+		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage = nil
+		createContainerProfile := true
+
+		BeforeEach(func() {
+			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
+			// placed in the "nnf-system" namespace so it must be present.
+			// EnvTest does not support namespace deletion, so this could already exist. Ignore any errors.
+			ns = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "nnf-system",
+				},
+			}
+			k8sClient.Create(context.TODO(), ns)
+
+			if createPersistent {
+				createPersistentStorageInstance(persistentStorageName)
+			}
+		})
+
+		JustBeforeEach(func() {
+			// containerProfileStorages is configurable, so this must happen in JustBeforeEach()
+			if createContainerProfile {
+				containerProfile = createBasicNnfContainerProfile(containerProfileStorages)
+			}
+		})
+
+		AfterEach(func() {
+			if containerProfile != nil {
+				Expect(k8sClient.Delete(context.TODO(), containerProfile)).Should(Succeed())
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(containerProfile), containerProfile)
+				}).ShouldNot(Succeed())
+			}
+
+			if createPersistent {
+				deletePersistentStorageInstance(persistentStorageName)
+			}
+		})
+
+		Context("when a container workflow has everything in order", func() {
+			// This means that:
+			// - A persistent instance is available prior to the container workflow
+			// - The provided storage arguments are included in the preceding directives
+			// - The supplied container profile exists and the supplied storage arguments are in the profiles list of required storages
+
+			It("should go to Proposal Ready with required storages present", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					"#DW persistentdw name=" + persistentStorageName,
+					fmt.Sprintf("#DW container name=container profile=%s "+
+						"DW_JOB_foo-local-storage=container-storage "+
+						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						containerProfile.Name),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateProposal
+				}).Should(BeTrue(), "reach desired Proposal state")
+			})
+		})
+
+		Context("when an optional storage in the container profile is not present in the container arguments", func() {
+			BeforeEach(func() {
+				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
+					{Name: "DW_JOB_foo-local-storage", Optional: false},
+					{Name: "DW_PERSISTENT_foo-persistent-storage", Optional: true},
+				}
+			})
+
+			It("should go to Proposal Ready", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					fmt.Sprintf("#DW container name=container profile=%s "+
+						"DW_JOB_foo-local-storage=container-storage ",
+						containerProfile.Name),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha1.StateProposal
+				}).Should(BeTrue(), "reach desired Proposal state")
+			})
+		})
+
+		Context("when a required storage in the container profile is not present in the directives", func() {
+			It("should go to error", func() {
+				workflow.Spec.DWDirectives = []string{
+					// persistent storage is missing
+					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					fmt.Sprintf("#DW container name=container profile=%s "+
+						"DW_JOB_foo-local-storage=container-storage "+
+						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						containerProfile.Name),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "be in error state")
+			})
+		})
+
+		Context("when a required storage in the container profile is not present in the arguments", func() {
+			It("should go to error", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					"#DW persistentdw name=" + persistentStorageName,
+					fmt.Sprintf("#DW container name=container profile=%s "+
+						// local storage is missing
+						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						containerProfile.Name),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "be in error state")
+			})
+		})
+
+		Context("when a argument is not in the container profile", func() {
+			BeforeEach(func() {
+				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
+					{Name: "DW_PERSISTENT_foo-persistent-storage", Optional: true},
+				}
+			})
+			It("should go to error", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					fmt.Sprintf("#DW container name=container profile=%s "+
+						"DW_JOB_foo-local-storage=container-storage ",
+						containerProfile.Name),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha1.StatusError
+				}).Should(BeTrue(), "be in error state")
+			})
+		})
+	})
+})
+
+var _ = Describe("NnfContainerProfile Webhook test", func() {
+	// The nnfcontainer.go covers testing of the webhook.
+	// This spec exists only to verify that the webhook is also running for
+	// the controller tests.
+	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfContainerProfile("an-invalid-profile", nil)
+		profileInvalid.Data.RetryLimit = -100
+		Expect(createNnfContainerProfile(profileInvalid, false)).To(BeNil())
 	})
 })
 

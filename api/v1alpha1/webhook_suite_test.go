@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -59,6 +59,7 @@ type envSetting struct {
 
 var envVars = []envSetting{
 	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
+	{"NNF_CONTAINER_PROFILE_NAMESPACE", "default"},
 }
 
 func TestAPIs(t *testing.T) {
@@ -116,6 +117,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&NnfStorageProfile{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&NnfContainerProfile{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

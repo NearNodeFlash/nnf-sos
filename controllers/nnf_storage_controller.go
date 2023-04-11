@@ -100,7 +100,8 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// that we can repeatedly make calls to the internal update method, with the final update
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() { dbd.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -356,12 +357,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			nodeAllocation.StorageGroup.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileSystem.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileShare.Status.UpdateIfWorseThan(&status)
-
-			for _, condition := range nodeAllocation.Conditions {
-				if condition.Reason == nnfv1alpha1.ConditionFailed {
-					allocationSet.Error = condition.Message
-				}
-			}
 		}
 
 		if nnfNodeStorage.Status.Error != nil {

@@ -39,10 +39,12 @@ type NnfContainerProfileData struct {
 
 	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to 0.
 	// A value of 0 disables this behavior.
+	// +kubebuilder:validation:Minimum:=0
 	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
 
 	// Specifies the number of times a container will be retried upon a failure. A new pod is deployed on each retry.
 	// Defaults to 6 by kubernetes itself and must be set. A value of 0 disables retries.
+	// +kubebuilder:validation:Minimum:=0
 	// +kubebuilder:default:=6
 	RetryLimit int32 `json:"retryLimit"`
 

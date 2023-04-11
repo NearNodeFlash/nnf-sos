@@ -106,9 +106,6 @@ type NnfStorageAllocationSetStatus struct {
 	// Health reflects the health of this allocation set
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	// Error is the human readable error string
-	Error string `json:"error,omitempty"`
-
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
