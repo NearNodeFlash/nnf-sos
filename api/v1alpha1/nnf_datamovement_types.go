@@ -59,6 +59,11 @@ type NnfDataMovementSpec struct {
 	// Set to true if the data movement operation should be canceled.
 	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
+
+	// User defined configuration on how data movement should be performed. This overrides the
+	// configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
+	// Copy Offload API.
+	UserConfig *NnfDataMovementConfig `json:"userConfig,omitempty"`
 }
 
 // DataMovementSpecSourceDestination defines the desired source or destination of data movement
@@ -70,6 +75,18 @@ type NnfDataMovementSpecSourceDestination struct {
 	// Storage describes the storage backing this data movement specification; Storage can reference
 	// either NNF storage or global Lustre storage depending on the object references Kind field.
 	StorageReference corev1.ObjectReference `json:"storageReference,omitempty"`
+}
+
+// NnfDataMovementConfig provides a way for a user to override the data movement behavior on a
+// per DM basis.
+type NnfDataMovementConfig struct {
+
+	// Fake the Data Movement operation. The system "performs" Data Movement but the command to so
+	// is trivial. This means a Data Movement request is still submitted but the IO is skipped.
+	Dryrun bool `json:"dryrun,omitempty"`
+
+	// Extra options to pass to the dcp command (used to perform data movement).
+	DCPOptions string `json:"dcpOptions,omitempty"`
 }
 
 // DataMovementCommandStatus defines the observed status of the underlying data movement
