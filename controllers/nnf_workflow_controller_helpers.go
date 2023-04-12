@@ -1300,6 +1300,7 @@ exit 0
 		replicas := int32(len(nnfNodes))
 		worker.Replicas = &replicas
 		workerSpec.Affinity = &corev1.Affinity{
+			// Ensure we run a worker on every NNF node
 			NodeAffinity: &corev1.NodeAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
 					NodeSelectorTerms: []corev1.NodeSelectorTerm{{
@@ -1308,6 +1309,26 @@ exit 0
 							Operator: corev1.NodeSelectorOpIn,
 							Values:   nnfNodes,
 						}},
+					}},
+				},
+			},
+			// But make sure it's only 1 per node
+			PodAntiAffinity: &corev1.PodAntiAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
+					TopologyKey: "kubernetes.io/hostname",
+					LabelSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "training.kubeflow.org/job-name",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{workflow.Name},
+							},
+							{
+								Key:      "training.kubeflow.org/job-role",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{"worker"},
+							},
+						},
 					}},
 				},
 			},
@@ -1481,7 +1502,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 			return ret, nnfv1alpha1.NewWorkflowErrorf("supplied compute node '%s' not found in SystemConfiguration", c)
 		}
 
-		// Add the node to thea map
+		// Add the node to the map
 		if _, found := nnfNodes[nnfNode]; !found {
 			nnfNodes[nnfNode] = struct{}{}
 		}
