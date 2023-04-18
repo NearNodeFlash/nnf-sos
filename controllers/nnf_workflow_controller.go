@@ -83,8 +83,9 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=kubeflow.org,resources=mpijobs,verbs=get;list;create;watch;update;patch;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -771,18 +772,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
-		if err := r.createContainerService(ctx, workflow); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
-		}
-		result, err := r.createContainerJobs(ctx, workflow, dwArgs, index)
-		if err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
-		}
-		if result != nil {
-			return result, nil
-		}
-
-		return nil, nil
+		return r.containerHandler(ctx, workflow, dwArgs, index)
 	}
 
 	// Create an NNFAccess for the compute clients

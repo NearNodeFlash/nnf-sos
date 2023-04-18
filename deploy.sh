@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+# Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -26,25 +26,26 @@ KUSTOMIZE=$2
 IMG=$3
 OVERLAY=$4
 
-if [[ $CMD == 'deploy' ]]
-then
+if [[ $CMD == 'deploy' ]]; then
     $(cd config/manager && $KUSTOMIZE edit set image controller=$IMG)
 
-    $KUSTOMIZE build config/$OVERLAY | kubectl apply -f -
+    # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
+    # MPIJobSpec (with large annotations).
+    $KUSTOMIZE build config/$OVERLAY | kubectl apply --server-side=true --force-conflicts -f -
 
     echo "Waiting for the webhook to become ready..."
-    while :
-    do
+    while :; do
         ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers | awk '{print $2}')
         [[ $ready == "2/2" ]] && break
         sleep 1
     done
 
-    $KUSTOMIZE build config/examples | kubectl apply -f -
+    # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
+    # MPIJobSpec (with large annotations).
+    $KUSTOMIZE build config/examples | kubectl apply --server-side=true --force-conflicts -f -
 fi
 
-if [[ $CMD == 'undeploy' ]]
-then
+if [[ $CMD == 'undeploy' ]]; then
     $KUSTOMIZE build config/examples | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
 fi
