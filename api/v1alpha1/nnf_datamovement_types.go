@@ -81,7 +81,7 @@ type NnfDataMovementSpecSourceDestination struct {
 // per DM basis.
 type NnfDataMovementConfig struct {
 
-	// Fake the Data Movement operation. The system "performs" Data Movement but the command to so
+	// Fake the Data Movement operation. The system "performs" Data Movement but the command to do so
 	// is trivial. This means a Data Movement request is still submitted but the IO is skipped.
 	Dryrun bool `json:"dryrun,omitempty"`
 
