@@ -154,6 +154,21 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                 type: object
+              userConfig:
+                description: User defined configuration on how data movement should
+                  be performed. This overrides the configuration defined in the nnf-dm-config
+                  ConfigMap. These values are typically set by the Copy Offload API.
+                properties:
+                  dcpOptions:
+                    description: Extra options to pass to the dcp command (used to
+                      perform data movement).
+                    type: string
+                  dryrun:
+                    description: Fake the Data Movement operation. The system "performs"
+                      Data Movement but the command to so is trivial. This means a
+                      Data Movement request is still submitted but the IO is skipped.
+                    type: boolean
+                type: object
               userId:
                 description: User Id specifies the user ID for the data movement operation.
                   This value is used in conjunction with the group ID to ensure the
