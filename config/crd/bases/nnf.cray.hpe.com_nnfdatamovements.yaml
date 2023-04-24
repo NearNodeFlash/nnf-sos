@@ -165,8 +165,8 @@ spec:
                     type: string
                   dryrun:
                     description: Fake the Data Movement operation. The system "performs"
-                      Data Movement but the command to so is trivial. This means a
-                      Data Movement request is still submitted but the IO is skipped.
+                      Data Movement but the command to do so is trivial. This means
+                      a Data Movement request is still submitted but the IO is skipped.
                     type: boolean
                 type: object
               userId:

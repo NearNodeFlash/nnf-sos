@@ -27,13 +27,20 @@ IMG=$3
 OVERLAY=$4
 
 if [[ $CMD == 'deploy' ]]; then
+    echo "Waiting for the dws webhook to become ready..."
+    while :; do
+        ready=$(kubectl get pods -n dws-operator-system -l control-plane=webhook --no-headers | awk '{print $2}')
+        [[ $ready == "1/1" ]] && break
+        sleep 1
+    done
+
     $(cd config/manager && $KUSTOMIZE edit set image controller=$IMG)
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
     $KUSTOMIZE build config/$OVERLAY | kubectl apply --server-side=true --force-conflicts -f -
 
-    echo "Waiting for the webhook to become ready..."
+    echo "Waiting for the nnf-sos webhook to become ready..."
     while :; do
         ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers | awk '{print $2}')
         [[ $ready == "2/2" ]] && break
