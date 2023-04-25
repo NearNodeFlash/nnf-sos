@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
 
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -68,7 +68,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(lusv1alpha1.AddToScheme(scheme))
 
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))

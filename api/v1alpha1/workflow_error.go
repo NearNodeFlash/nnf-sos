@@ -22,7 +22,7 @@ package v1alpha1
 import (
 	"fmt"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 )
 
 // +kubebuilder:object:generate=false
@@ -67,12 +67,12 @@ func (e *WorkflowError) Unwrap() error {
 	return e.err
 }
 
-func (e *WorkflowError) Inject(driverStatus *dwsv1alpha1.WorkflowDriverStatus) {
+func (e *WorkflowError) Inject(driverStatus *dwsv1alpha2.WorkflowDriverStatus) {
 	driverStatus.Message = e.GetMessage()
 	if e.GetRecoverable() {
-		driverStatus.Status = dwsv1alpha1.StatusRunning
+		driverStatus.Status = dwsv1alpha2.StatusRunning
 	} else {
-		driverStatus.Status = dwsv1alpha1.StatusError
+		driverStatus.Status = dwsv1alpha2.StatusError
 	}
 
 	if e.Unwrap() != nil {
@@ -94,7 +94,7 @@ func (e *WorkflowError) WithError(err error) *WorkflowError {
 		return workflowError
 	}
 
-	resourceError, ok := err.(*dwsv1alpha1.ResourceErrorInfo)
+	resourceError, ok := err.(*dwsv1alpha2.ResourceErrorInfo)
 	if ok {
 		e.message = resourceError.UserMessage
 		e.recoverable = resourceError.Recoverable
