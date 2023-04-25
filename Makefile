@@ -223,7 +223,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
 	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
 	for subdir in ${TESTDIRS}; do \
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v -ginkgo.progress $$failfast; \
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v $$failfast; \
 	done
 
 ##@ Build
