@@ -29,8 +29,8 @@ OVERLAY=$4
 if [[ $CMD == 'deploy' ]]; then
     echo "Waiting for the dws webhook to become ready..."
     while :; do
-        ready=$(kubectl get pods -n dws-operator-system -l control-plane=webhook --no-headers | awk '{print $2}')
-        [[ $ready == "1/1" ]] && break
+        ready=$(kubectl get deployments -n dws-operator-system dws-operator-webhook -o json | jq -Mr '.status.readyReplicas')
+        [[ $ready -ge 1 ]] && break
         sleep 1
     done
 
