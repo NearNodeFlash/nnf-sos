@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -191,17 +192,17 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace2(logging.LogToStdout, cmd, func(cmd string) ([]byte, error) {
 
 		ctx := context.Background()
-		timeoutString, found := os.LookupEnv("NNF_EC_COMMAND_TIMEOUT")
+		timeoutString, found := os.LookupEnv("NNF_EC_COMMAND_TIMEOUT_SECONDS")
 		if found {
 			var cancel context.CancelFunc
 
-			timeout, err := time.ParseDuration(timeoutString)
+			timeout, err := strconv.Atoi(timeoutString)
 			if err != nil {
 				return nil, err
 			}
 
 			if timeout > 0 {
-				ctx, cancel = context.WithTimeout(context.Background(), timeout)
+				ctx, cancel = context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 				defer cancel()
 			}
 		}
