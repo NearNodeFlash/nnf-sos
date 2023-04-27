@@ -58,14 +58,6 @@ rules:
   - patch
   - update
 - apiGroups:
-  - cray.hpe.com
-  resources:
-  - lustrefilesystems
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - dws.cray.hpe.com
   resources:
   - clientmounts
@@ -276,6 +268,14 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - lus.cray.hpe.com
+  resources:
+  - lustrefilesystems
+  verbs:
+  - get
+  - list
   - watch
 - apiGroups:
   - nnf.cray.hpe.com
