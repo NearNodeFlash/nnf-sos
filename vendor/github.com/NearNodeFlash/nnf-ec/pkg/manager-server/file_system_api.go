@@ -213,7 +213,7 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 		shellCmd.Stderr = &fsError.stderr
 		err := shellCmd.Run()
 		if err != nil {
-			// Command failed, return stderr
+			// Command failed, return FileSystemError with stdout and stderr
 			return nil, &fsError
 		}
 		// Command success, return stdout
