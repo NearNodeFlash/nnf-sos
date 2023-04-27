@@ -87,6 +87,16 @@ type NnfDataMovementConfig struct {
 
 	// Extra options to pass to the dcp command (used to perform data movement).
 	DCPOptions string `json:"dcpOptions,omitempty"`
+
+	// If true, enable the command's stdout to be saved in the log when the command completes
+	// successfully. On failure, the output is always logged.
+	// Note: Enabling this option may degrade performance.
+	LogStdout bool `json:"logStdout,omitempty"`
+
+	// Similar to LogStdout, store the command's stdout in Status.Message when the command completes
+	// successfully. On failure, the output is always stored.
+	// Note: Enabling this option may degrade performance.
+	StoreStdout bool `json:"storeStdout,omitempty"`
 }
 
 // DataMovementCommandStatus defines the observed status of the underlying data movement
@@ -106,7 +116,7 @@ type NnfDataMovementCommandStatus struct {
 
 	// LastMessage reflects the last message received over standard output or standard error as
 	// captured by the underlying data movement command.
-	LastMessage string `json:"message,omitempty"`
+	LastMessage string `json:"lastMessage,omitempty"`
 
 	// LastMessageTime reflects the time at which the last message was received over standard output or
 	// standard error by the underlying data movement command.
@@ -123,7 +133,8 @@ type NnfDataMovementStatus struct {
 	// +kubebuilder:validation:Enum=Success;Failed;Invalid;Cancelled
 	Status string `json:"status,omitempty"`
 
-	// Message contains any text that explains the Status.
+	// Message contains any text that explains the Status. If Data Movement failed or storeStdout is
+	// enabled, this will contain the command's output.
 	Message string `json:"message,omitempty"`
 
 	// StartTime reflects the time at which the Data Movement operation started.
