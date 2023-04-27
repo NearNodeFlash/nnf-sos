@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/HewlettPackard/dws v0.0.0-20230410193930-8fd6fbeff7f8
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20230426150127-b7cba32758e5
-	github.com/NearNodeFlash/nnf-ec v0.0.0-20230322150739-a8190e4ef79d
+	github.com/NearNodeFlash/nnf-ec v0.0.0-20230427164720-dc73727a986f
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/google/uuid v1.3.0

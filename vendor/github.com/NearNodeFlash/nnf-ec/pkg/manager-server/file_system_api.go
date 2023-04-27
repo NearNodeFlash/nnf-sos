@@ -21,12 +21,15 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"reflect"
+	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/mount-utils"
@@ -188,13 +191,29 @@ func (e *FileSystemError) Unwrap() error {
 func (*FileSystem) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace2(logging.LogToStdout, cmd, func(cmd string) ([]byte, error) {
 
+		ctx := context.Background()
+		timeoutString, found := os.LookupEnv("NNF_EC_COMMAND_TIMEOUT_SECONDS")
+		if found {
+			var cancel context.CancelFunc
+
+			timeout, err := strconv.Atoi(timeoutString)
+			if err != nil {
+				return nil, err
+			}
+
+			if timeout > 0 {
+				ctx, cancel = context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+				defer cancel()
+			}
+		}
+
 		fsError := FileSystemError{command: cmd}
-		shellCmd := exec.Command("bash", "-c", cmd)
+		shellCmd := exec.CommandContext(ctx, "bash", "-c", cmd)
 		shellCmd.Stdout = &fsError.stdout
 		shellCmd.Stderr = &fsError.stderr
 		err := shellCmd.Run()
 		if err != nil {
-			// Command failed, return stderr
+			// Command failed, return FileSystemError with stdout and stderr
 			return nil, &fsError
 		}
 		// Command success, return stdout
