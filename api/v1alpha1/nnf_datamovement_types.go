@@ -83,6 +83,7 @@ type NnfDataMovementConfig struct {
 
 	// Fake the Data Movement operation. The system "performs" Data Movement but the command to do so
 	// is trivial. This means a Data Movement request is still submitted but the IO is skipped.
+	// +kubebuilder:default:=false
 	Dryrun bool `json:"dryrun,omitempty"`
 
 	// Extra options to pass to the dcp command (used to perform data movement).
@@ -91,11 +92,13 @@ type NnfDataMovementConfig struct {
 	// If true, enable the command's stdout to be saved in the log when the command completes
 	// successfully. On failure, the output is always logged.
 	// Note: Enabling this option may degrade performance.
+	// +kubebuilder:default:=false
 	LogStdout bool `json:"logStdout,omitempty"`
 
 	// Similar to LogStdout, store the command's stdout in Status.Message when the command completes
 	// successfully. On failure, the output is always stored.
 	// Note: Enabling this option may degrade performance.
+	// +kubebuilder:default:=false
 	StoreStdout bool `json:"storeStdout,omitempty"`
 }
 
