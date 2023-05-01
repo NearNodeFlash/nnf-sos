@@ -100,7 +100,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// that we can repeatedly make calls to the internal update method, with the final update
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -247,8 +247,13 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
 				nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
 				nnfNodeStorage.Spec.LustreStorage.FileSystemName = allocationSet.FileSystemName
-				nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
 				nnfNodeStorage.Spec.LustreStorage.BackFs = allocationSet.BackFs
+				nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
+
+				// If this isn't the first allocation, then change MGTMDT to MDT so that we only get a single MGT
+				if allocationSet.TargetType == "MGTMDT" && startIndex != 0 {
+					nnfNodeStorage.Spec.LustreStorage.TargetType = "MDT"
+				}
 
 				// Create the list of client endpoints for each allocation and initialize it with
 				// the rabbit node endpoint
@@ -260,7 +265,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 					}
 				}
 
-				if allocationSet.TargetType == "MDT" || allocationSet.TargetType == "OST" {
+				if nnfNodeStorage.Spec.LustreStorage.TargetType == "MDT" || nnfNodeStorage.Spec.LustreStorage.TargetType == "OST" {
 					if len(allocationSet.ExternalMgsNid) > 0 {
 						nnfNodeStorage.Spec.LustreStorage.MgsNode = allocationSet.ExternalMgsNid
 					} else {

@@ -60,7 +60,7 @@ IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-sos
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.25.0
+ENVTEST_K8S_VERSION = 1.26.0
 
 # Jenkins behaviors
 # pipeline_service builds its target docker image and stores it into 1 of 3 destination folders.
@@ -223,7 +223,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
 	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
 	for subdir in ${TESTDIRS}; do \
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v -ginkgo.progress $$failfast; \
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v $$failfast; \
 	done
 
 ##@ Build
@@ -254,7 +254,7 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found -f -
 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -285,7 +285,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4.5.7
-CONTROLLER_TOOLS_VERSION ?= v0.9.2
+CONTROLLER_TOOLS_VERSION ?= v0.11.1
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize

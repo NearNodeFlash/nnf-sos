@@ -64,6 +64,15 @@ type AllocationSetConstraints struct {
 	// Labels is a list of labels is used to filter the Storage resources
 	Labels []string `json:"labels,omitempty"`
 
+	// Scale is a hint for the number of allocations to make based on a 1-10 value
+	// +kubebuilder:validation:Minimum:=1
+	// +kubebuilder:validation:Maximum:=10
+	Scale int `json:"scale,omitempty"`
+
+	// Count is the number of the allocations to make
+	// +kubebuilder:validation:Minimum:=1
+	Count int `json:"count,omitempty"`
+
 	// Colocation is a list of constraints for which Storage resources
 	// to pick in relation to Storage resources for other allocation sets.
 	Colocation []AllocationSetColocationConstraint `json:"colocation,omitempty"`
@@ -108,17 +117,34 @@ type StorageBreakdown struct {
 	AllocationSets []StorageAllocationSet `json:"allocationSets,omitempty"`
 }
 
+type ComputeLocationType string
+
 const (
-	ComputeLocationNetwork  = "network"
-	ComputeLocationPhysical = "physical"
+	ComputeLocationNetwork  ComputeLocationType = "network"
+	ComputeLocationPhysical ComputeLocationType = "physical"
 )
+
+type ComputeLocationPriority string
+
+const (
+	ComputeLocationPriorityMandatory  ComputeLocationPriority = "mandatory"
+	ComputeLocationPriorityBestEffort ComputeLocationPriority = "bestEffort"
+)
+
+type ComputeLocationAccess struct {
+	// Type is the relationship between the compute nodes and the resource in the Reference
+	// +kubebuilder:validation:Enum=physical;network
+	Type ComputeLocationType `json:"type"`
+
+	// Priority specifies whether the location constraint is mandatory or best effort
+	// +kubebuilder:validation:Enum=mandatory;bestEffort
+	Priority ComputeLocationPriority `json:"priority"`
+}
 
 // ComputeLocationConstraint describes a constraints on which compute nodes can be used with
 // a directive based on their location
 type ComputeLocationConstraint struct {
-	// Type is the relationship between the compute nodes and the resource in the Reference
-	// +kubebuilder:validation:Enum=physical;network
-	Type string `json:"type"`
+	Access []ComputeLocationAccess `json:"access"`
 
 	// Reference is an object reference to a resource that contains the location information
 	Reference corev1.ObjectReference `json:"reference"`

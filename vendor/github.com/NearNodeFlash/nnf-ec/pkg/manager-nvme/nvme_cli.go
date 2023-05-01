@@ -305,23 +305,6 @@ func (d *cliDevice) FormatNamespace(namespaceID nvme.NamespaceIdentifier) error 
 	return nil
 }
 
-func (d *cliDevice) WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error {
-	idns := &nvme.IdNs{}
-	idns.Utilization = 1 // something other than 0 to get the loop going below
-
-	for idns.Utilization > 0 {
-		idns, err := d.IdentifyNamespace(namespaceID)
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("Formatting, Utilization(bytes): %d              \r", idns.Utilization) // wipe out straggling digits
-	}
-
-	fmt.Printf("Formatting, Utilization(bytes): %d              \r", idns.Utilization)
-	return nil
-}
-
 func (d *cliDevice) AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error {
 	// Example Command
 	//    # nvme attach-ns /dev/nvme2 --namespace-id=1 --controllers=0x41

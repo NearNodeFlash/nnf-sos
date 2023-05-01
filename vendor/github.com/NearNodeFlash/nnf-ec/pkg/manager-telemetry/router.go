@@ -36,7 +36,7 @@ func (*DefaultApiRouter) Name() string {
 	return "Telemetry Manager"
 }
 
-func (*DefaultApiRouter) Init() error {
+func (*DefaultApiRouter) Init(ec.Logger) error {
 	return TelemetryManager.Initialize()
 }
 

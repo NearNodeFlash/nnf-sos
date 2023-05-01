@@ -20,8 +20,9 @@
 package nnf
 
 import (
+	logr "github.com/sirupsen/logrus"
+
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
-	log "github.com/sirupsen/logrus"
 )
 
 // Persistent Controller API provides an interface for creating, updating, and deleting persistent objects.
@@ -112,20 +113,20 @@ func executePersistentObjectTransaction(ledger *persistent.Ledger, obj Persisten
 
 	data, err := obj.GenerateStateData(startingState)
 	if err != nil {
-		log.WithError(err).Warnf("Object %s failed to generate starting state %d data", obj.GetKey(), startingState)
+		logr.WithError(err).Warnf("Object %s failed to generate starting state %d data", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := ledger.Log(startingState, data); err != nil {
-		log.WithError(err).Warnf("Object %s failed to log starting state %d", obj.GetKey(), startingState)
+		logr.WithError(err).Warnf("Object %s failed to log starting state %d", obj.GetKey(), startingState)
 		return err
 	}
 
 	if err := updateFunc(); err != nil {
-		log.WithError(err).Warnf("Object %s failed update to state %d", obj.GetKey(), startingState)
+		logr.WithError(err).Warnf("Object %s failed update to state %d", obj.GetKey(), startingState)
 
 		if rollbackErr := obj.Rollback(startingState); rollbackErr != nil {
-			log.WithError(rollbackErr).Errorf("Object %s failed rollback to state %d", obj.GetKey(), startingState)
+			logr.WithError(rollbackErr).Errorf("Object %s failed rollback to state %d", obj.GetKey(), startingState)
 		}
 
 		return err
@@ -133,12 +134,12 @@ func executePersistentObjectTransaction(ledger *persistent.Ledger, obj Persisten
 
 	data, err = obj.GenerateStateData(endingState)
 	if err != nil {
-		log.WithError(err).Warnf("Object %s failed to generate ending state %d data", obj.GetKey(), endingState)
+		logr.WithError(err).Warnf("Object %s failed to generate ending state %d data", obj.GetKey(), endingState)
 		return err
 	}
 
 	if err := ledger.Log(endingState, data); err != nil {
-		log.WithError(err).Warnf("Object %s failed to log ending state %d", obj.GetKey(), endingState)
+		logr.WithError(err).Warnf("Object %s failed to log ending state %d", obj.GetKey(), endingState)
 		return err
 	}
 

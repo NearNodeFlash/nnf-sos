@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: nnfaccesses.nnf.cray.hpe.com
 spec:
@@ -96,6 +96,10 @@ spec:
                 - mounted
                 - unmounted
                 type: string
+              groupID:
+                description: GroupID for the new mount. Currently only used for raw
+                format: int32
+                type: integer
               mountPath:
                 description: MountPath for the storage target on the client
                 type: string
@@ -149,19 +153,33 @@ spec:
                 - all
                 type: string
               teardownState:
+                allOf:
+                - enum:
+                  - Proposal
+                  - Setup
+                  - DataIn
+                  - PreRun
+                  - PostRun
+                  - DataOut
+                  - Teardown
+                - enum:
+                  - PreRun
+                  - PostRun
+                  - Teardown
                 description: TeardownState is the desired state of the workflow for
                   this NNF Access resource to be torn down and deleted.
-                enum:
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
                 type: string
+              userID:
+                description: UserID for the new mount. Currently only used for raw
+                format: int32
+                type: integer
             required:
             - desiredState
+            - groupID
             - storageReference
             - target
             - teardownState
+            - userID
             type: object
           status:
             description: NnfAccessStatus defines the observed state of NnfAccess

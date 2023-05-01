@@ -180,7 +180,7 @@ func (rh *fileSystemRecoveryReplyHandler) Metadata(data []byte) error {
 		return err
 	}
 
-	fsApi, err := server.FileSystemController.NewFileSystem(metadata.FileSystemOem)
+	fsApi, err := server.FileSystemController.NewFileSystem(&metadata.FileSystemOem)
 	if err != nil {
 		return fmt.Errorf("File System %s Replay: Failed to create api %s", rh.fileSystemId, err)
 	}

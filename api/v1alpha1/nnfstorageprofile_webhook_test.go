@@ -192,4 +192,11 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
+
+	It("should not allow scale and count to both be set", func() {
+		nnfProfile.Data.LustreStorage.MgtOptions.Scale = 5
+		nnfProfile.Data.LustreStorage.MgtOptions.Count = 5
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
 })

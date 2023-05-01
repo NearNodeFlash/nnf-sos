@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -106,7 +106,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.DirectiveBreakdownStatus](dbd)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { dbd.Status.SetResourceError(err) }()
 
 	// Check if the object is being deleted
@@ -204,24 +204,59 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
-		// Create a location constraint for the compute nodes based on what type of file system
-		// the persistent storage is using. For Lustre, any compute node with network access to
-		// the storage is acceptable. All other file systems need a physical connection to the storage.
-		constraint := dwsv1alpha1.ComputeLocationConstraint{
-			Reference: persistentStorage.Status.Servers,
-		}
-
-		if persistentStorage.Spec.FsType == "lustre" {
-			constraint.Type = dwsv1alpha1.ComputeLocationNetwork
-		} else {
-			constraint.Type = dwsv1alpha1.ComputeLocationPhysical
-		}
-
-		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
-			Constraints: dwsv1alpha1.ComputeConstraints{
-				Location: []dwsv1alpha1.ComputeLocationConstraint{constraint},
+		servers := &dwsv1alpha1.Servers{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      persistentStorage.Status.Servers.Name,
+				Namespace: persistentStorage.Status.Servers.Namespace,
 			},
 		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(servers), servers); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		// Create a location constraint for the compute nodes based on what type of file system
+		// the persistent storage is using.
+		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
+			Constraints: dwsv1alpha1.ComputeConstraints{},
+		}
+
+		for i := range servers.Spec.AllocationSets {
+			constraint := dwsv1alpha1.ComputeLocationConstraint{
+				Reference: v1.ObjectReference{
+					Kind:      persistentStorage.Status.Servers.Kind,
+					Name:      persistentStorage.Status.Servers.Name,
+					Namespace: persistentStorage.Status.Servers.Namespace,
+					FieldPath: fmt.Sprintf("servers.spec.allocationSets[%d]", i),
+				},
+			}
+
+			if argsMap["type"] == "lustre" {
+				// Lustre requires a network connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationNetwork,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+			} else if argsMap["type"] == "gfs2" {
+				// GFS2 requires both PCIe and network connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationNetwork,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationPhysical,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+			} else {
+				// XFS and Raw only require PCIe connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationPhysical,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+			}
+			dbd.Status.Compute.Constraints.Location = append(dbd.Status.Compute.Constraints.Location, constraint)
+		}
+
 	case "jobdw":
 		pinnedProfile, err := createPinnedProfile(ctx, r.Client, r.Scheme, argsMap, dbd, commonResourceName)
 		if err != nil {
@@ -253,29 +288,64 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			Reference: serversReference,
 		}
 
-		// Create a location constraint for the compute nodes based on what type of file system
-		// will be created. For Lustre, any compute node with network access to the storage is
-		// acceptable. All other file systems need a physical connection to the storage.
-		constraint := dwsv1alpha1.ComputeLocationConstraint{
-			Reference: serversReference,
-		}
-
-		if argsMap["type"] == "lustre" {
-			constraint.Type = dwsv1alpha1.ComputeLocationNetwork
-		} else {
-			constraint.Type = dwsv1alpha1.ComputeLocationPhysical
-		}
-
-		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
-			Constraints: dwsv1alpha1.ComputeConstraints{
-				Location: []dwsv1alpha1.ComputeLocationConstraint{constraint},
-			},
-		}
-
 		err = r.populateStorageBreakdown(ctx, dbd, commonResourceName, argsMap)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		// Create a location constraint for the compute nodes based on what type of file system
+		// will be created.
+		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
+			Constraints: dwsv1alpha1.ComputeConstraints{},
+		}
+
+		for i, allocationSet := range dbd.Status.Storage.AllocationSets {
+			constraint := dwsv1alpha1.ComputeLocationConstraint{
+				Reference: v1.ObjectReference{
+					Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+					Name:      servers.Name,
+					Namespace: servers.Namespace,
+					FieldPath: fmt.Sprintf("servers.spec.allocationSets[%d]", i),
+				},
+			}
+
+			if argsMap["type"] == "lustre" {
+				// Lustre requires a network connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationNetwork,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+
+				// If the "ColocateComputes" option is specified, force the computes to have a
+				// physical connection to the storage to limit their placement
+				targetOptions := pinnedProfile.GetLustreMiscOptions(allocationSet.Label)
+				if targetOptions.ColocateComputes {
+					constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+						Type:     dwsv1alpha1.ComputeLocationPhysical,
+						Priority: dwsv1alpha1.ComputeLocationPriorityBestEffort,
+					})
+				}
+			} else if argsMap["type"] == "gfs2" {
+				// GFS2 requires both PCIe and network connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationNetwork,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationPhysical,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+			} else {
+				// XFS and Raw only require PCIe connection between compute and Rabbit
+				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
+					Type:     dwsv1alpha1.ComputeLocationPhysical,
+					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				})
+			}
+
+			dbd.Status.Compute.Constraints.Location = append(dbd.Status.Compute.Constraints.Location, constraint)
+		}
+
 	default:
 	}
 
@@ -405,7 +475,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	switch filesystem {
 	case "raw", "xfs", "gfs2":
 		component := dwsv1alpha1.StorageAllocationSet{}
-		populateStorageAllocationSet(&component, dwsv1alpha1.AllocatePerCompute, breakdownCapacity, filesystem, nil)
+		populateStorageAllocationSet(&component, dwsv1alpha1.AllocatePerCompute, breakdownCapacity, 0, 0, filesystem, nil)
 
 		log.Info("allocationSets", "comp", component)
 
@@ -417,6 +487,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
+
 		lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, breakdownCapacity, "ost", nil})
 
 		mgtKey := &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
@@ -431,17 +502,18 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 			if mdtKey != nil {
 				useKey = mdtKey
 			}
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mgtmdt", useKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mgtmdt", useKey})
 		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
 		} else {
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mgtCapacity, "mgt", mgtKey})
 		}
 
 		for _, i := range lustreComponents {
+			targetMiscOptions := nnfStorageProfile.GetLustreMiscOptions(i.labelsStr)
 			component := dwsv1alpha1.StorageAllocationSet{}
-			populateStorageAllocationSet(&component, i.strategy, i.cap, i.labelsStr, i.colocationKey)
+			populateStorageAllocationSet(&component, i.strategy, i.cap, targetMiscOptions.Scale, targetMiscOptions.Count, i.labelsStr, i.colocationKey)
 
 			allocationSets = append(allocationSets, component)
 		}
@@ -492,11 +564,13 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy dwsv1alpha1.AllocationStrategy, cap int64, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
+func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy dwsv1alpha1.AllocationStrategy, cap int64, scale int, count int, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
-	a.Constraints.Labels = []string{"dws.cray.hpe.com/storage=Rabbit"}
+	a.Constraints.Labels = []string{dwsv1alpha1.StorageTypeLabel + "=Rabbit"}
+	a.Constraints.Scale = scale
+	a.Constraints.Count = count
 	if constraint != nil {
 		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{*constraint}
 	}

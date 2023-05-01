@@ -41,6 +41,8 @@ type Device struct {
 	ops  ops
 }
 
+func (dev *Device) String() string { return dev.Path }
+
 // UserIoCmd represents an NVMe User I/O Request
 // This is a copy of the C definition in '/include/linux/nvme_ioctl.h' struct nvme_user_io{}
 type UserIoCmd struct {
@@ -84,6 +86,10 @@ type PassthruCmd struct {
 // AdminCmd aliases the PassthruCmd
 type AdminCmd = PassthruCmd
 
+func (cmd *AdminCmd) String() string {
+	return fmt.Sprintf("OpCode: %s (%#02x)", AdminCommandOpCode(cmd.Opcode), cmd.Opcode)
+}
+
 // AdminCommandOpCode sizes the opcodes listed below
 type AdminCommandOpCode uint8
 
@@ -100,6 +106,33 @@ const (
 	NvmeMiRecv                AdminCommandOpCode = 0x1E
 	FormatNvmOpCode           AdminCommandOpCode = 0x80
 )
+
+func (code AdminCommandOpCode) String() string {
+	switch code {
+	case GetLogPage:
+		return "Get Log Page"
+	case IdentifyOpCode:
+		return "Identify"
+	case SetFeatures:
+		return "Set Features"
+	case GetFeatures:
+		return "Get Features"
+	case NamespaceManagementOpCode:
+		return "Namespace Management"
+	case NamespaceAttachOpCode:
+		return "Namespace Attach/Detach"
+	case VirtualMgmtOpCode:
+		return "Virtualization Management"
+	case NvmeMiSend:
+		return "Management Interface Send"
+	case NvmeMiRecv:
+		return "Management Interface Recv"
+	case FormatNvmOpCode:
+		return "Format"
+	}
+
+	return "UNKNOWN"
+}
 
 // StatusCode sizes the status codes listed below
 type StatusCode uint32
@@ -119,6 +152,17 @@ const (
 	NamespaceNotAttached     StatusCode = 0x11a
 )
 
+func (sc StatusCode) String() string {
+	switch sc {
+	case NamespaceAlreadyAttached:
+		return "Namespace Already Attached"
+	case NamespaceNotAttached:
+		return "Namespace Not Attached"
+	}
+
+	return "UNKNOWN"
+}
+
 // CommandError captures an error and details about handling
 type CommandError struct {
 	StatusCode        StatusCode
@@ -128,11 +172,11 @@ type CommandError struct {
 }
 
 func (e *CommandError) Error() string {
-	return fmt.Sprintf("NVMe Status: %#03x CRD: %d More: %t DNR: %t", e.StatusCode, e.CommandRetryDelay, e.More, e.DoNotRetry)
+	return fmt.Sprintf("NVMe Status: %s (%#03x) CRD: %d More: %t DNR: %t", e.StatusCode, uint32(e.StatusCode), e.CommandRetryDelay, e.More, e.DoNotRetry)
 }
 
 // NewCommandError generates the default CommandError for use
-func NewCommandError(status uint32) error {
+func newCommandError(status uint32) error {
 	return &CommandError{
 		StatusCode:        StatusCode(status & StatusCodeMask),
 		CommandRetryDelay: uint8((status & CommandRetryDelayMask) >> CommandRetryDelayShift),
@@ -195,7 +239,12 @@ func Connect(dev *switchtec.Device, pdfid uint16) (*Device, error) {
 		return nil, err
 	}
 
-	return &Device{ops: &ops}, nil
+	device := &Device{
+		Path: fmt.Sprintf("%#x@%s", pdfid, dev.Path),
+		ops:  &ops,
+	}
+
+	return device, nil
 }
 
 func connectDevice(dev *switchtec.Device, ops *switchOps) (err error) {
@@ -360,6 +409,26 @@ func (dev *Device) IdentifyNamespaceControllerList(namespaceId uint32) (*CtrlLis
 	}
 
 	return ctrlList, nil
+}
+
+func (dev *Device) IdentifyPrimaryControllerCapabilities(controllerId uint16) (*CtrlCaps, error) {
+
+	caps := new(CtrlCaps)
+	buf := structex.NewBuffer(caps)
+
+	var cdw10 uint32
+	cdw10 = uint32(controllerId) << 16
+	cdw10 |= uint32(PrimaryControllerCapabilities_CNS)
+
+	if err := dev.IdentifyRaw(0, cdw10, 0, buf.Bytes()); err != nil {
+		return nil, err
+	}
+
+	if err := structex.Decode(buf, caps); err != nil {
+		return nil, err
+	}
+
+	return caps, nil
 }
 
 // Identify -
@@ -641,6 +710,27 @@ type CtrlList struct {
 	Identifiers [2047]uint16
 }
 
+type CtrlCaps struct {
+	ControllerId                           uint16 // CNTLID
+	PortId                                 uint16 // PORTID
+	ControllerResourceType                 uint8  // CRT
+	Reserved5                              [27]uint8
+	VQResourcesFlexibleTotal               uint32 // VQFRT
+	VQResourcesFlexibleAssigned            uint32 // VQRFA
+	VQResourcesFlexibleAllocatedToPrimary  uint16 // VQRFAP
+	VQResourcesPrivateTotal                uint16 // VQPRT
+	VQResourcesFlexibleSecondaryMaximum    uint16 // VQFRSM
+	VQFlexibleResourcePreferredGranularity uint16 // VQGRAN
+	Reserved48                             [16]uint8
+	VIResourcesFlexibleTotal               uint32 // VIFRT
+	VIResourcesFlexibleAssigned            uint32 // VIRFA
+	VIResourcesFlexibleAllocatedToPrimary  uint16 // VIRFAP
+	VIResourcesPrivateTotal                uint16 // VIPRT
+	VIResourcesFlexibleSecondaryMaximum    uint16 // VIFRSM
+	VIFlexibleResourcePreferredGranularity uint16 // VIGRAN
+	Reserved90                             [4016]uint8
+}
+
 // CreateNamespace creates a new namespace with the specified parameters
 func (dev *Device) CreateNamespace(size uint64, capacity uint64, format uint8, dps uint8, sharing uint8, anagrpid uint32, nvmsetid uint16, timeout uint32) (uint32, error) {
 
@@ -723,36 +813,6 @@ func (dev *Device) FormatNamespace(namespaceID uint32) error {
 	}
 
 	return dev.ops.submitAdminPassthru(dev, &cmd, nil)
-}
-
-// WaitFormatComplete polls the namespace waiting for the Utilization to reach 0.
-func (dev *Device) WaitFormatComplete(namespaceID uint32) error {
-	idns, err := dev.IdentifyNamespace(namespaceID, true /* namespace present */)
-	if err != nil {
-		return err
-	}
-
-	lastUtilization := idns.Utilization
-
-	// As the format command runs, the Utilization should decrease to 0
-	for lastUtilization > 0 {
-		// Pause briefly to for format to make progress
-		delay := 100 * time.Millisecond
-		time.Sleep(delay)
-		idns, err = dev.IdentifyNamespace(namespaceID, true /* namespace present */)
-		if err != nil {
-			return err
-		}
-
-		// Fail if format is stuck
-		if lastUtilization == idns.Utilization {
-			return fmt.Errorf("Format is not progressing after %s", delay.String())
-		}
-
-		lastUtilization = idns.Utilization
-	}
-
-	return nil
 }
 
 func (dev *Device) manageNamespace(namespaceID uint32, controllers []uint16, attach bool) error {

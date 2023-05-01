@@ -1,0 +1,39 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: fencing-agent-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodes/status
+  verbs:
+  - get
+  - patch
+  - update

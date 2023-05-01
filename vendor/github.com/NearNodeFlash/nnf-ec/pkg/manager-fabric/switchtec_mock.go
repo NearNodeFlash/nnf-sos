@@ -275,6 +275,10 @@ func (d *MockSwitchtecDevice) EnumerateEndpoint(physPortId uint8, handlerFunc fu
 	return nil
 }
 
+func (d *MockSwitchtecDevice) ResetEndpoint(pdfid uint16) error {
+	return nil
+}
+
 func (d *MockSwitchtecDevice) Bind(hostPhysPortId, hostLogPortId uint8, pdfid uint16) error {
 
 	bindPort := func(hostPort *MockSwitchtecPort, hostLogPortId uint8, pdfid uint16) error {

@@ -51,7 +51,7 @@ func (w *Workflow) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-dws-cray-hpe-com-v1alpha1-workflow,mutating=true,failurePolicy=fail,sideEffects=None,groups=dws.cray.hpe.com,resources=workflows,verbs=create;update,versions=v1alpha1,name=mworkflow.kb.io,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/mutate-dws-cray-hpe-com-v1alpha1-workflow,mutating=true,failurePolicy=fail,sideEffects=None,groups=dws.cray.hpe.com,resources=workflows,verbs=create,versions=v1alpha1,name=mworkflow.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &Workflow{}
 
@@ -87,7 +87,7 @@ func (w *Workflow) ValidateCreate() error {
 		return field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
 	}
 	if w.Status.State != "" {
-		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set")
+		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set on creation")
 	}
 
 	return checkDirectives(w, &ValidatingRuleParser{})
@@ -217,38 +217,16 @@ func checkDirectives(workflow *Workflow, ruleParser RuleParser) error {
 		return nil
 	}
 
-	err := ruleParser.ReadRules()
-	if err != nil {
+	if err := ruleParser.ReadRules(); err != nil {
 		return err
 	}
 
-	uniqueMap := make(map[string]bool)
-
-	for i, directive := range workflow.Spec.DWDirectives {
-		validDirective := false
-		for _, rule := range ruleParser.GetRuleList() {
-			// validate #DW syntax
-			const rejectUnsupportedCommands bool = true
-
-			valid, err := dwdparse.ValidateDWDirective(rule, directive, uniqueMap, rejectUnsupportedCommands)
-			if err != nil {
-				// #DW parser validation failed
-				workflowlog.Info("dwDirective validation failed", "Error", err)
-				return err
-			}
-
-			if valid {
-				validDirective = true
-				ruleParser.MatchedDirective(workflow, rule.WatchStates, i, rule.DriverLabel)
-			}
-		}
-
-		if !validDirective {
-			return fmt.Errorf("invalid directive found: '%s'", directive)
-		}
+	// Forward the rule and directive index to the rule parsers matched directive handling
+	onValidDirectiveFunc := func(index int, rule dwdparse.DWDirectiveRuleSpec) {
+		ruleParser.MatchedDirective(workflow, rule.WatchStates, index, rule.DriverLabel)
 	}
 
-	return nil
+	return dwdparse.Validate(ruleParser.GetRuleList(), workflow.Spec.DWDirectives, onValidDirectiveFunc)
 }
 
 // RuleParser defines the interface a rule parser must provide

@@ -20,10 +20,9 @@
 package server
 
 import (
-	"fmt"
+	"encoding/json"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -45,7 +44,7 @@ func (DefaultServerControllerProvider) NewServerController(opts ServerController
 }
 
 type LocalServerController struct {
-	storage []*Storage
+	storages []*Storage
 }
 
 func (c *LocalServerController) Connected() bool { return true }
@@ -76,14 +75,14 @@ func (c *LocalServerController) NewStorage(pid uuid.UUID, expectedNamespaces []S
 		ctrl:                 c,
 	}
 
-	c.storage = append(c.storage, storage)
+	c.storages = append(c.storages, storage)
 	return storage
 }
 
 func (c *LocalServerController) Delete(s *Storage) error {
-	for storageIdx, storage := range c.storage {
+	for storageIdx, storage := range c.storages {
 		if storage.Id == s.Id {
-			c.storage = append(c.storage[:storageIdx], c.storage[storageIdx+1:]...)
+			c.storages = append(c.storages[:storageIdx], c.storages[storageIdx+1:]...)
 			break
 		}
 	}
@@ -92,6 +91,7 @@ func (c *LocalServerController) Delete(s *Storage) error {
 }
 
 func (c *LocalServerController) GetStatus(s *Storage) (StorageStatus, error) {
+
 	if len(s.discoveredNamespaces) < len(s.expectedNamespaces) {
 		if err := c.Discover(s); err != nil {
 			return StorageStatus_Error, err
@@ -138,13 +138,11 @@ func (c *LocalServerController) UnmountFileSystem(s *Storage, fs FileSystemApi, 
 }
 
 func (c *LocalServerController) Discover(s *Storage) error {
-	var err error
 	if devices, ok := os.LookupEnv("NNF_SUPPLIED_DEVICES"); ok {
-		err = c.discoverUsingSuppliedDevices(s, devices)
-	} else {
-		err = c.discoverViaNamespaces(s)
+		return c.discoverUsingSuppliedDevices(s, devices)
 	}
-	return err
+
+	return c.discoverViaNamespaces()
 }
 
 func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices string) error {
@@ -153,22 +151,9 @@ func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices
 	devList := strings.Split(devices, ",")
 	for idx, devSupplied := range devList {
 		log.Info("Supplied device ", " idx ", idx, " dev ", devSupplied)
-		byBytes := []byte(devSupplied)
-		// Use the last 8 bytes as the unique Id.
-		offset := len(byBytes) - 8
-		if len(byBytes) < 8 {
-			offset = 0
-		}
-		var myUuid uuid.UUID
-		copy(myUuid[:], byBytes[offset:])
-		guid := nvme.NamespaceGloballyUniqueIdentifier{}
-		guid.Parse(myUuid.String())
-
 		s.discoveredNamespaces = append(s.discoveredNamespaces, StorageNamespace{
-			Id:    nvme.NamespaceIdentifier(idx),
-			Guid:  guid,
-			path:  devSupplied,
-			debug: false,
+			Id:   nvme.NamespaceIdentifier(idx),
+			path: devSupplied,
 		})
 	}
 
@@ -177,42 +162,53 @@ func (c *LocalServerController) discoverUsingSuppliedDevices(s *Storage, devices
 	return nil
 }
 
-func (c *LocalServerController) discoverViaNamespaces(s *Storage) error {
-	paths, err := c.namespaces()
+// Discover NVMe Namespaces
+func (c *LocalServerController) discoverViaNamespaces() error {
+
+	data, err := c.run("nvme list --output-format=json")
 	if err != nil {
 		return err
 	}
 
-	for _, path := range paths {
+	devices := nvmeListDevices{}
+	if err := json.Unmarshal(data, &devices); err != nil {
+		return err
+	}
 
-		sns, err := c.newStorageNamespace(path)
-		if err != nil {
-			return err
-		}
+	for _, storage := range c.storages {
 
-		discovered := false
-		for _, ns := range s.discoveredNamespaces {
-			if ns.Equals(sns) {
-				discovered = true
-				break
-			}
-		}
-
-		if discovered {
+		// Skip storages that already discovered the expected namespaces
+		if len(storage.expectedNamespaces) == len(storage.discoveredNamespaces) {
 			continue
 		}
 
-		expected := false
-		for _, ns := range s.expectedNamespaces {
-			if ns.Equals(sns) {
-				expected = true
-				break
-			}
-		}
+		// For this storage resource, try to build the list of discovered namespaces
+		// from that which is expected.
+		for _, ns := range storage.expectedNamespaces {
+			for _, dev := range devices.Devices {
+				if dev.equals(ns) {
 
-		if expected {
-			log.Infof("Discovered namespace %s", sns.String())
-			s.discoveredNamespaces = append(s.discoveredNamespaces, *sns)
+					discovered := false
+					for _, ns := range storage.discoveredNamespaces {
+						if dev.equals(ns) {
+							discovered = true
+							break
+						}
+					}
+
+					if !discovered {
+						ns := StorageNamespace{
+							SerialNumber: dev.SerialNumber,
+							Id:           nvme.NamespaceIdentifier(dev.Namespace),
+							path:         dev.DevicePath,
+						}
+
+						storage.discoveredNamespaces = append(storage.discoveredNamespaces, ns)
+					}
+
+					break
+				}
+			}
 		}
 	}
 
@@ -220,9 +216,9 @@ func (c *LocalServerController) discoverViaNamespaces(s *Storage) error {
 }
 
 func (c *LocalServerController) findStorage(pid uuid.UUID) *Storage {
-	for idx, s := range c.storage {
+	for idx, s := range c.storages {
 		if s.Id == pid {
-			return c.storage[idx]
+			return c.storages[idx]
 		}
 	}
 
@@ -244,37 +240,45 @@ func (c *LocalServerController) namespaces() ([]string, error) {
 	return strings.Fields(string(nss)), err
 }
 
-func (c *LocalServerController) newStorageNamespace(path string) (*StorageNamespace, error) {
-
-	// First we need to identify the NSID for the provided path. The output is something like
-	// "NVME Identify Namespace 1:" so we awk the 4th value, which gives us "1:", then trim
-	// the colon below.
-	nsidStr, err := c.run(fmt.Sprintf("nvme id-ns %s | awk '/NVME Identify Namespace/{printf $4}'", path))
-	if err != nil {
-		return nil, err
-	}
-
-	nsid, _ := strconv.Atoi(strings.TrimSuffix(string(nsidStr[:]), ":"))
-
-	// Retrieve the namespace GUID. The output is something like "nguid   : 00000000000000008ce38ee205e70401"
-	// so we awk the third parameter.
-	guidStr, err := c.run(fmt.Sprintf("nvme id-ns %s --namespace-id=%d | awk '/nguid/{printf $3}'", path, nsid))
-	if err != nil {
-		return nil, err
-	}
-
-	guid := nvme.NamespaceGloballyUniqueIdentifier{}
-	guid.Parse(string(guidStr))
-
-	return &StorageNamespace{
-		Id:   nvme.NamespaceIdentifier(nsid),
-		Guid: guid,
-		path: path,
-	}, nil
-}
-
 func (c *LocalServerController) run(cmd string) ([]byte, error) {
 	return logging.Cli.Trace(cmd, func(cmd string) ([]byte, error) {
 		return exec.Command("bash", "-c", cmd).Output()
 	})
+}
+
+// The NVMe List command, `nvme list --output-format=json`, will output a list of devices
+//
+//	{
+//	  "Devices" : [
+//	    {
+//	      "NameSpace" : 1,
+//	      "DevicePath" : "/dev/nvme0n1",
+//	      "Firmware" : "1TCRS102",
+//	      "Index" : 0,
+//	      "ModelNumber" : "KIOXIA KCM7DRJE1T92",
+//	      "ProductName" : "Non-Volatile memory controller: KIOXIA Corporation Device 0x0014",
+//	      "SerialNumber" : "YCT0A08H03A1",
+//	      "UsedBytes" : 528384,
+//	      "MaximumLBA" : 15256,
+//	      "PhysicalSize" : 62488576,
+//	      "SectorSize" : 4096
+//	    },
+//	    ...
+//	  ]
+//	}
+//
+// We use this data to match expected namespaces for a particular drive against what is
+// found by the host to grab the Device Path which can be used to create a file system.
+type nvmeListDevice struct {
+	Namespace    uint32 `json:"Namespace"`
+	DevicePath   string `json:"DevicePath"`
+	SerialNumber string `json:"SerialNumber"`
+}
+
+type nvmeListDevices struct {
+	Devices []nvmeListDevice `json:"Devices"`
+}
+
+func (dev *nvmeListDevice) equals(sn StorageNamespace) bool {
+	return dev.SerialNumber == sn.SerialNumber && dev.Namespace == uint32(sn.Id)
 }

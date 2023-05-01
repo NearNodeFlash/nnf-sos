@@ -57,7 +57,6 @@ type NvmeDeviceApi interface {
 	DeleteNamespace(namespaceId nvme.NamespaceIdentifier) error
 
 	FormatNamespace(namespaceID nvme.NamespaceIdentifier) error
-	WaitFormatComplete(namespaceID nvme.NamespaceIdentifier) error
 
 	AttachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error
 	DetachNamespace(namespaceId nvme.NamespaceIdentifier, controllers []uint16) error

@@ -2,6 +2,7 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
+//go:build !appengine
 // +build !appengine
 
 package internal
@@ -23,8 +24,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	netcontext "context"
+
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
@@ -32,8 +34,7 @@ import (
 )
 
 const (
-	apiPath             = "/rpc_http"
-	defaultTicketSuffix = "/default.20150612t184001.0"
+	apiPath = "/rpc_http"
 )
 
 var (
@@ -65,20 +66,21 @@ var (
 			IdleConnTimeout:     90 * time.Second,
 		},
 	}
-
-	defaultTicketOnce     sync.Once
-	defaultTicket         string
-	backgroundContextOnce sync.Once
-	backgroundContext     netcontext.Context
 )
 
-func apiURL() *url.URL {
+func apiURL(ctx netcontext.Context) *url.URL {
 	host, port := "appengine.googleapis.internal", "10001"
 	if h := os.Getenv("API_HOST"); h != "" {
 		host = h
 	}
+	if hostOverride := ctx.Value(apiHostOverrideKey); hostOverride != nil {
+		host = hostOverride.(string)
+	}
 	if p := os.Getenv("API_PORT"); p != "" {
 		port = p
+	}
+	if portOverride := ctx.Value(apiPortOverrideKey); portOverride != nil {
+		port = portOverride.(string)
 	}
 	return &url.URL{
 		Scheme: "http",
@@ -87,82 +89,97 @@ func apiURL() *url.URL {
 	}
 }
 
-func handleHTTP(w http.ResponseWriter, r *http.Request) {
-	c := &context{
-		req:       r,
-		outHeader: w.Header(),
-		apiURL:    apiURL(),
-	}
-	r = r.WithContext(withContext(r.Context(), c))
-	c.req = r
-
-	stopFlushing := make(chan int)
-
-	// Patch up RemoteAddr so it looks reasonable.
-	if addr := r.Header.Get(userIPHeader); addr != "" {
-		r.RemoteAddr = addr
-	} else if addr = r.Header.Get(remoteAddrHeader); addr != "" {
-		r.RemoteAddr = addr
-	} else {
-		// Should not normally reach here, but pick a sensible default anyway.
-		r.RemoteAddr = "127.0.0.1"
-	}
-	// The address in the headers will most likely be of these forms:
-	//	123.123.123.123
-	//	2001:db8::1
-	// net/http.Request.RemoteAddr is specified to be in "IP:port" form.
-	if _, _, err := net.SplitHostPort(r.RemoteAddr); err != nil {
-		// Assume the remote address is only a host; add a default port.
-		r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
-	}
-
-	// Start goroutine responsible for flushing app logs.
-	// This is done after adding c to ctx.m (and stopped before removing it)
-	// because flushing logs requires making an API call.
-	go c.logFlusher(stopFlushing)
-
-	executeRequestSafely(c, r)
-	c.outHeader = nil // make sure header changes aren't respected any more
-
-	stopFlushing <- 1 // any logging beyond this point will be dropped
-
-	// Flush any pending logs asynchronously.
-	c.pendingLogs.Lock()
-	flushes := c.pendingLogs.flushes
-	if len(c.pendingLogs.lines) > 0 {
-		flushes++
-	}
-	c.pendingLogs.Unlock()
-	flushed := make(chan struct{})
-	go func() {
-		defer close(flushed)
-		// Force a log flush, because with very short requests we
-		// may not ever flush logs.
-		c.flushLog(true)
-	}()
-	w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
-
-	// Avoid nil Write call if c.Write is never called.
-	if c.outCode != 0 {
-		w.WriteHeader(c.outCode)
-	}
-	if c.outBody != nil {
-		w.Write(c.outBody)
-	}
-	// Wait for the last flush to complete before returning,
-	// otherwise the security ticket will not be valid.
-	<-flushed
+// Middleware wraps an http handler so that it can make GAE API calls
+func Middleware(next http.Handler) http.Handler {
+	return handleHTTPMiddleware(executeRequestSafelyMiddleware(next))
 }
 
-func executeRequestSafely(c *context, r *http.Request) {
-	defer func() {
-		if x := recover(); x != nil {
-			logf(c, 4, "%s", renderPanic(x)) // 4 == critical
-			c.outCode = 500
+func handleHTTPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c := &context{
+			req:       r,
+			outHeader: w.Header(),
 		}
-	}()
+		r = r.WithContext(withContext(r.Context(), c))
+		c.req = r
 
-	http.DefaultServeMux.ServeHTTP(c, r)
+		stopFlushing := make(chan int)
+
+		// Patch up RemoteAddr so it looks reasonable.
+		if addr := r.Header.Get(userIPHeader); addr != "" {
+			r.RemoteAddr = addr
+		} else if addr = r.Header.Get(remoteAddrHeader); addr != "" {
+			r.RemoteAddr = addr
+		} else {
+			// Should not normally reach here, but pick a sensible default anyway.
+			r.RemoteAddr = "127.0.0.1"
+		}
+		// The address in the headers will most likely be of these forms:
+		//	123.123.123.123
+		//	2001:db8::1
+		// net/http.Request.RemoteAddr is specified to be in "IP:port" form.
+		if _, _, err := net.SplitHostPort(r.RemoteAddr); err != nil {
+			// Assume the remote address is only a host; add a default port.
+			r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
+		}
+
+		if logToLogservice() {
+			// Start goroutine responsible for flushing app logs.
+			// This is done after adding c to ctx.m (and stopped before removing it)
+			// because flushing logs requires making an API call.
+			go c.logFlusher(stopFlushing)
+		}
+
+		next.ServeHTTP(c, r)
+		c.outHeader = nil // make sure header changes aren't respected any more
+
+		flushed := make(chan struct{})
+		if logToLogservice() {
+			stopFlushing <- 1 // any logging beyond this point will be dropped
+
+			// Flush any pending logs asynchronously.
+			c.pendingLogs.Lock()
+			flushes := c.pendingLogs.flushes
+			if len(c.pendingLogs.lines) > 0 {
+				flushes++
+			}
+			c.pendingLogs.Unlock()
+			go func() {
+				defer close(flushed)
+				// Force a log flush, because with very short requests we
+				// may not ever flush logs.
+				c.flushLog(true)
+			}()
+			w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
+		}
+
+		// Avoid nil Write call if c.Write is never called.
+		if c.outCode != 0 {
+			w.WriteHeader(c.outCode)
+		}
+		if c.outBody != nil {
+			w.Write(c.outBody)
+		}
+		if logToLogservice() {
+			// Wait for the last flush to complete before returning,
+			// otherwise the security ticket will not be valid.
+			<-flushed
+		}
+	})
+}
+
+func executeRequestSafelyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if x := recover(); x != nil {
+				c := w.(*context)
+				logf(c, 4, "%s", renderPanic(x)) // 4 == critical
+				c.outCode = 500
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func renderPanic(x interface{}) string {
@@ -218,8 +235,6 @@ type context struct {
 		lines   []*logpb.UserAppLogLine
 		flushes int
 	}
-
-	apiURL *url.URL
 }
 
 var contextKey = "holds a *context"
@@ -287,59 +302,19 @@ func WithContext(parent netcontext.Context, req *http.Request) netcontext.Contex
 	}
 }
 
-// DefaultTicket returns a ticket used for background context or dev_appserver.
-func DefaultTicket() string {
-	defaultTicketOnce.Do(func() {
-		if IsDevAppServer() {
-			defaultTicket = "testapp" + defaultTicketSuffix
-			return
-		}
-		appID := partitionlessAppID()
-		escAppID := strings.Replace(strings.Replace(appID, ":", "_", -1), ".", "_", -1)
-		majVersion := VersionID(nil)
-		if i := strings.Index(majVersion, "."); i > 0 {
-			majVersion = majVersion[:i]
-		}
-		defaultTicket = fmt.Sprintf("%s/%s.%s.%s", escAppID, ModuleName(nil), majVersion, InstanceID())
-	})
-	return defaultTicket
-}
-
-func BackgroundContext() netcontext.Context {
-	backgroundContextOnce.Do(func() {
-		// Compute background security ticket.
-		ticket := DefaultTicket()
-
-		c := &context{
-			req: &http.Request{
-				Header: http.Header{
-					ticketHeader: []string{ticket},
-				},
-			},
-			apiURL: apiURL(),
-		}
-		backgroundContext = toContext(c)
-
-		// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
-		go c.logFlusher(make(chan int))
-	})
-
-	return backgroundContext
-}
-
 // RegisterTestRequest registers the HTTP request req for testing, such that
-// any API calls are sent to the provided URL. It returns a closure to delete
-// the registration.
+// any API calls are sent to the provided URL.
 // It should only be used by aetest package.
-func RegisterTestRequest(req *http.Request, apiURL *url.URL, decorate func(netcontext.Context) netcontext.Context) (*http.Request, func()) {
-	c := &context{
-		req:    req,
-		apiURL: apiURL,
-	}
-	ctx := withContext(decorate(req.Context()), c)
-	req = req.WithContext(ctx)
-	c.req = req
-	return req, func() {}
+func RegisterTestRequest(req *http.Request, apiURL *url.URL, appID string) *http.Request {
+	ctx := req.Context()
+	ctx = withAPIHostOverride(ctx, apiURL.Hostname())
+	ctx = withAPIPortOverride(ctx, apiURL.Port())
+	ctx = WithAppIDOverride(ctx, appID)
+
+	// use the unregistered request as a placeholder so that withContext can read the headers
+	c := &context{req: req}
+	c.req = req.WithContext(withContext(ctx, c))
+	return c.req
 }
 
 var errTimeout = &CallError{
@@ -384,10 +359,11 @@ func (c *context) WriteHeader(code int) {
 	c.outCode = code
 }
 
-func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error) {
+func post(ctx netcontext.Context, body []byte, timeout time.Duration) (b []byte, err error) {
+	apiURL := apiURL(ctx)
 	hreq := &http.Request{
 		Method: "POST",
-		URL:    c.apiURL,
+		URL:    apiURL,
 		Header: http.Header{
 			apiEndpointHeader: apiEndpointHeaderValue,
 			apiMethodHeader:   apiMethodHeaderValue,
@@ -396,13 +372,16 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 		},
 		Body:          ioutil.NopCloser(bytes.NewReader(body)),
 		ContentLength: int64(len(body)),
-		Host:          c.apiURL.Host,
+		Host:          apiURL.Host,
 	}
-	if info := c.req.Header.Get(dapperHeader); info != "" {
-		hreq.Header.Set(dapperHeader, info)
-	}
-	if info := c.req.Header.Get(traceHeader); info != "" {
-		hreq.Header.Set(traceHeader, info)
+	c := fromContext(ctx)
+	if c != nil {
+		if info := c.req.Header.Get(dapperHeader); info != "" {
+			hreq.Header.Set(dapperHeader, info)
+		}
+		if info := c.req.Header.Get(traceHeader); info != "" {
+			hreq.Header.Set(traceHeader, info)
+		}
 	}
 
 	tr := apiHTTPClient.Transport.(*http.Transport)
@@ -463,10 +442,6 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	}
 
 	c := fromContext(ctx)
-	if c == nil {
-		// Give a good error message rather than a panic lower down.
-		return errNotAppEngineContext
-	}
 
 	// Apply transaction modifications if we're in a transaction.
 	if t := transactionFromContext(ctx); t != nil {
@@ -487,19 +462,12 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 		return err
 	}
 
-	ticket := c.req.Header.Get(ticketHeader)
-	// Use a test ticket under test environment.
-	if ticket == "" {
-		if appid := ctx.Value(&appIDOverrideKey); appid != nil {
-			ticket = appid.(string) + defaultTicketSuffix
+	ticket := ""
+	if c != nil {
+		ticket = c.req.Header.Get(ticketHeader)
+		if dri := c.req.Header.Get(devRequestIdHeader); IsDevAppServer() && dri != "" {
+			ticket = dri
 		}
-	}
-	// Fall back to use background ticket when the request ticket is not available in Flex or dev_appserver.
-	if ticket == "" {
-		ticket = DefaultTicket()
-	}
-	if dri := c.req.Header.Get(devRequestIdHeader); IsDevAppServer() && dri != "" {
-		ticket = dri
 	}
 	req := &remotepb.Request{
 		ServiceName: &service,
@@ -512,7 +480,7 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 		return err
 	}
 
-	hrespBody, err := c.post(hreqBody, timeout)
+	hrespBody, err := post(ctx, hreqBody, timeout)
 	if err != nil {
 		return err
 	}
@@ -581,12 +549,14 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	}
 	s := fmt.Sprintf(format, args...)
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
-	c.addLogLine(&logpb.UserAppLogLine{
-		TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
-		Level:         &level,
-		Message:       &s,
-	})
-	// Only duplicate log to stderr if not running on App Engine second generation
+	if logToLogservice() {
+		c.addLogLine(&logpb.UserAppLogLine{
+			TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
+			Level:         &level,
+			Message:       &s,
+		})
+	}
+	// Log to stdout if not deployed
 	if !IsSecondGen() {
 		log.Print(logLevelName[level] + ": " + s)
 	}
@@ -675,4 +645,10 @@ func (c *context) logFlusher(stop <-chan int) {
 
 func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{req: req})
+}
+
+func logToLogservice() bool {
+	// TODO: replace logservice with json structured logs to $LOG_DIR/app.log.json
+	// where $LOG_DIR is /var/log in prod and some tmpdir in dev
+	return os.Getenv("LOG_TO_LOGSERVICE") != "0"
 }

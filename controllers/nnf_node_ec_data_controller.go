@@ -36,6 +36,7 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
+	"github.com/go-logr/logr"
 )
 
 const (
@@ -48,6 +49,8 @@ type NnfNodeECDataReconciler struct {
 	Scheme  *runtime.Scheme
 	Options *nnfec.Options
 	types.NamespacedName
+
+	RawLog logr.Logger // RawLog, as opposed to Log, is the un-edited controller logger
 }
 
 // Start implements manager.Runnable
@@ -78,13 +81,26 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 				return err
 			}
 		}
+
+		// This resource acts as the storage provider for the NNF Element Controller
+		persistent.StorageProvider = r
 	}
 
-	// This resource acts as the storage provider for the NNF Element Controller
-	persistent.StorageProvider = r
+	// NNF Element Controller logger provides 4 verbosity levels. By default, nnf-ec
+	// will use the raw logger provided. If you are using zap defaults, this will
+	// only include the INFO and DEBUG levels. You can increase the defaults, by
+	// manually setting the zap.Options.Level, or using the -zap-log-level flag.
+	//
+	// You can decrease the log level of nnf-ec by adding verbosity levels to the
+	// logger. For example, `logger = logger.V(1)` would reduce the logging level
+	// by 1 in all nnf-ec logs. Unfortunately, the inverse is not true; one cannot
+	// increase the log level of nnf-ec as the `logger.V` method does not support
+	// negative values.
+	logger := r.RawLog.WithName("ec")
 
 	// Start the NNF Element Controller
-	c := nnfec.NewController(r.Options)
+	c := nnfec.NewController(r.Options).WithLogger(logger)
+
 	if err := c.Init(&ec.Options{Http: !testing, Port: nnfec.Port}); err != nil {
 		return err
 	}

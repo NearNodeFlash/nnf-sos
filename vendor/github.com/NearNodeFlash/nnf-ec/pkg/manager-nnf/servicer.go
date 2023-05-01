@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 
+	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
 	. "github.com/NearNodeFlash/nnf-ec/pkg/common"
@@ -53,8 +54,8 @@ func (s *DefaultApiService) Id() string {
 	return s.ss.Id()
 }
 
-func (s *DefaultApiService) Initialize(ctrl NnfControllerInterface) error {
-	return s.ss.Initialize(ctrl)
+func (s *DefaultApiService) Initialize(log ec.Logger, ctrl NnfControllerInterface) error {
+	return s.ss.Initialize(log, ctrl)
 }
 
 func (s *DefaultApiService) Close() error {
@@ -359,7 +360,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroup
 	EncodeResponse(model, err, w)
 }
 
-//RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdDelete(w http.ResponseWriter, r *http.Request)
+// RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdDelete(w http.ResponseWriter, r *http.Request)
 func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroupsStorageGroupIdDelete(w http.ResponseWriter, r *http.Request) {
 	params := Params(r)
 	storageServiceId := params["StorageServiceId"]
@@ -376,7 +377,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStorageGroup
 	EncodeResponse(model, err, w)
 }
 
-// 	RedfishV1StorageServicesStorageServiceIdEndpointsGet -
+// RedfishV1StorageServicesStorageServiceIdEndpointsGet -
 func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdEndpointsGet(w http.ResponseWriter, r *http.Request) {
 	params := Params(r)
 	storageServiceId := params["StorageServiceId"]
@@ -483,7 +484,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 	EncodeResponse(model, err, w)
 }
 
-// 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdDelete -
+// RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdDelete -
 func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemIdDelete(w http.ResponseWriter, r *http.Request) {
 	params := Params(r)
 	storageServiceId := params["StorageServiceId"]
@@ -500,7 +501,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsF
 	EncodeResponse(model, err, w)
 }
 
-// 	RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesGet -
+// RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesGet -
 func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdFileSystemsFileSystemsIdExportedFileSharesGet(w http.ResponseWriter, r *http.Request) {
 	params := Params(r)
 	storageServiceId := params["StorageServiceId"]

@@ -8,23 +8,23 @@ spec:
   - command: "jobdw"
     watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
-      - key: "type"
+      - key: "^type$"
         type: "string"
         pattern: "^(raw|xfs|gfs2|lustre)$"
         isRequired: true
         isValueRequired: true
-      - key: "capacity"
+      - key: "^capacity$"
         type: "string"
         pattern: "^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
         isRequired: true
         isValueRequired: true
-      - key: "name"
+      - key: "^name$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
         uniqueWithin: "jobdw_name"
-      - key: "profile"
+      - key: "^profile$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: false
@@ -32,23 +32,23 @@ spec:
   - command: "create_persistent"
     watchStates: Proposal,Setup,Teardown
     ruleDefs:
-      - key: "type"
+      - key: "^type$"
         type: "string"
         pattern: "^(raw|xfs|gfs2|lustre)$"
         isRequired: true
         isValueRequired: true
-      - key: "capacity"
+      - key: "^capacity$"
         type: "string"
         pattern: "^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
         isRequired: true
         isValueRequired: true
-      - key: "name"
+      - key: "^name$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
         isValueRequired: true
         uniqueWithin: "create_persistent_name"
-      - key: "profile"
+      - key: "^profile$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: false
@@ -56,7 +56,7 @@ spec:
   - command: "destroy_persistent"
     watchStates: Proposal,Teardown
     ruleDefs:
-      - key: "name"
+      - key: "^name$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
@@ -65,7 +65,7 @@ spec:
   - command: "persistentdw"
     watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
-      - key: "name"
+      - key: "^name$"
         type: "string"
         pattern: "^[A-Za-z][A-Za-z0-9-]+$"
         isRequired: true
@@ -73,22 +73,37 @@ spec:
   - command: "copy_in"
     watchStates: Proposal,DataIn,Teardown
     ruleDefs:
-      - key: "source"
+      - key: "^source$"
         type: "string"
         isRequired: true
         isValueRequired: true
-      - key: "destination"
+      - key: "^destination$"
         type: "string"
         isRequired: true
         isValueRequired: true
   - command: "copy_out"
     watchStates: Proposal,DataOut,Teardown
     ruleDefs:
-      - key: "source"
+      - key: "^source$"
         type: "string"
         isRequired: true
         isValueRequired: true
-      - key: "destination"
+      - key: "^destination$"
         type: "string"
         isRequired: true
+        isValueRequired: true
+  - command: "container"
+    watchStates: Proposal,PreRun,PostRun,Teardown
+    ruleDefs:
+      - key: "^name$"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: "^profile$"
+        type: "string"
+        isRequired: true
+        isValueRequired: true
+      - key: '^(DW_JOB_|DW_PERSISTENT_)[A-Za-z][A-Za-z0-9-]+$'
+        type: "string"
+        isRequired: false
         isValueRequired: true

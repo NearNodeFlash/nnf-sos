@@ -42,8 +42,6 @@ type ConfigFile struct {
 		Name string
 	}
 
-	DebugLevel string `yaml:"debugLevel"`
-
 	ManagementConfig ManagementConfig `yaml:"managementConfig"`
 	Switches         []SwitchConfig
 
@@ -63,7 +61,6 @@ type SwitchConfig struct {
 		Name string
 	}
 	PciGen     int32  `yaml:"pciGen"`
-	SlotPrefix string `yaml:"slotPrefix"`
 	Ports      []PortConfig
 
 	ManagementPortCount int

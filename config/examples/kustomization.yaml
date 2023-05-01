@@ -1,0 +1,5 @@
+namespace: nnf-system
+
+resources:
+- nnf_v1alpha1_nnfcontainerprofiles.yaml
+- nnf_v1alpha1_nnfstorageprofile.yaml

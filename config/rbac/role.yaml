@@ -6,12 +6,17 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - ""
+  - batch
   resources:
-  - configmaps
+  - jobs
   verbs:
+  - create
+  - delete
+  - deletecollection
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - ""
@@ -41,13 +46,17 @@ rules:
   - list
   - update
 - apiGroups:
-  - cray.hpe.com
+  - ""
   resources:
-  - lustrefilesystems
+  - services
   verbs:
+  - create
+  - delete
+  - deletecollection
   - get
   - list
-  - watch
+  - patch
+  - update
 - apiGroups:
   - dws.cray.hpe.com
   resources:
@@ -203,6 +212,14 @@ rules:
 - apiGroups:
   - dws.cray.hpe.com
   resources:
+  - storages/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - dws.cray.hpe.com
+  resources:
   - systemconfigurations
   verbs:
   - get
@@ -240,6 +257,27 @@ rules:
   verbs:
   - update
 - apiGroups:
+  - kubeflow.org
+  resources:
+  - mpijobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - lus.cray.hpe.com
+  resources:
+  - lustrefilesystems
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - nnf.cray.hpe.com
   resources:
   - directivebreakdowns/status
@@ -274,6 +312,19 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfcontainerprofiles
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
@@ -357,6 +408,32 @@ rules:
   resources:
   - nnfnodestorages/finalizers
   verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfportmanagers/status
+  verbs:
+  - get
+  - patch
   - update
 - apiGroups:
   - nnf.cray.hpe.com

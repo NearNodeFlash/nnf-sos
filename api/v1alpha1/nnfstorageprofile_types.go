@@ -43,6 +43,20 @@ type NnfStorageProfileLustreMiscOptions struct {
 	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions argument to mkfs.lustre instead.
 	// Use one array element per option. Do not prepend the options with "-o".
 	MountTarget []string `json:"mountTarget,omitempty"`
+
+	// ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
+	// to the compute nodes in a workflow
+	// +kubebuilder:default:=false
+	ColocateComputes bool `json:"colocateComputes"`
+
+	// Count specifies how many Lustre targets to create
+	// +kubebuilder:validation:Minimum:=1
+	Count int `json:"count,omitempty"`
+
+	// Scale provides a unitless value to determine how many Lustre targets to create
+	// +kubebuilder:validation:Minimum:=1
+	// +kubebuilder:validation:Maximum:=10
+	Scale int `json:"scale,omitempty"`
 }
 
 // NnfStorageProfileLustreData defines the Lustre-specific configuration
@@ -105,8 +119,29 @@ type NnfStorageProfileCmdLines struct {
 	// VgCreate specifies the vgcreate commandline, minus the "vgcreate".
 	VgCreate string `json:"vgCreate,omitempty"`
 
+	// VgChange specifies the various vgchange commandlines, minus the "vgchange"
+	VgChange NnfStorageProfileLVMVgChangeCmdLines `json:"vgChange,omitempty"`
+
+	// VgCreate specifies the vgcreate commandline, minus the "vgremove".
+	VgRemove string `json:"vgRemove,omitempty"`
+
 	// LvCreate specifies the lvcreate commandline, minus the "lvcreate".
 	LvCreate string `json:"lvCreate,omitempty"`
+
+	// LvRemove specifies the lvcreate commandline, minus the "lvremove".
+	LvRemove string `json:"lvRemove,omitempty"`
+}
+
+// NnfStorageProfileLVMVgChangeCmdLines
+type NnfStorageProfileLVMVgChangeCmdLines struct {
+	// The vgchange commandline for activation, minus the "vgchange" command
+	Activate string `json:"activate,omitempty"`
+
+	// The vgchange commandline for deactivation, minus the "vgchange" command
+	Deactivate string `json:"deactivate,omitempty"`
+
+	// The vgchange commandline for lockStart, minus the "vgchange" command
+	LockStart string `json:"lockStart,omitempty"`
 }
 
 // NnfStorageProfileMiscOptions defines options to use for the mount library, and other utilities.
@@ -187,6 +222,21 @@ type NnfStorageProfileList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NnfStorageProfile `json:"items"`
+}
+
+func (n *NnfStorageProfile) GetLustreMiscOptions(target string) NnfStorageProfileLustreMiscOptions {
+	switch target {
+	case "mgt":
+		return n.Data.LustreStorage.MgtOptions
+	case "mdt":
+		return n.Data.LustreStorage.MdtOptions
+	case "mgtmdt":
+		return n.Data.LustreStorage.MgtMdtOptions
+	case "ost":
+		return n.Data.LustreStorage.OstOptions
+	default:
+		panic("Invalid target type")
+	}
 }
 
 func (n *NnfStorageProfileList) GetObjectList() []client.Object {

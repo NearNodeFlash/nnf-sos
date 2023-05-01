@@ -27,10 +27,9 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
+	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,11 +37,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
@@ -69,6 +70,8 @@ func init() {
 	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(lusv1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -86,15 +89,15 @@ func main() {
 
 	nnfopts := nnf.BindFlags(flag.CommandLine)
 
-	opts := zapcr.Options{
+	opts := zap.Options{
 		Development: true,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
+
 	flag.Parse()
 
-	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
-	zaplogger := zapcr.New(zapcr.WriteTo(os.Stdout), zapcr.Encoder(encoder))
-	ctrl.SetLogger(zaplogger)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
 
@@ -188,18 +191,17 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Scheme:         mgr.GetScheme(),
 		NamespacedName: types.NamespacedName{Name: controllers.NnfNodeECDataResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 		Options:        opts,
+		RawLog:         ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
 
-	if os.Getenv("ENVIRONMENT") != "kind" {
-		if err := (&controllers.NnfClientMountReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			return err
-		}
+	if err := (&controllers.NnfClientMountReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
 	}
 
 	return (&controllers.NnfNodeStorageReconciler{
@@ -224,10 +226,10 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		return err
 	}
 
-	if err := (&controllers.NnfNodeSLCReconciler{
+	if err := (&controllers.NnfPortManagerReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme: mgr.GetScheme(),
+		// Note: Log is built into controller-runtime
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -251,6 +253,14 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 	if err := (&controllers.PersistentStorageReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("PersistentStorage"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.DWSStorageReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Storage"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		return err
@@ -283,6 +293,10 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 	if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
 		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
 		return err
+	}
+
+	if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
 	}
 
 	return nil

@@ -1,0 +1,65 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: placeholder
+  namespace: nnf-system
+data:
+  default: true
+  lustreStorage:
+    combinedMgtMdt: true
+    mgtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mgs $VOL_NAME
+    mdtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mdt --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+    mgtMdtCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --mgs --mdt --fsname=$FS_NAME --index=$INDEX $VOL_NAME
+    ostCommandlines:
+      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      mkfs: --ost --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+    ostOptions:
+      scale: 5
+      colocateComputes: true
+    mdtOptions:
+      count: 1
+    mgtMdtOptions:
+      count: 1
+    mgtOptions:
+      count: 1
+  gfs2Storage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      vgChange:
+        activate: --activate ys $VG_NAME
+        deactivate: --activate n $VG_NAME
+        lockStart: --lock-start $VG_NAME
+      vgRemove: $VG_NAME
+      lvCreate: --activate ys --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvRemove: $VG_NAME
+      mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
+  xfsStorage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      vgChange:
+        activate: --activate y $VG_NAME
+        deactivate: --activate n $VG_NAME
+      vgRemove: $VG_NAME
+      lvCreate: --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvRemove: $VG_NAME
+      mkfs: $DEVICE
+  rawStorage:
+    commandlines:
+      pvCreate: $DEVICE
+      vgCreate: $VG_NAME $DEVICE_LIST
+      vgChange:
+        activate: --activate y $VG_NAME
+        deactivate: --activate n $VG_NAME
+      vgRemove: $VG_NAME
+      lvCreate: --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvRemove: $VG_NAME
+
+
