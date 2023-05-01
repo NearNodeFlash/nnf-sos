@@ -420,8 +420,8 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 	// #DW jobdw name=my-gfs2 type=gfs2 capacity=1TB
 	// #DW persistentdw name=some-lustre
 	// #DW container name=my-foo profile=foo
-	//     DW_JOB_foo-local-storage=my-gfs2
-	//     DW_PERSISTENT_foo-persistent-storage=some-lustre
+	//     DW_JOB_foo_local_storage=my-gfs2
+	//     DW_PERSISTENT_foo_persistent_storage=some-lustre
 
 	// #DW commands that require a dwDirectiveBreakdown
 	breakDownCommands := []string{

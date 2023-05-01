@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -493,7 +494,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
-					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", persistentStorageName),
+					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", strings.ReplaceAll(persistentStorageName, "-", "_")),
 				}
 
 				createPersistentStorageInstance(persistentStorageName)
