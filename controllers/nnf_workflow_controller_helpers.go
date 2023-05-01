@@ -810,22 +810,25 @@ func findContainerDirectiveIndexByName(workflow *dwsv1alpha1.Workflow, name stri
 	return -1
 }
 
-// Returns a <name, path> pair for the given staging argument (typically source or destination)
-// i.e. $DW_JOB_my-file-system-name/path/to/a/file into "my-file-system-name" and "/path/to/a/file"
+// Returns a <name, path> pair for the given staging argument (typically source or destination).
+// Convert underscores in the variable name to dashs in the FS name.
+// i.e. $DW_JOB_my_file_system_name/path/to/a/file into:
+//   - "my-file-system-name"
+//   - "/path/to/a/file"
 func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 
-	var name = ""
+	var varname = ""
 	if strings.HasPrefix(arg, "$DW_JOB_") {
-		name = strings.SplitN(strings.Replace(arg, "$DW_JOB_", "", 1), "/", 2)[0]
+		varname = strings.SplitN(strings.Replace(arg, "$DW_JOB_", "", 1), "/", 2)[0]
 	} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
-		name = strings.SplitN(strings.Replace(arg, "$DW_PERSISTENT_", "", 1), "/", 2)[0]
+		varname = strings.SplitN(strings.Replace(arg, "$DW_PERSISTENT_", "", 1), "/", 2)[0]
 	}
+	name := strings.ReplaceAll(varname, "_", "-")
 	var path = "/"
 	if strings.Count(arg, "/") >= 1 {
 		path = "/" + strings.SplitN(arg, "/", 2)[1]
 	}
 	return name, path
-
 }
 
 // indexedResourceName returns a name for a workflow child resource based on the index of the #DW directive

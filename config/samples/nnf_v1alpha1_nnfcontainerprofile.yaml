@@ -20,11 +20,11 @@ data:
   #
   # Example:
   #   DW jobdw name=my-gfs2 type=gfs2 capacity=50GB
-  #   DW container name=my-container profile=nnfcontainerprofile-sample DW_JOB_foo-local-storage=my-gfs2
+  #   DW container name=my-container profile=nnfcontainerprofile-sample DW_JOB_foo_local_storage=my-gfs2
   storages:
-    - name: DW_JOB_foo-local-storage
+    - name: DW_JOB_foo_local_storage
       optional: false
-    - name: DW_PERSISTENT_foo-persistent-storage
+    - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
 
   # Template defines the containers that will be created from container profile.

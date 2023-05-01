@@ -187,7 +187,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	When("Negative tests for storage profiles", func() {
 		It("Fails to achieve proposal state when the named profile cannot be found", func() {
 			workflow.Spec.DWDirectives = []string{
-				"#DW jobdw name=test profile=noneSuch type=lustre capacity=1GiB",
+				"#DW jobdw name=test profile=none-such type=lustre capacity=1GiB",
 			}
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
@@ -1082,8 +1082,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
-						"DW_JOB_foo-local-storage=container-storage "+
-						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						"DW_JOB_foo_local_storage=container-storage "+
+						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
 						containerProfile.Name),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
@@ -1098,8 +1098,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Context("when an optional storage in the container profile is not present in the container arguments", func() {
 			BeforeEach(func() {
 				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
-					{Name: "DW_JOB_foo-local-storage", Optional: false},
-					{Name: "DW_PERSISTENT_foo-persistent-storage", Optional: true},
+					{Name: "DW_JOB_foo_local_storage", Optional: false},
+					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 				}
 			})
 
@@ -1107,7 +1107,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					fmt.Sprintf("#DW container name=container profile=%s "+
-						"DW_JOB_foo-local-storage=container-storage ",
+						"DW_JOB_foo_local_storage=container-storage ",
 						containerProfile.Name),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
@@ -1125,8 +1125,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					// persistent storage is missing
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					fmt.Sprintf("#DW container name=container profile=%s "+
-						"DW_JOB_foo-local-storage=container-storage "+
-						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						"DW_JOB_foo_local_storage=container-storage "+
+						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
 						containerProfile.Name),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
@@ -1145,7 +1145,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						// local storage is missing
-						"DW_PERSISTENT_foo-persistent-storage=container-persistent",
+						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
 						containerProfile.Name),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
@@ -1160,14 +1160,14 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Context("when a argument is not in the container profile", func() {
 			BeforeEach(func() {
 				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
-					{Name: "DW_PERSISTENT_foo-persistent-storage", Optional: true},
+					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 				}
 			})
 			It("should go to error", func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					fmt.Sprintf("#DW container name=container profile=%s "+
-						"DW_JOB_foo-local-storage=container-storage ",
+						"DW_JOB_foo_local_storage=container-storage ",
 						containerProfile.Name),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
@@ -1182,7 +1182,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 })
 
 var _ = Describe("NnfContainerProfile Webhook test", func() {
-	// The nnfcontainer.go covers testing of the webhook.
+	// The nnfcontainer_webhook_test.go covers testing of the webhook.
 	// This spec exists only to verify that the webhook is also running for
 	// the controller tests.
 	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {

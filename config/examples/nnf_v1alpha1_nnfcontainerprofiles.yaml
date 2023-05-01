@@ -5,9 +5,9 @@ metadata:
 data:
   retryLimit: 6
   storages:
-    - name: DW_JOB_foo-local-storage
+    - name: DW_JOB_foo_local_storage
       optional: false
-    - name: DW_PERSISTENT_foo-persistent-storage
+    - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
   spec:
     containers:
@@ -25,9 +25,9 @@ metadata:
 data:
   retryLimit: 6
   storages:
-    - name: DW_JOB_foo-local-storage
+    - name: DW_JOB_foo_local_storage
       optional: false
-    - name: DW_PERSISTENT_foo-persistent-storage
+    - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
   spec:
     containers:
@@ -50,9 +50,9 @@ metadata:
 data:
   retryLimit: 6
   storages:
-    - name: DW_JOB_foo-local-storage
+    - name: DW_JOB_foo_local_storage
       optional: false
-    - name: DW_PERSISTENT_foo-persistent-storage
+    - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
   spec:
     containers:
@@ -70,9 +70,9 @@ metadata:
 data:
   retryLimit: 6
   storages:
-    - name: DW_JOB_foo-local-storage
+    - name: DW_JOB_foo_local_storage
       optional: false
-    - name: DW_PERSISTENT_foo-persistent-storage
+    - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
   mpiSpec:
     runPolicy:
