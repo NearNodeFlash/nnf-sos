@@ -161,6 +161,29 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 				return err
 			}
 		}
+
+		storage := &dwsv1alpha1.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      r.Namespace,
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			log := r.Log.WithValues("resource", client.ObjectKeyFromObject(storage))
+
+			if !errors.IsNotFound(err) {
+				log.Error(err, "get storage resource failed")
+				return err
+			}
+
+			if err := r.Create(ctx, storage); err != nil {
+				log.Error(err, "create storage resource failed")
+				return err
+			}
+
+			log.Info("created storage resource")
+		}
 	}
 
 	// Subscribe to the NNF Event Manager
@@ -210,7 +233,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	// Prepare to update the node's status
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](node)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Access the default storage service running in the NNF Element
 	// Controller. Check for any State/Health change.
@@ -378,6 +401,7 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 			return err
 		}
 
+		drive.Slot = fmt.Sprintf("%d", storage.Location.PartLocation.LocationOrdinalValue)
 		drive.NnfResourceStatus = nnfv1alpha1.NnfResourceStatus{
 			ID:     storage.Id,
 			Name:   storage.Name,
@@ -408,7 +432,6 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 				drive.WearLevel = int64(storageController.NVMeControllerProperties.NVMeSMARTPercentageUsage)
 				drive.SerialNumber = storageController.SerialNumber
 				drive.FirmwareVersion = storageController.FirmwareVersion
-				drive.Slot = fmt.Sprintf("%s%d", storageController.Location.PartLocation.ServiceLabel, storageController.Location.PartLocation.LocationOrdinalValue)
 			}
 
 			// The Swordfish architecture places capacity information in a Storage device's Storage Pools. For our implementation,

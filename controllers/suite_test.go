@@ -74,6 +74,7 @@ type envSetting struct {
 var envVars = []envSetting{
 	{"POD_NAMESPACE", "default"},
 	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
+	{"NNF_CONTAINER_PROFILE_NAMESPACE", "default"},
 	{"NNF_POD_IP", "172.0.0.1"},
 	{"NNF_NODE_NAME", "nnf-test-node"},
 	{"ACK_GINKGO_DEPRECATIONS", "1.16.4"},
@@ -156,6 +157,10 @@ var _ = BeforeSuite(func() {
 
 	//+kubebuilder:scaffold:scheme
 
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(k8sClient).NotTo(BeNil())
+
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -174,6 +179,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls.WorkflowReconciler{
@@ -222,6 +230,7 @@ var _ = BeforeSuite(func() {
 		Client:  k8sManager.GetClient(),
 		Scheme:  testEnv.Scheme,
 		Options: nnf.NewMockOptions(false),
+		RawLog:  ctrl.Log,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -246,9 +255,15 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&NnfNodeSLCReconciler{
+	err = (&NnfPortManagerReconciler{
 		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeSLC"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&DWSStorageReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Storage"),
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -273,9 +288,6 @@ var _ = BeforeSuite(func() {
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
-
-	k8sClient = k8sManager.GetClient()
-	Expect(k8sClient).ToNot(BeNil())
 
 	go func() {
 		defer GinkgoRecover()

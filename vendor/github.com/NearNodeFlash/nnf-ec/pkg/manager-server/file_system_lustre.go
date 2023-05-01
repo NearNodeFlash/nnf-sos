@@ -58,6 +58,8 @@ type FileSystemLustre struct {
 	// Satisfy FileSystemApi interface.
 	FileSystem
 
+	TargetType string
+
 	Oem       FileSystemOemLustre
 	MkfsMount FileSystemOemMkfsMount
 	ZfsArgs   FileSystemOemZfs
@@ -66,14 +68,14 @@ type FileSystemLustre struct {
 func (*FileSystemLustre) New(oem FileSystemOem) (FileSystemApi, error) {
 	return &FileSystemLustre{
 		FileSystem: FileSystem{name: oem.Name},
-		// TargetType and BackFs are already verified by IsType() below.
-		Oem:       oem.Lustre,
-		MkfsMount: oem.MkfsMount,
-		ZfsArgs:   oem.ZfsCmd,
+		TargetType: targetTypes[oem.Lustre.TargetType],
+		Oem:        oem.Lustre,
+		MkfsMount:  oem.MkfsMount,
+		ZfsArgs:    oem.ZfsCmd,
 	}, nil
 }
 
-func (*FileSystemLustre) IsType(oem FileSystemOem) bool {
+func (*FileSystemLustre) IsType(oem *FileSystemOem) bool {
 	_, ok := targetTypes[oem.Lustre.TargetType]
 	if ok {
 		_, ok = backFsTypes[oem.Lustre.BackFs]
@@ -83,7 +85,19 @@ func (*FileSystemLustre) IsType(oem FileSystemOem) bool {
 
 func (*FileSystemLustre) IsMockable() bool { return false }
 func (*FileSystemLustre) Type() string     { return "lustre" }
-func (f *FileSystemLustre) Name() string   { return f.name }
+
+func (f *FileSystemLustre) Name() string { return f.name }
+
+func (f *FileSystemLustre) VgChangeActivateDefault() string { return "" }
+
+func (f *FileSystemLustre) MkfsDefault() string {
+	return map[string]string{
+		TargetMGT:    "--mgs $VOL_NAME",
+		TargetMDT:    "--mdt --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME",
+		TargetMGTMDT: "--mgs --mdt --fsname=$FS_NAME --index=$INDEX $VOL_NAME",
+		TargetOST:    "--ost --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME",
+	}[f.TargetType]
+}
 
 func (f *FileSystemLustre) Create(devices []string, options FileSystemOptions) error {
 
@@ -187,7 +201,7 @@ func (f *FileSystemLustre) zfsTargType() string {
 }
 
 func (f *FileSystemLustre) zfsPoolName() string {
-	return fmt.Sprintf("%s-%spool", f.name, f.zfsTargType())
+	return fmt.Sprintf("%s-%spool-%d", f.name, f.zfsTargType(), f.Oem.Index)
 }
 
 func (f *FileSystemLustre) zfsVolName() string {

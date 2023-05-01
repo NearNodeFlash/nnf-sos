@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -248,10 +249,7 @@ func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfN
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
 		updateError(condition, &allocationStatus.StoragePool, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create StoragePool", err)
-		log.Info(nodeStorage.Status.Error.Error())
-
-		return &ctrl.Result{Requeue: true}, nil
+		return r.handleCreateError(nodeStorage, "could not create storage pool", err)
 	}
 
 	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
@@ -315,11 +313,11 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 	// Build a list of all nodes with access to the storage
 	clients := []string{}
-	for _, server := range storage.Data.Access.Servers {
+	for _, server := range storage.Status.Access.Servers {
 		clients = append(clients, server.Name)
 	}
 
-	for _, compute := range storage.Data.Access.Computes {
+	for _, compute := range storage.Status.Access.Computes {
 		clients = append(clients, compute.Name)
 	}
 
@@ -377,10 +375,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
 				updateError(condition, &allocationStatus.StorageGroup, err)
-				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create storage group", err).WithFatal()
-				log.Info(nodeStorage.Status.Error.Error())
-
-				return &ctrl.Result{Requeue: true}, nil
+				return r.handleCreateError(nodeStorage, "could not create storage group", err)
 			}
 
 			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
@@ -388,7 +383,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 			// If the SF ID is empty then we just created the resource. Save the ID in the NnfNodeStorage
 			if len(allocationStatus.StorageGroup.ID) == 0 {
-				log.Info("Created storage group", "storageGroupID", storageGroupID)
+				log.Info("Created storage group", "Id", storageGroupID)
 				allocationStatus.StorageGroup.ID = sg.Id
 				condition.LastTransitionTime = metav1.Now()
 				condition.Status = metav1.ConditionFalse // we are finished with this state
@@ -442,14 +437,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		condition.LastTransitionTime = metav1.Now()
 	}
 
-	var fsType string
-	if nodeStorage.Spec.FileSystemType == "raw" {
-		fsType = "lvm"
-	} else {
-		fsType = nodeStorage.Spec.FileSystemType
-	}
 	oem := nnfserver.FileSystemOem{
-		Type: fsType,
+		Type: nodeStorage.Spec.FileSystemType,
 	}
 
 	if oem.Type == "lustre" {
@@ -488,7 +477,14 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		oem.MkfsMount.Mkfs = c.Mkfs
 		oem.LvmCmd.PvCreate = c.PvCreate
 		oem.LvmCmd.VgCreate = c.VgCreate
+		oem.LvmCmd.VgChange = nnfserver.FileSystemOemVgChange{
+			Activate:   c.VgChange.Activate,
+			Deactivate: c.VgChange.Deactivate,
+			LockStart:  c.VgChange.LockStart,
+		}
+		oem.LvmCmd.VgRemove = c.VgRemove
 		oem.LvmCmd.LvCreate = c.LvCreate
+		oem.LvmCmd.LvRemove = c.LvRemove
 	}
 
 	setOpts := func(c *nnfv1alpha1.NnfStorageProfileMiscOptions) {
@@ -514,7 +510,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		setOpts(&nnfStorageProfile.Data.XFSStorage.Options)
 	}
 
-	if oem.Type == "lvm" {
+	if oem.Type == "raw" {
 		setCmdLines(&nnfStorageProfile.Data.RawStorage.CmdLines)
 	}
 
@@ -522,10 +518,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	fs, err := r.createFileSystem(ss, fileSystemID, allocationStatus.StoragePool.ID, oem)
 	if err != nil {
 		updateError(condition, &allocationStatus.FileSystem, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file system", err).WithFatal()
-		log.Info(nodeStorage.Status.Error.Error())
 
-		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		return r.handleCreateError(nodeStorage, "could not create file system", err)
 	}
 
 	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
@@ -559,12 +553,22 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	}
 
 	shareOptions := make(map[string]interface{})
+	var volumeGroupName, logicalVolumeName string
 	if nodeStorage.Spec.FileSystemType == "lustre" {
 		targetIndex := nodeStorage.Spec.LustreStorage.StartIndex + index
 		mountPath = "/mnt/lustre/" + nodeStorage.Spec.LustreStorage.FileSystemName + "/" + nodeStorage.Spec.LustreStorage.TargetType + strconv.Itoa(targetIndex)
 	} else {
-		shareOptions["volumeGroupName"] = volumeGroupName(fileShareID)
-		shareOptions["logicalVolumeName"] = logicalVolumeName(fileShareID)
+		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, index)
+		if err != nil {
+			updateError(condition, &allocationStatus.FileShare, err)
+			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("could not get VG/LV names", err).WithFatal()
+			log.Info(nodeStorage.Status.Error.Error())
+
+			return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		}
+
+		shareOptions["volumeGroupName"] = volumeGroupName
+		shareOptions["logicalVolumeName"] = logicalVolumeName
 		shareOptions["userID"] = int(nodeStorage.Spec.UserID)
 		shareOptions["groupID"] = int(nodeStorage.Spec.GroupID)
 	}
@@ -572,10 +576,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		updateError(condition, &allocationStatus.FileShare, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not create file share", err).WithFatal()
-		log.Info(nodeStorage.Status.Error.Error())
-
-		return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+		return r.handleCreateError(nodeStorage, "could not create file share", err)
 	}
 
 	nid := ""
@@ -596,8 +597,8 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	if len(allocationStatus.FileShare.ID) == 0 {
 		log.Info("Created file share", "Id", sh.Id)
 		allocationStatus.FileShare.ID = sh.Id
-		allocationStatus.VolumeGroup = volumeGroupName(fileShareID)
-		allocationStatus.LogicalVolume = logicalVolumeName(fileShareID)
+		allocationStatus.VolumeGroup = volumeGroupName
+		allocationStatus.LogicalVolume = logicalVolumeName
 		condition.LastTransitionTime = metav1.Now()
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = nnfv1alpha1.ConditionSuccess
@@ -704,12 +705,35 @@ func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNod
 	return &ctrl.Result{}, nil
 }
 
-func volumeGroupName(id string) string {
-	return fmt.Sprintf("%s_vg", id)
-}
+func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, string, error) {
+	labels := nodeStorage.GetLabels()
 
-func logicalVolumeName(id string) string {
-	return fmt.Sprintf("%s_lv", id)
+	workflowName, ok := labels[dwsv1alpha1.WorkflowNameLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
+	}
+
+	workflowNamespace, ok := labels[dwsv1alpha1.WorkflowNamespaceLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
+	}
+
+	directiveIndex, ok := labels[nnfv1alpha1.DirectiveIndexLabel]
+	if !ok {
+		return "", "", fmt.Errorf("missing directive index label on NnfNodeStorage")
+	}
+
+	workflow := &dwsv1alpha1.Workflow{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      workflowName,
+			Namespace: workflowNamespace,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(workflow), workflow); err != nil {
+		return "", "", dwsv1alpha1.NewResourceError("could get workflow", err)
+	}
+
+	return fmt.Sprintf("%s_%s_%d", workflow.GetUID(), directiveIndex, index), "lv", nil
 }
 
 func (r *NnfNodeStorageReconciler) isSpecComplete(nodeStorage *nnfv1alpha1.NnfNodeStorage) bool {
@@ -900,6 +924,30 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 	}
 
 	return fs, nil
+}
+
+func (r *NnfNodeStorageReconciler) handleCreateError(storage *nnfv1alpha1.NnfNodeStorage, message string, err error) (*ctrl.Result, error) {
+
+	resourceError := dwsv1alpha1.NewResourceError(message, err)
+	defer func() {
+		r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(storage).String()).Info(resourceError.Error())
+		storage.Status.Error = resourceError
+	}()
+
+	controllerError := &ec.ControllerError{}
+	if errors.As(err, &controllerError) && controllerError.IsRetryable() {
+		return &ctrl.Result{RequeueAfter: controllerError.RetryDelay()}, nil
+	}
+
+	resourceError = resourceError.WithFatal()
+
+	// If this is really Fatal, we should not retry. But not all of nnf-ec supports the
+	// retryable classification of errors. Instead we mark the error as Fatal() but continue
+	// to retry with a modest delay. If the resource creation error occurs perpetually, an
+	// external entity should timeout the operation and therefore prevent future create attempts.
+	// Once nnf-ec has correctly classified all errors, there should be no need to requeue.
+
+	return &ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 func updateError(condition *metav1.Condition, status *nnfv1alpha1.NnfResourceStatus, err error) {

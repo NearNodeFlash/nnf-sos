@@ -110,7 +110,7 @@ var _ = Describe("Access Controller Test", func() {
 				},
 				Spec: nnfv1alpha1.NnfAccessSpec{
 					DesiredState:    "mounted",
-					TeardownState:   dwsv1alpha1.StateDataIn,
+					TeardownState:   dwsv1alpha1.StatePreRun,
 					Target:          "all",
 					ClientReference: corev1.ObjectReference{},
 					MountPath:       "./",

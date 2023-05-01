@@ -21,12 +21,15 @@ package ec
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type ControllerError struct {
 	statusCode   int
+	retryDelay   time.Duration
 	cause        string
 	resourceType string
 	err          error
@@ -39,6 +42,12 @@ func NewControllerError(sc int) *ControllerError {
 
 func (e *ControllerError) Error() string {
 	errorString := fmt.Sprintf("Error %d: %s", e.statusCode, http.StatusText(e.statusCode))
+	if e.IsRetryable() {
+		errorString += fmt.Sprintf(", Retry-Delay: %ds", e.retryDelay)
+	}
+	if len(e.resourceType) != 0 {
+		errorString += fmt.Sprintf(", Resource: %s", e.resourceType)
+	}
 	if len(e.cause) != 0 {
 		errorString += fmt.Sprintf(", Cause: %s", e.cause)
 	}
@@ -88,8 +97,26 @@ func (e *ControllerError) WithEvent(event interface{}) *ControllerError {
 	return e
 }
 
+func (e *ControllerError) WithRetryDelay(delay time.Duration) *ControllerError {
+	e.retryDelay = delay
+	return e
+}
+
+func (e *ControllerError) IsRetryable() bool {
+	return e.statusCode != http.StatusTooManyRequests
+}
+
+func (e *ControllerError) RetryDelay() time.Duration {
+	return e.retryDelay
+}
+
 // NewErr** Functions will allocate a controller error for the specific type of error.
 // Error details can be added through the use of WithError(err) and WithCause(string) methods
+func NewErrorNotReady() *ControllerError {
+	// In HTTP, Error 429 (Too Many Requests) response indicates how long to wait before making a
+	// new request. We use that here to include a delay (default 1s) before making a new request.
+	return NewControllerError(http.StatusTooManyRequests).WithRetryDelay(1 * time.Second)
+}
 
 func NewErrNotFound() *ControllerError {
 	return NewControllerError(http.StatusNotFound)
@@ -109,6 +136,22 @@ func NewErrInternalServerError() *ControllerError {
 
 func NewErrNotImplemented() *ControllerError {
 	return NewControllerError(http.StatusNotImplemented)
+}
+
+// IsRetryable returns true and the retry delay if ANY errors emanating from the supplied error
+// is an ec.ControllerError that is Retryable, and false otherwise.
+func IsRetryable(err error) (bool, time.Duration) {
+
+	for err != nil {
+		var ctrlErr *ControllerError
+		if errors.As(err, &ctrlErr) && ctrlErr.IsRetryable() {
+			return true, ctrlErr.RetryDelay()
+		}
+
+		err = errors.Unwrap(err)
+	}
+
+	return false, time.Duration(0)
 }
 
 type ErrorResponse struct {

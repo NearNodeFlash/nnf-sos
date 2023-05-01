@@ -94,7 +94,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ClientMountStatus](clientMount)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r, err) }()
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {
@@ -194,6 +194,35 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
 func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, shouldMount bool, log logr.Logger) error {
+
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		if shouldMount {
+			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
+			}
+
+			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
+		} else {
+			// Return if the directory was already removed
+			if _, err := os.Stat(clientMountInfo.MountPath); os.IsNotExist(err) {
+				return nil
+			}
+
+			if err := os.RemoveAll(clientMountInfo.MountPath); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
+			}
+
+			log.Info("Fake unmounted file system", "Mount path", clientMountInfo.MountPath)
+		}
+
+		if clientMountInfo.SetPermissions {
+			if err := os.Chown(clientMountInfo.MountPath, int(clientMountInfo.UserID), int(clientMountInfo.GroupID)); err != nil {
+				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Chown failed: %s", clientMountInfo.MountPath), err)
+			}
+		}
+
+		return nil
+	}
 
 	switch clientMountInfo.Device.Type {
 	case dwsv1alpha1.ClientMountDeviceTypeLustre:

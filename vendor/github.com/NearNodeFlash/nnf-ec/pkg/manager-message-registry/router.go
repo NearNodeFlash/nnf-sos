@@ -35,7 +35,7 @@ func (*DefaultApiRouter) Name() string {
 	return "Message Registries"
 }
 
-func (*DefaultApiRouter) Init() error {
+func (*DefaultApiRouter) Init(log ec.Logger) error {
 	return MessageRegistryManager.Initialize()
 }
 

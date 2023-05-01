@@ -48,8 +48,8 @@ func (*DefaultApiRouter) Name() string {
 }
 
 // Init -
-func (r *DefaultApiRouter) Init() error {
-	return Initialize(r.controller)
+func (r *DefaultApiRouter) Init(log ec.Logger) error {
+	return Initialize(log, r.controller)
 }
 
 // Start -

@@ -35,7 +35,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 
-	log "github.com/sirupsen/logrus"
+	logr "github.com/go-logr/logr"
 )
 
 var (
@@ -62,7 +62,7 @@ type Router interface {
 	Routes() Routes
 
 	Name() string
-	Init() error
+	Init(Logger) error
 	Start() error
 	Close() error
 }
@@ -70,16 +70,34 @@ type Router interface {
 // Routers -
 type Routers []Router
 
+type Logger = logr.Logger
+
 // Controller -
 type Controller struct {
 	Name    string
 	Port    int
 	Version string
 	Routers Routers
+	Log     Logger
 
 	options   Options
 	router    *mux.Router
 	processor ControllerProcessor
+}
+
+func NewController(name string, port int, version string, routers Routers) *Controller {
+	return &Controller{
+		Name:    name,
+		Port:    port,
+		Version: version,
+		Routers: routers,
+		Log:     logr.Discard(),
+	}
+}
+
+func (ctrl *Controller) WithLogger(log Logger) *Controller {
+	ctrl.Log = log
+	return ctrl
 }
 
 // Options -
@@ -144,7 +162,7 @@ func (c *Controller) initialize(opts *Options) error {
 	c.router = mux.NewRouter().StrictSlash(true)
 
 	for _, api := range c.Routers {
-		if err := api.Init(); err != nil {
+		if err := api.Init(c.Log); err != nil {
 			return err
 		}
 	}
@@ -178,19 +196,20 @@ type HttpControllerProcessor struct {
 }
 
 func (p *HttpControllerProcessor) Run(c *Controller, options Options) error {
+	log := c.Log
 	if options.Log {
 		c.router.Use(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-				var rlog = log.WithFields(log.Fields{
-					"Method": r.Method,
-					"URL":    r.RequestURI,
-				})
+				var log = log.WithValues(
+					"method", r.Method,
+					"url", r.RequestURI,
+				)
 
 				if options.Verbose && r.Method == POST_METHOD {
 					body, _ := ioutil.ReadAll(r.Body)
 					r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-					rlog.WithField("Request", string(body)).Infof("Http Request: %s %s", r.Method, r.URL)
+					log.WithValues("request", string(body)).Info("Http Request")
 				}
 
 				start := time.Now()
@@ -204,13 +223,14 @@ func (p *HttpControllerProcessor) Run(c *Controller, options Options) error {
 				w.Write(recorder.Body.Bytes())
 
 				if options.Verbose {
-					rlog = rlog.WithField("Response", recorder.Body.String())
+					log = log.WithValues("response", recorder.Body.String())
 				}
 
-				rlog.WithFields(log.Fields{
-					"Status":      status,
-					"ElapsedTime": time.Since(start).String(),
-				}).Infof("Http Response: %d (%s)", status, http.StatusText(status))
+				log.WithValues(
+					"status", status,
+					"statusText", http.StatusText(status),
+					"elapsedTime", time.Since(start).String(),
+				).Info("Http Response")
 			})
 		})
 	}
@@ -225,9 +245,9 @@ func (p *HttpControllerProcessor) Run(c *Controller, options Options) error {
 		Handler: crs.Handler(c.router),
 	}
 
-	log.Infof("Starting HTTP Server at %s", p.server.Addr)
+	log.Info("Starting HTTP Server", "address", p.server.Addr)
 	if err := p.server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Fatalf("ListenAndServer Failed: Error: %v", err)
+		log.Error(err, "ListenAndServer Failed")
 		return err
 	}
 
@@ -303,15 +323,18 @@ func (c *Controller) Init(opts *Options) error {
 // Run - Run a controller with standard behavior - that is with GRPC server and
 // request handling that operates by unpacking the GRPC request and
 // forwardining it to the element controller's handlers.
-func (c *Controller) Run() {
+func (c *Controller) Run() error {
 	if c.processor == nil {
-		log.Fatalf("Controller %s must call Init() prior to run", c.Name)
+		return fmt.Errorf("controller processor uninitialized")
 	}
+
 	c.Attach(c.router, nil)
 
 	if err := c.processor.Run(c, c.options); err != nil {
-		log.WithError(err).Fatalf("%s failed to run", c.Name)
+		return err
 	}
+
+	return nil
 }
 
 // Send a request to the element controller
@@ -348,8 +371,7 @@ func (c *Controller) Close() {
 }
 
 // EncodeResponse -
-func EncodeResponse(s interface{}, err error, w http.ResponseWriter) {
-
+func EncodeResponse(s interface{}, err error, w http.ResponseWriter) error {
 	if err != nil {
 		// If the supplied error is of an Element Controller Controller Error type,
 		// encode the response to a new error response packet.
@@ -366,14 +388,13 @@ func EncodeResponse(s interface{}, err error, w http.ResponseWriter) {
 		w.Header().Set("Content-Type", "application/json")
 		response, err := json.Marshal(s)
 		if err != nil {
-			log.WithError(err).Error("Failed to marshal json response")
-			w.WriteHeader(http.StatusInternalServerError)
+			return err
 		}
 		_, err = w.Write(response)
 		if err != nil {
-			log.WithError(err).Error("Failed to write json response")
-			w.WriteHeader(http.StatusInternalServerError)
+			return err
 		}
-
 	}
+
+	return nil
 }

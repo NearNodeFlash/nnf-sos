@@ -1,0 +1,9 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfPortManager
+metadata:
+  name: port-manager
+spec:
+  systemConfiguration:
+    name: default
+    namespace: default
+  allocations: []

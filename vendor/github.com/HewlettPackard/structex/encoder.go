@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/bits"
 	"reflect"
 )
 
@@ -38,39 +39,38 @@ type encoder struct {
 
 func (e *encoder) write(value uint64, nbits uint64) error {
 
-	if nbits > 1 && value > uint64(math.Pow(2, float64(nbits)))-1 {
-		return fmt.Errorf("Value %d will overflow bitfield of %d bits", value, nbits)
+	if nbits > 1 && value > math.MaxUint64 {
+		return fmt.Errorf("Value %d (%#x) will overflow bitfield of %d bits", value, value, nbits)
 	}
 
-	if nbits < 8 {
-		shift := e.bitOffset
-		if shift+nbits > 8 {
-			return fmt.Errorf("Bitfield not allowed to overflow single byte")
-		}
-
-		e.currentByte |= uint8(value << shift)
-		e.bitOffset += nbits
-
-		if e.bitOffset == 8 {
-			e.writeByte(e.currentByte)
-			e.bitOffset = 0
-			e.currentByte = 0
-		}
-
-		return nil
-	}
-
+	// Write any bits that might be part of previous bitfield definitions
 	if e.bitOffset != 0 {
-		return fmt.Errorf("Cannot span multi-byte bitfield")
+		e.currentByte |= uint8(value << e.bitOffset)
+
+		remainingBits := 8 - e.bitOffset
+		if nbits < remainingBits {
+			e.bitOffset += nbits
+			return nil
+		} else {
+			value = value >> remainingBits
+			nbits -= remainingBits
+
+			e.writeByte(e.currentByte)
+			e.currentByte = uint8(value)
+			e.bitOffset = 0
+		}
 	}
 
-	if nbits%8 != 0 {
-		return fmt.Errorf("Can only write 8-bit byte multiples")
-	}
+	for nbits != 0 {
+		e.currentByte = uint8(value)
+		if nbits < 8 {
+			e.bitOffset += nbits
+			return nil
+		} else {
+			e.writeByte(e.currentByte)
 
-	for b := uint64(0); b < nbits/8; b++ {
-		if err := e.writeByte(uint8(value >> (b * 8))); err != nil {
-			return err
+			value = value >> 8
+			nbits -= 8
 		}
 	}
 
@@ -86,10 +86,37 @@ func (e *encoder) writeByte(value uint8) error {
 	return nil
 }
 
+func (e *encoder) align(val alignment) error {
+	if e.bitOffset != 0 {
+		if err := e.write(0, 8-e.bitOffset); err != nil {
+			return err
+		}
+	}
+
+	for e.byteOffset%uint64(val) != 0 {
+		if err := e.write(0, 8); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (e *encoder) field(val reflect.Value, tags *tags) error {
 	v := getValue(val)
 	if tags == nil {
 		return e.write(v, uint64(val.Type().Bits()))
+	}
+
+	if tags.endian == big {
+		switch val.Kind() {
+		case reflect.Uint16, reflect.Int16:
+			v = uint64(bits.ReverseBytes16(uint16(v)))
+		case reflect.Uint32, reflect.Int32, reflect.Uint, reflect.Int:
+			v = uint64(bits.ReverseBytes32(uint32(v)))
+		case reflect.Uint64, reflect.Int64:
+			v = bits.ReverseBytes64(v)
+		}
 	}
 
 	return e.write(v, tags.bitfield.nbits)

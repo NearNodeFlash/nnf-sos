@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   name: nnfdatamovements.nnf.cray.hpe.com
 spec:
@@ -154,6 +154,36 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                 type: object
+              userConfig:
+                description: User defined configuration on how data movement should
+                  be performed. This overrides the configuration defined in the nnf-dm-config
+                  ConfigMap. These values are typically set by the Copy Offload API.
+                properties:
+                  dcpOptions:
+                    description: Extra options to pass to the dcp command (used to
+                      perform data movement).
+                    type: string
+                  dryrun:
+                    default: false
+                    description: Fake the Data Movement operation. The system "performs"
+                      Data Movement but the command to do so is trivial. This means
+                      a Data Movement request is still submitted but the IO is skipped.
+                    type: boolean
+                  logStdout:
+                    default: false
+                    description: 'If true, enable the command''s stdout to be saved
+                      in the log when the command completes successfully. On failure,
+                      the output is always logged. Note: Enabling this option may
+                      degrade performance.'
+                    type: boolean
+                  storeStdout:
+                    default: false
+                    description: 'Similar to LogStdout, store the command''s stdout
+                      in Status.Message when the command completes successfully. On
+                      failure, the output is always stored. Note: Enabling this option
+                      may degrade performance.'
+                    type: boolean
+                type: object
               userId:
                 description: User Id specifies the user ID for the data movement operation.
                   This value is used in conjunction with the group ID to ensure the
@@ -177,16 +207,16 @@ spec:
                     description: ElapsedTime reflects the elapsed time since the underlying
                       data movement command started.
                     type: string
+                  lastMessage:
+                    description: LastMessage reflects the last message received over
+                      standard output or standard error as captured by the underlying
+                      data movement command.
+                    type: string
                   lastMessageTime:
                     description: LastMessageTime reflects the time at which the last
                       message was received over standard output or standard error
                       by the underlying data movement command.
                     format: date-time
-                    type: string
-                  message:
-                    description: LastMessage reflects the last message received over
-                      standard output or standard error as captured by the underlying
-                      data movement command.
                     type: string
                   progress:
                     description: Progress refects the progress of the underlying data
@@ -204,7 +234,9 @@ spec:
                 format: date-time
                 type: string
               message:
-                description: Message contains any text that explains the Status.
+                description: Message contains any text that explains the Status. If
+                  Data Movement failed or storeStdout is enabled, this will contain
+                  the command's output.
                 type: string
               restarts:
                 description: Restarts contains the number of restarts of the Data

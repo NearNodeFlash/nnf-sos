@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	server "github.com/NearNodeFlash/nnf-ec/pkg/manager-server"
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
@@ -122,11 +121,16 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 
 		sp := sg.storageService.findStoragePool(sg.storagePoolId)
 		if sp == nil {
-			return fmt.Errorf("Storage Pool %s not found", sg.storagePoolId)
+			return fmt.Errorf("Rollback Storage Group %s Create Start: Storage Pool %s not found", sg.id, sg.storagePoolId)
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return fmt.Errorf("Rollback Storage Group %s Create Start: Volume %s not found", sg.id, pv.VolumeId)
+			}
+
+			if err := volume.DetachController(sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -136,11 +140,16 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 
 		sp := sg.storageService.findStoragePool(sg.storagePoolId)
 		if sp == nil {
-			return fmt.Errorf("Storage Pool %s not found", sg.storagePoolId)
+			return fmt.Errorf("Rollback Storage Group %s Delete Start: Storage Pool %s not found", sg.id, sg.storagePoolId)
 		}
 
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.AttachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return fmt.Errorf("Rollback Storage Group %s Delete Start: Volume %s not found", sg.id, pv.VolumeId)
+			}
+
+			if err := volume.AttachController(sg.endpoint.controllerId); err != nil {
 				return err
 			}
 		}
@@ -206,7 +215,12 @@ func (rh *storageGroupRecoveryReplyHandler) Done() (bool, error) {
 
 		sp := rh.storageService.findStoragePool(sg.storagePoolId)
 		for _, pv := range sp.providingVolumes {
-			if err := nvme.DetachController(pv.Storage.FindVolume(pv.VolumeId), sg.endpoint.controllerId); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return false, fmt.Errorf("Storage Group %s Recover: Volume %s not found", sg.id, pv.VolumeId)
+			}
+
+			if err := volume.DetachController(sg.endpoint.controllerId); err != nil {
 				return false, err
 			}
 		}

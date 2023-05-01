@@ -117,6 +117,15 @@ type ClientMountInfo struct {
 	// Client path for mount target
 	MountPath string `json:"mountPath"`
 
+	// UserID to set for the mount
+	UserID uint32 `json:"userID,omitempty"`
+
+	// GroupID to set for the mount
+	GroupID uint32 `json:"groupID,omitempty"`
+
+	// SetPermissions will set UserID and GroupID on the mount if true
+	SetPermissions bool `json:"setPermissions"`
+
 	// Options for the file system mount
 	Options string `json:"options"`
 

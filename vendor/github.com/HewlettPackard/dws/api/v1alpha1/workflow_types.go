@@ -34,6 +34,7 @@ const (
 )
 
 // WorkflowState is the enumeration of the state of the workflow
+// +kubebuilder:validation:Enum:=Proposal;Setup;DataIn;PreRun;PostRun;DataOut;Teardown
 type WorkflowState string
 
 // WorkflowState values
@@ -50,6 +51,8 @@ const (
 // Next reports the next state after state s
 func (s WorkflowState) next() WorkflowState {
 	switch s {
+	case "":
+		return StateProposal
 	case StateProposal:
 		return StateSetup
 	case StateSetup:
@@ -100,8 +103,6 @@ const (
 type WorkflowSpec struct {
 	// Desired state for the workflow to be in. Unless progressing to the teardown state,
 	// this can only be set to the next state when the current desired state has been achieved.
-	// +kubebuilder:validation:Enum:=Proposal;Setup;DataIn;PreRun;PostRun;DataOut;Teardown
-	// +kubebuilder:validation:Type:=string
 	DesiredState WorkflowState `json:"desiredState"`
 
 	WLMID string `json:"wlmID"`
@@ -144,6 +145,7 @@ type WorkflowDriverStatus struct {
 	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error;DriverWait
 	Status string `json:"status,omitempty"`
 
+	// Message provides additional details on the current status of the resource
 	Message string `json:"message,omitempty"`
 
 	// Driver error string. This is not rolled up into the workflow's
@@ -158,7 +160,7 @@ type WorkflowDriverStatus struct {
 type WorkflowStatus struct {
 	// The state the resource is currently transitioning to.
 	// Updated by the controller once started.
-	State WorkflowState `json:"state"`
+	State WorkflowState `json:"state,omitempty"`
 
 	// Ready can be 'True', 'False'
 	// Indicates whether State has been reached.
@@ -166,7 +168,9 @@ type WorkflowStatus struct {
 
 	// User readable reason and status message
 	// +kubebuilder:validation:Enum=Completed;DriverWait;Error
-	Status  string `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
+
+	// Message provides additional details on the current status of the resource
 	Message string `json:"message,omitempty"`
 
 	// Set of DW environment variable settings for WLM to apply to the job.

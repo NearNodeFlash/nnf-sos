@@ -35,7 +35,7 @@ type NnfAccessSpec struct {
 
 	// TeardownState is the desired state of the workflow for this NNF Access resource to
 	// be torn down and deleted.
-	// +kubebuilder:validation:Enum:=DataIn;PreRun;PostRun;DataOut
+	// +kubebuilder:validation:Enum:=PreRun;PostRun;Teardown
 	// +kubebuilder:validation:Type:=string
 	TeardownState dwsv1alpha1.WorkflowState `json:"teardownState"`
 
@@ -44,6 +44,12 @@ type NnfAccessSpec struct {
 	// - all: All of the storage the client can access
 	// +kubebuilder:validation:Enum=single;all
 	Target string `json:"target"`
+
+	// UserID for the new mount. Currently only used for raw
+	UserID uint32 `json:"userID"`
+
+	// GroupID for the new mount. Currently only used for raw
+	GroupID uint32 `json:"groupID"`
 
 	// ClientReference is for a client resource. (DWS) Computes is the only client
 	// resource type currently supported

@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
 
 	nvme2 "github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
@@ -106,22 +105,25 @@ func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGro
 }
 
 func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, ignoreErrors bool) error {
+	log := p.storageService.log
 
-	log.Infof("Storage Pool %s: Recover Volumes", p.id)
+	log.WithValues(storagePoolIdKey, p.id)
+	log.Info("recover volumes")
 
 	for _, volumeInfo := range volumes {
+		log := log.WithValues("serialNumber", volumeInfo.SerialNumber, "namespaceId", volumeInfo.NamespaceId)
 
 		// Locate the NVMe Storage device by Serial Number
 		storage := p.storageService.findStorage(volumeInfo.SerialNumber)
 		if storage == nil {
-			log.Warnf("Storage %s not found", volumeInfo.SerialNumber)
+			log.Info("storage device not found")
 			continue
 		}
 
 		// Locate the Volume by Namespace ID
 		volume, err := storage.FindVolumeByNamespaceId(volumeInfo.NamespaceId)
 		if err != nil {
-			log.Errorf("Volume %d not found", volumeInfo.NamespaceId)
+			log.Error(err, "namespace not found")
 			if ignoreErrors {
 				continue
 			}
@@ -145,23 +147,38 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, 
 }
 
 func (p *StoragePool) deallocateVolumes() error {
-	// In order to speed up deleting volumes, we format them first.
-	// Format runs asynchronously on each namespace. Launch format for each namespace
-	// and wait all format operations to complete.
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
+	// In order to speed up deleting volumes, we format them first. Format runs asynchronously, so after
+	// each format call, wait for completion before deleting the volume.
 
-	/*
-		TEMP: Can't do this just yet - the format must be attached to a controller
+	runOnProvidingVolumes := func(volFn func(*nvme.Volume) error) error {
 		for _, pv := range p.providingVolumes {
-			if err := nvme.FormatVolumeAndWaitForComplete(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
+			volume := pv.Storage.FindVolume(pv.VolumeId)
+			if volume == nil {
+				return fmt.Errorf("Volume %s not found", pv.VolumeId)
+			}
+
+			if err := volFn(volume); err != nil {
 				return err
 			}
 		}
-	*/
 
-	for _, pv := range p.providingVolumes {
-		if err := nvme.DeleteVolume(pv.Storage.FindVolume(pv.VolumeId)); err != nil {
-			return err
-		}
+		return nil
+	}
+
+	log.V(3).Info("Formatting volumes")
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.Format() }); err != nil {
+		return fmt.Errorf("Failed to format volumes: %v", err)
+	}
+
+	log.V(3).Info("Wait for format complete")
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.WaitFormatComplete() }); err != nil {
+		return fmt.Errorf("Failed to wait on format completions: %v", err)
+	}
+
+	log.V(3).Info("Deleting volumes")
+	if err := runOnProvidingVolumes(func(v *nvme.Volume) error { return v.Delete() }); err != nil {
+		return fmt.Errorf("Failed to delete volumes: %v", err)
 	}
 
 	return nil
@@ -259,7 +276,6 @@ func NewStoragePoolRecoveryRegistry(s *StorageService) persistent.Registry {
 func (*storagePoolRecoveryRegistry) Prefix() string { return storagePoolRegistryPrefix }
 
 func (r *storagePoolRecoveryRegistry) NewReplay(id string) persistent.ReplayHandler {
-	log.Infof("Storage Pool %s: New Replay", id)
 	return &storagePoolRecoveryReplayHandler{storageService: r.storageService, id: id}
 }
 

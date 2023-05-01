@@ -36,7 +36,7 @@ func (*DefaultApiRouter) Name() string {
 	return "Event Manager"
 }
 
-func (r *DefaultApiRouter) Init() error {
+func (r *DefaultApiRouter) Init(log ec.Logger) error {
 	return r.servicer.Initialize()
 }
 
