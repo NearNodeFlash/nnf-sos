@@ -869,9 +869,9 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	envName := ""
 	switch dwArgs["command"] {
 	case "jobdw":
-		envName = "DW_JOB_" + dwArgs["name"]
+		envName = "DW_JOB_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
 	case "persistentdw":
-		envName = "DW_PERSISTENT_" + dwArgs["name"]
+		envName = "DW_PERSISTENT_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
 	case "container":
 		return r.waitForContainersToStart(ctx, workflow, index)
 	default:
