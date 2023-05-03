@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,6 +22,8 @@ package v1alpha2
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/HewlettPackard/dws/utils/updater"
 )
 
 // SystemConfigurationComputeNode describes a compute node in the system
@@ -87,6 +89,10 @@ type SystemConfiguration struct {
 
 	Spec   SystemConfigurationSpec   `json:"spec,omitempty"`
 	Status SystemConfigurationStatus `json:"status,omitempty"`
+}
+
+func (s *SystemConfiguration) GetStatus() updater.Status[*SystemConfigurationStatus] {
+	return &s.Status
 }
 
 //+kubebuilder:object:root=true

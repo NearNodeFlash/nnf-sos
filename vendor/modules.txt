@@ -1,4 +1,4 @@
-# github.com/HewlettPackard/dws v0.0.0-20230502150831-7a2d7136375b
+# github.com/HewlettPackard/dws v0.0.0-20230503202417-89973dea4801
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha1
 github.com/HewlettPackard/dws/api/v1alpha2

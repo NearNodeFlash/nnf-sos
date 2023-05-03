@@ -3,6 +3,8 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/HewlettPackard/dws v0.0.0-20230502150831-7a2d7136375b h1:RV6yi3gSmYDT7zfxk2ZZ28JbWwuAQHy3gc1Gblyxm+Q=
 github.com/HewlettPackard/dws v0.0.0-20230502150831-7a2d7136375b/go.mod h1:YvNzcgAPmwhl/YQj6dMwsB9OpwbI5bp/41kINfFiXX8=
+github.com/HewlettPackard/dws v0.0.0-20230503202417-89973dea4801 h1:61TN91vDo5M9s9slbvtXD8Qi1h3RPjOLLo3xltVcLtQ=
+github.com/HewlettPackard/dws v0.0.0-20230503202417-89973dea4801/go.mod h1:YvNzcgAPmwhl/YQj6dMwsB9OpwbI5bp/41kINfFiXX8=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20230426150127-b7cba32758e5 h1:Uo9kgHrI/ZfWfSlULuAl46FEMTDXXJeAsSqMS0d+oJI=
