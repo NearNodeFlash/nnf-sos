@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
@@ -73,14 +73,14 @@ type DirectiveBreakdownReconciler struct {
 	client.Client
 	Log          logr.Logger
 	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha1.ObjectList
+	ChildObjects []dwsv1alpha2.ObjectList
 }
 
 type lustreComponentType struct {
-	strategy      dwsv1alpha1.AllocationStrategy
+	strategy      dwsv1alpha2.AllocationStrategy
 	cap           int64
 	labelsStr     string
-	colocationKey *dwsv1alpha1.AllocationSetColocationConstraint
+	colocationKey *dwsv1alpha2.AllocationSetColocationConstraint
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;list;watch;create;update;patch;delete
@@ -99,13 +99,13 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	metrics.NnfDirectiveBreakdownReconcilesTotal.Inc()
 
-	dbd := &dwsv1alpha1.DirectiveBreakdown{}
+	dbd := &dwsv1alpha2.DirectiveBreakdown{}
 	err = r.Get(ctx, req.NamespacedName, dbd)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.DirectiveBreakdownStatus](dbd)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.DirectiveBreakdownStatus](dbd)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { dbd.Status.SetResourceError(err) }()
 
@@ -118,7 +118,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		// Delete all  children that are owned by this DirectiveBreakdown.
-		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, dbd)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, dbd)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -181,8 +181,8 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, nil
 		}
 
-		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{
-			Lifetime:  dwsv1alpha1.StorageLifetimePersistent,
+		dbd.Status.Storage = &dwsv1alpha2.StorageBreakdown{
+			Lifetime:  dwsv1alpha2.StorageLifetimePersistent,
 			Reference: persistentStorage.Status.Servers,
 		}
 
@@ -192,7 +192,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	case "persistentdw":
 		// Find the peristentStorageInstance that the persistentdw is referencing
-		persistentStorage := &dwsv1alpha1.PersistentStorageInstance{
+		persistentStorage := &dwsv1alpha2.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      commonResourceName,
 				Namespace: commonResourceNamespace,
@@ -204,7 +204,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
-		servers := &dwsv1alpha1.Servers{
+		servers := &dwsv1alpha2.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      persistentStorage.Status.Servers.Name,
 				Namespace: persistentStorage.Status.Servers.Namespace,
@@ -217,12 +217,12 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		// Create a location constraint for the compute nodes based on what type of file system
 		// the persistent storage is using.
-		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
-			Constraints: dwsv1alpha1.ComputeConstraints{},
+		dbd.Status.Compute = &dwsv1alpha2.ComputeBreakdown{
+			Constraints: dwsv1alpha2.ComputeConstraints{},
 		}
 
 		for i := range servers.Spec.AllocationSets {
-			constraint := dwsv1alpha1.ComputeLocationConstraint{
+			constraint := dwsv1alpha2.ComputeLocationConstraint{
 				Reference: v1.ObjectReference{
 					Kind:      persistentStorage.Status.Servers.Kind,
 					Name:      persistentStorage.Status.Servers.Name,
@@ -233,25 +233,25 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			if argsMap["type"] == "lustre" {
 				// Lustre requires a network connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationNetwork,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationNetwork,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 			} else if argsMap["type"] == "gfs2" {
 				// GFS2 requires both PCIe and network connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationNetwork,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationNetwork,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationPhysical,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationPhysical,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 			} else {
 				// XFS and Raw only require PCIe connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationPhysical,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationPhysical,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 			}
 			dbd.Status.Compute.Constraints.Location = append(dbd.Status.Compute.Constraints.Location, constraint)
@@ -278,13 +278,13 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		serversReference := v1.ObjectReference{
-			Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+			Kind:      reflect.TypeOf(dwsv1alpha2.Servers{}).Name(),
 			Name:      servers.Name,
 			Namespace: servers.Namespace,
 		}
 
-		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{
-			Lifetime:  dwsv1alpha1.StorageLifetimeJob,
+		dbd.Status.Storage = &dwsv1alpha2.StorageBreakdown{
+			Lifetime:  dwsv1alpha2.StorageLifetimeJob,
 			Reference: serversReference,
 		}
 
@@ -295,14 +295,14 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 		// Create a location constraint for the compute nodes based on what type of file system
 		// will be created.
-		dbd.Status.Compute = &dwsv1alpha1.ComputeBreakdown{
-			Constraints: dwsv1alpha1.ComputeConstraints{},
+		dbd.Status.Compute = &dwsv1alpha2.ComputeBreakdown{
+			Constraints: dwsv1alpha2.ComputeConstraints{},
 		}
 
 		for i, allocationSet := range dbd.Status.Storage.AllocationSets {
-			constraint := dwsv1alpha1.ComputeLocationConstraint{
+			constraint := dwsv1alpha2.ComputeLocationConstraint{
 				Reference: v1.ObjectReference{
-					Kind:      reflect.TypeOf(dwsv1alpha1.Servers{}).Name(),
+					Kind:      reflect.TypeOf(dwsv1alpha2.Servers{}).Name(),
 					Name:      servers.Name,
 					Namespace: servers.Namespace,
 					FieldPath: fmt.Sprintf("servers.spec.allocationSets[%d]", i),
@@ -311,35 +311,35 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 			if argsMap["type"] == "lustre" {
 				// Lustre requires a network connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationNetwork,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationNetwork,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 
 				// If the "ColocateComputes" option is specified, force the computes to have a
 				// physical connection to the storage to limit their placement
 				targetOptions := pinnedProfile.GetLustreMiscOptions(allocationSet.Label)
 				if targetOptions.ColocateComputes {
-					constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-						Type:     dwsv1alpha1.ComputeLocationPhysical,
-						Priority: dwsv1alpha1.ComputeLocationPriorityBestEffort,
+					constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+						Type:     dwsv1alpha2.ComputeLocationPhysical,
+						Priority: dwsv1alpha2.ComputeLocationPriorityBestEffort,
 					})
 				}
 			} else if argsMap["type"] == "gfs2" {
 				// GFS2 requires both PCIe and network connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationNetwork,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationNetwork,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationPhysical,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationPhysical,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 			} else {
 				// XFS and Raw only require PCIe connection between compute and Rabbit
-				constraint.Access = append(constraint.Access, dwsv1alpha1.ComputeLocationAccess{
-					Type:     dwsv1alpha1.ComputeLocationPhysical,
-					Priority: dwsv1alpha1.ComputeLocationPriorityMandatory,
+				constraint.Access = append(constraint.Access, dwsv1alpha2.ComputeLocationAccess{
+					Type:     dwsv1alpha2.ComputeLocationPhysical,
+					Priority: dwsv1alpha2.ComputeLocationPriorityMandatory,
 				})
 			}
 
@@ -354,10 +354,10 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, name string, argsMap map[string]string) (*dwsv1alpha1.PersistentStorageInstance, error) {
+func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(ctx context.Context, dbd *dwsv1alpha2.DirectiveBreakdown, name string, argsMap map[string]string) (*dwsv1alpha2.PersistentStorageInstance, error) {
 	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
-	psi := &dwsv1alpha1.PersistentStorageInstance{
+	psi := &dwsv1alpha2.PersistentStorageInstance{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: dbd.Namespace,
@@ -369,14 +369,14 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 			// Only set the owner references during the create. The workflow controller
 			// will remove the reference after setup phase has completed
 			if psi.Spec.Name == "" {
-				dwsv1alpha1.AddOwnerLabels(psi, dbd)
+				dwsv1alpha2.AddOwnerLabels(psi, dbd)
 				err := ctrl.SetControllerReference(dbd, psi, r.Scheme)
 				if err != nil {
 					return err
 				}
 			} else {
 				if psi.Spec.UserID != dbd.Spec.UserID {
-					return dwsv1alpha1.NewResourceError(fmt.Sprintf("Existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID), nil).WithUserMessage("User ID does not match existing persistent storage").WithFatal()
+					return dwsv1alpha2.NewResourceError(fmt.Sprintf("Existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID), nil).WithUserMessage("User ID does not match existing persistent storage").WithFatal()
 				}
 			}
 
@@ -384,7 +384,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 			psi.Spec.FsType = argsMap["type"]
 			psi.Spec.DWDirective = dbd.Spec.Directive
 			psi.Spec.UserID = dbd.Spec.UserID
-			psi.Spec.State = dwsv1alpha1.PSIStateActive
+			psi.Spec.State = dwsv1alpha2.PSIStateActive
 
 			return nil
 		})
@@ -410,10 +410,10 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 	return psi, err
 }
 
-func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha1.DirectiveBreakdown) (*dwsv1alpha1.Servers, error) {
+func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, serversName string, serversNamespace string, dbd *dwsv1alpha2.DirectiveBreakdown) (*dwsv1alpha2.Servers, error) {
 	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
-	server := &dwsv1alpha1.Servers{
+	server := &dwsv1alpha2.Servers{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serversName,
 			Namespace: serversNamespace,
@@ -422,8 +422,8 @@ func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, server
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, server,
 		func() error {
-			dwsv1alpha1.InheritParentLabels(server, dbd)
-			dwsv1alpha1.AddOwnerLabels(server, dbd)
+			dwsv1alpha2.InheritParentLabels(server, dbd)
+			dwsv1alpha2.AddOwnerLabels(server, dbd)
 
 			return ctrl.SetControllerReference(dbd, server, r.Scheme)
 		})
@@ -450,7 +450,7 @@ func (r *DirectiveBreakdownReconciler) createServers(ctx context.Context, server
 }
 
 // populateDirectiveBreakdown parses the #DW to pull out the relevant information for the WLM to see.
-func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Context, dbd *dwsv1alpha1.DirectiveBreakdown, commonResourceName string, argsMap map[string]string) error {
+func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Context, dbd *dwsv1alpha2.DirectiveBreakdown, commonResourceName string, argsMap map[string]string) error {
 	log := r.Log.WithValues("DirectiveBreakdown", client.ObjectKeyFromObject(dbd))
 
 	// The pinned profile will be named for the NnfStorage.
@@ -469,13 +469,13 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	// allocationSets represents the result we need to produce.
 	// We build it then check to see if the directiveBreakdown's
 	// AllocationSet matches. If so, we don't change it.
-	var allocationSets []dwsv1alpha1.StorageAllocationSet
+	var allocationSets []dwsv1alpha2.StorageAllocationSet
 
 	// Depending on the #DW's filesystem (#DW type=<>) , we have different work to do
 	switch filesystem {
 	case "raw", "xfs", "gfs2":
-		component := dwsv1alpha1.StorageAllocationSet{}
-		populateStorageAllocationSet(&component, dwsv1alpha1.AllocatePerCompute, breakdownCapacity, 0, 0, filesystem, nil)
+		component := dwsv1alpha2.StorageAllocationSet{}
+		populateStorageAllocationSet(&component, dwsv1alpha2.AllocatePerCompute, breakdownCapacity, 0, 0, filesystem, nil)
 
 		log.Info("allocationSets", "comp", component)
 
@@ -488,12 +488,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
 
-		lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, breakdownCapacity, "ost", nil})
+		lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, breakdownCapacity, "ost", nil})
 
-		mgtKey := &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
-		var mdtKey *dwsv1alpha1.AllocationSetColocationConstraint
+		mgtKey := &dwsv1alpha2.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
+		var mdtKey *dwsv1alpha2.AllocationSetColocationConstraint
 		if nnfStorageProfile.Data.LustreStorage.ExclusiveMDT {
-			mdtKey = &dwsv1alpha1.AllocationSetColocationConstraint{Type: "exclusive"}
+			mdtKey = &dwsv1alpha2.AllocationSetColocationConstraint{Type: "exclusive"}
 		}
 
 		if nnfStorageProfile.Data.LustreStorage.CombinedMGTMDT {
@@ -502,17 +502,17 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 			if mdtKey != nil {
 				useKey = mdtKey
 			}
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mgtmdt", useKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mgtmdt", useKey})
 		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
 		} else {
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
-			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha1.AllocateSingleServer, mgtCapacity, "mgt", mgtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
+			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateSingleServer, mgtCapacity, "mgt", mgtKey})
 		}
 
 		for _, i := range lustreComponents {
 			targetMiscOptions := nnfStorageProfile.GetLustreMiscOptions(i.labelsStr)
-			component := dwsv1alpha1.StorageAllocationSet{}
+			component := dwsv1alpha2.StorageAllocationSet{}
 			populateStorageAllocationSet(&component, i.strategy, i.cap, targetMiscOptions.Scale, targetMiscOptions.Count, i.labelsStr, i.colocationKey)
 
 			allocationSets = append(allocationSets, component)
@@ -525,7 +525,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	}
 
 	if dbd.Status.Storage == nil {
-		dbd.Status.Storage = &dwsv1alpha1.StorageBreakdown{}
+		dbd.Status.Storage = &dwsv1alpha2.StorageBreakdown{}
 	}
 
 	dbd.Status.Storage.AllocationSets = allocationSets
@@ -564,32 +564,32 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateStorageAllocationSet(a *dwsv1alpha1.StorageAllocationSet, strategy dwsv1alpha1.AllocationStrategy, cap int64, scale int, count int, labelStr string, constraint *dwsv1alpha1.AllocationSetColocationConstraint) {
+func populateStorageAllocationSet(a *dwsv1alpha2.StorageAllocationSet, strategy dwsv1alpha2.AllocationStrategy, cap int64, scale int, count int, labelStr string, constraint *dwsv1alpha2.AllocationSetColocationConstraint) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
-	a.Constraints.Labels = []string{dwsv1alpha1.StorageTypeLabel + "=Rabbit"}
+	a.Constraints.Labels = []string{dwsv1alpha2.StorageTypeLabel + "=Rabbit"}
 	a.Constraints.Scale = scale
 	a.Constraints.Count = count
 	if constraint != nil {
-		a.Constraints.Colocation = []dwsv1alpha1.AllocationSetColocationConstraint{*constraint}
+		a.Constraints.Colocation = []dwsv1alpha2.AllocationSetColocationConstraint{*constraint}
 	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha1.ObjectList{
-		&dwsv1alpha1.ServersList{},
+	r.ChildObjects = []dwsv1alpha2.ObjectList{
+		&dwsv1alpha2.ServersList{},
 		&nnfv1alpha1.NnfStorageProfileList{},
-		&dwsv1alpha1.PersistentStorageInstanceList{},
+		&dwsv1alpha2.PersistentStorageInstanceList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha1.DirectiveBreakdown{}).
-		Owns(&dwsv1alpha1.Servers{}).
-		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
+		For(&dwsv1alpha2.DirectiveBreakdown{}).
+		Owns(&dwsv1alpha2.Servers{}).
+		Owns(&dwsv1alpha2.PersistentStorageInstance{}).
 		Owns(&nnfv1alpha1.NnfStorageProfile{}).
 		Complete(r)
 }

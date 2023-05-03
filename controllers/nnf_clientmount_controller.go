@@ -40,7 +40,7 @@ import (
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
@@ -72,7 +72,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	metrics.NnfClientMountReconcilesTotal.Inc()
 
-	clientMount := &dwsv1alpha1.ClientMount{}
+	clientMount := &dwsv1alpha2.ClientMount{}
 	if err := r.Get(ctx, req.NamespacedName, clientMount); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -93,7 +93,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ClientMountStatus](clientMount)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ClientMountStatus](clientMount)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
@@ -104,7 +104,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Unmount everything before removing the finalizer
 		log.Info("Unmounting all file systems due to resource deletion")
-		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha1.ClientMountStateUnmounted); err != nil {
+		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha2.ClientMountStateUnmounted); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -122,7 +122,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create the status section if it doesn't exist yet
 	if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
-		clientMount.Status.Mounts = make([]dwsv1alpha1.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
+		clientMount.Status.Mounts = make([]dwsv1alpha2.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
 	}
 
 	// Initialize the status section if the desired state doesn't match the status state
@@ -152,7 +152,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	clientMount.Status.Error = nil
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		resourceError := dwsv1alpha1.NewResourceError("Mount/Unmount failed", err)
+		resourceError := dwsv1alpha2.NewResourceError("Mount/Unmount failed", err)
 		log.Info(resourceError.Error())
 
 		clientMount.Status.Error = resourceError
@@ -163,7 +163,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
-func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha1.ClientMount, state dwsv1alpha1.ClientMountState) error {
+func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, state dwsv1alpha2.ClientMountState) error {
 	log := r.Log.WithValues("ClientMount", types.NamespacedName{Name: clientMount.Name, Namespace: clientMount.Namespace})
 
 	var firstError error
@@ -171,9 +171,9 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 		var err error
 
 		switch state {
-		case dwsv1alpha1.ClientMountStateMounted:
+		case dwsv1alpha2.ClientMountStateMounted:
 			err = r.changeMount(ctx, mount, true, log)
-		case dwsv1alpha1.ClientMountStateUnmounted:
+		case dwsv1alpha2.ClientMountStateUnmounted:
 			err = r.changeMount(ctx, mount, false, log)
 		default:
 			return fmt.Errorf("Invalid desired state %s", state)
@@ -193,12 +193,12 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 }
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
-func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha1.ClientMountInfo, shouldMount bool, log logr.Logger) error {
+func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha2.ClientMountInfo, shouldMount bool, log logr.Logger) error {
 
 	if os.Getenv("ENVIRONMENT") == "kind" {
 		if shouldMount {
 			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
-				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
 			}
 
 			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
@@ -209,7 +209,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 			}
 
 			if err := os.RemoveAll(clientMountInfo.MountPath); err != nil {
-				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
 			}
 
 			log.Info("Fake unmounted file system", "Mount path", clientMountInfo.MountPath)
@@ -217,7 +217,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 		if clientMountInfo.SetPermissions {
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMountInfo.UserID), int(clientMountInfo.GroupID)); err != nil {
-				return dwsv1alpha1.NewResourceError(fmt.Sprintf("Chown failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Chown failed: %s", clientMountInfo.MountPath), err)
 			}
 		}
 
@@ -225,7 +225,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 	}
 
 	switch clientMountInfo.Device.Type {
-	case dwsv1alpha1.ClientMountDeviceTypeLustre:
+	case dwsv1alpha2.ClientMountDeviceTypeLustre:
 		mountPath := clientMountInfo.MountPath
 
 		_, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT")
@@ -248,7 +248,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 				if !testEnv {
 					if err := os.MkdirAll(mountPath, 0755); err != nil {
-						return dwsv1alpha1.NewResourceError(fmt.Sprintf("Make directory failed: %s", mountPath), err)
+						return dwsv1alpha2.NewResourceError(fmt.Sprintf("Make directory failed: %s", mountPath), err)
 					}
 				}
 
@@ -264,7 +264,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 			}
 		}
 
-	case dwsv1alpha1.ClientMountDeviceTypeReference:
+	case dwsv1alpha2.ClientMountDeviceTypeReference:
 
 		namespacedName := types.NamespacedName{
 			Name:      clientMountInfo.Device.DeviceReference.ObjectReference.Name,
@@ -279,7 +279,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 		allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
 		fileShare, err := r.getFileShare(allocationStatus.FileSystem.ID, allocationStatus.FileShare.ID)
 		if err != nil {
-			return dwsv1alpha1.NewResourceError("Could not get file share", err).WithFatal()
+			return dwsv1alpha2.NewResourceError("Could not get file share", err).WithFatal()
 		}
 
 		if shouldMount {
@@ -290,11 +290,11 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 		fileShare, err = r.updateFileShare(allocationStatus.FileSystem.ID, fileShare)
 		if err != nil {
-			return dwsv1alpha1.NewResourceError("Could not update file share", err)
+			return dwsv1alpha2.NewResourceError("Could not update file share", err)
 		}
 
 	default:
-		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid device type %s", clientMountInfo.Device.Type), nil).WithFatal()
+		return dwsv1alpha2.NewResourceError(fmt.Sprintf("Invalid device type %s", clientMountInfo.Device.Type), nil).WithFatal()
 	}
 
 	if shouldMount {
@@ -339,7 +339,7 @@ func (r *NnfClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha1.ClientMount{})
+		For(&dwsv1alpha2.ClientMount{})
 
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		builder = builder.WithEventFilter(filterByRabbitNamespacePrefixForTest())
