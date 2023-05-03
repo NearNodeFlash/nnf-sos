@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
+	"github.com/HewlettPackard/dws/utils/updater"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
@@ -59,7 +60,7 @@ type NnfSystemConfigurationReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("SystemConfiguration", req.NamespacedName)
 
 	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
@@ -71,6 +72,11 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// Create a status updater that handles the call to r.Status().Update() if any of the fields
+	// in systemConfiguration.Status{} change
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.SystemConfigurationStatus](systemConfiguration)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !systemConfiguration.GetDeletionTimestamp().IsZero() {
@@ -126,6 +132,8 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 	if err := r.createNamespaces(ctx, systemConfiguration, validNamespaces); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	systemConfiguration.Status.Ready = true
 
 	return ctrl.Result{}, nil
 }
