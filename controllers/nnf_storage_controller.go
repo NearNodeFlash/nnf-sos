@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -48,7 +48,7 @@ type NnfStorageReconciler struct {
 	client.Client
 	Log          logr.Logger
 	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha1.ObjectList
+	ChildObjects []dwsv1alpha2.ObjectList
 }
 
 const (
@@ -233,8 +233,8 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeStorage,
 			func() error {
-				dwsv1alpha1.InheritParentLabels(nnfNodeStorage, storage)
-				dwsv1alpha1.AddOwnerLabels(nnfNodeStorage, storage)
+				dwsv1alpha2.InheritParentLabels(nnfNodeStorage, storage)
+				dwsv1alpha2.AddOwnerLabels(nnfNodeStorage, storage)
 
 				labels := nnfNodeStorage.GetLabels()
 				labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
@@ -309,7 +309,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	allocationSet.Error = ""
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
-	matchLabels := dwsv1alpha1.MatchingOwner(storage)
+	matchLabels := dwsv1alpha2.MatchingOwner(storage)
 	matchLabels[nnfv1alpha1.AllocationSetLabel] = storage.Spec.AllocationSets[allocationSetIndex].Name
 
 	listOptions := []client.ListOption{
@@ -425,7 +425,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		}
 	}
 
-	deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
+	deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
 	if err != nil {
 		return nodeStoragesExist, err
 	}
@@ -447,7 +447,7 @@ func nnfNodeStorageName(storage *nnfv1alpha1.NnfStorage, allocationSetIndex int,
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha1.ObjectList{
+	r.ChildObjects = []dwsv1alpha2.ObjectList{
 		&nnfv1alpha1.NnfNodeStorageList{},
 		&nnfv1alpha1.NnfStorageProfileList{},
 	}
@@ -456,6 +456,6 @@ func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha1.NnfStorage{}).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNodeStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		Complete(r)
 }

@@ -31,23 +31,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
 var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 
-	var cfg *dwsv1alpha1.SystemConfiguration
+	var cfg *dwsv1alpha2.SystemConfiguration
 	const portStart = 20
 	const portEnd = 29
 
 	BeforeAll(func() {
-		cfg = &dwsv1alpha1.SystemConfiguration{
+		cfg = &dwsv1alpha2.SystemConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "port-manager-system-config",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha1.SystemConfigurationSpec{
+			Spec: dwsv1alpha2.SystemConfigurationSpec{
 				Ports: []intstr.IntOrString{
 					intstr.FromString(fmt.Sprintf("%d-%d", portStart, portEnd)),
 				},

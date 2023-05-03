@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
@@ -64,7 +64,7 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 
 	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
 
-	systemConfiguration := &dwsv1alpha1.SystemConfiguration{}
+	systemConfiguration := &dwsv1alpha2.SystemConfiguration{}
 	if err := r.Get(ctx, req.NamespacedName, systemConfiguration); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -133,9 +133,9 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 // deleteNamespaces looks for namespaces owned by the SystemConfiguration resource (by looking
 // at the namespace's labels) and deletes them if it isn't a namespace listed in the validNamespaces
 // map. Only the first error encountered is returned.
-func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context, config *dwsv1alpha1.SystemConfiguration, validNamespaces map[string]struct{}) error {
+func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context, config *dwsv1alpha2.SystemConfiguration, validNamespaces map[string]struct{}) error {
 	listOptions := []client.ListOption{
-		dwsv1alpha1.MatchingOwner(config),
+		dwsv1alpha2.MatchingOwner(config),
 	}
 
 	namespaces := &corev1.NamespaceList{}
@@ -163,7 +163,7 @@ func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context,
 
 // createNamespaces creates a namespace for each entry in the validNamespaces map. The
 // namespaces have a "name" and "namespace" label for the SystemConfiguration owner.
-func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context, config *dwsv1alpha1.SystemConfiguration, validNamespaces map[string]struct{}) error {
+func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context, config *dwsv1alpha2.SystemConfiguration, validNamespaces map[string]struct{}) error {
 	for name := range validNamespaces {
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -172,7 +172,7 @@ func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context,
 		}
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, namespace,
 			func() error {
-				dwsv1alpha1.AddOwnerLabels(namespace, config)
+				dwsv1alpha2.AddOwnerLabels(namespace, config)
 				return nil
 			})
 		if err != nil {
@@ -188,8 +188,8 @@ func (r *NnfSystemConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		Watches(&source.Kind{Type: &corev1.Namespace{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
-		For(&dwsv1alpha1.SystemConfiguration{})
+		Watches(&source.Kind{Type: &corev1.Namespace{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
+		For(&dwsv1alpha2.SystemConfiguration{})
 
 	return builder.Complete(r)
 }
