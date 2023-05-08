@@ -1902,12 +1902,16 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			continue
 		}
 
+		// k8s resources can't have underscores
+		volName = strings.ReplaceAll(volName, "_", "-")
+
 		vol := nnfContainerVolume{
 			name:           volName,
 			command:        cmd,
 			directiveName:  val,
 			directiveIndex: -1,
-			envVarName:     strings.ReplaceAll(arg, "-", "_"), // env vars can't have hyphens
+			// and env vars can't have hyphens
+			envVarName: strings.ReplaceAll(arg, "-", "_"),
 		}
 
 		// Find the directive index for the given name so we can retrieve its NnfAccess
