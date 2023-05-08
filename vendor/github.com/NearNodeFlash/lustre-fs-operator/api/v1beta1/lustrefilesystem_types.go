@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha1
+package v1beta1
 
 import (
 	"strings"
@@ -110,6 +110,7 @@ const (
 )
 
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="FSNAME",type="string",JSONPath=".spec.name",description="Lustre file system name"
 //+kubebuilder:printcolumn:name="MGSNIDS",type="string",JSONPath=".spec.mgsNids",description="List of MGS NIDs"

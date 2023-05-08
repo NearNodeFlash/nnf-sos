@@ -17,7 +17,9 @@
  * limitations under the License.
  */
 
-// The following tag tells conversion-gen to generate conversion routines, and
-// it tells conversion-gen the name of the hub version.
-// +k8s:conversion-gen=github.com/HewlettPackard/dws/api/v1alpha2
-package v1alpha1
+package v1beta1
+
+func (*LustreFileSystem) Hub() {}
+
+// The conversion-verifier tool wants these...though they're never used.
+func (*LustreFileSystemList) Hub() {}

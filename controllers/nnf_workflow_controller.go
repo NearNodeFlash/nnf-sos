@@ -48,7 +48,7 @@ import (
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	"github.com/HewlettPackard/dws/utils/updater"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -551,7 +551,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		} else if lustre := r.findLustreFileSystemForPath(ctx, param, r.Log); lustre != nil {
 			storageReference = &corev1.ObjectReference{
-				Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
+				Kind:      reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name(),
 				Name:      lustre.Name,
 				Namespace: lustre.Namespace,
 			}

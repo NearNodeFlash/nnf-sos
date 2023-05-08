@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -405,7 +405,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		// Create a fake global lustre file system.
 		var (
-			lustre *lusv1alpha1.LustreFileSystem
+			lustre *lusv1beta1.LustreFileSystem
 		)
 
 		BeforeEach(func() {
@@ -419,12 +419,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		BeforeEach(func() {
-			lustre = &lusv1alpha1.LustreFileSystem{
+			lustre = &lusv1beta1.LustreFileSystem{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "maui",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: lusv1alpha1.LustreFileSystemSpec{
+				Spec: lusv1beta1.LustreFileSystemSpec{
 					Name:      "maui",
 					MountRoot: "/lus/maui",
 					MgsNids:   "10.0.0.1@tcp",
@@ -472,7 +472,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))
@@ -541,7 +541,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))

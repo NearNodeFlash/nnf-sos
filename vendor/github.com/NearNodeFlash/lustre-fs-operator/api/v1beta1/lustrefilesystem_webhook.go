@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha1
+package v1beta1
 
 import (
 	"net"
@@ -47,7 +47,7 @@ func (r *LustreFileSystem) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-lus-cray-hpe-com-v1alpha1-lustrefilesystem,mutating=false,failurePolicy=fail,sideEffects=None,groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=create;update,versions=v1alpha1,name=vlustrefilesystem.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-lus-cray-hpe-com-v1beta1-lustrefilesystem,mutating=false,failurePolicy=fail,sideEffects=None,groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=create;update,versions=v1beta1,name=vlustrefilesystem.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LustreFileSystem{}
 

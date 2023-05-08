@@ -30,7 +30,7 @@ import (
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/go-logr/logr"
@@ -643,8 +643,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	return nnfStorage, nil
 }
 
-func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1alpha1.LustreFileSystem {
-	lustres := &lusv1alpha1.LustreFileSystemList{}
+func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {
+	lustres := &lusv1beta1.LustreFileSystemList{}
 	if err := r.List(ctx, lustres); err != nil {
 		log.Error(err, "Failed to list lustre file systems")
 		return nil
