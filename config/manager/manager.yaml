@@ -100,8 +100,6 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      nodeSelector:
-        cray.nnf.manager: "true"
       containers:
       - command:
         - /manager
