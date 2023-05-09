@@ -40,7 +40,7 @@ import (
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	dwparse "github.com/HewlettPackard/dws/utils/dwdparse"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -1035,15 +1035,15 @@ var _ = Describe("Integration Test", func() {
 
 		})
 
-		var lustre *lusv1alpha1.LustreFileSystem
+		var lustre *lusv1beta1.LustreFileSystem
 
 		BeforeEach(func() {
-			lustre = &lusv1alpha1.LustreFileSystem{
+			lustre = &lusv1beta1.LustreFileSystem{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "lustre-test",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: lusv1alpha1.LustreFileSystemSpec{
+				Spec: lusv1beta1.LustreFileSystemSpec{
 					Name:      "lustre",
 					MgsNids:   "172.0.0.1@tcp",
 					MountRoot: "/lus/maui",
@@ -1634,16 +1634,16 @@ var _ = Describe("Integration Test", func() {
 		When("using copy_in without jobdw", func() {
 			// Create a fake global lustre file system.
 			var (
-				lustre *lusv1alpha1.LustreFileSystem
+				lustre *lusv1beta1.LustreFileSystem
 			)
 
 			BeforeEach(func() {
-				lustre = &lusv1alpha1.LustreFileSystem{
+				lustre = &lusv1beta1.LustreFileSystem{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "maui",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: lusv1alpha1.LustreFileSystemSpec{
+					Spec: lusv1beta1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
 						MgsNids:   "10.0.0.1@tcp",
@@ -1670,16 +1670,16 @@ var _ = Describe("Integration Test", func() {
 		When("using copy_in without persistentdw", func() {
 			// Create a fake global lustre file system.
 			var (
-				lustre *lusv1alpha1.LustreFileSystem
+				lustre *lusv1beta1.LustreFileSystem
 			)
 
 			BeforeEach(func() {
-				lustre = &lusv1alpha1.LustreFileSystem{
+				lustre = &lusv1beta1.LustreFileSystem{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "maui",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: lusv1alpha1.LustreFileSystemSpec{
+					Spec: lusv1beta1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
 						MgsNids:   "10.0.0.1@tcp",

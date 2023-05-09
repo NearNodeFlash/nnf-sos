@@ -44,7 +44,7 @@ import (
 	"github.com/ghodss/yaml"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
@@ -149,7 +149,7 @@ var _ = BeforeSuite(func() {
 	err = dwsv1alpha2.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = lusv1alpha1.AddToScheme(testEnv.Scheme)
+	err = lusv1beta1.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
