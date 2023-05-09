@@ -45,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	"github.com/HewlettPackard/dws/utils/updater"
 	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
@@ -66,7 +66,7 @@ type NnfWorkflowReconciler struct {
 	client.Client
 	Log          logr.Logger
 	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha1.ObjectList
+	ChildObjects []dwsv1alpha2.ObjectList
 }
 
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
@@ -80,11 +80,12 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
-//+kubebuilder:rbac:groups=cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
+//+kubebuilder:rbac:groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=kubeflow.org,resources=mpijobs,verbs=get;list;create;watch;update;patch;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -97,7 +98,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	metrics.NnfWorkflowReconcilesTotal.Inc()
 
 	// Fetch the Workflow instance
-	workflow := &dwsv1alpha1.Workflow{}
+	workflow := &dwsv1alpha2.Workflow{}
 
 	if err := r.Get(ctx, req.NamespacedName, workflow); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
@@ -106,7 +107,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.WorkflowStatus](workflow)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.WorkflowStatus](workflow)
 	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	driverID := os.Getenv("DWS_DRIVER_ID")
@@ -123,7 +124,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		deleteStatus, err := dwsv1alpha1.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -170,7 +171,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Create a list of the driverStatus array elements that correspond to the current state
 	// of the workflow and are targeted for the Rabbit driver
-	driverList := []*dwsv1alpha1.WorkflowDriverStatus{}
+	driverList := []*dwsv1alpha2.WorkflowDriverStatus{}
 
 	for i := range workflow.Status.Drivers {
 		driverStatus := &workflow.Status.Drivers[i]
@@ -188,14 +189,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		driverList = append(driverList, driverStatus)
 	}
 
-	startFunctions := map[dwsv1alpha1.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
-		dwsv1alpha1.StateProposal: (*NnfWorkflowReconciler).startProposalState,
-		dwsv1alpha1.StateSetup:    (*NnfWorkflowReconciler).startSetupState,
-		dwsv1alpha1.StateDataIn:   (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha1.StatePreRun:   (*NnfWorkflowReconciler).startPreRunState,
-		dwsv1alpha1.StatePostRun:  (*NnfWorkflowReconciler).startPostRunState,
-		dwsv1alpha1.StateDataOut:  (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha1.StateTeardown: (*NnfWorkflowReconciler).startTeardownState,
+	startFunctions := map[dwsv1alpha2.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha2.Workflow, int) (*result, error){
+		dwsv1alpha2.StateProposal: (*NnfWorkflowReconciler).startProposalState,
+		dwsv1alpha2.StateSetup:    (*NnfWorkflowReconciler).startSetupState,
+		dwsv1alpha2.StateDataIn:   (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha2.StatePreRun:   (*NnfWorkflowReconciler).startPreRunState,
+		dwsv1alpha2.StatePostRun:  (*NnfWorkflowReconciler).startPostRunState,
+		dwsv1alpha2.StateDataOut:  (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha2.StateTeardown: (*NnfWorkflowReconciler).startTeardownState,
 	}
 
 	// Call the correct "start" function based on workflow state for each directive that has registered for
@@ -212,7 +213,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		driverStatus.Status = dwsv1alpha1.StatusRunning
+		driverStatus.Status = dwsv1alpha2.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -225,14 +226,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Start done")
 	}
 
-	finishFunctions := map[dwsv1alpha1.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha1.Workflow, int) (*result, error){
-		dwsv1alpha1.StateProposal: (*NnfWorkflowReconciler).finishProposalState,
-		dwsv1alpha1.StateSetup:    (*NnfWorkflowReconciler).finishSetupState,
-		dwsv1alpha1.StateDataIn:   (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha1.StatePreRun:   (*NnfWorkflowReconciler).finishPreRunState,
-		dwsv1alpha1.StatePostRun:  (*NnfWorkflowReconciler).finishPostRunState,
-		dwsv1alpha1.StateDataOut:  (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha1.StateTeardown: (*NnfWorkflowReconciler).finishTeardownState,
+	finishFunctions := map[dwsv1alpha2.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha2.Workflow, int) (*result, error){
+		dwsv1alpha2.StateProposal: (*NnfWorkflowReconciler).finishProposalState,
+		dwsv1alpha2.StateSetup:    (*NnfWorkflowReconciler).finishSetupState,
+		dwsv1alpha2.StateDataIn:   (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha2.StatePreRun:   (*NnfWorkflowReconciler).finishPreRunState,
+		dwsv1alpha2.StatePostRun:  (*NnfWorkflowReconciler).finishPostRunState,
+		dwsv1alpha2.StateDataOut:  (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha2.StateTeardown: (*NnfWorkflowReconciler).finishTeardownState,
 	}
 
 	// Call the correct "finish" function based on workflow state for each directive that has registered for
@@ -251,7 +252,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
-		driverStatus.Status = dwsv1alpha1.StatusRunning
+		driverStatus.Status = dwsv1alpha2.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -264,7 +265,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Finish done")
 
 		ts := metav1.NowMicro()
-		driverStatus.Status = dwsv1alpha1.StatusCompleted
+		driverStatus.Status = dwsv1alpha2.StatusCompleted
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 		driverStatus.CompleteTime = &ts
@@ -274,7 +275,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -302,7 +303,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	}
 
 	directiveBreakdownReference := v1.ObjectReference{
-		Kind:      reflect.TypeOf(dwsv1alpha1.DirectiveBreakdown{}).Name(),
+		Kind:      reflect.TypeOf(dwsv1alpha2.DirectiveBreakdown{}).Name(),
 		Name:      directiveBreakdown.Name,
 		Namespace: directiveBreakdown.Namespace,
 	}
@@ -321,7 +322,8 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	// only jobdw, persistentdw, and create_persistent have a directive breakdown
@@ -332,7 +334,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 		return nil, nil
 	}
 
-	directiveBreakdown := &dwsv1alpha1.DirectiveBreakdown{
+	directiveBreakdown := &dwsv1alpha2.DirectiveBreakdown{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
 			Namespace: workflow.GetNamespace(),
@@ -356,7 +358,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -367,7 +369,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		return nil, r.addPersistentStorageReference(ctx, workflow, index)
 	case "jobdw", "create_persistent":
 		// Chain through the DirectiveBreakdown to the Servers object
-		dbd := &dwsv1alpha1.DirectiveBreakdown{
+		dbd := &dwsv1alpha2.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      indexedResourceName(workflow, index),
 				Namespace: workflow.Namespace,
@@ -378,7 +380,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 			return nil, dwsv1alpha1.NewResourceError("unable to get DirectiveBreakdown: %v", client.ObjectKeyFromObject(dbd)).WithError(err).WithUserMessage("could not read allocation request")
 		}
 
-		s := &dwsv1alpha1.Servers{
+		s := &dwsv1alpha2.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dbd.Status.Storage.Reference.Name,
 				Namespace: dbd.Status.Storage.Reference.Namespace,
@@ -407,7 +409,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 	// Check whether the NnfStorage has finished creating the storage.
@@ -439,7 +441,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 
 	dwArgs, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
@@ -511,19 +513,19 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
-			var teardownState dwsv1alpha1.WorkflowState
+			var teardownState dwsv1alpha2.WorkflowState
 			if dwArgs["command"] == "copy_in" {
-				teardownState = dwsv1alpha1.StatePreRun
+				teardownState = dwsv1alpha2.StatePreRun
 
 				if fsType == "gfs2" || fsType == "lustre" {
-					teardownState = dwsv1alpha1.StatePostRun
+					teardownState = dwsv1alpha2.StatePostRun
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
-						teardownState = dwsv1alpha1.StateTeardown
+						teardownState = dwsv1alpha2.StateTeardown
 					}
 				}
 			} else if dwArgs["command"] == "copy_out" {
-				teardownState = dwsv1alpha1.StateTeardown
+				teardownState = dwsv1alpha2.StateTeardown
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
@@ -584,7 +586,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	// For copy_out, the source is the Rabbit and therefore the target
 
 	var targetStorageRef *corev1.ObjectReference
-	if workflow.Spec.DesiredState == dwsv1alpha1.StateDataIn {
+	if workflow.Spec.DesiredState == dwsv1alpha2.StateDataIn {
 		targetStorageRef = destStorage
 	} else {
 		targetStorageRef = sourceStorage
@@ -652,8 +654,8 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 					},
 				}
 
-				dwsv1alpha1.AddWorkflowLabels(dm, workflow)
-				dwsv1alpha1.AddOwnerLabels(dm, workflow)
+				dwsv1alpha2.AddWorkflowLabels(dm, workflow)
+				dwsv1alpha2.AddOwnerLabels(dm, workflow)
 				nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 				addDirectiveIndexLabel(dm, index)
 
@@ -688,8 +690,8 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			},
 		}
 
-		dwsv1alpha1.AddWorkflowLabels(dm, workflow)
-		dwsv1alpha1.AddOwnerLabels(dm, workflow)
+		dwsv1alpha2.AddWorkflowLabels(dm, workflow)
+		dwsv1alpha2.AddOwnerLabels(dm, workflow)
 		nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 		addDirectiveIndexLabel(dm, index)
 
@@ -705,11 +707,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 }
 
 // Monitor a data movement resource for completion
-func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 
 	// Wait for data movement resources to complete
 
-	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
+	matchingLabels := dwsv1alpha2.MatchingOwner(workflow)
 	matchingLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(workflow.Status.State)
 
@@ -741,7 +743,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -766,10 +768,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
-		if err := r.createContainerService(ctx, workflow); err != nil {
-			return nil, dwsv1alpha1.NewResourceError("unable to create/update Container Service").WithError(err)
-		}
-		result, err := r.createContainerJobs(ctx, workflow, dwArgs, index)
+		result, err := r.containerHandler(ctx, workflow, dwArgs, index)
+
 		if err != nil {
 			return nil, dwsv1alpha1.NewResourceError("unable to create/update Container Jobs").WithError(err).WithFatal()
 		}
@@ -783,11 +783,11 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// Create an NNFAccess for the compute clients
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, access,
 		func() error {
-			dwsv1alpha1.AddWorkflowLabels(access, workflow)
-			dwsv1alpha1.AddOwnerLabels(access, workflow)
+			dwsv1alpha2.AddWorkflowLabels(access, workflow)
+			dwsv1alpha2.AddOwnerLabels(access, workflow)
 			addDirectiveIndexLabel(access, index)
 
-			access.Spec.TeardownState = dwsv1alpha1.StatePostRun
+			access.Spec.TeardownState = dwsv1alpha2.StatePostRun
 			access.Spec.DesiredState = "mounted"
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
@@ -846,9 +846,9 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		// Set the teardown state to post run. If there is a copy_out or container directive that
 		// uses this storage instance, set the teardown state so NNF Access is preserved up until
 		// Teardown
-		teardownState := dwsv1alpha1.StatePostRun
+		teardownState := dwsv1alpha2.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 || findContainerDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
-			teardownState = dwsv1alpha1.StateTeardown
+			teardownState = dwsv1alpha2.StateTeardown
 		}
 
 		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)
@@ -860,7 +860,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -873,9 +873,9 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	envName := ""
 	switch dwArgs["command"] {
 	case "jobdw":
-		envName = "DW_JOB_" + dwArgs["name"]
+		envName = "DW_JOB_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
 	case "persistentdw":
-		envName = "DW_PERSISTENT_" + dwArgs["name"]
+		envName = "DW_PERSISTENT_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
 	case "container":
 		return r.waitForContainersToStart(ctx, workflow, index)
 	default:
@@ -895,7 +895,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -910,8 +910,8 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	}
 
 	// Wait for data movement resources to complete
-	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha1.StatePostRun)
+	matchingLabels := dwsv1alpha2.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha2.StatePostRun)
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -939,7 +939,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	if dwArgs["command"] == "container" {
@@ -955,8 +955,8 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 
 	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
 	// TODO: Customer asked if this could be optional
-	matchingLabels := dwsv1alpha1.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha1.StatePostRun)
+	matchingLabels := dwsv1alpha2.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha1.DataMovementTeardownStateLabel] = string(dwsv1alpha2.StatePostRun)
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
@@ -976,17 +976,17 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 
 	// Delete the NnfDataMovement and NnfAccess for this directive before removing the NnfStorage.
 	// copy_in/out directives can reference NnfStorage from a different directive, so all the NnfAccesses
 	// need to be removed first.
-	childObjects := []dwsv1alpha1.ObjectList{
+	childObjects := []dwsv1alpha2.ObjectList{
 		&nnfv1alpha1.NnfDataMovementList{},
 		&nnfv1alpha1.NnfAccessList{},
 	}
 
-	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
+	deleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
 	if err != nil {
 		return nil, dwsv1alpha1.NewResourceError("could not delete NnfDataMovement and NnfAccess children").WithError(err).WithUserMessage("could not stop data movement and unmount file systems")
 	}
@@ -998,14 +998,14 @@ func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflow *dwsv1alpha1.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	switch dwArgs["command"] {
 	case "create_persistent":
 		for _, driverStatus := range workflow.Status.Drivers {
-			if driverStatus.WatchState == dwsv1alpha1.StateTeardown {
+			if driverStatus.WatchState == dwsv1alpha2.StateTeardown {
 				continue
 			}
 
@@ -1020,7 +1020,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		}
 
 		persistentStorage.SetOwnerReferences([]metav1.OwnerReference{})
-		dwsv1alpha1.RemoveOwnerLabels(persistentStorage)
+		dwsv1alpha2.RemoveOwnerLabels(persistentStorage)
 		labels := persistentStorage.GetLabels()
 		delete(labels, nnfv1alpha1.DirectiveIndexLabel)
 		persistentStorage.SetLabels(labels)
@@ -1050,9 +1050,9 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return nil, dwsv1alpha1.NewResourceError("persistent storage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences)).WithError(err).WithUserMessage("persistent storage cannot be deleted while in use").WithFatal().WithUser()
 		}
 
-		persistentStorage.Spec.State = dwsv1alpha1.PSIStateDestroying
+		persistentStorage.Spec.State = dwsv1alpha2.PSIStateDestroying
 
-		dwsv1alpha1.AddOwnerLabels(persistentStorage, workflow)
+		dwsv1alpha2.AddOwnerLabels(persistentStorage, workflow)
 		addDirectiveIndexLabel(persistentStorage, index)
 
 		if err := controllerutil.SetControllerReference(workflow, persistentStorage, r.Scheme); err != nil {
@@ -1075,12 +1075,12 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	default:
 	}
 
-	childObjects := []dwsv1alpha1.ObjectList{
+	childObjects := []dwsv1alpha2.ObjectList{
 		&nnfv1alpha1.NnfStorageList{},
-		&dwsv1alpha1.PersistentStorageInstanceList{},
+		&dwsv1alpha2.PersistentStorageInstanceList{},
 	}
 
-	deleteStatus, err := dwsv1alpha1.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
+	deleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
 	if err != nil {
 		return nil, dwsv1alpha1.NewResourceError("could not delete NnfStorage and PersistentStorageInstance children").WithError(err).WithUserMessage("could not delete storage allocations")
 	}
@@ -1094,22 +1094,22 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha1.ObjectList{
+	r.ChildObjects = []dwsv1alpha2.ObjectList{
 		&nnfv1alpha1.NnfDataMovementList{},
 		&nnfv1alpha1.NnfAccessList{},
 		&nnfv1alpha1.NnfStorageList{},
-		&dwsv1alpha1.PersistentStorageInstanceList{},
-		&dwsv1alpha1.DirectiveBreakdownList{},
+		&dwsv1alpha2.PersistentStorageInstanceList{},
+		&dwsv1alpha2.DirectiveBreakdownList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha1.Workflow{}).
+		For(&dwsv1alpha2.Workflow{}).
 		Owns(&nnfv1alpha1.NnfAccess{}).
-		Owns(&dwsv1alpha1.DirectiveBreakdown{}).
-		Owns(&dwsv1alpha1.PersistentStorageInstance{}).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfDataMovement{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha1.OwnerLabelMapFunc)).
+		Owns(&dwsv1alpha2.DirectiveBreakdown{}).
+		Owns(&dwsv1alpha2.PersistentStorageInstance{}).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfDataMovement{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
+		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		Complete(r)
 }

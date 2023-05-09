@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -110,7 +110,7 @@ var _ = Describe("Access Controller Test", func() {
 				},
 				Spec: nnfv1alpha1.NnfAccessSpec{
 					DesiredState:    "mounted",
-					TeardownState:   dwsv1alpha1.StatePreRun,
+					TeardownState:   dwsv1alpha2.StatePreRun,
 					Target:          "all",
 					ClientReference: corev1.ObjectReference{},
 					MountPath:       "./",
@@ -133,7 +133,7 @@ var _ = Describe("Access Controller Test", func() {
 
 			By("Verify Client Mounts")
 			for _, nodeName := range nodeNames {
-				mount := &dwsv1alpha1.ClientMount{
+				mount := &dwsv1alpha2.ClientMount{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      clientMountName(access),
 						Namespace: nodeName,
@@ -153,13 +153,13 @@ var _ = Describe("Access Controller Test", func() {
 
 				Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
 					"Node":         Equal(nodeName),
-					"DesiredState": Equal(dwsv1alpha1.ClientMountStateMounted),
+					"DesiredState": Equal(dwsv1alpha2.ClientMountStateMounted),
 					"Mounts":       HaveLen(1),
 				}))
 				Expect(mount.Status.Error).To(BeNil())
 				Expect(mount.Status.Mounts).To(HaveLen(1))
 				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State": Equal(dwsv1alpha1.ClientMountStateMounted),
+					"State": Equal(dwsv1alpha2.ClientMountStateMounted),
 					"Ready": BeTrue(),
 				}))
 			}
@@ -176,7 +176,7 @@ var _ = Describe("Access Controller Test", func() {
 
 			By("Verify Client Mounts go unmounted")
 			for _, nodeName := range nodeNames {
-				mount := &dwsv1alpha1.ClientMount{
+				mount := &dwsv1alpha2.ClientMount{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      clientMountName(access),
 						Namespace: nodeName,
@@ -196,13 +196,13 @@ var _ = Describe("Access Controller Test", func() {
 
 				Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
 					"Node":         Equal(nodeName),
-					"DesiredState": Equal(dwsv1alpha1.ClientMountStateUnmounted),
+					"DesiredState": Equal(dwsv1alpha2.ClientMountStateUnmounted),
 					"Mounts":       HaveLen(1),
 				}))
 				Expect(mount.Status.Error).To(BeNil())
 				Expect(mount.Status.Mounts).To(HaveLen(1))
 				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State": Equal(dwsv1alpha1.ClientMountStateUnmounted),
+					"State": Equal(dwsv1alpha2.ClientMountStateUnmounted),
 					"Ready": BeTrue(),
 				}))
 			}

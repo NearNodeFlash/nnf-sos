@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
@@ -95,22 +95,22 @@ func (rst NnfResourceStatusType) UpdateIfWorseThan(status *NnfResourceStatusType
 	}
 }
 
-func (rst NnfResourceStatusType) ConvertToDWSResourceStatus() dwsv1alpha1.ResourceStatus {
+func (rst NnfResourceStatusType) ConvertToDWSResourceStatus() dwsv1alpha2.ResourceStatus {
 	switch rst {
 	case ResourceStarting:
-		return dwsv1alpha1.StartingStatus
+		return dwsv1alpha2.StartingStatus
 	case ResourceReady:
-		return dwsv1alpha1.ReadyStatus
+		return dwsv1alpha2.ReadyStatus
 	case ResourceDisabled:
-		return dwsv1alpha1.DisabledStatus
+		return dwsv1alpha2.DisabledStatus
 	case ResourceNotPresent:
-		return dwsv1alpha1.NotPresentStatus
+		return dwsv1alpha2.NotPresentStatus
 	case ResourceOffline:
-		return dwsv1alpha1.OfflineStatus
+		return dwsv1alpha2.OfflineStatus
 	case ResourceFailed:
-		return dwsv1alpha1.FailedStatus
+		return dwsv1alpha2.FailedStatus
 	default:
-		return dwsv1alpha1.UnknownStatus
+		return dwsv1alpha2.UnknownStatus
 	}
 }
 

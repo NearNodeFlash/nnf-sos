@@ -12,14 +12,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-dws-cray-hpe-com-v1alpha1-workflow
+      path: /mutate-dws-cray-hpe-com-v1alpha2-workflow
   failurePolicy: Fail
   name: mworkflow.kb.io
   rules:
   - apiGroups:
     - dws.cray.hpe.com
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     resources:
@@ -39,14 +39,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-dws-cray-hpe-com-v1alpha1-workflow
+      path: /validate-dws-cray-hpe-com-v1alpha2-workflow
   failurePolicy: Fail
   name: vworkflow.kb.io
   rules:
   - apiGroups:
     - dws.cray.hpe.com
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     - UPDATE

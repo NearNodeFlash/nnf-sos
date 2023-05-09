@@ -61,8 +61,8 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha1.NnfContainerPr
 	// default storages if not supplied, optional by default
 	if len(storages) == 0 {
 		storages = []nnfv1alpha1.NnfContainerProfileStorage{
-			{Name: "DW_JOB_foo-local-storage", Optional: true},
-			{Name: "DW_PERSISTENT_foo-persistent-storage", Optional: true},
+			{Name: "DW_JOB_foo_local_storage", Optional: true},
+			{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 		}
 	}
 
@@ -73,11 +73,9 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha1.NnfContainerPr
 		Data: nnfv1alpha1.NnfContainerProfileData{
 			Pinned:   false,
 			Storages: storages,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{Name: "test", Image: "alpine:latest", Command: []string{"true"}},
-					},
+			Spec: &corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: "test", Image: "alpine:latest", Command: []string{"true"}},
 				},
 			},
 		},

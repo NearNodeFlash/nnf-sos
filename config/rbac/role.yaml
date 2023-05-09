@@ -17,6 +17,7 @@ rules:
   - list
   - patch
   - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -56,14 +57,6 @@ rules:
   - list
   - patch
   - update
-- apiGroups:
-  - cray.hpe.com
-  resources:
-  - lustrefilesystems
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - dws.cray.hpe.com
   resources:
@@ -263,6 +256,27 @@ rules:
   - workflows/finalizers
   verbs:
   - update
+- apiGroups:
+  - kubeflow.org
+  resources:
+  - mpijobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - lus.cray.hpe.com
+  resources:
+  - lustrefilesystems
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

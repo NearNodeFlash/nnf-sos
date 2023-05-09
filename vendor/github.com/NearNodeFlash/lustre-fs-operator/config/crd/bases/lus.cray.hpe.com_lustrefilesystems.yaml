@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: lustrefilesystems.cray.hpe.com
+  name: lustrefilesystems.lus.cray.hpe.com
 spec:
-  group: cray.hpe.com
+  group: lus.cray.hpe.com
   names:
     kind: LustreFileSystem
     listKind: LustreFileSystemList

@@ -23,9 +23,11 @@ import (
 	"context"
 	"os"
 
+	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -47,11 +49,10 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 				Name:      "test",
 				Namespace: namespaceName,
 			},
-			// Containers cannot be null, so set it
 			Data: NnfContainerProfileData{
-				Template: v1.PodTemplateSpec{
-					Spec: v1.PodSpec{
-						Containers: []v1.Container{},
+				Spec: &corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "test"},
 					},
 				},
 			},
@@ -86,6 +87,99 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	It("Should not allow a negative postRunTimeoutSeconds", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.PostRunTimeoutSeconds = -1
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting both Spec and MPISpec", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Spec = &corev1.PodSpec{}
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should fail when both Spec and MPISpec are unset", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Spec = nil
+		nnfProfile.Data.MPISpec = nil
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow an empty MPIReplicaSpecs", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow an empty Launcher and Worker ReplicaSpecs", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+				mpiv2beta1.MPIReplicaTypeLauncher: nil,
+				mpiv2beta1.MPIReplicaTypeWorker:   nil,
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow an empty Launcher and Worker PodSpecs", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+				mpiv2beta1.MPIReplicaTypeLauncher: {
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{},
+					},
+				},
+				mpiv2beta1.MPIReplicaTypeWorker: {
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Spec = nil
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+
+		timeout := int64(10)
+		nnfProfile.Data.PostRunTimeoutSeconds = timeout
+		nnfProfile.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds = &timeout
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+
+		timeout := int64(10)
+		nnfProfile.Data.PostRunTimeoutSeconds = timeout
+		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting MPISpec.RunPolicy.BackoffLimit directly", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.Spec = nil
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+
+		limit := int32(10)
+		nnfProfile.Data.MPISpec.RunPolicy.BackoffLimit = &limit
+
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})

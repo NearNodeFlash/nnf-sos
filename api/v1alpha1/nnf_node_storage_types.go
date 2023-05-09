@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,7 +107,7 @@ type NnfNodeStorageStatus struct {
 	// Allocations is the list of storage allocations that were made
 	Allocations []NnfNodeStorageAllocationStatus `json:"allocations,omitempty"`
 
-	dwsv1alpha1.ResourceError `json:",inline"`
+	dwsv1alpha2.ResourceError `json:",inline"`
 
 	// LustreStorageStatus describes the Lustre targets created here.
 	LustreStorage LustreStorageStatus `json:"lustreStorage,omitempty"`

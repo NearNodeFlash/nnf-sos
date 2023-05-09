@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,6 +47,47 @@ var _ webhook.Validator = &NnfContainerProfile{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateCreate() error {
 	nnfcontainerprofilelog.Info("validate create", "name", r.Name)
+
+	mpiJob := r.Data.MPISpec != nil
+	nonmpiJob := r.Data.Spec != nil
+
+	// Either Spec or MPISpec must be set, but not both
+	if mpiJob && nonmpiJob {
+		return fmt.Errorf("both Spec and MPISpec are provided - only 1 can be set")
+	}
+	if !mpiJob && !nonmpiJob {
+		return fmt.Errorf("either Spec or MPISpec must be provided")
+	}
+
+	if mpiJob {
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
+		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+
+		// Don't allow users to set the backoff limit directly
+		if r.Data.MPISpec.RunPolicy.BackoffLimit != nil && r.Data.RetryLimit > 0 {
+			return fmt.Errorf("MPISpec.RunPolicy.BackoffLimit is set. Use RetryLimit instead")
+		}
+
+		launcher, launcherOk := r.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher]
+		if !launcherOk || len(launcher.Template.Spec.Containers) < 1 {
+			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Launcher must be present with at least 1 container defined")
+		}
+		worker, workerOk := r.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker]
+		if !workerOk || len(worker.Template.Spec.Containers) < 1 {
+			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
+		}
+	} else {
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
+		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+
+		if len(r.Data.Spec.Containers) < 1 {
+			return fmt.Errorf("at least 1 container must be defined in Spec")
+		}
+	}
 
 	return nil
 }

@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -121,7 +121,7 @@ func createPinnedProfile(ctx context.Context, clnt client.Client, clntScheme *ru
 	newProfile.Data.Default = false
 	controllerutil.SetControllerReference(owner, newProfile, clntScheme)
 
-	dwsv1alpha1.AddOwnerLabels(newProfile, owner)
+	dwsv1alpha2.AddOwnerLabels(newProfile, owner)
 	err = clnt.Create(ctx, newProfile)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {

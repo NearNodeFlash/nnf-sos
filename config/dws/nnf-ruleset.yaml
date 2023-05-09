@@ -1,4 +1,4 @@
-apiVersion: dws.cray.hpe.com/v1alpha1
+apiVersion: dws.cray.hpe.com/v1alpha2
 kind: DWDirectiveRule
 metadata:
   name: nnf
@@ -20,13 +20,13 @@ spec:
         isValueRequired: true
       - key: "^name$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
         uniqueWithin: "jobdw_name"
       - key: "^profile$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: false
         isValueRequired: true
   - command: "create_persistent"
@@ -44,13 +44,13 @@ spec:
         isValueRequired: true
       - key: "^name$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
         uniqueWithin: "create_persistent_name"
       - key: "^profile$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: false
         isValueRequired: true
   - command: "destroy_persistent"
@@ -58,7 +58,7 @@ spec:
     ruleDefs:
       - key: "^name$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
         uniqueWithin: "destroy_persistent_name"
@@ -67,7 +67,7 @@ spec:
     ruleDefs:
       - key: "^name$"
         type: "string"
-        pattern: "^[A-Za-z][A-Za-z0-9-]+$"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
   - command: "copy_in"
@@ -97,13 +97,15 @@ spec:
     ruleDefs:
       - key: "^name$"
         type: "string"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
       - key: "^profile$"
         type: "string"
+        pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
-      - key: '^(DW_JOB_|DW_PERSISTENT_)[A-Za-z][A-Za-z0-9-]+$'
+      - key: '^(DW_JOB_|DW_PERSISTENT_)[a-z][a-z0-9_]+$'
         type: "string"
         isRequired: false
         isValueRequired: true

@@ -6,7 +6,7 @@ metadata:
 spec:
   desiredState: "Proposal"
   dwDirectives:
-    - "#DW jobdw type=raw capacity=1GB name=myRawStorage"
+    - "#DW jobdw type=raw capacity=1GB name=my-raw-storage"
   wlmID: "5f239bd8-30db-450b-8c2c-a1a7c8631a1a"
   jobID: 900001
   userID: 1001

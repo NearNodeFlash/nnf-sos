@@ -44,6 +44,8 @@ spec:
           # use this node to create storage during setup phase
           - name: RABBIT_NODE
             value: "0"
+          - name: NNF_EC_COMMAND_TIMEOUT_SECONDS
+            value: "90"
           - name: NNF_NODE_NAME
             valueFrom:
               fieldRef:
