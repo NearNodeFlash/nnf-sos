@@ -92,6 +92,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
@@ -174,13 +175,16 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if access.Status.State == "mounted" {
 		result, err = r.mount(ctx, access, clientList, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("Unable to mount file system on client nodes")
+		}
 	} else {
 		result, err = r.unmount(ctx, access, clientList, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("Unable to unmount file system from client nodes")
+		}
 	}
 
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 	if result != nil {
 		return *result, nil
 	}
@@ -201,7 +205,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 	// from a single host.
 	wait, err := r.lockStorage(ctx, access)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to lock storage").WithError(err)
 	}
 
 	if wait {
@@ -211,18 +215,18 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 	// Add compute node information to the storage map, if necessary.
 	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to add endpoints to NnfNodeStorage").WithError(err)
 	}
 
 	// Create the ClientMount resources. One ClientMount resource is created per client
-	err = r.createClientMounts(ctx, access, storageMapping)
+	err = r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to create ClientMount resources").WithError(err)
 	}
 
 	ready, err := r.getNodeStorageEndpointStatus(ctx, access, storageMapping)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to check endpoints for NnfNodeStorage").WithError(err)
 	}
 
 	if ready == false {
@@ -232,7 +236,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 	// Aggregate the status from all the ClientMount resources
 	ready, err = r.getClientMountStatus(ctx, access, clientList)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to check ClientMount status").WithError(err)
 	}
 
 	// Wait for all of the ClientMounts to be ready
@@ -245,15 +249,15 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 
 func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
 	// Create the ClientMount resources. One ClientMount resource is created per client
-	err := r.createClientMounts(ctx, access, storageMapping)
+	err := r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to update ClientMount resources").WithError(err)
 	}
 
 	// Aggregate the status from all the ClientMount resources
 	ready, err := r.getClientMountStatus(ctx, access, clientList)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to get ClientMount status").WithError(err)
 	}
 
 	// Wait for all of the ClientMounts to be ready
@@ -263,12 +267,12 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.N
 
 	err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to remove NnfNodeStorage endpoints").WithError(err)
 	}
 
 	// Unlock the NnfStorage so it can be used by another NnfAccess
 	if err = r.unlockStorage(ctx, access); err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("Unable to unlock storage").WithError(err)
 	}
 
 	return nil, nil
@@ -580,7 +584,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 		// Check that the correct number of NnfNodeStorage resources were found for this
 		// Rabbit.
 		if len(nnfNodeStorageList.Items) != storageCount.instanceCount {
-			return nil, fmt.Errorf("Incorrect number of NnfNodeStorages. found %d. Needed %d.", len(nnfNodeStorageList.Items), storageCount.instanceCount)
+			return nil, dwsv1alpha2.NewResourceError("Incorrect number of NnfNodeStorages. found %d. Needed %d.", len(nnfNodeStorageList.Items), storageCount.instanceCount).WithMajor()
 		}
 
 		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
@@ -684,7 +688,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			}
 
 			if len(existingStorage[storageName]) == 0 {
-				return nil, fmt.Errorf("Invalid matching between clients and storage. Too many clients for storage %s", storageName)
+				return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Invalid matching between clients and storage. Too many clients for storage").WithUser().WithFatal()
 			}
 
 			// If target==all, then the client wants to access all the storage it can see
@@ -897,8 +901,8 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 	return nil
 }
 
-// createClientMounts creates the ClientMount resources based on the information in the storageMapping map.
-func (r *NnfAccessReconciler) createClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+// manageClientMounts creates or updates the ClientMount resources based on the information in the storageMapping map.
+func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 	g := new(errgroup.Group)
 

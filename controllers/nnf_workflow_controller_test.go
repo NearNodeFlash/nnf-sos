@@ -159,7 +159,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
 					Status:          "Ready",
 					Health:          "OK",
-					Error:           "",
 					AllocationCount: 0,
 				}},
 			},

@@ -275,7 +275,6 @@ spec:
                       - Completed
                       - Error
                       - DriverWait
-                      - Stalled
                       type: string
                     taskID:
                       type: string
@@ -340,7 +339,6 @@ spec:
                 enum:
                 - Completed
                 - DriverWait
-                - Stalled
                 - Error
                 type: string
             required:
@@ -608,6 +606,7 @@ spec:
                       - Queued
                       - Running
                       - Completed
+                      - Stalled
                       - Error
                       - DriverWait
                       type: string
@@ -674,6 +673,7 @@ spec:
                 enum:
                 - Completed
                 - DriverWait
+                - Stalled
                 - Error
                 type: string
             required:

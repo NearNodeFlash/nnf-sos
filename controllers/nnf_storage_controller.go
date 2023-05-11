@@ -85,7 +85,7 @@ const (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-
+	log := r.Log.WithValues("NnfStorage", req.NamespacedName)
 	metrics.NnfStorageReconcilesTotal.Inc()
 
 	storage := &nnfv1alpha1.NnfStorage{}
@@ -101,7 +101,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() { dbd.Status.SetResourceErrorAndLog(err, log) }()
+	defer func() { storage.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -280,7 +280,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 
 		if err != nil {
 			if !apierrors.IsConflict(err) {
-				storage.Status.AllocationSets[allocationSetIndex].Error = err.Error()
+				return nil, err
 			}
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -307,7 +307,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	var status nnfv1alpha1.NnfResourceStatusType = nnfv1alpha1.ResourceReady
 
 	allocationSet.AllocationCount = 0
-	allocationSet.Error = ""
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
 	matchLabels := dwsv1alpha2.MatchingOwner(storage)

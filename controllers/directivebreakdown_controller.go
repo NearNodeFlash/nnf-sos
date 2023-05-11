@@ -117,7 +117,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, nil
 		}
 
-		// Delete all  children that are owned by this DirectiveBreakdown.
+		// Delete all children that are owned by this DirectiveBreakdown.
 		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, dbd)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -155,7 +155,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	argsMap, err := dwdparse.BuildArgsMap(dbd.Spec.Directive)
 	if err != nil {
-		return ctrl.Result{}, dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid DW directive: %s", dbd.Spec.Directive), err).WithUserMessage("Invalid DW directive").WithFatal()
+		return ctrl.Result{}, dwsv1alpha2.NewResourceError("Invalid DW directive: %s", dbd.Spec.Directive).WithError(err).WithUserMessage("Invalid DW directive").WithFatal()
 	}
 
 	commonResourceName, commonResourceNamespace := getStorageReferenceNameFromDBD(dbd)
@@ -376,7 +376,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 				}
 			} else {
 				if psi.Spec.UserID != dbd.Spec.UserID {
-					return dwsv1alpha2.NewResourceError(fmt.Sprintf("Existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID), nil).WithUserMessage("User ID does not match existing persistent storage").WithFatal()
+					return dwsv1alpha2.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID).WithUserMessage("User ID does not match existing persistent storage").WithFatal()
 				}
 			}
 
@@ -456,7 +456,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	// The pinned profile will be named for the NnfStorage.
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, dbd.GetNamespace(), commonResourceName)
 	if err != nil {
-		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Unable to find pinned NnfStorageProfile: %s/%s", commonResourceName, dbd.GetNamespace()), err).WithUserMessage("Unable to find pinned NnfStorageProfile").WithFatal()
+		return dwsv1alpha2.NewResourceError("Unable to find pinned NnfStorageProfile: %s/%s", commonResourceName, dbd.GetNamespace()).WithError(err).WithUserMessage("Unable to find pinned NnfStorageProfile").WithFatal()
 	}
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
@@ -518,7 +518,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		}
 
 	default:
-		return dwsv1alpha1.NewResourceError(fmt.Sprintf("Invalid DW directive file system type: %s", filesystem), nil).WithUserMessage("Invalid DW directive").WithFatal()
+		return dwsv1alpha2.NewResourceError("Invalid DW directive file system type: %s", filesystem).WithUserMessage("Invalid DW directive").WithFatal()
 	}
 
 	if dbd.Status.Storage == nil {
@@ -555,7 +555,7 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	// matches[0] is the entire string, we want the parts.
 	val, err := strconv.ParseFloat(matches[1], 64)
 	if err != nil {
-		return 0, dwsv1alpha1.NewResourceError("Invalid capacity string, %s", capacity)
+		return 0, dwsv1alpha2.NewResourceError("Invalid capacity string, %s", capacity)
 	}
 
 	return int64(math.Round(val * powers[matches[3]])), nil

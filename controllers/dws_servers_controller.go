@@ -21,7 +21,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -42,8 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/HewlettPackard/dws/utils/updater"
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
+	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -85,7 +84,7 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-
+	log := r.Log.WithValues("Servers", req.NamespacedName)
 	metrics.NnfServersReconcilesTotal.Inc()
 
 	servers := &dwsv1alpha2.Servers{}
@@ -96,7 +95,7 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha1.ServersStatus](dbd)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ServersStatus](servers)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { servers.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -222,7 +221,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		// If the nnfStorage was created using information from the Servers resource, then
 		// we should always find a match.
 		if serversIndex == -1 {
-			return ctrl.Result{}, fmt.Errorf("Unable to find allocation label %s", label)
+			return ctrl.Result{}, dwsv1alpha2.NewResourceError("Unable to find allocation label %s", label).WithFatal()
 		}
 
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
