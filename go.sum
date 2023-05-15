@@ -7,8 +7,8 @@ github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5r
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20230505195900-67d257c69292 h1:0bT0EoJv+3c+0+gjqvwtuQ1MEF5/vtIHDeqfyWxP2Uk=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20230505195900-67d257c69292/go.mod h1:O71nfDnuK7MZZYAW9kaOFTMo48nmDlaYnzISXEPsKSw=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20230427164720-dc73727a986f h1:kJetY6ACr44dAKEbJkXCwDdbnqqx4KKx63cjXPCHktQ=
-github.com/NearNodeFlash/nnf-ec v0.0.0-20230427164720-dc73727a986f/go.mod h1:11Ol46sAWdqlj3WmIFTzKO+UxQX3lvWBqpe6yaiMEIg=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230512221456-5fa47fb42560 h1:ewsW6a7EFrueIrjoMgS7oBCiaAU0Nc7wKwl5fW95NLg=
+github.com/NearNodeFlash/nnf-ec v0.0.0-20230512221456-5fa47fb42560/go.mod h1:11Ol46sAWdqlj3WmIFTzKO+UxQX3lvWBqpe6yaiMEIg=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
