@@ -56,6 +56,10 @@ GIT_TAG=$(shell git rev-parse --short HEAD)
 # cray.com/nnf-sos-bundle:$VERSION and cray.com/nnf-sos-catalog:$VERSION.
 IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-sos
 
+# The NNF-MFU container image to use in NNFContainerProfile resources.
+NNFMFU_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-mfu
+NNFMFU_VERSION ?= master
+
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 
@@ -258,7 +262,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY)
+	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY) $(NNFMFU_TAG_BASE):$(NNFMFU_VERSION)
 
 undeploy: VERSION ?= $(shell cat .version)
 undeploy: .version kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.

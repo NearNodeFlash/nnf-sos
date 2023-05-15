@@ -83,7 +83,7 @@ data:
           spec:
             containers:
               - name: example-mpi
-                image: ghcr.io/nearnodeflash/nnf-mfu:latest
+                image: nnf-mfu:latest
                 command:
                   - mpirun
                   - dcmp
@@ -94,4 +94,4 @@ data:
           spec:
             containers:
               - name: example-mpi
-                image: ghcr.io/nearnodeflash/nnf-mfu:latest
+                image: nnf-mfu:latest
