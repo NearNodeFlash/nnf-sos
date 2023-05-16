@@ -1105,7 +1105,7 @@ func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *
 		})
 	}
 
-	addInitContainer := func(spec *corev1.PodSpec, user string, uid, gid int64, image string) {
+	addInitContainerPasswd := func(spec *corev1.PodSpec, user string, uid, gid int64, image string) {
 		// This script creates an entry in /etc/passwd to map the user to the given UID/GID using an
 		// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
 		// worker nodes. ssh itself requires that the UID is tied to a username in the container.
@@ -1127,7 +1127,7 @@ exit 0
 			Name:  "mpi-init-passwd",
 			Image: image,
 			Command: []string{
-				"/bin/sh",
+				"/bin/bash",
 				"-c",
 				script,
 			},
@@ -1137,28 +1137,43 @@ exit 0
 		})
 	}
 
-	applyPermissions := func(spec *corev1.PodSpec, mpiJobSpec *mpiv2beta1.MPIJobSpec, user string) {
+	addInitContainerWorkerWait := func(spec *corev1.PodSpec, worker int) {
+		// Add an initContainer to ensure that a worker pod is up and discoverable via dns. This
+		// assumes nslookup is available in the container. The nnf-mfu image provides this.
+		script := `# use nslookup to contact workers
+echo "contacting $HOST..."
+for i in {1..100}; do
+   sleep 1
+   echo "attempt $i of 100..."
+   nslookup $HOST
+   if [ $? -eq 0 ]; then
+      echo "successfully contacted $HOST; done"
+      exit 0
+   fi
+done
+echo "failed to contact $HOST"
+exit 1
+`
+		// Build the worker's hostname.domain (e.g. nnf-container-example-worker-0.nnf-container-example-worker.default.svc)
+		// This name comes from mpi-operator.
+		host := strings.ToLower(fmt.Sprintf(
+			"%s-worker-%d.%s-worker.%s.svc", workflow.Name, worker, workflow.Name, workflow.Namespace))
+		script = strings.ReplaceAll(script, "$HOST", host)
+
+		spec.InitContainers = append(spec.InitContainers, corev1.Container{
+			Name:  fmt.Sprintf("mpi-wait-for-worker-%d", worker),
+			Image: spec.Containers[0].Image,
+			Command: []string{
+				"/bin/bash",
+				"-c",
+				script,
+			},
+		})
+	}
+
+	applyPermissions := func(spec *corev1.PodSpec, mpiJobSpec *mpiv2beta1.MPIJobSpec, user string, worker bool) {
 		uid := int64(workflow.Spec.UserID)
 		gid := int64(workflow.Spec.GroupID)
-
-		// Add SecurityContext if necessary
-		if spec.SecurityContext == nil {
-			spec.SecurityContext = &corev1.PodSecurityContext{}
-		}
-
-		// Skip the rest if root permissions are wanted
-		if strings.ToLower(user) == "root" || uid == 0 {
-			return
-		}
-
-		// Add spec level security context to apply FSGroup to all containers. This keeps the
-		// volumes safe from root actions.
-		spec.SecurityContext.FSGroup = &gid
-
-		// Set the ssh key path for non-root users. Defaults to root.
-		if mpiJobSpec != nil {
-			mpiJobSpec.SSHAuthMountPath = fmt.Sprintf("/home/%s/.ssh", username)
-		}
 
 		// Add volume for /etc/passwd to map user to UID/GID
 		spec.Volumes = append(spec.Volumes, corev1.Volume{
@@ -1168,24 +1183,29 @@ exit 0
 			},
 		})
 
+		if !worker {
+			// Add SecurityContext if necessary
+			if spec.SecurityContext == nil {
+				spec.SecurityContext = &corev1.PodSecurityContext{}
+			}
+
+			// Add spec level security context to apply FSGroup to all containers. This keeps the
+			// volumes safe from root actions.
+			spec.SecurityContext.FSGroup = &gid
+
+			// Set the ssh key path for non-root users. Defaults to root.
+			if mpiJobSpec != nil {
+				mpiJobSpec.SSHAuthMountPath = fmt.Sprintf("/home/%s/.ssh", username)
+			}
+		}
+
 		// Add user permissions to each container. This needs to be done for each container because
 		// we do not want these permissions on the init container.
 		for idx := range spec.Containers {
 			container := &spec.Containers[idx]
 
-			// Add non-root permissions from the workflow's user/group ID
-			if container.SecurityContext == nil {
-				container.SecurityContext = &corev1.SecurityContext{}
-			}
-			container.SecurityContext.RunAsUser = &uid
-			container.SecurityContext.RunAsGroup = &gid
-			nonRoot := true
-			container.SecurityContext.RunAsNonRoot = &nonRoot
-			su := false
-			container.SecurityContext.AllowPrivilegeEscalation = &su
-
 			// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd
-			addInitContainer(spec, user, uid, gid, container.Image)
+			addInitContainerPasswd(spec, user, uid, gid, container.Image)
 
 			// Add a mount to copy the modified /etc/passwd to
 			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -1193,6 +1213,21 @@ exit 0
 				MountPath: "/etc/passwd",
 				SubPath:   "passwd",
 			})
+
+			// Add non-root permissions from the workflow's user/group ID for the launcher, but not
+			// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
+			// the worker are executed via the launcher as the `mpiuser` and not root.
+			if !worker {
+				if container.SecurityContext == nil {
+					container.SecurityContext = &corev1.SecurityContext{}
+				}
+				container.SecurityContext.RunAsUser = &uid
+				container.SecurityContext.RunAsGroup = &gid
+				nonRoot := true
+				container.SecurityContext.RunAsNonRoot = &nonRoot
+				su := false
+				container.SecurityContext.AllowPrivilegeEscalation = &su
+			}
 		}
 	}
 
@@ -1299,6 +1334,11 @@ exit 0
 		// Run the launcher on the first NNF node
 		launcherSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNodes[0]}
 
+		// Use initContainers to ensure the workers are up and discoverable before running the launcher command
+		for i := range nnfNodes {
+			addInitContainerWorkerWait(launcherSpec, i)
+		}
+
 		// Target all the NNF nodes for the workers
 		replicas := int32(len(nnfNodes))
 		worker.Replicas = &replicas
@@ -1337,11 +1377,9 @@ exit 0
 			},
 		}
 
-		// Set the appropriate permissions (UID/GID) from the workflow on the launcher
-		// TODO: test if something other than mpiuser works with the nnf-mfu image
-		applyPermissions(launcherSpec, &mpiJob.Spec, username)
-		// The worker pods need to run ssh servers, so leave them as root
-		applyPermissions(workerSpec, nil, "root")
+		// Set the appropriate permissions (UID/GID) from the workflow
+		applyPermissions(launcherSpec, &mpiJob.Spec, username, false)
+		applyPermissions(workerSpec, &mpiJob.Spec, username, true)
 
 		addNNFVolumes(launcherSpec)
 		addNNFVolumes(workerSpec)
@@ -1384,7 +1422,7 @@ exit 0
 		podSpec.Subdomain = workflow.Name // service name == workflow name
 
 		applyTolerations(podSpec)
-		applyPermissions(podSpec, nil, username)
+		applyPermissions(podSpec, nil, username, false)
 		addNNFVolumes(podSpec)
 		addEnvVars(podSpec, false)
 
