@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -212,8 +212,15 @@ func (*FileSystem) run(cmd string) ([]byte, error) {
 		shellCmd.Stdout = &fsError.stdout
 		shellCmd.Stderr = &fsError.stderr
 		err := shellCmd.Run()
+
+		// Command timed out, return timeout message with FileSystemError
+		if ctx.Err() == context.DeadlineExceeded {
+			errStr := fmt.Sprintf("command timed out after %s seconds", timeoutString)
+			return []byte(errStr), fmt.Errorf("%s: %w", errStr, &fsError)
+		}
+
+		// Command failed, return FileSystemError with stdout and stderr
 		if err != nil {
-			// Command failed, return FileSystemError with stdout and stderr
 			return nil, &fsError
 		}
 		// Command success, return stdout
