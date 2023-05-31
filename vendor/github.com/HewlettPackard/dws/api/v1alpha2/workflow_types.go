@@ -105,8 +105,18 @@ type WorkflowSpec struct {
 	// this can only be set to the next state when the current desired state has been achieved.
 	DesiredState WorkflowState `json:"desiredState"`
 
+	// WLMID identifies the Workflow Manager (WLM), and is set by the WLM
+	// when it creates the workflow resource.
 	WLMID string `json:"wlmID"`
-	JobID int    `json:"jobID"`
+
+	// JobID2 is the WLM job ID that corresponds to this workflow, and is
+	// set by the WLM when it creates the workflow resource.
+	JobID2 string `json:"jobID2"`
+
+	// JobID is the old version of the WLM job ID, and should not be used.
+	// It is retained here only to satisfy the spoke-hub-spoke conversion
+	// test.
+	JobID int `json:"jobIDdoNotUse,omitempty"`
 
 	// UserID specifies the user ID for the workflow. The User ID is used by the various states
 	// in the workflow to ensure the user has permissions to perform certain actions. Used in
@@ -206,8 +216,8 @@ type WorkflowStatus struct {
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Indicates achievement of current state"
+//+kubebuilder:printcolumn:name="JOBID",type="string",JSONPath=".spec.jobID2",description="Job ID"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-//+kubebuilder:printcolumn:name="JOBID",type="integer",JSONPath=".spec.jobID",description="Job ID",priority=1
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="Desired state",priority=1
 //+kubebuilder:printcolumn:name="DESIREDSTATECHANGE",type="date",JSONPath=".status.desiredStateChange",description="Time of most recent desiredState change",priority=1
 //+kubebuilder:printcolumn:name="ELAPSEDTIMELASTSTATE",type="string",JSONPath=".status.elapsedTimeLastState",description="Duration of last state change",priority=1

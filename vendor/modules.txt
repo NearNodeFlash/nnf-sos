@@ -1,4 +1,4 @@
-# github.com/HewlettPackard/dws v0.0.0-20230503202417-89973dea4801
+# github.com/HewlettPackard/dws v0.0.0-20230503202417-89973dea4801 => ../dws
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha2
 github.com/HewlettPackard/dws/config/crd/bases
@@ -769,3 +769,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/HewlettPackard/dws => ../dws

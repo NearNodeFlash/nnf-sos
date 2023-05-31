@@ -192,6 +192,13 @@ func validateWorkflowImmutable(newWorkflow *Workflow, oldWorkflow *Workflow) err
 		return immutableError("WLMID")
 	}
 
+	if newWorkflow.Spec.JobID2 != oldWorkflow.Spec.JobID2 {
+		return immutableError("JobID2")
+	}
+
+	// JobID is the old version of the WLM job ID, and should not be used.
+	// It is retained in the CRD only to satisfy the spoke-hub-spoke
+	// conversion test.
 	if newWorkflow.Spec.JobID != oldWorkflow.Spec.JobID {
 		return immutableError("JobID")
 	}
