@@ -362,7 +362,7 @@ spec:
       name: STATUS
       type: string
     - description: Job ID
-      jsonPath: .spec.jobID2
+      jsonPath: .spec.jobID
       name: JOBID
       type: string
     - jsonPath: .metadata.creationTimestamp
@@ -438,15 +438,13 @@ spec:
                   must also kill any in-progress data transfers, or skip any data
                   transfers that have not yet begun.
                 type: boolean
-              jobID2:
-                description: JobID2 is the WLM job ID that corresponds to this workflow,
+              jobID:
+                anyOf:
+                - type: integer
+                - type: string
+                description: JobID is the WLM job ID that corresponds to this workflow,
                   and is set by the WLM when it creates the workflow resource.
-                type: string
-              jobIDdoNotUse:
-                description: JobID is the old version of the WLM job ID, and should
-                  not be used. It is retained here only to satisfy the spoke-hub-spoke
-                  conversion test.
-                type: integer
+                x-kubernetes-int-or-string: true
               userID:
                 description: UserID specifies the user ID for the workflow. The User
                   ID is used by the various states in the workflow to ensure the user
@@ -462,7 +460,7 @@ spec:
             - desiredState
             - dwDirectives
             - groupID
-            - jobID2
+            - jobID
             - userID
             - wlmID
             type: object

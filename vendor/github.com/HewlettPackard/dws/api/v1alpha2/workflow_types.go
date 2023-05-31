@@ -23,6 +23,7 @@ import (
 	"github.com/HewlettPackard/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -109,14 +110,9 @@ type WorkflowSpec struct {
 	// when it creates the workflow resource.
 	WLMID string `json:"wlmID"`
 
-	// JobID2 is the WLM job ID that corresponds to this workflow, and is
+	// JobID is the WLM job ID that corresponds to this workflow, and is
 	// set by the WLM when it creates the workflow resource.
-	JobID2 string `json:"jobID2"`
-
-	// JobID is the old version of the WLM job ID, and should not be used.
-	// It is retained here only to satisfy the spoke-hub-spoke conversion
-	// test.
-	JobID int `json:"jobIDdoNotUse,omitempty"`
+	JobID intstr.IntOrString `json:"jobID"`
 
 	// UserID specifies the user ID for the workflow. The User ID is used by the various states
 	// in the workflow to ensure the user has permissions to perform certain actions. Used in
@@ -216,7 +212,7 @@ type WorkflowStatus struct {
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Indicates achievement of current state"
-//+kubebuilder:printcolumn:name="JOBID",type="string",JSONPath=".spec.jobID2",description="Job ID"
+//+kubebuilder:printcolumn:name="JOBID",type="string",JSONPath=".spec.jobID",description="Job ID"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="Desired state",priority=1
 //+kubebuilder:printcolumn:name="DESIREDSTATECHANGE",type="date",JSONPath=".status.desiredStateChange",description="Time of most recent desiredState change",priority=1
