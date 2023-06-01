@@ -36,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
@@ -485,7 +486,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        idx,
+					JobID:        intstr.FromInt(idx),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
 						directive,
@@ -961,7 +962,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        -1,
+					JobID:        intstr.FromString("a job id"),
 					WLMID:        "Test WLMID",
 				},
 			}
@@ -1248,7 +1249,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        1234,
+					JobID:        intstr.FromString("job 1234"),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
 						fmt.Sprintf("#DW container name=%s profile=%s", wfName, containerProfile.Name),
@@ -1380,7 +1381,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        0,
+					JobID:        intstr.FromString("some job 234"),
 					WLMID:        "Test WLMID",
 				},
 			}
@@ -1514,7 +1515,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        -1,
+					JobID:        intstr.FromString("job 2222"),
 					WLMID:        "Test WLMID",
 				},
 			}
