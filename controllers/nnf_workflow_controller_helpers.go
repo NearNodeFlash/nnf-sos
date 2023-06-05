@@ -1392,7 +1392,7 @@ exit 1
 				return err
 			}
 		} else {
-			log.Info("Created MPI job", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
+			log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
 		}
 
 		return nil
