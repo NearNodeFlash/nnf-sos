@@ -1051,7 +1051,7 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
 	profile, err := r.getContainerProfile(ctx, workflow, index)
 	if err != nil {
 		return nil, err
@@ -1127,7 +1127,7 @@ exit 0
 			Name:  "mpi-init-passwd",
 			Image: image,
 			Command: []string{
-				"/bin/bash",
+				"/bin/sh",
 				"-c",
 				script,
 			},
@@ -1164,7 +1164,7 @@ exit 1
 			Name:  fmt.Sprintf("mpi-wait-for-worker-%d", worker),
 			Image: spec.Containers[0].Image,
 			Command: []string{
-				"/bin/bash",
+				"/bin/sh",
 				"-c",
 				script,
 			},
@@ -1391,6 +1391,8 @@ exit 1
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
+		} else {
+			log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
 		}
 
 		return nil
@@ -1443,6 +1445,8 @@ exit 1
 				if !apierrors.IsAlreadyExists(err) {
 					return err
 				}
+			} else {
+				log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 			}
 		}
 

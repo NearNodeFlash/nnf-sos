@@ -772,7 +772,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
-		return r.containerHandler(ctx, workflow, dwArgs, index)
+		return r.containerHandler(ctx, workflow, dwArgs, index, log)
 	}
 
 	// Create an NNFAccess for the compute clients
