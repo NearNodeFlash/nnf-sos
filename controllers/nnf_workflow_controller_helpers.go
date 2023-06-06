@@ -1142,7 +1142,7 @@ exit 0
 		// assumes nslookup is available in the container. The nnf-mfu image provides this.
 		script := `# use nslookup to contact workers
 echo "contacting $HOST..."
-for i in {1..100}; do
+for i in $(seq 1 100); do
    sleep 1
    echo "attempt $i of 100..."
    nslookup $HOST
