@@ -73,10 +73,6 @@ spec:
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 10
-        resources:
-          requests:
-            cpu: 100m
-            memory: 60Mi
         securityContext:
           privileged: true
       serviceAccountName: controller-manager
@@ -130,9 +126,5 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
-        resources:
-          requests:
-            cpu: 100m
-            memory: 30Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
