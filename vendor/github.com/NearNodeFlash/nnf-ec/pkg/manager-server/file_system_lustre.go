@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -148,14 +148,16 @@ func (f *FileSystemLustre) Delete() error {
 	var err error
 	if f.Oem.BackFs == BackFsZfs {
 		zpool := f.zfsPoolName()
+
 		// Query the existence of the pool.
 		_, err = f.run(fmt.Sprintf("zpool list %s", zpool))
-		if err != nil {
-			return err
-		}
-		_, err = f.run(fmt.Sprintf("zpool destroy %s", zpool))
-		if err != nil {
-			return err
+
+		// If the pool exists, delete it.
+		if err == nil || (err != nil && !strings.Contains(err.Error(), "no such pool")) {
+			_, err = f.run(fmt.Sprintf("zpool destroy %s", zpool))
+			if err != nil {
+				return err
+			}
 		}
 	}
 

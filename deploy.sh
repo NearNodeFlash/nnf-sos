@@ -25,6 +25,7 @@ CMD=$1
 KUSTOMIZE=$2
 IMG=$3
 OVERLAY=$4
+NNFMFU_IMG=$5
 
 if [[ $CMD == 'deploy' ]]; then
     echo "Waiting for the dws webhook to become ready..."
@@ -34,7 +35,7 @@ if [[ $CMD == 'deploy' ]]; then
         sleep 1
     done
 
-    $(cd config/manager && $KUSTOMIZE edit set image controller=$IMG)
+    (cd config/manager && $KUSTOMIZE edit set image controller=$IMG)
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
@@ -49,6 +50,7 @@ if [[ $CMD == 'deploy' ]]; then
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
+    (cd config/examples && $KUSTOMIZE edit set image nnf-mfu=$NNFMFU_IMG)
     $KUSTOMIZE build config/examples | kubectl apply --server-side=true --force-conflicts -f -
 fi
 

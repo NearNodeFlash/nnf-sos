@@ -3,3 +3,10 @@ namespace: nnf-system
 resources:
 - nnf_v1alpha1_nnfcontainerprofiles.yaml
 - nnf_v1alpha1_nnfstorageprofile.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: nnf-mfu
+  newName: ghcr.io/nearnodeflash/nnf-mfu
+  newTag: master

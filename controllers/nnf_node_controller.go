@@ -48,7 +48,7 @@ import (
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -162,7 +162,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 			}
 		}
 
-		storage := &dwsv1alpha1.Storage{
+		storage := &dwsv1alpha2.Storage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      r.Namespace,
 				Namespace: corev1.NamespaceDefault,
@@ -270,7 +270,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	systemConfig := &dwsv1alpha1.SystemConfiguration{}
+	systemConfig := &dwsv1alpha2.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
 		log.Info("Could not get system configuration")
 		return ctrl.Result{}, nil
@@ -472,6 +472,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Watches(&source.Kind{Type: &dwsv1alpha1.SystemConfiguration{}}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
+		Watches(&source.Kind{Type: &dwsv1alpha2.SystemConfiguration{}}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		Complete(r)
 }
