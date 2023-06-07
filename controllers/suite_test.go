@@ -43,8 +43,8 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
@@ -86,8 +86,8 @@ var envVars = []envSetting{
 	{"NNF_TEST_ENVIRONMENT", "true"},
 }
 
-func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha1.DWDirectiveRule, error) {
-	ruleset := dwsv1alpha1.DWDirectiveRule{}
+func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha2.DWDirectiveRule, error) {
+	ruleset := dwsv1alpha2.DWDirectiveRule{}
 
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -146,10 +146,10 @@ var _ = BeforeSuite(func() {
 	err = nnfv1alpha1.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = dwsv1alpha1.AddToScheme(testEnv.Scheme)
+	err = dwsv1alpha2.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = lusv1alpha1.AddToScheme(testEnv.Scheme)
+	err = lusv1beta1.AddToScheme(testEnv.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
@@ -175,7 +175,7 @@ var _ = BeforeSuite(func() {
 		Start Everything
 	*/
 
-	err = (&dwsv1alpha1.Workflow{}).SetupWebhookWithManager(k8sManager)
+	err = (&dwsv1alpha2.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)

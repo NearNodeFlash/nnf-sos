@@ -56,6 +56,10 @@ GIT_TAG=$(shell git rev-parse --short HEAD)
 # cray.com/nnf-sos-bundle:$VERSION and cray.com/nnf-sos-catalog:$VERSION.
 IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-sos
 
+# The NNF-MFU container image to use in NNFContainerProfile resources.
+NNFMFU_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-mfu
+NNFMFU_VERSION ?= master
+
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 
@@ -223,7 +227,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
 	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
 	for subdir in ${TESTDIRS}; do \
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover.out -ginkgo.v $$failfast; \
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover-$$subdir.out -ginkgo.v $$failfast; \
 	done
 
 ##@ Build
@@ -244,9 +248,9 @@ docker-push: .version ## Push docker image with the manager.
 
 kind-push: VERSION ?= $(shell cat .version)
 kind-push: .version ## Push docker image to kind
-	kind load docker-image --nodes `kubectl get node --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` $(IMAGE_TAG_BASE):$(VERSION)
+	kind load docker-image $(IMAGE_TAG_BASE):$(VERSION)
 	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
-	kind load docker-image --nodes `kubectl get node -l cray.nnf.manager=true --no-headers -o custom-columns=":metadata.name" | paste -d, -s -` gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+	kind load docker-image gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
 
@@ -258,7 +262,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY)
+	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY) $(NNFMFU_TAG_BASE):$(NNFMFU_VERSION)
 
 undeploy: VERSION ?= $(shell cat .version)
 undeploy: .version kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.

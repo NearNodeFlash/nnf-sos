@@ -48,7 +48,7 @@ import (
 	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -289,7 +289,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 	// Retrieve the collection of endpoints for us to map
 	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
 	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get service endpoint", err).WithFatal()
+		nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not get service endpoint", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{Requeue: true}, nil
@@ -302,10 +302,10 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 		Namespace: "default",
 	}
 
-	storage := &dwsv1alpha1.Storage{}
+	storage := &dwsv1alpha2.Storage{}
 	err := r.Get(ctx, namespacedName, storage)
 	if err != nil {
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not read storage resource", err)
+		nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not read storage resource", err)
 		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{Requeue: true}, nil
@@ -346,7 +346,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 			}
 
 			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
-				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not delete storage group", err).WithFatal()
+				nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not delete storage group", err).WithFatal()
 				log.Info(nodeStorage.Status.Error.Error())
 
 				return &ctrl.Result{Requeue: true}, nil
@@ -361,7 +361,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 
 			endPoint, err := r.getEndpoint(ss, endpointID)
 			if err != nil {
-				nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get endpoint", err).WithFatal()
+				nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not get endpoint", err).WithFatal()
 				log.Info(nodeStorage.Status.Error.Error())
 
 				return &ctrl.Result{Requeue: true}, nil
@@ -415,7 +415,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	endpoint, err := r.getEndpoint(ss, os.Getenv("RABBIT_NODE"))
 	if err != nil {
 		nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not get endpoint", err).WithFatal()
+		nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not get endpoint", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{}, nil
@@ -424,7 +424,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nodeStorage)
 	if err != nil {
 		nnfv1alpha1.SetGetResourceFailureCondition(allocationStatus.Conditions, err)
-		nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not find pinned storage profile", err).WithFatal()
+		nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not find pinned storage profile", err).WithFatal()
 		log.Info(nodeStorage.Status.Error.Error())
 
 		return &ctrl.Result{}, nil
@@ -561,7 +561,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, index)
 		if err != nil {
 			updateError(condition, &allocationStatus.FileShare, err)
-			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("could not get VG/LV names", err).WithFatal()
+			nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("could not get VG/LV names", err).WithFatal()
 			log.Info(nodeStorage.Status.Error.Error())
 
 			return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
@@ -683,7 +683,7 @@ func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNod
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
 			updateError(condition, &allocationStatus.FileShare, err)
-			nodeStorage.Status.Error = dwsv1alpha1.NewResourceError("Could not delete storage pool", err).WithFatal()
+			nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("Could not delete storage pool", err).WithFatal()
 			log.Info(nodeStorage.Status.Error.Error())
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -708,12 +708,12 @@ func (r *NnfNodeStorageReconciler) deleteStorage(nodeStorage *nnfv1alpha1.NnfNod
 func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, string, error) {
 	labels := nodeStorage.GetLabels()
 
-	workflowName, ok := labels[dwsv1alpha1.WorkflowNameLabel]
+	workflowName, ok := labels[dwsv1alpha2.WorkflowNameLabel]
 	if !ok {
 		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
 	}
 
-	workflowNamespace, ok := labels[dwsv1alpha1.WorkflowNamespaceLabel]
+	workflowNamespace, ok := labels[dwsv1alpha2.WorkflowNamespaceLabel]
 	if !ok {
 		return "", "", fmt.Errorf("missing Workflow label on NnfNodeStorage")
 	}
@@ -723,14 +723,14 @@ func (r *NnfNodeStorageReconciler) lvmNames(ctx context.Context, nodeStorage *nn
 		return "", "", fmt.Errorf("missing directive index label on NnfNodeStorage")
 	}
 
-	workflow := &dwsv1alpha1.Workflow{
+	workflow := &dwsv1alpha2.Workflow{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workflowName,
 			Namespace: workflowNamespace,
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(workflow), workflow); err != nil {
-		return "", "", dwsv1alpha1.NewResourceError("could get workflow", err)
+		return "", "", dwsv1alpha2.NewResourceError("could get workflow", err)
 	}
 
 	return fmt.Sprintf("%s_%s_%d", workflow.GetUID(), directiveIndex, index), "lv", nil
@@ -765,7 +765,7 @@ func (r *NnfNodeStorageReconciler) createStoragePool(ss nnf.StorageServiceApi, i
 	if err := ss.StorageServiceIdStoragePoolIdPut(ss.Id(), id, sp); err != nil {
 		ecErr, ok := err.(*ec.ControllerError)
 		if ok {
-			resourceErr := dwsv1alpha1.NewResourceError("", err)
+			resourceErr := dwsv1alpha2.NewResourceError("", err)
 			switch ecErr.Cause() {
 			case "Insufficient capacity available":
 				return nil, resourceErr.WithUserMessage("Insufficient capacity available").WithFatal()
@@ -928,7 +928,7 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 
 func (r *NnfNodeStorageReconciler) handleCreateError(storage *nnfv1alpha1.NnfNodeStorage, message string, err error) (*ctrl.Result, error) {
 
-	resourceError := dwsv1alpha1.NewResourceError(message, err)
+	resourceError := dwsv1alpha2.NewResourceError(message, err)
 	defer func() {
 		r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(storage).String()).Info(resourceError.Error())
 		storage.Status.Error = resourceError

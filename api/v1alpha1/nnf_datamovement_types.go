@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	dwsv1alpha1 "github.com/HewlettPackard/dws/api/v1alpha1"
+	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -211,7 +211,7 @@ const (
 	DataMovementTeardownStateLabel = "nnf.cray.hpe.com/teardown_state"
 )
 
-func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha1.WorkflowState) {
+func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha2.WorkflowState) {
 	labels := object.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)
