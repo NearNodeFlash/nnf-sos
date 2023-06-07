@@ -741,68 +741,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(BeTrue(), "waiting for ready after setup")
 			})
 
-			It("Succeeds with multiple mdts", func() {
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
-					if len(servers.Spec.AllocationSets) == 0 {
-						return fmt.Errorf("Waiting for cache to update")
-					}
-					for i := range servers.Spec.AllocationSets {
-						if servers.Spec.AllocationSets[i].Label != "mdt" {
-							continue
-						}
-
-						// Make four allocations, each with one quarter the size
-						servers.Spec.AllocationSets[i].AllocationSize /= 4
-						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
-						servers.Spec.AllocationSets[i].Storage[1].AllocationCount = 3
-					}
-					return k8sClient.Update(context.TODO(), servers)
-				}).Should(Succeed(), "Set multiple allocations")
-
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
-					return k8sClient.Update(context.TODO(), workflow)
-				}).Should(Succeed(), "update to Setup")
-
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
-				}).Should(BeTrue(), "waiting for ready after setup")
-			})
-
-			It("Succeeds with multiple mdts", func() {
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
-					if len(servers.Spec.AllocationSets) == 0 {
-						return fmt.Errorf("Waiting for cache to update")
-					}
-					for i := range servers.Spec.AllocationSets {
-						if servers.Spec.AllocationSets[i].Label != "mdt" {
-							continue
-						}
-
-						// Make four allocations, each with one quarter the size
-						servers.Spec.AllocationSets[i].AllocationSize /= 4
-						servers.Spec.AllocationSets[i].Storage = append(servers.Spec.AllocationSets[i].Storage, servers.Spec.AllocationSets[i].Storage[0])
-						servers.Spec.AllocationSets[i].Storage[1].AllocationCount = 3
-					}
-					return k8sClient.Update(context.TODO(), servers)
-				}).Should(Succeed(), "Set multiple allocations")
-
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
-					return k8sClient.Update(context.TODO(), workflow)
-				}).Should(Succeed(), "update to Setup")
-
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
-				}).Should(BeTrue(), "waiting for ready after setup")
-			})
-
 			It("Fails when allocation is too small", func() {
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
