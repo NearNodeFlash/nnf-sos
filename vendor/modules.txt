@@ -1,4 +1,4 @@
-# github.com/HewlettPackard/dws v0.0.1-0.20230602182741-44a9b200eedd => ../dws
+# github.com/HewlettPackard/dws v0.0.1-0.20230613201835-73abc41bd83c
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha2
 github.com/HewlettPackard/dws/config/crd/bases
@@ -11,7 +11,7 @@ github.com/HewlettPackard/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.0-20230505195900-67d257c69292 => ../lustre-fs-operator
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230613180840-6178f2b04900
 ## explicit; go 1.19
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
@@ -769,5 +769,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/NearNodeFlash/lustre-fs-operator => ../lustre-fs-operator
-# github.com/HewlettPackard/dws => ../dws
