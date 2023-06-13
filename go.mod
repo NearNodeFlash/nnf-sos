@@ -1,5 +1,8 @@
 module github.com/NearNodeFlash/nnf-sos
 
+replace github.com/NearNodeFlash/lustre-fs-operator => ../lustre-fs-operator
+replace github.com/HewlettPackard/dws => ../dws
+
 go 1.19
 
 require (
