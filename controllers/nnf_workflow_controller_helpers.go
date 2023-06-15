@@ -22,7 +22,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -236,8 +235,8 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		return nnfv1alpha1.NewWorkflowError("invalid DW directive: " + workflow.Spec.DWDirectives[index]).WithFatal()
 	}
 
-	// Ensure the supplied profile exists or use the default
-	profile, err := r.findContainerProfile(ctx, workflow, index)
+	// Ensure the supplied profile exists
+	profile, err := findContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
 	}
@@ -1052,7 +1051,7 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 }
 
 func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
@@ -1563,7 +1562,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 
 func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
@@ -1635,7 +1634,7 @@ func (r *NnfWorkflowReconciler) getMPIJobConditions(ctx context.Context, workflo
 
 func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
@@ -1740,7 +1739,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 
 func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
@@ -1820,108 +1819,6 @@ func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *
 	}
 
 	return jobList, nil
-}
-
-func (r *NnfWorkflowReconciler) getContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
-	if err != nil {
-		return nil, err
-	}
-
-	if profile == nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
-	}
-
-	if !profile.Data.Pinned {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("expected pinned container profile '%s'", indexedResourceName(workflow, index)).WithFatal()
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) findPinnedContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	profile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index),
-			Namespace: workflow.Namespace,
-		},
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
-		return nil, err
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-	if err != nil {
-		return nil, err
-	}
-
-	name, found := args["profile"]
-	if !found {
-		return nil, fmt.Errorf("container directive '%s' has no profile key", workflow.Spec.DWDirectives[index])
-	}
-
-	profile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE"),
-		},
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
-		return nil, err
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) error {
-	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if profile != nil {
-		if !profile.Data.Pinned {
-			return fmt.Errorf("expected pinned container profile, but it was not pinned: %s", profile.Name)
-		}
-
-		return nil
-	}
-
-	profile, err = r.findContainerProfile(ctx, workflow, index)
-	if err != nil {
-		return err
-	}
-
-	pinnedProfile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index),
-			Namespace: workflow.Namespace,
-		},
-	}
-
-	profile.Data.DeepCopyInto(&pinnedProfile.Data)
-
-	pinnedProfile.Data.Pinned = true
-
-	dwsv1alpha2.AddOwnerLabels(pinnedProfile, workflow)
-
-	if err := controllerutil.SetControllerReference(workflow, pinnedProfile, r.Scheme); err != nil {
-		r.Log.Error(err, "failed to set controller reference on profile", "profile", pinnedProfile)
-		return fmt.Errorf("failed to set controller reference on profile %s", client.ObjectKeyFromObject(pinnedProfile))
-	}
-
-	r.Log.Info("Creating pinned container profile", "resource", client.ObjectKeyFromObject(pinnedProfile))
-	if err := r.Create(ctx, pinnedProfile); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments

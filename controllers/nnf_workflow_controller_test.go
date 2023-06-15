@@ -1094,6 +1094,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
 				}).Should(BeTrue(), "reach desired Proposal state")
+				Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 2)).To(Succeed())
 			})
 		})
 
@@ -1118,6 +1119,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
 				}).Should(BeTrue(), "reach desired Proposal state")
+				Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 1)).To(Succeed())
 			})
 		})
 
@@ -1159,7 +1161,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 
-		Context("when a argument is not in the container profile", func() {
+		Context("when an argument is not in the container profile", func() {
 			BeforeEach(func() {
 				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
 					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
