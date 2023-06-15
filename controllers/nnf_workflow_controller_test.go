@@ -1030,14 +1030,20 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	When("Using container directives", func() {
 		var ns *corev1.Namespace
 
-		persistentStorageName := "container-persistent"
-		createPersistent := true
+		var persistentStorageName string
+		var createPersistent bool
 
 		var containerProfile *nnfv1alpha1.NnfContainerProfile
-		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage = nil
-		createContainerProfile := true
+		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage
+		var createContainerProfile bool
 
 		BeforeEach(func() {
+			persistentStorageName = "container-persistent"
+			createPersistent = true
+			containerProfile = nil
+			containerProfileStorages = nil
+			createContainerProfile = true
+
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
 			// placed in the "nnf-system" namespace so it must be present.
 			// EnvTest does not support namespace deletion, so this could already exist. Ignore any errors.
@@ -1141,6 +1147,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		Context("when a required storage in the container profile is not present in the arguments", func() {
+			BeforeEach(func() {
+				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
+					{Name: "DW_JOB_foo_local_storage", Optional: false},
+					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+				}
+			})
 			It("should go to error", func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
