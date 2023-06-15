@@ -287,7 +287,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	// only jobdw, persistentdw, and create_persistent need a directive breakdown
 	switch dwArgs["command"] {
 	case "container":
-		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
+		return nil, createPinnedContainerProfileIfNecessary(ctx, r.Client, r.Scheme, workflow, index, r.Log)
 	case "jobdw", "persistentdw", "create_persistent":
 		break
 	default:
