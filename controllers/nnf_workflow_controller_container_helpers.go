@@ -27,13 +27,16 @@ import (
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type nnfUserContainer struct {
@@ -43,7 +46,9 @@ type nnfUserContainer struct {
 	volumes  []nnfContainerVolume
 	username string
 	uid, gid int64
-	r        *NnfWorkflowReconciler
+	client   client.Client
+	log      logr.Logger
+	scheme   *runtime.Scheme
 	ctx      context.Context
 	index    int
 }
@@ -149,13 +154,13 @@ func (c *nnfUserContainer) createMPIJob() error {
 	c.addEnvVars(launcherSpec, true)
 	c.addEnvVars(workerSpec, true)
 
-	err := c.r.Create(c.ctx, mpiJob)
+	err := c.client.Create(c.ctx, mpiJob)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
 	} else {
-		c.r.Log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
+		c.log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
 	}
 
 	return nil
@@ -203,13 +208,13 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 		newJob := &batchv1.Job{}
 		job.DeepCopyInto(newJob)
 
-		err := c.r.Create(c.ctx, newJob)
+		err := c.client.Create(c.ctx, newJob)
 		if err != nil {
 			if !apierrors.IsAlreadyExists(err) {
 				return err
 			}
 		} else {
-			c.r.Log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
+			c.log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 		}
 	}
 
@@ -229,7 +234,7 @@ func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 	labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(c.index)
 	job.SetLabels(labels)
 
-	if err := ctrl.SetControllerReference(c.workflow, job, c.r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(c.workflow, job, c.scheme); err != nil {
 		return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.GetName()).WithError(err)
 	}
 

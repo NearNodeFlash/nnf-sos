@@ -1070,7 +1070,9 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 		uid:      int64(workflow.Spec.UserID),
 		gid:      int64(workflow.Spec.GroupID),
 		index:    index,
-		r:        r,
+		client:   r.Client,
+		log:      r.Log,
+		scheme:   r.Scheme,
 		ctx:      ctx,
 	}
 
