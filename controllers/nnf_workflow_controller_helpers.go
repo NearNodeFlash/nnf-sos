@@ -33,7 +33,6 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/go-logr/logr"
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -53,16 +52,6 @@ type result struct {
 	reason       string
 	object       client.Object
 	deleteStatus *dwsv1alpha2.DeleteStatus
-}
-
-// This struct contains all the necessary information for mounting container storages
-type nnfContainerVolume struct {
-	name           string
-	command        string
-	directiveName  string
-	directiveIndex int
-	mountPath      string
-	envVarName     string
 }
 
 // When workflow stages cannot advance they return a Requeue result with a particular reason.
@@ -1050,14 +1039,12 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
+func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
 	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
 	mpiJob := profile.Data.MPISpec != nil
-
-	username := nnfv1alpha1.ContainerUser
 
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
@@ -1074,394 +1061,32 @@ func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *
 		return result, nil
 	}
 
-	applyLabels := func(job metav1.Object) error {
-
-		// Apply Job Labels/Owners
-		dwsv1alpha2.InheritParentLabels(job, workflow)
-		dwsv1alpha2.AddOwnerLabels(job, workflow)
-		dwsv1alpha2.AddWorkflowLabels(job, workflow)
-
-		labels := job.GetLabels()
-		labels[nnfv1alpha1.ContainerLabel] = workflow.Name
-		labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
-		labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
-		labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-		job.SetLabels(labels)
-
-		if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
-			return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.GetName()).WithError(err)
-		}
-
-		return nil
-	}
-
-	applyTolerations := func(spec *corev1.PodSpec) {
-		spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
-			Effect:   corev1.TaintEffectNoSchedule,
-			Key:      "cray.nnf.node",
-			Operator: corev1.TolerationOpEqual,
-			Value:    "true",
-		})
-	}
-
-	addInitContainerPasswd := func(spec *corev1.PodSpec, user string, uid, gid int64, image string) {
-		// This script creates an entry in /etc/passwd to map the user to the given UID/GID using an
-		// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
-		// worker nodes. ssh itself requires that the UID is tied to a username in the container.
-		// Since the launcher container is running as non-root, we need to make use of an InitContainer
-		// to edit /etc/passwd and copy it to a volume which can then be mounted into the non-root
-		// container to replace /etc/passwd.
-		script := `# tie the UID/GID to the user
-sed -i '/^$USER/d' /etc/passwd
-echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /etc/passwd
-cp /etc/passwd /config/
-exit 0
-`
-		// Replace the user and UID/GID
-		script = strings.ReplaceAll(script, "$USER", user)
-		script = strings.ReplaceAll(script, "$UID", fmt.Sprintf("%d", uid))
-		script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", gid))
-
-		spec.InitContainers = append(spec.InitContainers, corev1.Container{
-			Name:  "mpi-init-passwd",
-			Image: image,
-			Command: []string{
-				"/bin/sh",
-				"-c",
-				script,
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{Name: "passwd", MountPath: "/config"},
-			},
-		})
-	}
-
-	addInitContainerWorkerWait := func(spec *corev1.PodSpec, worker int) {
-		// Add an initContainer to ensure that a worker pod is up and discoverable via dns. This
-		// assumes nslookup is available in the container. The nnf-mfu image provides this.
-		script := `# use nslookup to contact workers
-echo "contacting $HOST..."
-for i in $(seq 1 100); do
-   sleep 1
-   echo "attempt $i of 100..."
-   nslookup $HOST
-   if [ $? -eq 0 ]; then
-      echo "successfully contacted $HOST; done"
-      exit 0
-   fi
-done
-echo "failed to contact $HOST"
-exit 1
-`
-		// Build the worker's hostname.domain (e.g. nnf-container-example-worker-0.nnf-container-example-worker.default.svc)
-		// This name comes from mpi-operator.
-		host := strings.ToLower(fmt.Sprintf(
-			"%s-worker-%d.%s-worker.%s.svc", workflow.Name, worker, workflow.Name, workflow.Namespace))
-		script = strings.ReplaceAll(script, "$HOST", host)
-
-		spec.InitContainers = append(spec.InitContainers, corev1.Container{
-			Name:  fmt.Sprintf("mpi-wait-for-worker-%d", worker),
-			Image: spec.Containers[0].Image,
-			Command: []string{
-				"/bin/sh",
-				"-c",
-				script,
-			},
-		})
-	}
-
-	applyPermissions := func(spec *corev1.PodSpec, mpiJobSpec *mpiv2beta1.MPIJobSpec, user string, worker bool) {
-		uid := int64(workflow.Spec.UserID)
-		gid := int64(workflow.Spec.GroupID)
-
-		// Add volume for /etc/passwd to map user to UID/GID
-		spec.Volumes = append(spec.Volumes, corev1.Volume{
-			Name: "passwd",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-
-		if !worker {
-			// Add SecurityContext if necessary
-			if spec.SecurityContext == nil {
-				spec.SecurityContext = &corev1.PodSecurityContext{}
-			}
-
-			// Add spec level security context to apply FSGroup to all containers. This keeps the
-			// volumes safe from root actions.
-			spec.SecurityContext.FSGroup = &gid
-
-			// Set the ssh key path for non-root users. Defaults to root.
-			if mpiJobSpec != nil {
-				mpiJobSpec.SSHAuthMountPath = fmt.Sprintf("/home/%s/.ssh", username)
-			}
-		}
-
-		// Add user permissions to each container. This needs to be done for each container because
-		// we do not want these permissions on the init container.
-		for idx := range spec.Containers {
-			container := &spec.Containers[idx]
-
-			// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd
-			addInitContainerPasswd(spec, user, uid, gid, container.Image)
-
-			// Add a mount to copy the modified /etc/passwd to
-			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      "passwd",
-				MountPath: "/etc/passwd",
-				SubPath:   "passwd",
-			})
-
-			// Add non-root permissions from the workflow's user/group ID for the launcher, but not
-			// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
-			// the worker are executed via the launcher as the `mpiuser` and not root.
-			if !worker {
-				if container.SecurityContext == nil {
-					container.SecurityContext = &corev1.SecurityContext{}
-				}
-				container.SecurityContext.RunAsUser = &uid
-				container.SecurityContext.RunAsGroup = &gid
-				nonRoot := true
-				container.SecurityContext.RunAsNonRoot = &nonRoot
-				su := false
-				container.SecurityContext.AllowPrivilegeEscalation = &su
-			}
-		}
-	}
-
-	addNNFVolumes := func(spec *corev1.PodSpec) {
-		for _, vol := range volumes {
-			// Volumes
-			hostPathType := corev1.HostPathDirectory
-			spec.Volumes = append(spec.Volumes, corev1.Volume{
-				Name: vol.name,
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: vol.mountPath,
-						Type: &hostPathType,
-					},
-				},
-			})
-
-			// Add VolumeMounts and Volume environment variables for all containers
-			for idx := range spec.Containers {
-				container := &spec.Containers[idx]
-
-				container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-					Name:      vol.name,
-					MountPath: vol.mountPath,
-				})
-
-				container.Env = append(container.Env, corev1.EnvVar{
-					Name:  vol.envVarName,
-					Value: vol.mountPath,
-				})
-			}
-		}
-	}
-
-	addEnvVars := func(spec *corev1.PodSpec, mpi bool) {
-		// Add in non-volume environment variables for all containers
-		for idx := range spec.Containers {
-			container := &spec.Containers[idx]
-
-			// Jobs/hostnames and services/subdomains are named differently based on mpi or not. For
-			// MPI, there are launcher/worker pods and the service is named after the worker. For
-			// non-MPI, the jobs are named after the rabbit node.
-			subdomain := ""
-			domain := workflow.Namespace + ".svc.cluster.local"
-			hosts := []string{}
-
-			if mpi {
-				launcher := workflow.Name + "-launcher"
-				worker := workflow.Name + "-worker"
-				subdomain = worker
-
-				hosts = append(hosts, launcher)
-				for i, _ := range nnfNodes {
-					hosts = append(hosts, fmt.Sprintf("%s-%d", worker, i))
-				}
-			} else {
-				subdomain = spec.Subdomain
-				hosts = append(hosts, nnfNodes...)
-			}
-
-			container.Env = append(container.Env,
-				corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
-				corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},
-				corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, " ")})
-		}
-	}
-
-	// MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
-	// a job for the launcher (to run mpirun) and a replicaset for the worker pods. The worker nodes
-	// run an ssh server to listen for mpirun operations from the launcher pod.
-	createMPIJob := func() error {
-		mpiJob := &mpiv2beta1.MPIJob{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      workflow.Name,
-				Namespace: workflow.Namespace,
-			},
-		}
-		profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
-		username = nnfv1alpha1.ContainerMPIUser
-
-		if err := applyLabels(&mpiJob.ObjectMeta); err != nil {
-			return err
-		}
-
-		// Use the profile's backoff limit if not set
-		if mpiJob.Spec.RunPolicy.BackoffLimit == nil {
-			mpiJob.Spec.RunPolicy.BackoffLimit = &profile.Data.RetryLimit
-		}
-
-		// MPIJobs have two pod specs: one for the launcher and one for the workers
-		launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
-		launcherSpec := &launcher.Template.Spec
-		worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
-		workerSpec := &worker.Template.Spec
-
-		// Keep failed pods around for log inspection
-		launcher.RestartPolicy = mpicommonv1.RestartPolicyNever
-		worker.RestartPolicy = mpicommonv1.RestartPolicyNever
-
-		// Add NNF node tolerations
-		applyTolerations(launcherSpec)
-		applyTolerations(workerSpec)
-
-		// Run the launcher on the first NNF node
-		launcherSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNodes[0]}
-
-		// Use initContainers to ensure the workers are up and discoverable before running the launcher command
-		for i := range nnfNodes {
-			addInitContainerWorkerWait(launcherSpec, i)
-		}
-
-		// Target all the NNF nodes for the workers
-		replicas := int32(len(nnfNodes))
-		worker.Replicas = &replicas
-		workerSpec.Affinity = &corev1.Affinity{
-			// Ensure we run a worker on every NNF node
-			NodeAffinity: &corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{{
-						MatchExpressions: []corev1.NodeSelectorRequirement{{
-							Key:      "kubernetes.io/hostname",
-							Operator: corev1.NodeSelectorOpIn,
-							Values:   nnfNodes,
-						}},
-					}},
-				},
-			},
-			// But make sure it's only 1 per node
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
-					TopologyKey: "kubernetes.io/hostname",
-					LabelSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      "training.kubeflow.org/job-name",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{workflow.Name},
-							},
-							{
-								Key:      "training.kubeflow.org/job-role",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{"worker"},
-							},
-						},
-					}},
-				},
-			},
-		}
-
-		// Set the appropriate permissions (UID/GID) from the workflow
-		applyPermissions(launcherSpec, &mpiJob.Spec, username, false)
-		applyPermissions(workerSpec, &mpiJob.Spec, username, true)
-
-		addNNFVolumes(launcherSpec)
-		addNNFVolumes(workerSpec)
-		addEnvVars(launcherSpec, true)
-		addEnvVars(workerSpec, true)
-
-		err = r.Create(ctx, mpiJob)
-		if err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return err
-			}
-		} else {
-			log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
-		}
-
-		return nil
-	}
-
-	// Non-MPI container workflow. In this model, a job is created for each NNF node which ensures
-	// that a pod is executed successfully (or the backOffLimit) is hit. Each container in this model
-	// runs the same image.
-	createNonMPIJob := func() error {
-		// Use one job that we'll use as a base to create all jobs. Each NNF node will get its own job.
-		job := &batchv1.Job{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: workflow.Namespace,
-			},
-		}
-		profile.Data.Spec.DeepCopyInto(&job.Spec.Template.Spec)
-		podSpec := &job.Spec.Template.Spec
-
-		if err := applyLabels(&job.ObjectMeta); err != nil {
-			return err
-		}
-
-		// Use the same labels as the job for the pods
-		job.Spec.Template.Labels = job.DeepCopy().Labels
-
-		job.Spec.BackoffLimit = &profile.Data.RetryLimit
-
-		podSpec.RestartPolicy = corev1.RestartPolicyNever
-		podSpec.Subdomain = workflow.Name // service name == workflow name
-
-		applyTolerations(podSpec)
-		applyPermissions(podSpec, nil, username, false)
-		addNNFVolumes(podSpec)
-		addEnvVars(podSpec, false)
-
-		// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
-		for _, nnfNode := range nnfNodes {
-			job.ObjectMeta.Name = workflow.Name + "-" + nnfNode
-			podSpec.Hostname = nnfNode
-
-			// In our case, the target is only 1 node for the job, so a restartPolicy of Never
-			// is ok because any retry (i.e. new pod) will land on the same node.
-			podSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNode}
-
-			newJob := &batchv1.Job{}
-			job.DeepCopyInto(newJob)
-
-			err = r.Create(ctx, newJob)
-			if err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return err
-				}
-			} else {
-				log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
-			}
-		}
-
-		return nil
+	c := nnfUserContainer{
+		workflow: workflow,
+		profile:  profile,
+		nnfNodes: nnfNodes,
+		volumes:  volumes,
+		username: nnfv1alpha1.ContainerUser,
+		uid:      int64(workflow.Spec.UserID),
+		gid:      int64(workflow.Spec.GroupID),
+		index:    index,
+		client:   r.Client,
+		log:      r.Log,
+		scheme:   r.Scheme,
+		ctx:      ctx,
 	}
 
 	if mpiJob {
-		if err := createMPIJob(); err != nil {
+		if err := c.createMPIJob(); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update MPIJob").WithFatal().WithError(err)
 		}
 	} else {
+		// For non-MPI jobs, we need to create a service ourselves
 		if err := r.createContainerService(ctx, workflow); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
 		}
 
-		if err := createNonMPIJob(); err != nil {
+		if err := c.createNonMPIJob(); err != nil {
 			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
 		}
 	}
