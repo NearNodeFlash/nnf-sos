@@ -1133,7 +1133,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						return workflow.Status.Status == dwsv1alpha2.StatusError && strings.Contains(workflow.Status.Message, "container profile") && strings.Contains(workflow.Status.Message, "is restricted to")
-					}).Should(BeFalse(), "does not reach desired Proposal state")
+					}).Should(BeTrue(), "does not reach desired Proposal state")
 				},
 				Entry("when restricted to non-matching user ID", &altWorkflowUserID, nil),
 				Entry("when restricted to non-matching group ID", nil, &altWorkflowGroupID),

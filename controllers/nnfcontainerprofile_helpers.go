@@ -100,7 +100,7 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 		return nil, fmt.Errorf(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID)
 	}
 	if profile.Data.GroupID != nil && *profile.Data.GroupID != workflow.Spec.GroupID {
-		return nil, fmt.Errorf(restrictedMsg, profile.Name, "GroupID", *profile.Data.UserID)
+		return nil, fmt.Errorf(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID)
 
 	}
 
