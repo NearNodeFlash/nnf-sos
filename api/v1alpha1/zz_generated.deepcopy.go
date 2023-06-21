@@ -207,6 +207,16 @@ func (in *NnfContainerProfileData) DeepCopyInto(out *NnfContainerProfileData) {
 		*out = make([]NnfContainerProfileStorage, len(*in))
 		copy(*out, *in)
 	}
+	if in.UserID != nil {
+		in, out := &in.UserID, &out.UserID
+		*out = new(uint32)
+		**out = **in
+	}
+	if in.GroupID != nil {
+		in, out := &in.GroupID, &out.GroupID
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.Spec != nil {
 		in, out := &in.Spec, &out.Spec
 		*out = new(corev1.PodSpec)

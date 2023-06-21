@@ -28,6 +28,12 @@ spec:
           data:
             description: NnfContainerProfileSpec defines the desired state of NnfContainerProfile
             properties:
+              groupID:
+                description: GroupID specifies the group ID that is allowed to use
+                  this profile. If this is specified, only Workflows that have a matching
+                  group ID can select this profile.
+                format: int32
+                type: integer
               mpiSpec:
                 description: MPIJobSpec to define the containers created from container
                   profile. This is used for MPI containers via MPIJobs. See mpi-operator
@@ -15735,6 +15741,12 @@ spec:
                   - optional
                   type: object
                 type: array
+              userID:
+                description: UserID specifies the user ID that is allowed to use this
+                  profile. If this is specified, only Workflows that have a matching
+                  user ID can select this profile.
+                format: int32
+                type: integer
             required:
             - retryLimit
             type: object

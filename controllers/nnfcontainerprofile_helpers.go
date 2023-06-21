@@ -94,6 +94,16 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 		return nil, nnfv1alpha1.NewWorkflowErrorf("expected container profile that is not pinned '%s', but found one that is pinned", indexedResourceName(workflow, index)).WithFatal()
 	}
 
+	// Determine whether the profile is restricted to a UserID/GroupID.
+	restrictedMsg := "container profile '%s' is restricted to %s %d"
+	if profile.Data.UserID != nil && *profile.Data.UserID != workflow.Spec.UserID {
+		return nil, fmt.Errorf(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID)
+	}
+	if profile.Data.GroupID != nil && *profile.Data.GroupID != workflow.Spec.GroupID {
+		return nil, fmt.Errorf(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID)
+
+	}
+
 	return profile, nil
 }
 
