@@ -73,6 +73,11 @@ func (c *nnfUserContainer) createMPIJob() error {
 			Namespace: c.workflow.Namespace,
 		},
 	}
+
+	if c.profile.Data.MPISpec == nil {
+		return fmt.Errorf("Profile does not contain Data.MPISpec")
+	}
+
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
 	c.username = nnfv1alpha1.ContainerMPIUser
 
@@ -86,9 +91,16 @@ func (c *nnfUserContainer) createMPIJob() error {
 	}
 
 	// MPIJobs have two pod specs: one for the launcher and one for the workers
-	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
+	launcher, found := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
+	if !found {
+		return fmt.Errorf("%s not found in MPIReplicaSpecs", mpiv2beta1.MPIReplicaTypeLauncher)
+	}
 	launcherSpec := &launcher.Template.Spec
-	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
+
+	worker, found := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
+	if !found {
+		return fmt.Errorf("%s not found in MPIReplicaSpecs", mpiv2beta1.MPIReplicaTypeWorker)
+	}
 	workerSpec := &worker.Template.Spec
 
 	// Keep failed pods around for log inspection
@@ -357,19 +369,33 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 			SubPath:   "passwd",
 		})
 
+		// Create SecurityContext if necessary
+		if container.SecurityContext == nil {
+			container.SecurityContext = &corev1.SecurityContext{}
+		}
+
 		// Add non-root permissions from the workflow's user/group ID for the launcher, but not
 		// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
 		// the worker are executed via the launcher as the `mpiuser` and not root.
 		if !worker {
-			if container.SecurityContext == nil {
-				container.SecurityContext = &corev1.SecurityContext{}
-			}
 			container.SecurityContext.RunAsUser = &c.uid
 			container.SecurityContext.RunAsGroup = &c.gid
 			nonRoot := true
 			container.SecurityContext.RunAsNonRoot = &nonRoot
 			su := false
 			container.SecurityContext.AllowPrivilegeEscalation = &su
+		} else {
+			// For the worker nodes, we need to ensure we have the appropriate linux capabilities to
+			// allow for ssh access for mpirun. Drop all capabilities and only add what is
+			// necessary. Only do this if the Capabilities have not been set by the user.
+			su := true
+			container.SecurityContext.AllowPrivilegeEscalation = &su
+			if container.SecurityContext.Capabilities == nil {
+				container.SecurityContext.Capabilities = &corev1.Capabilities{
+					Drop: []corev1.Capability{"ALL"},
+					Add:  []corev1.Capability{"NET_BIND_SERVICE", "SYS_CHROOT", "AUDIT_WRITE", "SETUID", "SETGID"},
+				}
+			}
 		}
 	}
 }

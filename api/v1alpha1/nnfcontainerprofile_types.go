@@ -92,7 +92,7 @@ type NnfContainerProfile struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Data NnfContainerProfileData `json:"data,omitempty"`
+	Data NnfContainerProfileData `json:"data"`
 }
 
 // +kubebuilder:object:root=true
