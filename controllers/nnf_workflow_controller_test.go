@@ -1238,9 +1238,10 @@ var _ = Describe("NnfContainerProfile Webhook test", func() {
 	// The nnfcontainer_webhook_test.go covers testing of the webhook.
 	// This spec exists only to verify that the webhook is also running for
 	// the controller tests.
-	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
-		profileInvalid := basicNnfContainerProfile("an-invalid-profile", nil)
-		profileInvalid.Data.RetryLimit = -100
+	It("fails to create an invalid profile to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfContainerProfile("invalid-"+uuid.NewString()[:8], nil)
+		profileInvalid.Data.Spec = nil
+		profileInvalid.Data.MPISpec = nil
 		Expect(createNnfContainerProfile(profileInvalid, false)).To(BeNil())
 	})
 })
@@ -1249,8 +1250,8 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 	// The nnfstorageprofile_webhook_test.go covers testing of the webhook.
 	// This spec exists only to verify that the webhook is also running for
 	// the controller tests.
-	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
-		profileInvalid := basicNnfStorageProfile("an-invalid-profile")
+	It("fails to create an invalid profile to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfStorageProfile("invalid-" + uuid.NewString()[:8])
 		profileInvalid.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		profileInvalid.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())

@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,22 +35,26 @@ import (
 )
 
 // createNnfContainerProfile creates the given profile in the "default" namespace.
+// When expectSuccess=false, we expect to find that it was failed by the webhook.
 func createNnfContainerProfile(containerProfile *nnfv1alpha1.NnfContainerProfile, expectSuccess bool) *nnfv1alpha1.NnfContainerProfile {
 	// Place NnfContainerProfiles in "default" for the test environment.
 	containerProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
 	profKey := client.ObjectKeyFromObject(containerProfile)
 	profExpected := &nnfv1alpha1.NnfContainerProfile{}
-	Expect(k8sClient.Get(context.TODO(), profKey, profExpected)).ToNot(Succeed())
+	err := k8sClient.Get(context.TODO(), profKey, profExpected)
+	Expect(err).ToNot(BeNil())
+	Expect(apierrors.IsNotFound(err)).To(BeTrue())
 
 	if expectSuccess {
 		Expect(k8sClient.Create(context.TODO(), containerProfile)).To(Succeed(), "create nnfcontainerprofile")
-		//err := k8sClient.Create(context.TODO(), containerProfile)
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(context.TODO(), profKey, profExpected)).To(Succeed())
 		}, "3s", "1s").Should(Succeed(), "wait for create of NnfContainerProfile")
 	} else {
-		Expect(k8sClient.Create(context.TODO(), containerProfile)).ToNot(Succeed(), "expect to fail to create nnfcontainerprofile")
+		err = k8sClient.Create(context.TODO(), containerProfile)
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(MatchRegexp("webhook .* denied the request"))
 		containerProfile = nil
 	}
 
