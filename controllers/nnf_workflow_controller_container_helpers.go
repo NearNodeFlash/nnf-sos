@@ -74,10 +74,6 @@ func (c *nnfUserContainer) createMPIJob() error {
 		},
 	}
 
-	if c.profile.Data.MPISpec == nil {
-		return fmt.Errorf("Profile does not contain Data.MPISpec")
-	}
-
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
 	c.username = nnfv1alpha1.ContainerMPIUser
 
@@ -90,17 +86,11 @@ func (c *nnfUserContainer) createMPIJob() error {
 		mpiJob.Spec.RunPolicy.BackoffLimit = &c.profile.Data.RetryLimit
 	}
 
-	// MPIJobs have two pod specs: one for the launcher and one for the workers
-	launcher, found := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
-	if !found {
-		return fmt.Errorf("%s not found in MPIReplicaSpecs", mpiv2beta1.MPIReplicaTypeLauncher)
-	}
+	// MPIJobs have two pod specs: one for the launcher and one for the workers. The webhook ensures
+	// that the launcher/worker specs exist
+	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
 	launcherSpec := &launcher.Template.Spec
-
-	worker, found := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
-	if !found {
-		return fmt.Errorf("%s not found in MPIReplicaSpecs", mpiv2beta1.MPIReplicaTypeWorker)
-	}
+	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
 	workerSpec := &worker.Template.Spec
 
 	// Keep failed pods around for log inspection
