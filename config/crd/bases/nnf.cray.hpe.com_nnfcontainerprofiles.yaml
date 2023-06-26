@@ -15757,6 +15757,8 @@ spec:
             type: string
           metadata:
             type: object
+        required:
+        - data
         type: object
     served: true
     storage: true
