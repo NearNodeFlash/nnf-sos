@@ -61,6 +61,11 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 						{Name: "test"},
 					},
 				},
+				Storages: []NnfContainerProfileStorage{
+					{Name: "DW_JOB_storage", Optional: true},
+					{Name: "DW_PERSISTENT_storage", Optional: true},
+					{Name: "DW_GLOBAL_storage", Optional: true},
+				},
 			},
 		}
 
@@ -304,4 +309,28 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		newProfile.Data.Pinned = false
 		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
 	})
+
+	DescribeTable("when modes are set for storages on creation",
+		func(storageName string, mode corev1.PersistentVolumeAccessMode, result bool) {
+			for i, storage := range nnfProfile.Data.Storages {
+				if storage.Name == storageName && mode != "" {
+					nnfProfile.Data.Storages[i].PVCMode = mode
+				}
+			}
+			if result {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		// Only nil modes should pass for JOB/PERSISTENT
+		Entry("should pass when DW_JOB has no mode", "DW_JOB_storage", nil, true),
+		Entry("should fail when DW_JOB has a mode", "DW_JOB_storage", corev1.ReadWriteMany, false),
+		Entry("should pass when DW_PERSISTENT has no mode", "DW_PERSISTENT_storage", nil, true),
+		Entry("should fail when DW_PERSISTENT has a mode", "DW_PERSISTENT_storage", corev1.ReadWriteMany, false),
+		// Both should pass
+		Entry("should pass when DW_GLOBAL has no mode (defaults)", "DW_GLOBAL_storage", nil, true),
+		Entry("should pass when DW_GLOBAL has a mode", "DW_GLOBAL_storage", corev1.ReadWriteMany, true),
+	)
 })

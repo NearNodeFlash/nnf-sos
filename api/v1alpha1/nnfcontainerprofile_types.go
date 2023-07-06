@@ -83,6 +83,11 @@ type NnfContainerProfileStorage struct {
 	// the user not supplying this filesystem in the #DW directives
 	//+kubebuilder:default:=false
 	Optional bool `json:"optional"`
+
+	// For DW_GLOBAL_ (global lustre) storages, the access mode must match what is configured in
+	// the LustreFilesystem resource for the namespace. Defaults to `ReadWriteMany` for global
+	// lustre, otherwise empty.
+	PVCMode corev1.PersistentVolumeAccessMode `json:"pvcMode,omitempty"`
 }
 
 // +kubebuilder:object:root=true

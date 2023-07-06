@@ -134,7 +134,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		return nil
 	}
 
-	createPersistentStorageInstance := func(name string) {
+	createPersistentStorageInstance := func(name, fsType string) {
 		By("Fabricate the persistent storage instance")
 
 		// Create a persistent storage instance to be found
@@ -143,7 +143,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
 			Spec: dwsv1alpha2.PersistentStorageInstanceSpec{
 				Name:   name,
-				FsType: "lustre",
+				FsType: fsType,
 				// DWDirective: workflow.Spec.DWDirectives[0],
 				DWDirective: "#DW persistentdw name=" + name,
 				State:       dwsv1alpha2.PSIStateActive,
@@ -164,7 +164,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Namespace: workflow.Namespace,
 			},
 			Spec: nnfv1alpha1.NnfStorageSpec{
-				FileSystemType: "lustre",
+				FileSystemType: fsType,
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
 			},
 		}
@@ -497,7 +497,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", strings.ReplaceAll(persistentStorageName, "-", "_")),
 				}
 
-				createPersistentStorageInstance(persistentStorageName)
+				createPersistentStorageInstance(persistentStorageName, "lustre")
 			})
 
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
@@ -1027,16 +1027,24 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	})
 
 	When("Using container directives", func() {
-		var ns *corev1.Namespace
+		var (
+			ns *corev1.Namespace
 
-		var createPersistent bool
+			createPersistent     bool
+			createPersistentType string
 
-		var containerProfile *nnfv1alpha1.NnfContainerProfile
-		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage
-		var createContainerProfile bool
+			createGlobalLustre bool
+			globalLustre       *lusv1beta1.LustreFileSystem
+
+			containerProfile         *nnfv1alpha1.NnfContainerProfile
+			containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage
+			createContainerProfile   bool
+		)
 
 		BeforeEach(func() {
 			createPersistent = true
+			createPersistentType = "lustre"
+			createGlobalLustre = false
 			containerProfile = nil
 			containerProfileStorages = nil
 			createContainerProfile = true
@@ -1051,15 +1059,31 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 			k8sClient.Create(context.TODO(), ns)
 
-			if createPersistent {
-				createPersistentStorageInstance(persistentStorageName)
-			}
 		})
 
 		JustBeforeEach(func() {
 			// containerProfileStorages is configurable, so this must happen in JustBeforeEach()
 			if createContainerProfile {
 				containerProfile = createBasicNnfContainerProfile(containerProfileStorages)
+			}
+
+			if createPersistent {
+				createPersistentStorageInstance(persistentStorageName, createPersistentType)
+			}
+
+			if createGlobalLustre {
+				globalLustre = &lusv1beta1.LustreFileSystem{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sawbill",
+						Namespace: corev1.NamespaceDefault,
+					},
+					Spec: lusv1beta1.LustreFileSystemSpec{
+						Name:      "sawbill",
+						MountRoot: "/lus/sawbill",
+						MgsNids:   "10.0.0.2@tcp",
+					},
+				}
+				Expect(k8sClient.Create(context.TODO(), globalLustre)).To(Succeed())
 			}
 		})
 
@@ -1075,11 +1099,17 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			if createPersistent {
 				deletePersistentStorageInstance(persistentStorageName)
 			}
+
+			if createGlobalLustre {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(globalLustre), globalLustre)).To(Succeed())
+				Expect(k8sClient.Delete(context.TODO(), globalLustre)).To(Succeed())
+			}
 		})
 
 		Context("with container restrictions", func() {
 			BeforeEach(func() {
 				createContainerProfile = false // We'll make a custom version.
+				createGlobalLustre = true
 			})
 
 			// buildRestrictedContainerProfile will create a NnfContainerProfile that
@@ -1104,8 +1134,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						"DW_JOB_foo_local_storage=container-storage "+
-						"DW_PERSISTENT_foo_persistent_storage=%s",
-						containerProfile.Name, persistentStorageName),
+						"DW_PERSISTENT_foo_persistent_storage=%s "+
+						"DW_GLOBAL_foo_global_lustre=%s",
+						containerProfile.Name, persistentStorageName, globalLustre.Spec.MountRoot),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
 			}
@@ -1146,6 +1177,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
 					{Name: "DW_JOB_foo_local_storage", Optional: false},
 					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+					{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 				}
 			})
 
@@ -1210,26 +1242,151 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 
-		Context("when an argument is not in the container profile", func() {
+		Context("when an argument is present in the container directive but not in the container profile", func() {
+			var storageArgsList []string
+			localStorageName := "local-storage"
+
 			BeforeEach(func() {
-				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
-					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+				createContainerProfile = false // We'll make a custom version.
+				createGlobalLustre = true
+			})
+
+			JustBeforeEach(func() {
+				// Build a list of storage arguments for the test. This is necessary because things
+				// like persistentStorageName are not initialized until the parent's BeforeEach()
+				// block, and the Entry() in the DescribeTable() will be translated well before
+				// then. So create a list of canned directive arguments for use in the Entries.
+				storageArgsList = []string{
+					fmt.Sprintf("DW_JOB_foo_local_storage=%s", localStorageName),
+					fmt.Sprintf("DW_PERSISTENT_foo_persistent_storage=%s", persistentStorageName),
+					fmt.Sprintf("DW_GLOBAL_foo_global_lustre=%s", globalLustre.Spec.MountRoot),
 				}
 			})
-			It("should go to error", func() {
+
+			buildContainerProfile := func(storages []nnfv1alpha1.NnfContainerProfileStorage) {
+				By("Creating a profile with specific storages")
+				tempProfile := basicNnfContainerProfile("restricted-"+uuid.NewString()[:8], storages)
+				containerProfile = createNnfContainerProfile(tempProfile, true)
+			}
+
+			buildContainerWorkflowWithArgs := func(args string) {
+				By("creating the workflow")
 				workflow.Spec.DWDirectives = []string{
-					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
-					fmt.Sprintf("#DW container name=container profile=%s "+
-						"DW_JOB_foo_local_storage=container-storage ",
-						containerProfile.Name),
+					fmt.Sprintf("#DW jobdw name=%s type=gfs2 capacity=1GB", localStorageName),
+					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
+					fmt.Sprintf("#DW container name=container profile=%s %s", containerProfile.Name, args),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+			}
 
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha2.StatusError
-				}).Should(BeTrue(), "be in error state")
+			DescribeTable("should not go to Proposal Ready",
+				func(argIdx int, storages []nnfv1alpha1.NnfContainerProfileStorage) {
+					buildContainerProfile(storages)
+					buildContainerWorkflowWithArgs(storageArgsList[argIdx])
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						return workflow.Status.Status == dwsv1alpha2.StatusError &&
+							strings.Contains(workflow.Status.Message, "not found in container profile")
+					}).Should(BeTrue(), "does not reach desired Proposal state")
+				},
+
+				Entry("when DW_JOB_ not present in the container profile", 0,
+					[]nnfv1alpha1.NnfContainerProfileStorage{
+						{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+						{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
+					},
+				),
+				Entry("when DW_PERSISTENT_ not present in the container profile", 1,
+					[]nnfv1alpha1.NnfContainerProfileStorage{
+						{Name: "DW_JOB_foo_local_storage", Optional: true},
+						{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
+					},
+				),
+				Entry("when DW_GLOBAL_ not present in the container profile", 2,
+					[]nnfv1alpha1.NnfContainerProfileStorage{
+						{Name: "DW_JOB_foo_local_storage", Optional: true},
+						{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+					},
+				),
+			)
+		})
+
+		Context("when an unsupported jobdw container filesystem type is specified", func() {
+			localStorageName := "local-storage"
+
+			buildContainerWorkflowWithJobDWType := func(fsType string) {
+				By("creating the workflow")
+				workflow.Spec.DWDirectives = []string{
+					fmt.Sprintf("#DW jobdw name=%s type=%s capacity=1GB", localStorageName, fsType),
+					fmt.Sprintf("#DW container name=container profile=%s DW_JOB_foo_local_storage=%s",
+						containerProfile.Name, localStorageName),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+			}
+
+			DescribeTable("should reach the desired Proposal state",
+				func(fsType string, shouldError bool) {
+					buildContainerWorkflowWithJobDWType(fsType)
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						if shouldError {
+							return workflow.Status.Status == dwsv1alpha2.StatusError &&
+								strings.Contains(workflow.Status.Message, "unsupported container filesystem")
+						} else {
+							return workflow.Status.Ready == true
+						}
+					}).Should(BeTrue(), "should reach desired Proposal state")
+
+				},
+				Entry("when gfs2 jobdw storage is used", "gfs2", false),
+				Entry("when lustre jobdw storage is used", "lustre", false),
+				Entry("when xfs jobdw storage is used", "xfs", true),
+				Entry("when raw jobdw storage is used", "raw", true),
+			)
+		})
+
+		Context("when an unsupported persistentdw container filesystem type is specified", func() {
+
+			BeforeEach(func() {
+				createPersistent = false
 			})
+
+			buildContainerWorkflowWithPersistentDWType := func(fsType string) {
+				By("creating the workflow")
+				workflow.Spec.DWDirectives = []string{
+					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
+					fmt.Sprintf("#DW container name=container profile=%s DW_PERSISTENT_foo_persistent_storage=%s",
+						containerProfile.Name, persistentStorageName),
+				}
+				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+			}
+
+			DescribeTable("should reach the desired Proposal state",
+				func(fsType string, shouldError bool) {
+					createPersistentStorageInstance(persistentStorageName, fsType)
+					buildContainerWorkflowWithPersistentDWType(fsType)
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						if shouldError {
+							// Raw isn't supported for persistent storage, make sure that error gets
+							// reported properly
+							if fsType == "raw" {
+								return workflow.Status.Status == dwsv1alpha2.StatusError &&
+									strings.Contains(workflow.Status.Message, "can not be used with raw allocations")
+							}
+							return workflow.Status.Status == dwsv1alpha2.StatusError &&
+								strings.Contains(workflow.Status.Message, "unsupported container filesystem: "+fsType)
+						} else {
+							return workflow.Status.Ready == true
+						}
+					}).Should(BeTrue(), "should reach desired Proposal state")
+
+				},
+				Entry("when gfs2 persistentdw storage is used", "gfs2", false),
+				Entry("when lustre persistentdw storage is used", "lustre", false),
+				Entry("when xfs persistentdw storage is used", "xfs", true),
+				Entry("when raw persistentdw storage is used", "raw", true),
+			)
 		})
 	})
 })

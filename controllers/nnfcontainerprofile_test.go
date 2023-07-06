@@ -69,6 +69,7 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha1.NnfContainerPr
 		storages = []nnfv1alpha1.NnfContainerProfileStorage{
 			{Name: "DW_JOB_foo_local_storage", Optional: true},
 			{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+			{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 		}
 	}
 

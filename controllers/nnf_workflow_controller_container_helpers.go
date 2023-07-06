@@ -61,6 +61,7 @@ type nnfContainerVolume struct {
 	directiveIndex int
 	mountPath      string
 	envVarName     string
+	pvcName        string
 }
 
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
@@ -392,17 +393,27 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 
 func (c *nnfUserContainer) addNnfVolumes(spec *corev1.PodSpec) {
 	for _, vol := range c.volumes {
-		// Volumes
-		hostPathType := corev1.HostPathDirectory
-		spec.Volumes = append(spec.Volumes, corev1.Volume{
-			Name: vol.name,
-			VolumeSource: corev1.VolumeSource{
+
+		var volSource corev1.VolumeSource
+
+		// If global lustre, use a PVC, otherwise use a HostPath on the rabbit to the mounts that
+		// already exist.
+		if vol.command == "globaldw" {
+			volSource = corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: vol.pvcName,
+				},
+			}
+		} else {
+			hostPathType := corev1.HostPathDirectory
+			volSource = corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
 					Path: vol.mountPath,
 					Type: &hostPathType,
 				},
-			},
-		})
+			}
+		}
+		spec.Volumes = append(spec.Volumes, corev1.Volume{Name: vol.name, VolumeSource: volSource})
 
 		// Add VolumeMounts and Volume environment variables for all containers
 		for idx := range spec.Containers {

@@ -291,7 +291,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				suppliedStorageArguments = append(suppliedStorageArguments, arg)
 			} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
 				if err := r.validatePersistentInstanceForStaging(ctx, storageName, workflow.Namespace); err != nil {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found: %v", storageName, err)).WithFatal()
 				}
 				idx := findDirectiveIndexByName(workflow, storageName, "persistentdw")
 				if idx == -1 {
@@ -299,6 +299,15 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				}
 				if err := checkContainerFs(idx); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+				}
+				if err := checkStorageIsInProfile(arg); err != nil {
+					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+				}
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
+			} else if strings.HasPrefix(arg, "DW_GLOBAL_") {
+				// Look up the global lustre fs by path rather than LustreFilesystem name
+				if globalLustre := r.findLustreFileSystemForPath(ctx, storageName, r.Log); globalLustre == nil {
+					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("global Lustre file system containing '%s' not found", storageName)).WithFatal()
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
 					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
@@ -1053,7 +1062,7 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	}
 
 	// Get the NNF volumes to mount into the containers
-	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs)
+	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs, profile)
 	if err != nil {
 		return nil, nnfv1alpha1.NewWorkflowErrorf("could not determine the list of volumes need to create container job for workflow: %s", workflow.Name).WithError(err).WithFatal()
 	}
@@ -1447,7 +1456,7 @@ func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *
 }
 
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
-func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string) ([]nnfContainerVolume, *result, error) {
+func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, profile *nnfv1alpha1.NnfContainerProfile) ([]nnfContainerVolume, *result, error) {
 	volumes := []nnfContainerVolume{}
 
 	// TODO: ssh is necessary for mpi see setupSSHAuthVolumes(manager, podSpec) in nnf-dm
@@ -1462,6 +1471,9 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
 			volName = strings.TrimPrefix(arg, "DW_PERSISTENT_")
 			cmd = "persistentdw"
+		} else if strings.HasPrefix(arg, "DW_GLOBAL_") {
+			volName = strings.TrimPrefix(arg, "DW_GLOBAL_")
+			cmd = "globaldw"
 		} else {
 			continue
 		}
@@ -1478,27 +1490,58 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			envVarName: strings.ReplaceAll(arg, "-", "_"),
 		}
 
-		// Find the directive index for the given name so we can retrieve its NnfAccess
-		vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
-		if vol.directiveIndex < 0 {
-			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s'", vol.directiveName)
-		}
+		// For global lustre, a namespace that matches the workflow's namespace must be present in
+		// the LustreFilesystem's Spec.Namespaces list. This results in a matching PVC that can
+		// then be mounted into containers in that namespace.
+		if cmd == "globaldw" {
+			globalLustre := r.findLustreFileSystemForPath(ctx, val, r.Log)
+			if globalLustre == nil {
+				return nil, nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf(
+					"global Lustre file system containing '%s' not found", val)).WithFatal()
+			}
 
-		nnfAccess := &nnfv1alpha1.NnfAccess{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      workflow.Name + "-" + strconv.Itoa(vol.directiveIndex) + "-servers",
-				Namespace: workflow.Namespace,
-			},
-		}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the NnfAccess '%s'", nnfAccess.Name)
-		}
+			ns, nsFound := globalLustre.Spec.Namespaces[workflow.Namespace]
+			if !nsFound || len(ns.Modes) < 1 {
+				return nil, nil, nnfv1alpha1.NewWorkflowError(fmt.Sprintf(
+					"global Lustre file system containing '%s' is not configured for the '%s' namespace", val, workflow.Namespace)).WithFatal()
+			}
 
-		if !nnfAccess.Status.Ready {
-			return nil, Requeue(fmt.Sprintf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)).after(2 * time.Second), nil
-		}
+			// Retrieve the desired PVC mode from the container profile. Default to readwritemany.
+			modeStr := strings.ToLower(string(corev1.ReadWriteMany))
+			if profile != nil {
+				for _, storage := range profile.Data.Storages {
+					if storage.Name == arg && storage.PVCMode != "" {
+						modeStr = strings.ToLower(string(storage.PVCMode))
+					}
+				}
+			}
 
-		vol.mountPath = nnfAccess.Spec.MountPath
+			// e.g. PVC name: global-default-readwritemany-pvc
+			vol.pvcName = strings.ToLower(fmt.Sprintf("%s-%s-%s-pvc", globalLustre.Name, globalLustre.Namespace, modeStr))
+			vol.mountPath = globalLustre.Spec.MountRoot
+		} else {
+			// Find the directive index for the given name so we can retrieve its NnfAccess
+			vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
+			if vol.directiveIndex < 0 {
+				return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s'", vol.directiveName)
+			}
+
+			nnfAccess := &nnfv1alpha1.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Name + "-" + strconv.Itoa(vol.directiveIndex) + "-servers",
+					Namespace: workflow.Namespace,
+				},
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
+				return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the NnfAccess '%s'", nnfAccess.Name)
+			}
+
+			if !nnfAccess.Status.Ready {
+				return nil, Requeue(fmt.Sprintf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)).after(2 * time.Second), nil
+			}
+
+			vol.mountPath = nnfAccess.Spec.MountPath
+		}
 		volumes = append(volumes, vol)
 	}
 

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,6 +59,46 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 		return err
 	}
 
+	if err := r.validateContent(); err != nil {
+		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
+		return err
+	}
+
+	return nil
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
+	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
+
+	obj := old.(*NnfContainerProfile)
+
+	if obj.Data.Pinned != r.Data.Pinned {
+		err := fmt.Errorf("the pinned flag is immutable")
+		nnfcontainerprofilelog.Error(err, "invalid")
+		return err
+	}
+
+	if obj.Data.Pinned {
+		// Allow metadata to be updated, for things like finalizers,
+		// ownerReferences, and labels, but do not allow Data to be
+		// updated.
+		if !reflect.DeepEqual(r.Data, obj.Data) {
+			err := fmt.Errorf("update on pinned resource not allowed")
+			nnfcontainerprofilelog.Error(err, "invalid")
+			return err
+		}
+	}
+
+	if err := r.validateContent(); err != nil {
+		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
+		return err
+	}
+
+	return nil
+}
+
+func (r *NnfContainerProfile) validateContent() error {
 	mpiJob := r.Data.MPISpec != nil
 	nonmpiJob := r.Data.Spec != nil
 
@@ -99,27 +140,12 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 		}
 	}
 
-	return nil
-}
-
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
-	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
-
-	obj := old.(*NnfContainerProfile)
-	if obj.Data.Pinned != r.Data.Pinned {
-		err := fmt.Errorf("the pinned flag is immutable")
-		nnfcontainerprofilelog.Error(err, "invalid")
-		return err
-	}
-	if obj.Data.Pinned {
-		// Allow metadata to be updated, for things like finalizers,
-		// ownerReferences, and labels, but do not allow Data to be
-		// updated.
-		if !reflect.DeepEqual(r.Data, obj.Data) {
-			err := fmt.Errorf("update on pinned resource not allowed")
-			nnfcontainerprofilelog.Error(err, "invalid")
-			return err
+	// Ensure only DW_GLOBAL_ storages have PVCMode
+	for _, storage := range r.Data.Storages {
+		if !strings.HasPrefix(storage.Name, "DW_GLOBAL_") {
+			if storage.PVCMode != "" {
+				return fmt.Errorf("PVCMode is only supported for global lustre storages (DW_GLOBAL_)")
+			}
 		}
 	}
 
@@ -129,7 +155,5 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateDelete() error {
 	nnfcontainerprofilelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }

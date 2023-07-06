@@ -16,7 +16,7 @@ data:
   # List of possible filesystems supported by this container profile. These
   # storages are mounted inside of the container. Any non-optional storage must
   # be supplied with the container directive as an argument and must reference
-  # a valid jobdw or persistentdw directive's name.
+  # a valid jobdw/persistentdw directive's name or refer to a LustreFilesystem path.
   #
   # Example:
   #   DW jobdw name=my-gfs2 type=gfs2 capacity=50GB
@@ -26,9 +26,15 @@ data:
       optional: false
     - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
+    # For Global lustre pvcMode is supported and must match the mode configured in the
+    # LustreFilesystem Resource
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
+      pvcMode: ReadWriteMany
 
   # Template defines the containers that will be created from container profile.
   template:
+    # TODO: Update for mpiSpec
     spec:
       containers:
         - name: sample-nnfcontainerprofile
