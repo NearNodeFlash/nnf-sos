@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -47,6 +48,15 @@ var _ webhook.Validator = &NnfContainerProfile{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateCreate() error {
 	nnfcontainerprofilelog.Info("validate create", "name", r.Name)
+
+	// If it's not pinned, then it's being made available for users to select
+	// and it must be in the correct namespace.
+	profileNamespace := os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE")
+	if !r.Data.Pinned && r.GetNamespace() != profileNamespace {
+		err := fmt.Errorf("incorrect namespace for profile that is intended to be selected by users; the namespace should be '%s'", profileNamespace)
+		nnfstorageprofilelog.Error(err, "invalid")
+		return err
+	}
 
 	mpiJob := r.Data.MPISpec != nil
 	nonmpiJob := r.Data.Spec != nil
@@ -97,6 +107,11 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
 
 	obj := old.(*NnfContainerProfile)
+	if obj.Data.Pinned != r.Data.Pinned {
+		err := fmt.Errorf("the pinned flag is immutable")
+		nnfcontainerprofilelog.Error(err, "invalid")
+		return err
+	}
 	if obj.Data.Pinned {
 		// Allow metadata to be updated, for things like finalizers,
 		// ownerReferences, and labels, but do not allow Data to be

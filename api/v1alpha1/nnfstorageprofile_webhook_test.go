@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,8 +23,10 @@ import (
 	"context"
 	"os"
 
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,21 +36,41 @@ import (
 
 var _ = Describe("NnfStorageProfile Webhook", func() {
 	var (
-		namespaceName                         = os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
-		pinnedResourceName                    = "test-pinned"
-		nnfProfile         *NnfStorageProfile = nil
+		namespaceName      = os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
+		otherNamespaceName string
+		otherNamespace     *corev1.Namespace
+
+		pinnedResourceName string
+		nnfProfile         *NnfStorageProfile
 		newProfile         *NnfStorageProfile
 	)
 
 	BeforeEach(func() {
+		pinnedResourceName = "test-pinned-" + uuid.NewString()[:8]
+
 		nnfProfile = &NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test",
+				Name:      "test-" + uuid.NewString()[:8],
 				Namespace: namespaceName,
 			},
 		}
 
 		newProfile = &NnfStorageProfile{}
+	})
+
+	BeforeEach(func() {
+		otherNamespaceName = "other-" + uuid.NewString()[:8]
+
+		otherNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: otherNamespaceName,
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), otherNamespace)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), otherNamespace)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -59,6 +81,17 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), profExpected)
 			}).ShouldNot(Succeed())
 		}
+	})
+
+	It("should accept system profiles in the designated namespace", func() {
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
+	It("should not accept system profiles that are not in the designated namespace", func() {
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		err := k8sClient.Create(context.TODO(), nnfProfile)
+		Expect(err.Error()).To(MatchRegexp("webhook .* denied the request: incorrect namespace"))
+		nnfProfile = nil
 	})
 
 	It("should accept default=true", func() {
@@ -120,6 +153,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 	It("Should not allow modification of Data in a pinned resource", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
 		nnfProfile.Data.Pinned = true
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
@@ -135,6 +169,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 	It("Should allow modification of Meta in a pinned resource", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
 		nnfProfile.Data.Pinned = true
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
@@ -198,5 +233,29 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		nnfProfile.Data.LustreStorage.MgtOptions.Count = 5
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
+	})
+
+	It("Should not allow an unpinned profile to become pinned", func() {
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+		}).Should(Succeed())
+
+		newProfile.Data.Pinned = true
+		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+	})
+
+	It("Should not allow a pinned profile to become unpinned", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		nnfProfile.Data.Pinned = true
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+		}).Should(Succeed())
+
+		newProfile.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
 	})
 })
