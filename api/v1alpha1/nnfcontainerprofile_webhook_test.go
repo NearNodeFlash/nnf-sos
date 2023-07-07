@@ -23,6 +23,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/google/uuid"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
@@ -37,16 +38,21 @@ import (
 
 var _ = Describe("NnfContainerProfile Webhook", func() {
 	var (
-		namespaceName                           = os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE")
-		pinnedResourceName                      = "test-pinned"
-		nnfProfile         *NnfContainerProfile = nil
+		namespaceName      = os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE")
+		otherNamespaceName string
+		otherNamespace     *corev1.Namespace
+
+		pinnedResourceName string
+		nnfProfile         *NnfContainerProfile
 		newProfile         *NnfContainerProfile
 	)
 
 	BeforeEach(func() {
+		pinnedResourceName = "test-pinned-" + uuid.NewString()[:8]
+
 		nnfProfile = &NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test",
+				Name:      "test-" + uuid.NewString()[:8],
 				Namespace: namespaceName,
 			},
 			Data: NnfContainerProfileData{
@@ -61,6 +67,21 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		newProfile = &NnfContainerProfile{}
 	})
 
+	BeforeEach(func() {
+		otherNamespaceName = "other-" + uuid.NewString()[:8]
+
+		otherNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: otherNamespaceName,
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), otherNamespace)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), otherNamespace)).To(Succeed())
+	})
+
 	AfterEach(func() {
 		if nnfProfile != nil {
 			Expect(k8sClient.Delete(context.TODO(), nnfProfile)).To(Succeed())
@@ -71,28 +92,35 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		}
 	})
 
+	It("should accept system profiles in the designated namespace", func() {
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	})
+
+	It("should not accept system profiles that are not in the designated namespace", func() {
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		err := k8sClient.Create(context.TODO(), nnfProfile)
+		Expect(err.Error()).To(MatchRegexp("webhook .* denied the request: incorrect namespace"))
+		nnfProfile = nil
+	})
+
 	It("Should not allow a negative retryLimit", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.RetryLimit = -1
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
 	It("Should allow a zero retryLimit", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.RetryLimit = 0
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("Should not allow a negative postRunTimeoutSeconds", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.PostRunTimeoutSeconds = -1
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
 	It("Should not allow setting both Spec and MPISpec", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.Spec = &corev1.PodSpec{}
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
@@ -100,7 +128,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should fail when both Spec and MPISpec are unset", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.Spec = nil
 		nnfProfile.Data.MPISpec = nil
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
@@ -108,7 +135,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow an empty MPIReplicaSpecs", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{},
 		}
@@ -117,7 +143,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow both an empty Launcher and Worker ReplicaSpecs", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: nil,
@@ -129,7 +154,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow an empty Launcher ReplicaSpec", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: nil,
@@ -145,7 +169,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow an empty Worker ReplicaSpec", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: {
@@ -161,7 +184,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow an empty Launcher and Worker PodSpecs", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: {
@@ -181,7 +203,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow setting both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.Spec = nil
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 
@@ -194,8 +215,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow setting both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
-
 		timeout := int64(10)
 		nnfProfile.Data.PostRunTimeoutSeconds = timeout
 		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
@@ -205,7 +224,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow setting MPISpec.RunPolicy.BackoffLimit directly", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.Spec = nil
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 
@@ -217,21 +235,18 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should allow a zero postRunTimeoutSeconds", func() {
-		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.PostRunTimeoutSeconds = 0
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("Should not allow modification of Data in a pinned resource", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		nnfProfile.Data.Pinned = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
-
-		// Set it as pinned with an Update
-		nnfProfile.Data.Pinned = true
-		Expect(k8sClient.Update(context.TODO(), nnfProfile)).To(Succeed())
 
 		// Verify pinned
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
@@ -244,14 +259,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should allow modification of Meta in a pinned resource", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		nnfProfile.Data.Pinned = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
-
-		// Set it as pinned with an Update
-		nnfProfile.Data.Pinned = true
-		Expect(k8sClient.Update(context.TODO(), nnfProfile)).To(Succeed())
 
 		// Verify pinned
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
@@ -266,5 +279,29 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		labels["profile-label"] = "profile-label"
 		newProfile.SetLabels(labels)
 		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
+	})
+
+	It("Should not allow an unpinned profile to become pinned", func() {
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+		}).Should(Succeed())
+
+		newProfile.Data.Pinned = true
+		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+	})
+
+	It("Should not allow a pinned profile to become unpinned", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
+		nnfProfile.Data.Pinned = true
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+		}).Should(Succeed())
+
+		newProfile.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
 	})
 })
