@@ -47,7 +47,7 @@ import (
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/dwdparse"
 	"github.com/HewlettPackard/dws/utils/updater"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -285,7 +285,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	// only jobdw, persistentdw, and create_persistent need a directive breakdown
 	switch dwArgs["command"] {
 	case "container":
-		return nil, r.createPinnedContainerProfileIfNecessary(ctx, workflow, index)
+		return nil, createPinnedContainerProfileIfNecessary(ctx, r.Client, r.Scheme, workflow, index, r.Log)
 	case "jobdw", "persistentdw", "create_persistent":
 		break
 	default:
@@ -541,7 +541,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		} else if lustre := r.findLustreFileSystemForPath(ctx, param, r.Log); lustre != nil {
 			storageReference = &corev1.ObjectReference{
-				Kind:      reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name(),
+				Kind:      reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name(),
 				Name:      lustre.Name,
 				Namespace: lustre.Namespace,
 			}
@@ -766,7 +766,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
-		result, err := r.containerHandler(ctx, workflow, dwArgs, index)
+		result, err := r.userContainerHandler(ctx, workflow, dwArgs, index, log)
 
 		if err != nil {
 			return nil, dwsv1alpha2.NewResourceError("unable to create/update Container Jobs").WithError(err).WithFatal()

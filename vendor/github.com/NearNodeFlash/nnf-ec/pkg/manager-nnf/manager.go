@@ -1416,6 +1416,10 @@ func (*StorageService) StorageServiceIdFileSystemIdExportedSharesPost(storageSer
 		}
 
 		if err := sg.serverStorage.MountFileSystem(fs.fsApi, sh.mountRoot); err != nil {
+			if deleteErr := sg.serverStorage.DeleteFileSystem(fs.fsApi); deleteErr != nil {
+				return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(deleteErr).WithCause(fmt.Sprintf("File share '%s' failed delete after mount failure", sh.id))
+			}
+
 			return ec.NewErrInternalServerError().WithResourceType(FileShareOdataType).WithError(err).WithCause(fmt.Sprintf("File share '%s' mount failed", sh.id))
 		}
 

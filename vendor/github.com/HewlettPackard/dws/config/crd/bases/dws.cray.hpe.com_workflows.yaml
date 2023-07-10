@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.12.0
   name: workflows.dws.cray.hpe.com
 spec:
   group: dws.cray.hpe.com
@@ -361,14 +360,13 @@ spec:
       jsonPath: .status.status
       name: STATUS
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
     - description: Job ID
       jsonPath: .spec.jobID
       name: JOBID
-      priority: 1
-      type: integer
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
     - description: Desired state
       jsonPath: .spec.desiredState
       name: DESIREDSTATE
@@ -440,7 +438,12 @@ spec:
                   transfers that have not yet begun.
                 type: boolean
               jobID:
-                type: integer
+                anyOf:
+                - type: integer
+                - type: string
+                description: JobID is the WLM job ID that corresponds to this workflow,
+                  and is set by the WLM when it creates the workflow resource.
+                x-kubernetes-int-or-string: true
               userID:
                 description: UserID specifies the user ID for the workflow. The User
                   ID is used by the various states in the workflow to ensure the user
@@ -449,6 +452,8 @@ spec:
                 format: int32
                 type: integer
               wlmID:
+                description: WLMID identifies the Workflow Manager (WLM), and is set
+                  by the WLM when it creates the workflow resource.
                 type: string
             required:
             - desiredState

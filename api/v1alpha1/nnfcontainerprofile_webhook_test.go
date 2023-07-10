@@ -116,12 +116,44 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow an empty Launcher and Worker ReplicaSpecs", func() {
+	It("Should not allow both an empty Launcher and Worker ReplicaSpecs", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: nil,
 				mpiv2beta1.MPIReplicaTypeWorker:   nil,
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow an empty Launcher ReplicaSpec", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+				mpiv2beta1.MPIReplicaTypeLauncher: nil,
+				mpiv2beta1.MPIReplicaTypeWorker: {
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow an empty Worker ReplicaSpec", func() {
+		nnfProfile.ObjectMeta.Name = pinnedResourceName
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+				mpiv2beta1.MPIReplicaTypeLauncher: {
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{},
+					},
+				},
+				mpiv2beta1.MPIReplicaTypeWorker: nil,
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())

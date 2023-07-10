@@ -36,9 +36,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -46,16 +47,26 @@ import (
 // BeforeEach - initialize the workflow
 // AfterEach - destroy the workflow
 
+var (
+	baseWorkflowUserID  uint32 = 1042
+	baseWorkflowGroupID uint32 = 1043
+
+	altWorkflowUserID  uint32 = 1044
+	altWorkflowGroupID uint32 = 1045
+)
+
 var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	var (
-		key            types.NamespacedName
-		workflow       *dwsv1alpha2.Workflow
-		storageProfile *nnfv1alpha1.NnfStorageProfile
+		key                   types.NamespacedName
+		workflow              *dwsv1alpha2.Workflow
+		storageProfile        *nnfv1alpha1.NnfStorageProfile
+		persistentStorageName string
 	)
 
 	BeforeEach(func() {
 		wfid := uuid.NewString()[0:8]
+		persistentStorageName = "persistent-" + uuid.NewString()[:8]
 
 		key = types.NamespacedName{
 			Name:      "nnf-workflow-" + wfid,
@@ -69,8 +80,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			},
 			Spec: dwsv1alpha2.WorkflowSpec{
 				DesiredState: dwsv1alpha2.StateProposal,
-				JobID:        0,
+				JobID:        intstr.FromString("job 1244"),
 				WLMID:        uuid.NewString(),
+				UserID:       baseWorkflowUserID,
+				GroupID:      baseWorkflowGroupID,
 			},
 		}
 
@@ -154,6 +167,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				FileSystemType: "lustre",
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
 			},
+			// MATTR
 			Status: nnfv1alpha1.NnfStorageStatus{
 				MgsNode: "",
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
@@ -167,9 +181,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	}
 
 	deletePersistentStorageInstance := func(name string) {
-		By("Fabricate the nnfStorage as if the persistent storage instance exists")
-
-		// Delete persistent storage instance
+		By("delete persistent storage instance")
 		psi := &dwsv1alpha2.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
 		}
@@ -404,7 +416,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		// Create a fake global lustre file system.
 		var (
-			lustre *lusv1alpha1.LustreFileSystem
+			lustre *lusv1beta1.LustreFileSystem
 		)
 
 		BeforeEach(func() {
@@ -418,12 +430,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		BeforeEach(func() {
-			lustre = &lusv1alpha1.LustreFileSystem{
+			lustre = &lusv1beta1.LustreFileSystem{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "maui",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: lusv1alpha1.LustreFileSystemSpec{
+				Spec: lusv1beta1.LustreFileSystemSpec{
 					Name:      "maui",
 					MountRoot: "/lus/maui",
 					MgsNids:   "10.0.0.1@tcp",
@@ -471,7 +483,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))
@@ -488,8 +500,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		When("using $DW_PERSISTENT_ references", func() {
-			persistentStorageName := "my-persistent-storage"
-
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
@@ -540,7 +550,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Source.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Source.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(lusv1alpha1.LustreFileSystem{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(lusv1beta1.LustreFileSystem{}).Name()),
 						"Name":      Equal(lustre.ObjectMeta.Name),
 						"Namespace": Equal(lustre.Namespace),
 					}))
@@ -1028,14 +1038,18 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	When("Using container directives", func() {
 		var ns *corev1.Namespace
 
-		persistentStorageName := "container-persistent"
-		createPersistent := true
+		var createPersistent bool
 
 		var containerProfile *nnfv1alpha1.NnfContainerProfile
-		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage = nil
-		createContainerProfile := true
+		var containerProfileStorages []nnfv1alpha1.NnfContainerProfileStorage
+		var createContainerProfile bool
 
 		BeforeEach(func() {
+			createPersistent = true
+			containerProfile = nil
+			containerProfileStorages = nil
+			createContainerProfile = true
+
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
 			// placed in the "nnf-system" namespace so it must be present.
 			// EnvTest does not support namespace deletion, so this could already exist. Ignore any errors.
@@ -1060,6 +1074,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		AfterEach(func() {
 			if containerProfile != nil {
+				By("delete NnfContainerProfile")
 				Expect(k8sClient.Delete(context.TODO(), containerProfile)).Should(Succeed())
 				Eventually(func() error {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(containerProfile), containerProfile)
@@ -1071,28 +1086,68 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 		})
 
-		Context("when a container workflow has everything in order", func() {
-			// This means that:
-			// - A persistent instance is available prior to the container workflow
-			// - The provided storage arguments are included in the preceding directives
-			// - The supplied container profile exists and the supplied storage arguments are in the profiles list of required storages
+		Context("with container restrictions", func() {
+			BeforeEach(func() {
+				createContainerProfile = false // We'll make a custom version.
+			})
 
-			It("should go to Proposal Ready with required storages present", func() {
+			// buildRestrictedContainerProfile will create a NnfContainerProfile that
+			// is restricted to a specific user ID or group ID.
+			buildRestrictedContainerProfile := func(userID *uint32, groupID *uint32) {
+				By("Create a restricted NnfContainerProfile")
+				tempProfile := basicNnfContainerProfile("restricted-"+uuid.NewString()[:8], containerProfileStorages)
+				if userID != nil {
+					tempProfile.Data.UserID = userID
+				}
+				if groupID != nil {
+					tempProfile.Data.GroupID = groupID
+				}
+
+				containerProfile = createNnfContainerProfile(tempProfile, true)
+			}
+
+			buildWorkflowWithCorrectDirectives := func() {
+				By("creating the workflow")
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						"DW_JOB_foo_local_storage=container-storage "+
-						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
-						containerProfile.Name),
+						"DW_PERSISTENT_foo_persistent_storage=%s",
+						containerProfile.Name, persistentStorageName),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
+			}
 
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
-				}).Should(BeTrue(), "reach desired Proposal state")
-			})
+			DescribeTable("should go to Proposal Ready when everything is in order",
+				func(containerUserID *uint32, containerGroupID *uint32) {
+					buildRestrictedContainerProfile(containerUserID, containerGroupID)
+					buildWorkflowWithCorrectDirectives()
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
+					}).Should(BeTrue(), "reach desired Proposal state")
+					Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 2)).To(Succeed())
+				},
+				Entry("when not restricted to a user ID or group ID", nil, nil),
+				Entry("when restricted to a matching user ID", &baseWorkflowUserID, nil),
+				Entry("when restricted to a matching group ID", nil, &baseWorkflowGroupID),
+				Entry("when restricted to a matching user ID and group ID", &baseWorkflowUserID, &baseWorkflowGroupID),
+			)
+
+			DescribeTable("should not go to Proposal Ready when profile restriction is not satisfied",
+				func(containerUserID *uint32, containerGroupID *uint32) {
+					buildRestrictedContainerProfile(containerUserID, containerGroupID)
+					buildWorkflowWithCorrectDirectives()
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						return workflow.Status.Status == dwsv1alpha2.StatusError && strings.Contains(workflow.Status.Message, "container profile") && strings.Contains(workflow.Status.Message, "is restricted to")
+					}).Should(BeTrue(), "does not reach desired Proposal state")
+				},
+				Entry("when restricted to non-matching user ID", &altWorkflowUserID, nil),
+				Entry("when restricted to non-matching group ID", nil, &altWorkflowGroupID),
+				Entry("when restricted to non-matching user ID and group ID", &altWorkflowUserID, &altWorkflowGroupID),
+			)
 		})
 
 		Context("when an optional storage in the container profile is not present in the container arguments", func() {
@@ -1116,6 +1171,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
 				}).Should(BeTrue(), "reach desired Proposal state")
+				Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 1)).To(Succeed())
 			})
 		})
 
@@ -1126,8 +1182,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						"DW_JOB_foo_local_storage=container-storage "+
-						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
-						containerProfile.Name),
+						"DW_PERSISTENT_foo_persistent_storage=%s",
+						containerProfile.Name, persistentStorageName),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
 
@@ -1139,14 +1195,20 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		Context("when a required storage in the container profile is not present in the arguments", func() {
+			BeforeEach(func() {
+				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
+					{Name: "DW_JOB_foo_local_storage", Optional: false},
+					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
+				}
+			})
 			It("should go to error", func() {
 				workflow.Spec.DWDirectives = []string{
 					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						// local storage is missing
-						"DW_PERSISTENT_foo_persistent_storage=container-persistent",
-						containerProfile.Name),
+						"DW_PERSISTENT_foo_persistent_storage=%s",
+						containerProfile.Name, persistentStorageName),
 				}
 				Expect(k8sClient.Create(context.TODO(), workflow)).Should(Succeed())
 
@@ -1157,7 +1219,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			})
 		})
 
-		Context("when a argument is not in the container profile", func() {
+		Context("when an argument is not in the container profile", func() {
 			BeforeEach(func() {
 				containerProfileStorages = []nnfv1alpha1.NnfContainerProfileStorage{
 					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
@@ -1185,9 +1247,10 @@ var _ = Describe("NnfContainerProfile Webhook test", func() {
 	// The nnfcontainer_webhook_test.go covers testing of the webhook.
 	// This spec exists only to verify that the webhook is also running for
 	// the controller tests.
-	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
-		profileInvalid := basicNnfContainerProfile("an-invalid-profile", nil)
-		profileInvalid.Data.RetryLimit = -100
+	It("fails to create an invalid profile to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfContainerProfile("invalid-"+uuid.NewString()[:8], nil)
+		profileInvalid.Data.Spec = nil
+		profileInvalid.Data.MPISpec = nil
 		Expect(createNnfContainerProfile(profileInvalid, false)).To(BeNil())
 	})
 })
@@ -1196,8 +1259,8 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 	// The nnfstorageprofile_webhook_test.go covers testing of the webhook.
 	// This spec exists only to verify that the webhook is also running for
 	// the controller tests.
-	It("Fails to create an invalid profile, to verify that the webhook is installed", func() {
-		profileInvalid := basicNnfStorageProfile("an-invalid-profile")
+	It("fails to create an invalid profile to verify that the webhook is installed", func() {
+		profileInvalid := basicNnfStorageProfile("invalid-" + uuid.NewString()[:8])
 		profileInvalid.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		profileInvalid.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())

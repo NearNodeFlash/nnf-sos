@@ -36,11 +36,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	dwparse "github.com/HewlettPackard/dws/utils/dwdparse"
-	lusv1alpha1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1alpha1"
+	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -485,7 +486,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        idx,
+					JobID:        intstr.FromInt(idx),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
 						directive,
@@ -961,7 +962,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        -1,
+					JobID:        intstr.FromString("a job id"),
 					WLMID:        "Test WLMID",
 				},
 			}
@@ -1035,15 +1036,15 @@ var _ = Describe("Integration Test", func() {
 
 		})
 
-		var lustre *lusv1alpha1.LustreFileSystem
+		var lustre *lusv1beta1.LustreFileSystem
 
 		BeforeEach(func() {
-			lustre = &lusv1alpha1.LustreFileSystem{
+			lustre = &lusv1beta1.LustreFileSystem{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "lustre-test",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: lusv1alpha1.LustreFileSystemSpec{
+				Spec: lusv1beta1.LustreFileSystemSpec{
 					Name:      "lustre",
 					MgsNids:   "172.0.0.1@tcp",
 					MountRoot: "/lus/maui",
@@ -1248,7 +1249,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        1234,
+					JobID:        intstr.FromString("job 1234"),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
 						fmt.Sprintf("#DW container name=%s profile=%s", wfName, containerProfile.Name),
@@ -1262,6 +1263,7 @@ var _ = Describe("Integration Test", func() {
 			}).Should(Succeed())
 
 			advanceStateAndCheckReady("Proposal", workflow)
+			Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 0)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -1306,7 +1308,7 @@ var _ = Describe("Integration Test", func() {
 				matchLabels[nnfv1alpha1.DirectiveIndexLabel] = "0"
 
 				jobList := &batchv1.JobList{}
-				Eventually(func(g Gomega) int {
+				Eventually(func() int {
 					Expect(k8sClient.List(context.TODO(), jobList, matchLabels)).To(Succeed())
 					return len(jobList.Items)
 				}).Should(Equal(2))
@@ -1380,7 +1382,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        0,
+					JobID:        intstr.FromString("some job 234"),
 					WLMID:        "Test WLMID",
 				},
 			}
@@ -1514,7 +1516,7 @@ var _ = Describe("Integration Test", func() {
 				},
 				Spec: dwsv1alpha2.WorkflowSpec{
 					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        -1,
+					JobID:        intstr.FromString("job 2222"),
 					WLMID:        "Test WLMID",
 				},
 			}
@@ -1634,16 +1636,16 @@ var _ = Describe("Integration Test", func() {
 		When("using copy_in without jobdw", func() {
 			// Create a fake global lustre file system.
 			var (
-				lustre *lusv1alpha1.LustreFileSystem
+				lustre *lusv1beta1.LustreFileSystem
 			)
 
 			BeforeEach(func() {
-				lustre = &lusv1alpha1.LustreFileSystem{
+				lustre = &lusv1beta1.LustreFileSystem{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "maui",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: lusv1alpha1.LustreFileSystemSpec{
+					Spec: lusv1beta1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
 						MgsNids:   "10.0.0.1@tcp",
@@ -1670,16 +1672,16 @@ var _ = Describe("Integration Test", func() {
 		When("using copy_in without persistentdw", func() {
 			// Create a fake global lustre file system.
 			var (
-				lustre *lusv1alpha1.LustreFileSystem
+				lustre *lusv1beta1.LustreFileSystem
 			)
 
 			BeforeEach(func() {
-				lustre = &lusv1alpha1.LustreFileSystem{
+				lustre = &lusv1beta1.LustreFileSystem{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "maui",
 						Namespace: corev1.NamespaceDefault,
 					},
-					Spec: lusv1alpha1.LustreFileSystemSpec{
+					Spec: lusv1beta1.LustreFileSystemSpec{
 						Name:      "maui",
 						MountRoot: "/lus/maui",
 						MgsNids:   "10.0.0.1@tcp",
