@@ -1075,16 +1075,16 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 
 	if mpiJob {
 		if err := c.createMPIJob(); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update MPIJob").WithFatal().WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("Unable to create/update MPIJob").WithMajor().WithError(err)
 		}
 	} else {
 		// For non-MPI jobs, we need to create a service ourselves
 		if err := r.createContainerService(ctx, workflow); err != nil {
-			return nil, dwsv1alpha2.NewResourceError("Unable to create/update Container Service").WithFatal().WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("Unable to create/update Container Service").WithMajor().WithError(err)
 		}
 
 		if err := c.createNonMPIJob(); err != nil {
-			return nil, dwsv1alpha2.NewResourceError("Unable to create/update Container Jobs").WithFatal().WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("Unable to create/update Container Jobs").WithMajor().WithError(err)
 		}
 	}
 
