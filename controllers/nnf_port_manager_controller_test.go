@@ -85,7 +85,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			DeferCleanup(func() { Expect(k8sClient.Delete(ctx, mgr)).To(Succeed()) })
 		})
 
-		reservePorts := func(mgr *nnfv1alpha1.NnfPortManager, name string, count int) {
+		reservePorts := func(mgr *nnfv1alpha1.NnfPortManager, name string, count int) []uint16 {
 			By(fmt.Sprintf("Reserving %d ports for '%s'", count, name))
 
 			allocation := nnfv1alpha1.NnfPortManagerAllocationSpec{
@@ -110,6 +110,8 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			Expect(status).ToNot(BeNil())
 			Expect(status.Ports).To(HaveLen(allocation.Count))
 			Expect(status.Status).To(Equal(nnfv1alpha1.NnfPortManagerAllocationStatusInUse))
+
+			return status.Ports
 		}
 
 		releasePorts := func(mgr *nnfv1alpha1.NnfPortManager, name string) {
@@ -130,16 +132,69 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			}).Should(Succeed())
 		}
 
+		// Verify the number of allocations in the status allocation list
+		verifyNumAllocations := func(mgr *nnfv1alpha1.NnfPortManager, count int) {
+			By(fmt.Sprintf("Verifying there are %d allocations in the status allocation list", count))
+
+			Eventually(func() int {
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgr), mgr)).To(Succeed())
+				return len(mgr.Status.Allocations)
+			}).Should(Equal(count))
+		}
+
 		It("Reserves & removes a single port", func() {
 			const name = "single"
-			reservePorts(mgr, name, 1)
+			ports := reservePorts(mgr, name, 1)
+			Expect(ports[0]).To(BeEquivalentTo(portStart))
+			verifyNumAllocations(mgr, 1)
 			releasePorts(mgr, name)
+			verifyNumAllocations(mgr, 0)
+		})
+
+		It("Reserves & removes a multiple ports, one after another", func() {
+			first := "first"
+			ports := reservePorts(mgr, first, 1)
+			Expect(ports[0]).To(BeEquivalentTo(portStart))
+			verifyNumAllocations(mgr, 1)
+
+			second := "second"
+			ports = reservePorts(mgr, second, 1)
+			Expect(ports[0]).To(BeEquivalentTo(portStart + 1))
+			verifyNumAllocations(mgr, 2)
+
+			releasePorts(mgr, first)
+			verifyNumAllocations(mgr, 1)
+
+			releasePorts(mgr, second)
+			verifyNumAllocations(mgr, 0)
+		})
+
+		It("Reserves & removes a multiple ports, one at a time", func() {
+			first := "first"
+			ports := reservePorts(mgr, first, 1)
+			firstPort := ports[0]
+			Expect(ports[0]).To(BeEquivalentTo(portStart))
+			verifyNumAllocations(mgr, 1)
+			releasePorts(mgr, first)
+			verifyNumAllocations(mgr, 0)
+
+			// Port should be reused since it was freed already
+			// This will fail once cooldowns are introduced
+			second := "second"
+			ports = reservePorts(mgr, second, 1)
+			Expect(ports[0]).To(BeEquivalentTo(firstPort))
+			verifyNumAllocations(mgr, 1)
+
+			releasePorts(mgr, second)
+			verifyNumAllocations(mgr, 0)
 		})
 
 		It("Reserves & removes all ports", func() {
 			const name = "all"
 			reservePorts(mgr, name, portEnd-portStart+1)
+			verifyNumAllocations(mgr, 1)
 			releasePorts(mgr, name)
+			verifyNumAllocations(mgr, 0)
 		})
 
 		It("Reserves from free list", func() {
@@ -147,11 +202,15 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			reservePorts(mgr, single, 1)
 
 			const remaining = "remaining"
-			reservePorts(mgr, remaining, portEnd-portStart)
+			count := portEnd - portStart
+			reservePorts(mgr, remaining, count)
 
 			releasePorts(mgr, single)
+			verifyNumAllocations(mgr, 1)
 
 			reservePorts(mgr, "free", 1)
+
+			verifyNumAllocations(mgr, 2)
 		})
 
 		It("Fails with insufficient resources", func() {

@@ -13,6 +13,11 @@ data:
   # PostRun. Defaults to 0. A value of 0 disables this behavior.
   postRunTimeoutSeconds: 0
 
+  # Request the number of ports to open on the targeted rabbits. These ports are accessible outside
+  # of the k8s cluster.  The requested ports are made available as environment variables inside the
+  # container and in the DWS workflow (NNF_CONTAINER_PORTS).
+  numPorts: 0
+
   # List of possible filesystems supported by this container profile. These
   # storages are mounted inside of the container. Any non-optional storage must
   # be supplied with the container directive as an argument and must reference

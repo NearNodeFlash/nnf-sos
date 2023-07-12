@@ -1302,6 +1302,66 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	return nil, nil
 }
 
+func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	doneMpi := false
+	doneNonMpi := false
+
+	// Set the delete propagation
+	policy := metav1.DeletePropagationBackground
+	deleteAllOptions := &client.DeleteAllOfOptions{
+		DeleteOptions: client.DeleteOptions{
+			PropagationPolicy: &policy,
+		},
+	}
+	// Add workflow matchLabels + directive index (if desired)
+	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	}
+
+	// Delete MPIJobs
+	mpiJobList, err := r.getMPIJobs(ctx, workflow, index)
+	if err != nil {
+		if strings.Contains(err.Error(), "no kind is registered for the type v2beta1.MPIJobList") || apierrors.IsNotFound(err) {
+			doneMpi = true
+		} else {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not delete container MPIJob(s)").WithError(err)
+		}
+	} else if len(mpiJobList.Items) > 0 {
+		if err := r.DeleteAllOf(ctx, &mpiJobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, nnfv1alpha1.NewWorkflowError("Could not delete container MPIJob(s)").WithError(err)
+			}
+		}
+	} else {
+		doneMpi = true
+	}
+
+	// Delete non-MPI Jobs
+	jobList, err := r.getContainerJobs(ctx, workflow, index)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			doneNonMpi = true
+		} else {
+			return nil, nnfv1alpha1.NewWorkflowError("Could not delete container Job(s)").WithError(err)
+		}
+	} else if len(jobList.Items) > 0 {
+		if err := r.DeleteAllOf(ctx, &jobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, nnfv1alpha1.NewWorkflowError("Could not delete container Job(s)").WithError(err)
+			}
+		}
+	} else {
+		doneNonMpi = true
+	}
+
+	if doneMpi && doneNonMpi {
+		return nil, nil
+	}
+
+	return Requeue("pending container deletion"), nil
+}
+
 func (r *NnfWorkflowReconciler) getMPIJobConditions(ctx context.Context, workflow *dwsv1alpha2.Workflow, index, expected int) (*mpiv2beta1.MPIJob, *result) {
 	mpiJob := &mpiv2beta1.MPIJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1361,7 +1421,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		// Set the ActiveDeadLineSeconds on each of the k8s jobs created by MPIJob/mpi-operator. We
 		// need to retrieve the jobs in a different way than non-MPI jobs since the jobs are created
 		// by the MPIJob.
-		jobList, err := r.getMPIJobList(ctx, workflow, mpiJob)
+		jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("waitForContainersToFinish: no MPIJob JobList found for workflow '%s', index: %d", workflow.Name, index).WithMajor()
 		}
@@ -1467,7 +1527,8 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) getMPIJobList(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob) (*batchv1.JobList, error) {
+// Given an MPIJob, return a list of all the k8s Jobs owned by the MPIJob
+func (r *NnfWorkflowReconciler) getMPIJobChildrenJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob) (*batchv1.JobList, error) {
 	// The k8s jobs that are spawned off by MPIJob do not have labels tied to the workflow.
 	// Therefore, we need to get the k8s jobs manually. To do this, we can query the jobs by the
 	// name of the MPIJob. However, this doesn't account for the namespace. We need another way.
@@ -1498,14 +1559,31 @@ func (r *NnfWorkflowReconciler) getMPIJobList(ctx context.Context, workflow *dws
 	return jobList, nil
 }
 
+func (r *NnfWorkflowReconciler) getMPIJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*mpiv2beta1.MPIJobList, error) {
+	// Get the MPIJobs for this workflow and directive index
+	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	}
+
+	jobList := &mpiv2beta1.MPIJobList{}
+	if err := r.List(ctx, jobList, matchLabels); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("could not retrieve MPIJobs").WithError(err)
+	}
+
+	return jobList, nil
+}
+
 func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*batchv1.JobList, error) {
 	// Get the jobs for this workflow and directive index
 	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
-	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	}
 
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs for index %d", index).WithError(err).WithMajor()
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs").WithError(err).WithMajor()
 	}
 
 	return jobList, nil
@@ -1600,4 +1678,147 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 	}
 
 	return volumes, nil, nil
+}
+
+// Use the container profile to determine how many ports are needed and request them from the default NnfPortManager
+func (r *NnfWorkflowReconciler) getContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do here if ports are not requested
+	if profile.Data.NumPorts > 0 {
+		pm, err := getContainerPortManager(ctx, r.Client)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check to see if we've already made an allocation
+		for _, alloc := range pm.Spec.Allocations {
+			if alloc.Requester.UID == workflow.UID {
+				return nil, nil
+			}
+		}
+
+		// Add a port allocation request to the manager for the number of ports specified by the
+		// container profile
+		pm.Spec.Allocations = append(pm.Spec.Allocations, nnfv1alpha1.NnfPortManagerAllocationSpec{
+			Requester: corev1.ObjectReference{
+				Name:      workflow.Name,
+				Namespace: workflow.Namespace,
+				Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
+				UID:       workflow.UID,
+			},
+			Count: int(profile.Data.NumPorts),
+		})
+
+		if err := r.Update(ctx, pm); err != nil {
+			if !apierrors.IsConflict(err) {
+				return nil, err
+			}
+			return Requeue("update port manager allocation"), nil
+		}
+
+		r.Log.Info("Ports Requested", "numPorts", profile.Data.NumPorts)
+	}
+
+	return nil, nil
+}
+
+// Ensure that the default NnfPortManager has assigned the appropriate number of requested ports
+func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do here if ports are not requested
+	r.Log.Info("Checking for requested ports", "numPorts", profile.Data.NumPorts)
+	if profile.Data.NumPorts > 0 {
+		pm, err := getContainerPortManager(ctx, r.Client)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, alloc := range pm.Status.Allocations {
+			if alloc.Requester != nil && alloc.Requester.UID == workflow.UID {
+				if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse && len(alloc.Ports) == int(profile.Data.NumPorts) {
+					// Add workflow env var for the ports
+					name, val := getContainerPortsEnvVar(alloc.Ports)
+					workflow.Status.Env[name] = val
+					return nil, nil // done
+				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInvalidConfiguration {
+					return nil, nnfv1alpha1.NewWorkflowError("error requesting ports for container workflow: Invalid NnfPortManager configuration").WithFatal()
+				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInsufficientResources {
+					return nil, nnfv1alpha1.NewWorkflowError("error requesting ports for container workflow: InsufficientResources").WithFatal()
+				}
+			}
+		}
+
+		return Requeue("NnfPortManager allocation not ready").after(2 * time.Second).withObject(pm), nil
+	}
+
+	return nil, nil
+}
+
+// Retrieve the default NnfPortManager for user containers. Allow a client to be passed in as this
+// is meant to be used by reconcilers or container helpers.
+func getContainerPortManager(ctx context.Context, cl client.Client) (*nnfv1alpha1.NnfPortManager, error) {
+	pm := &nnfv1alpha1.NnfPortManager{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nnf-port-manager",
+			Namespace: "nnf-system",
+		},
+	}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(pm), pm); err != nil {
+		return nil, nnfv1alpha1.NewWorkflowError("error retrieving NnfPortManager").WithError(err).WithFatal()
+	}
+
+	return pm, nil
+}
+
+// Tell the NnfPortManager that the ports are no longer needed
+// func (r *NnfWorkflowReconciler) releaseContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) releaseContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow) (*result, error) {
+	found := false
+
+	pm, err := getContainerPortManager(ctx, r.Client)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	// Find the allocation in the Status
+	for _, alloc := range pm.Status.Allocations {
+		if alloc.Requester.UID == workflow.UID && alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+			found = true
+			break
+		}
+	}
+
+	if found {
+		// Remove the allocation request from the Spec
+		// TODO: For cooldowns, change the status to cooldown/time_wait rather than delete. Can we
+		// even do that from here?
+		for idx, alloc := range pm.Spec.Allocations {
+			if alloc.Requester.UID == workflow.UID {
+				pm.Spec.Allocations = append(pm.Spec.Allocations[:idx], pm.Spec.Allocations[idx+1:]...)
+			}
+		}
+
+		if err := r.Update(ctx, pm); err != nil {
+			if !apierrors.IsConflict(err) {
+				return nil, err
+			}
+		}
+
+		return Requeue("pending port de-allocation"), nil
+	} else {
+		return nil, nil
+	}
 }

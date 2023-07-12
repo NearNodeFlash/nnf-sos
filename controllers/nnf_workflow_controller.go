@@ -123,6 +123,20 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, err
 		}
 
+		// Delete containers and unallocate port
+		containerRes, err := r.deleteContainers(ctx, workflow, -1)
+		if err != nil {
+			return ctrl.Result{}, err
+		} else if containerRes != nil {
+			return containerRes.Result, nil
+		}
+		containerRes, err = r.releaseContainerPorts(ctx, workflow)
+		if err != nil {
+			return ctrl.Result{}, err
+		} else if containerRes != nil {
+			return containerRes.Result, nil
+		}
+
 		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -406,39 +420,49 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 
 			return nil, dwsv1alpha2.NewResourceError("could not create NnfStorage").WithError(err).WithUserMessage("could not create allocation")
 		}
+	case "container":
+		return r.getContainerPorts(ctx, workflow, index)
 	}
 
 	return nil, nil
 }
 
 func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
-	name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	// Check whether the NnfStorage has finished creating the storage.
-	nnfStorage := &nnfv1alpha1.NnfStorage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err).WithUserMessage("could not allocate storage")
-	}
+	switch dwArgs["command"] {
+	default:
+		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
-	// If the Status section has not been filled in yet, exit and wait.
-	if len(nnfStorage.Status.AllocationSets) != len(nnfStorage.Spec.AllocationSets) {
-		// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
-		return Requeue("allocation").after(2 * time.Second).withObject(nnfStorage), nil
-	}
+		// Check whether the NnfStorage has finished creating the storage.
+		nnfStorage := &nnfv1alpha1.NnfStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+		}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err).WithUserMessage("could not allocate storage")
+		}
 
-	if nnfStorage.Status.Error != nil {
-		handleWorkflowErrorByIndex(dwsv1alpha2.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error).WithUserMessage("could not allocate storage"), workflow, index)
-		return Requeue("error").withObject(nnfStorage), nil
-	}
+		// If the Status section has not been filled in yet, exit and wait.
+		if len(nnfStorage.Status.AllocationSets) != len(nnfStorage.Spec.AllocationSets) {
+			// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
+			return Requeue("allocation").after(2 * time.Second).withObject(nnfStorage), nil
+		}
 
-	if nnfStorage.Status.Status != nnfv1alpha1.ResourceReady {
-		// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
-		return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
+		if nnfStorage.Status.Error != nil {
+			handleWorkflowErrorByIndex(dwsv1alpha2.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error).WithUserMessage("could not allocate storage"), workflow, index)
+			return Requeue("error").withObject(nnfStorage), nil
+		}
+
+		if nnfStorage.Status.Status != nnfv1alpha1.ResourceReady {
+			// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
+			return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
+		}
+
+	case "container":
+		return r.checkContainerPorts(ctx, workflow, index)
 	}
 
 	return nil, nil
@@ -986,6 +1010,14 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 }
 
 func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	if dwArgs["command"] == "container" {
+		res, err := r.deleteContainers(ctx, workflow, index)
+		if res != nil || err != nil {
+			return res, err
+		}
+	}
 
 	// Delete the NnfDataMovement and NnfAccess for this directive before removing the NnfStorage.
 	// copy_in/out directives can reference NnfStorage from a different directive, so all the NnfAccesses
@@ -1077,6 +1109,12 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		err := r.removePersistentStorageReference(ctx, workflow, index)
 		if err != nil {
 			return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("Could not remove persistent storage reference")
+		}
+	case "container":
+		// Release container ports
+		res, err := r.releaseContainerPorts(ctx, workflow)
+		if res != nil || err != nil {
+			return res, err
 		}
 	default:
 	}
