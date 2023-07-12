@@ -74,6 +74,9 @@ data:
       optional: false
     - name: DW_PERSISTENT_foo_persistent_storage
       optional: true
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
+      pvcMode: ReadWriteMany
   mpiSpec:
     runPolicy:
       cleanPodPolicy: Running
