@@ -325,12 +325,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 			}
 		},
 		// Only nil modes should pass for JOB/PERSISTENT
-		Entry("should pass when DW_JOB has no mode", "DW_JOB_storage", nil, true),
+		Entry("should pass when DW_JOB has no mode", "DW_JOB_storage", corev1.PersistentVolumeAccessMode(""), true),
 		Entry("should fail when DW_JOB has a mode", "DW_JOB_storage", corev1.ReadWriteMany, false),
-		Entry("should pass when DW_PERSISTENT has no mode", "DW_PERSISTENT_storage", nil, true),
+		Entry("should pass when DW_PERSISTENT has no mode", "DW_PERSISTENT_storage", corev1.PersistentVolumeAccessMode(""), true),
 		Entry("should fail when DW_PERSISTENT has a mode", "DW_PERSISTENT_storage", corev1.ReadWriteMany, false),
 		// Both should pass
-		Entry("should pass when DW_GLOBAL has no mode (defaults)", "DW_GLOBAL_storage", nil, true),
+		Entry("should pass when DW_GLOBAL has no mode (defaults)", "DW_GLOBAL_storage", corev1.PersistentVolumeAccessMode(""), true),
 		Entry("should pass when DW_GLOBAL has a mode", "DW_GLOBAL_storage", corev1.ReadWriteMany, true),
 	)
 })
