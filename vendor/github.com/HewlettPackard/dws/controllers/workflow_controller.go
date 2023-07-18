@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -179,25 +180,38 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	workflow.Status.Status = dwsv1alpha2.StatusCompleted
 	workflow.Status.Message = ""
 
-	// Loop through the driver status array and update the workflow
-	// status as necessary
+	// Loop through the driver status array find the entries that are for the current state
+	drivers := []dwsv1alpha2.WorkflowDriverStatus{}
+
 	for _, driver := range workflow.Status.Drivers {
 		if driver.WatchState != workflow.Status.State {
 			continue
 		}
 
-		if driver.Completed == false {
-			workflow.Status.Ready = false
-			workflow.Status.Status = dwsv1alpha2.StatusDriverWait
-		}
+		drivers = append(drivers, driver)
+	}
 
-		if driver.Message != "" {
-			workflow.Status.Message = fmt.Sprintf("DW Directive %d: %s", driver.DWDIndex, driver.Message)
-		}
+	if len(drivers) > 0 {
+		// Sort the driver entries by their status
+		sort.Slice(drivers, func(i, j int) bool {
+			return statusPriority(drivers[i].Status) > statusPriority(drivers[j].Status)
+		})
 
-		if driver.Status == dwsv1alpha2.StatusError {
-			workflow.Status.Status = dwsv1alpha2.StatusError
-			break
+		priority := statusPriority(drivers[0].Status)
+		for _, driver := range drivers {
+			if statusPriority(driver.Status) < priority {
+				break
+			}
+
+			if driver.Completed == false {
+				workflow.Status.Ready = false
+			}
+
+			if driver.Message != "" {
+				workflow.Status.Message = fmt.Sprintf("DW Directive %d: %s", driver.DWDIndex, driver.Message)
+			}
+
+			workflow.Status.Status = driver.Status
 		}
 	}
 
@@ -242,6 +256,28 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha2
 	}
 
 	return computes, nil
+}
+
+// Next reports the next state after state s
+func statusPriority(status string) int {
+	switch status {
+	case dwsv1alpha2.StatusCompleted:
+		return 1
+	case dwsv1alpha2.StatusDriverWait:
+		return 2
+	case dwsv1alpha2.StatusPending:
+		fallthrough
+	case dwsv1alpha2.StatusQueued:
+		fallthrough
+	case dwsv1alpha2.StatusRunning:
+		return 3
+	case dwsv1alpha2.StatusStalled:
+		return 4
+	case dwsv1alpha2.StatusError:
+		return 5
+	}
+
+	panic(status)
 }
 
 type workflowStatusUpdater struct {

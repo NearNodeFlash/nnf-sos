@@ -269,7 +269,11 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: ClientMount is the Schema for the clientmounts API
@@ -485,8 +489,8 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication if the error is likely recoverable or
-                      not
+                    description: Indication of how sever the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major

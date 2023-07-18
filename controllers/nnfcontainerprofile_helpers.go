@@ -97,10 +97,10 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 	// Determine whether the profile is restricted to a UserID/GroupID.
 	restrictedMsg := "container profile '%s' is restricted to %s %d"
 	if profile.Data.UserID != nil && *profile.Data.UserID != workflow.Spec.UserID {
-		return nil, fmt.Errorf(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID)
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID).WithUser().WithFatal()
 	}
 	if profile.Data.GroupID != nil && *profile.Data.GroupID != workflow.Spec.GroupID {
-		return nil, fmt.Errorf(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID)
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID).WithUser().WithFatal()
 
 	}
 

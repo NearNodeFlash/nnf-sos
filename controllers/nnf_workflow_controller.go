@@ -904,7 +904,12 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	// Unmount the NnfAccess for the compute nodes. This will free the compute nodes to be used
 	// in a different job even if there is data movement happening on the Rabbits.
 	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "computes"); result != nil || err != nil {
-		return result, dwsv1alpha2.NewResourceError("could not unmount file system from compute nodes").WithError(err)
+		resourceErr := dwsv1alpha2.NewResourceError("could not unmount file system from compute nodes")
+		if err != nil {
+			resourceErr = resourceErr.WithError(err)
+		}
+
+		return result, resourceErr
 	}
 
 	// Wait for data movement resources to complete
@@ -967,7 +972,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 		}
 
 		if dm.Status.Status == nnfv1alpha1.DataMovementConditionReasonFailed {
-			return nil, dwsv1alpha2.NewResourceError("data movement %v failed", client.ObjectKeyFromObject(&dm)).WithError(err).WithUserMessage("data movement failed").WithFatal()
+			return nil, dwsv1alpha2.NewResourceError("data movement %v failed", client.ObjectKeyFromObject(&dm)).WithUserMessage("data movement failed").WithFatal()
 		}
 	}
 

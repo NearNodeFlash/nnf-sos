@@ -66,6 +66,7 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// in clientMount.Status{} change
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ClientMountStatus](clientMount)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() { clientMount.Status.SetResourceError(err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {

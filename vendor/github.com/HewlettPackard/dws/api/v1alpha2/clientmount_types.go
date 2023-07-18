@@ -189,6 +189,7 @@ type ClientMountStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // ClientMount is the Schema for the clientmounts API
 type ClientMount struct {

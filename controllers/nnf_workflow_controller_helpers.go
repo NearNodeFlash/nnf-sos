@@ -723,7 +723,7 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 			log.Error(err, "Unable to get PersistentStorageInstance", "name", psiName, "error", err)
 		}
 
-		return nil, dwsv1alpha2.NewResourceError("could not get PersistentStorageInstance: %v", psiNamedNamespace).WithError(err)
+		return nil, err
 	}
 
 	return psi, nil

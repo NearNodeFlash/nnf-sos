@@ -51,7 +51,8 @@ type ResourceErrorInfo struct {
 	// +kubebuilder:validation:Enum=Internal;User
 	Type ResourceErrorType `json:"type"`
 
-	// Indication if the error is likely recoverable or not
+	// Indication of how sever the error is. Minor will likely succeed, Major may
+	// succeed, and Fatal will never succeed.
 	// +kubebuilder:validation:Enum=Minor;Major;Fatal
 	Severity ResourceErrorSeverity `json:"severity"`
 }

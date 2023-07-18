@@ -22,7 +22,6 @@ package controllers
 import (
 	"context"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -241,7 +240,8 @@ func (r *NnfNodeStorageReconciler) allocateStorage(nodeStorage *nnfv1alpha1.NnfN
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeStorage.Spec.Capacity)
 	if err != nil {
 		allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceFailed
-		return r.handleCreateError(nodeStorage, "could not create storage pool", err)
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create storage pool").WithError(err).WithMajor()
+
 	}
 
 	allocationStatus.StoragePool.Status = nnfv1alpha1.ResourceStatus(sp.Status)
@@ -347,7 +347,7 @@ func (r *NnfNodeStorageReconciler) createBlockDevice(ctx context.Context, nodeSt
 			sg, err := r.createStorageGroup(ss, storageGroupID, allocationStatus.StoragePool.ID, endpointID)
 			if err != nil {
 				allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceFailed
-				return r.handleCreateError(nodeStorage, "could not create storage group", err)
+				return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create storage group").WithError(err).WithMajor()
 			}
 
 			allocationStatus.StorageGroup.Status = nnfv1alpha1.ResourceStatus(sg.Status)
@@ -480,7 +480,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	if err != nil {
 		allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceFailed
 
-		return r.handleCreateError(nodeStorage, "could not create file system", err)
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
 	}
 
 	allocationStatus.FileSystem.Status = nnfv1alpha1.ResourceReady
@@ -512,10 +512,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 		volumeGroupName, logicalVolumeName, err = r.lvmNames(ctx, nodeStorage, index)
 		if err != nil {
 			allocationStatus.FileShare.Status = nnfv1alpha1.ResourceFailed
-			nodeStorage.Status.Error = dwsv1alpha2.NewResourceError("could not get VG/LV names").WithError(err).WithFatal()
-			log.Info(nodeStorage.Status.Error.Error())
-
-			return &ctrl.Result{RequeueAfter: time.Minute * 2}, nil
+			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not get VG/LV names").WithError(err).WithFatal()
 		}
 
 		shareOptions["volumeGroupName"] = volumeGroupName
@@ -527,7 +524,7 @@ func (r *NnfNodeStorageReconciler) formatFileSystem(ctx context.Context, nodeSto
 	sh, err = r.createFileShare(ss, fileShareID, allocationStatus.FileSystem.ID, os.Getenv("RABBIT_NODE"), mountPath, shareOptions)
 	if err != nil {
 		allocationStatus.FileShare.Status = nnfv1alpha1.ResourceFailed
-		return r.handleCreateError(nodeStorage, "could not create file share", err)
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create file share").WithError(err).WithMajor()
 	}
 
 	nid := ""
@@ -705,18 +702,18 @@ func (r *NnfNodeStorageReconciler) createStoragePool(ss nnf.StorageServiceApi, i
 	}
 
 	if err := ss.StorageServiceIdStoragePoolIdPut(ss.Id(), id, sp); err != nil {
+		resourceErr := dwsv1alpha2.NewResourceError("Could not allocate storage pool").WithError(err)
 		ecErr, ok := err.(*ec.ControllerError)
 		if ok {
-			resourceErr := dwsv1alpha2.NewResourceError("Could not allocate storage pool").WithError(err)
 			switch ecErr.Cause() {
 			case "Insufficient capacity available":
 				return nil, resourceErr.WithUserMessage("Insufficient capacity available").WithFatal()
 			default:
-				return nil, err
+				return nil, resourceErr
 			}
 		}
 
-		return nil, err
+		return nil, resourceErr
 	}
 
 	return sp, nil
@@ -866,28 +863,6 @@ func (r *NnfNodeStorageReconciler) getFileSystem(ss nnf.StorageServiceApi, id st
 	}
 
 	return fs, nil
-}
-
-func (r *NnfNodeStorageReconciler) handleCreateError(storage *nnfv1alpha1.NnfNodeStorage, message string, err error) (*ctrl.Result, error) {
-	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(storage).String())
-	resourceError := dwsv1alpha2.NewResourceError(message).WithError(err)
-
-	defer func() { storage.Status.SetResourceErrorAndLog(resourceError, log) }()
-
-	controllerError := &ec.ControllerError{}
-	if errors.As(err, &controllerError) && controllerError.IsRetryable() {
-		return &ctrl.Result{RequeueAfter: controllerError.RetryDelay()}, nil
-	}
-
-	resourceError = resourceError.WithMajor()
-
-	// If this is really Fatal, we should not retry. But not all of nnf-ec supports the
-	// retryable classification of errors. Instead we mark the error as Fatal() but continue
-	// to retry with a modest delay. If the resource creation error occurs perpetually, an
-	// external entity should timeout the operation and therefore prevent future create attempts.
-	// Once nnf-ec has correctly classified all errors, there should be no need to requeue.
-
-	return &ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

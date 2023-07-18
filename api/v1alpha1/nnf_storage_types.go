@@ -132,6 +132,7 @@ type NnfStorageStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // NnfStorage is the Schema for the storages API
 type NnfStorage struct {

@@ -194,6 +194,7 @@ func (ns *NnfNodeStorage) GetStatus() updater.Status[*NnfNodeStorageStatus] {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // NnfNodeStorageList contains a list of NNF Nodes
 type NnfNodeStorageList struct {

@@ -23,6 +23,7 @@ import (
 	"context"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -101,7 +102,11 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() { storage.Status.SetResourceErrorAndLog(err, log) }()
+	defer func() {
+		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
+			storage.Status.SetResourceErrorAndLog(err, log)
+		}
+	}()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -188,7 +193,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Wait for all the allocation sets to be ready
 	for _, allocationSet := range storage.Status.AllocationSets {
 		if allocationSet.Status != nnfv1alpha1.ResourceReady {
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: time.Minute}, nil //statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), nil)
 		}
 	}
 
