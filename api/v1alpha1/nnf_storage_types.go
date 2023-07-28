@@ -106,9 +106,6 @@ type NnfStorageAllocationSetStatus struct {
 	// Health reflects the health of this allocation set
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	// Error is the human readable error string
-	Error string `json:"error,omitempty"`
-
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
@@ -135,6 +132,8 @@ type NnfStorageStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // NnfStorage is the Schema for the storages API
 type NnfStorage struct {

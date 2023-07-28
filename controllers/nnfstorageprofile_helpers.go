@@ -21,7 +21,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -61,14 +60,14 @@ func findProfileToUse(ctx context.Context, clnt client.Client, args map[string]s
 		}
 		// Require that there be one and only one default.
 		if len(profilesFound) == 0 {
-			return nil, fmt.Errorf("Unable to find a default NnfStorageProfile to use")
+			return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find a default NnfStorageProfile to use").WithFatal()
 		} else if len(profilesFound) > 1 {
-			return nil, fmt.Errorf("More than one default NnfStorageProfile found; unable to pick one: %v", profilesFound)
+			return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("More than one default NnfStorageProfile found; unable to pick one: %v", profilesFound).WithFatal()
 		}
 		profileName = profilesFound[0]
 	}
 	if len(profileName) == 0 {
-		return nil, fmt.Errorf("Unable to find an NnfStorageProfile name")
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find an NnfStorageProfile name").WithUser().WithFatal()
 	}
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, nnfStorageProfile)
 	if err != nil {
@@ -86,7 +85,7 @@ func findPinnedProfile(ctx context.Context, clnt client.Client, namespace string
 		return nil, err
 	}
 	if !nnfStorageProfile.Data.Pinned {
-		return nil, fmt.Errorf("Expected pinned NnfStorageProfile, but it was not pinned: %s", pinnedName)
+		return nil, dwsv1alpha2.NewResourceError("Expected pinned NnfStorageProfile, but it was not pinned: %s", pinnedName).WithFatal()
 	}
 	return nnfStorageProfile, nil
 }
@@ -150,16 +149,16 @@ func addPinnedStorageProfileLabel(object metav1.Object, nnfStorageProfile *nnfv1
 func getPinnedStorageProfileFromLabel(ctx context.Context, clnt client.Client, object metav1.Object) (*nnfv1alpha1.NnfStorageProfile, error) {
 	labels := object.GetLabels()
 	if labels == nil {
-		return nil, fmt.Errorf("unable to find labels")
+		return nil, dwsv1alpha2.NewResourceError("unable to find labels").WithFatal()
 	}
 
 	pinnedName, okName := labels[nnfv1alpha1.PinnedStorageProfileLabelName]
 	if !okName {
-		return nil, fmt.Errorf("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelName)
+		return nil, dwsv1alpha2.NewResourceError("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelName).WithFatal()
 	}
 	pinnedNamespace, okNamespace := labels[nnfv1alpha1.PinnedStorageProfileLabelNameSpace]
 	if !okNamespace {
-		return nil, fmt.Errorf("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelNameSpace)
+		return nil, dwsv1alpha2.NewResourceError("unable to find %s label", nnfv1alpha1.PinnedStorageProfileLabelNameSpace).WithFatal()
 	}
 
 	return findPinnedProfile(ctx, clnt, pinnedNamespace, pinnedName)

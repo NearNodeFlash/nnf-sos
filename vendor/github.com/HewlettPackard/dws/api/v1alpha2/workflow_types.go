@@ -92,12 +92,13 @@ func (s WorkflowState) after(t WorkflowState) bool {
 
 // Strings associated with workflow statuses
 const (
-	StatusPending    = "Pending"
-	StatusQueued     = "Queued"
-	StatusRunning    = "Running"
-	StatusCompleted  = "Completed"
-	StatusError      = "Error"
-	StatusDriverWait = "DriverWait"
+	StatusPending            = "Pending"
+	StatusQueued             = "Queued"
+	StatusRunning            = "Running"
+	StatusCompleted          = "Completed"
+	StatusTransientCondition = "TransientCondition"
+	StatusError              = "Error"
+	StatusDriverWait         = "DriverWait"
 )
 
 // WorkflowSpec defines the desired state of Workflow
@@ -147,8 +148,8 @@ type WorkflowDriverStatus struct {
 
 	// User readable reason.
 	// For the CDS driver, this could be the state of the underlying
-	// data movement request:  Pending, Queued, Running, Completed or Error
-	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error;DriverWait
+	// data movement request
+	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;TransientCondition;Error;DriverWait
 	Status string `json:"status,omitempty"`
 
 	// Message provides additional details on the current status of the resource
@@ -172,8 +173,12 @@ type WorkflowStatus struct {
 	// Indicates whether State has been reached.
 	Ready bool `json:"ready"`
 
-	// User readable reason and status message
-	// +kubebuilder:validation:Enum=Completed;DriverWait;Error
+	// User readable reason and status message.
+	// - Completed: The workflow has reached the state in workflow.Status.State.
+	// - DriverWait: The underlying drivers are currently running.
+	// - TransientCondition: A driver has encountered an error that might not be recoverable.
+	// - Error: A driver has encountered an error that will no recover.
+	// +kubebuilder:validation:Enum=Completed;DriverWait;TransientCondition;Error
 	Status string `json:"status,omitempty"`
 
 	// Message provides additional details on the current status of the resource

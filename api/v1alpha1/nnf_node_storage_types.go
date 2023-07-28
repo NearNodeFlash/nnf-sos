@@ -169,8 +169,6 @@ type NnfNodeStorageAllocationStatus struct {
 	StoragePool NnfResourceStatus `json:"storagePool,omitempty"`
 
 	FileSystem NnfResourceStatus `json:"fileSystem,omitempty"`
-
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // LustreStorageStatus describes the Lustre target created here.
@@ -196,6 +194,8 @@ func (ns *NnfNodeStorage) GetStatus() updater.Status[*NnfNodeStorageStatus] {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // NnfNodeStorageList contains a list of NNF Nodes
 type NnfNodeStorageList struct {

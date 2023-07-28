@@ -167,6 +167,14 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				FileSystemType: fsType,
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
 			},
+			Status: nnfv1alpha1.NnfStorageStatus{
+				MgsNode: "",
+				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
+					Status:          "Ready",
+					Health:          "OK",
+					AllocationCount: 0,
+				}},
+			},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
 	}
@@ -1368,12 +1376,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						if shouldError {
-							// Raw isn't supported for persistent storage, make sure that error gets
-							// reported properly
-							if fsType == "raw" {
-								return workflow.Status.Status == dwsv1alpha2.StatusError &&
-									strings.Contains(workflow.Status.Message, "can not be used with raw allocations")
-							}
 							return workflow.Status.Status == dwsv1alpha2.StatusError &&
 								strings.Contains(workflow.Status.Message, "unsupported container filesystem: "+fsType)
 						} else {

@@ -91,6 +91,8 @@ type PersistentStorageInstanceStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // PersistentStorageInstance is the Schema for the Persistentstorageinstances API
 type PersistentStorageInstance struct {

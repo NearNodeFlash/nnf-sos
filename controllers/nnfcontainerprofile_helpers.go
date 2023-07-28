@@ -43,7 +43,7 @@ func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv
 	}
 
 	if profile == nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	return profile, nil
@@ -62,7 +62,7 @@ func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflo
 	}
 
 	if !profile.Data.Pinned {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("expected a pinned container profile '%s', but found one that is not pinned", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("expected a pinned container profile '%s', but found one that is not pinned", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	return profile, nil
@@ -91,16 +91,16 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 	}
 
 	if profile.Data.Pinned {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("expected container profile that is not pinned '%s', but found one that is pinned", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("expected container profile that is not pinned '%s', but found one that is pinned", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	// Determine whether the profile is restricted to a UserID/GroupID.
 	restrictedMsg := "container profile '%s' is restricted to %s %d"
 	if profile.Data.UserID != nil && *profile.Data.UserID != workflow.Spec.UserID {
-		return nil, fmt.Errorf(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID)
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID).WithUser().WithFatal()
 	}
 	if profile.Data.GroupID != nil && *profile.Data.GroupID != workflow.Spec.GroupID {
-		return nil, fmt.Errorf(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID)
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID).WithUser().WithFatal()
 
 	}
 

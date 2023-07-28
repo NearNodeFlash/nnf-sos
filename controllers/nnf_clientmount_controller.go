@@ -21,7 +21,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -79,22 +78,22 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// on deleted requests.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	// Create a status updater that handles the call to status().Update() if any of the fields
+	// in clientMount.Status change
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ClientMountStatus](clientMount)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() { clientMount.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Ensure the NNF Storage Service is running prior to taking any action.
 	ss := nnf.NewDefaultStorageService()
 	storageService := &sf.StorageServiceV150StorageService{}
 	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to get redfish storage service status").WithError(err).WithMajor()
 	}
 
 	if storageService.Status.State != sf.ENABLED_RST {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-
-	// Create a status updater that handles the call to status().Update() if any of the fields
-	// in clientMount.Status change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ClientMountStatus](clientMount)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {
@@ -152,7 +151,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	clientMount.Status.Error = nil
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		resourceError := dwsv1alpha2.NewResourceError("Mount/Unmount failed", err)
+		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
 		log.Info(resourceError.Error())
 
 		clientMount.Status.Error = resourceError
@@ -176,7 +175,7 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 		case dwsv1alpha2.ClientMountStateUnmounted:
 			err = r.changeMount(ctx, mount, false, log)
 		default:
-			return fmt.Errorf("Invalid desired state %s", state)
+			return dwsv1alpha2.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
 
 		if err != nil {
@@ -198,7 +197,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 	if os.Getenv("ENVIRONMENT") == "kind" {
 		if shouldMount {
 			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
-				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Make directory failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError("make directory failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
 			}
 
 			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
@@ -209,7 +208,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 			}
 
 			if err := os.RemoveAll(clientMountInfo.MountPath); err != nil {
-				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Remove directory failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError("remove directory failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
 			}
 
 			log.Info("Fake unmounted file system", "Mount path", clientMountInfo.MountPath)
@@ -217,7 +216,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 		if clientMountInfo.SetPermissions {
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMountInfo.UserID), int(clientMountInfo.GroupID)); err != nil {
-				return dwsv1alpha2.NewResourceError(fmt.Sprintf("Chown failed: %s", clientMountInfo.MountPath), err)
+				return dwsv1alpha2.NewResourceError("chown failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
 			}
 		}
 
@@ -248,18 +247,18 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 				if !testEnv {
 					if err := os.MkdirAll(mountPath, 0755); err != nil {
-						return dwsv1alpha2.NewResourceError(fmt.Sprintf("Make directory failed: %s", mountPath), err)
+						return dwsv1alpha2.NewResourceError("make directory failed: %s", mountPath).WithError(err).WithMajor()
 					}
 				}
 
 				if err := mounter.Mount(mountSource, mountPath, "lustre", nil); err != nil {
-					return err
+					return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
 				}
 			}
 		} else {
 			if !isNotMountPoint {
 				if err := mounter.Unmount(mountPath); err != nil {
-					return err
+					return dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
 				}
 			}
 		}
@@ -279,7 +278,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 		allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
 		fileShare, err := r.getFileShare(allocationStatus.FileSystem.ID, allocationStatus.FileShare.ID)
 		if err != nil {
-			return dwsv1alpha2.NewResourceError("Could not get file share", err).WithFatal()
+			return dwsv1alpha2.NewResourceError("could not get file share").WithError(err).WithMajor()
 		}
 
 		if shouldMount {
@@ -290,11 +289,11 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountI
 
 		fileShare, err = r.updateFileShare(allocationStatus.FileSystem.ID, fileShare)
 		if err != nil {
-			return dwsv1alpha2.NewResourceError("Could not update file share", err)
+			return dwsv1alpha2.NewResourceError("could not update file share").WithError(err).WithMajor()
 		}
 
 	default:
-		return dwsv1alpha2.NewResourceError(fmt.Sprintf("Invalid device type %s", clientMountInfo.Device.Type), nil).WithFatal()
+		return dwsv1alpha2.NewResourceError("invalid device type %s", clientMountInfo.Device.Type).WithFatal()
 	}
 
 	if shouldMount {

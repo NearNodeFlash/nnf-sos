@@ -69,7 +69,7 @@ var _ = Describe("Access Controller Test", func() {
 					FileSystemType: "lustre",
 					AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{
 						{
-							Name: "MGTMDT",
+							Name: "mgtmdt",
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
 								FileSystemName: "MGTMDT",
 								TargetType:     "MGTMDT",
@@ -82,7 +82,7 @@ var _ = Describe("Access Controller Test", func() {
 							},
 						},
 						{
-							Name: "OST",
+							Name: "ost",
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
 								FileSystemName: "OST",
 								TargetType:     "OST",
