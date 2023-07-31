@@ -468,7 +468,7 @@ func getContainerPortsEnvVar(ports []uint16) (string, string) {
 		portStr = append(portStr, strconv.Itoa(int(port)))
 	}
 
-	return "NNF_CONTAINER_PORT", strings.Join(portStr, ",")
+	return "NNF_CONTAINER_PORTS", strings.Join(portStr, ",")
 }
 
 // Add a environment variable for the container ports to all containers in a PodSpec

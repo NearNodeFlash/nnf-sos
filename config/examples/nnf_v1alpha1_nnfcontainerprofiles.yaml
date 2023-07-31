@@ -131,7 +131,7 @@ data:
                   - python3
                   - -m
                   - http.server
-                  - $(NNF_CONTAINER_PORT)
+                  - $(NNF_CONTAINER_PORTS)
       Worker:
         template:
           spec:
