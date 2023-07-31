@@ -1766,10 +1766,13 @@ func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflo
 // Retrieve the default NnfPortManager for user containers. Allow a client to be passed in as this
 // is meant to be used by reconcilers or container helpers.
 func getContainerPortManager(ctx context.Context, cl client.Client) (*nnfv1alpha1.NnfPortManager, error) {
+	portManagerName := os.Getenv("NNF_STORAGE_PROFILE_NAME")
+	portManagerNamespace := os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
+
 	pm := &nnfv1alpha1.NnfPortManager{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nnf-port-manager",
-			Namespace: "nnf-system",
+			Name:      portManagerName,
+			Namespace: portManagerNamespace,
 		},
 	}
 	if err := cl.Get(ctx, client.ObjectKeyFromObject(pm), pm); err != nil {
