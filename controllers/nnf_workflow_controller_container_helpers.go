@@ -424,7 +424,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Get the ports from the port manager for this workflow
 	for _, alloc := range pm.Status.Allocations {
-		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
 			ports = append(ports, alloc.Ports...)
 		}
 	}

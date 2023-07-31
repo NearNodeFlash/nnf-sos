@@ -1322,7 +1322,7 @@ func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *
 	// Delete MPIJobs
 	mpiJobList, err := r.getMPIJobs(ctx, workflow, index)
 	if err != nil {
-		if strings.Contains(err.Error(), "no kind is registered for the type v2beta1.MPIJobList") || apierrors.IsNotFound(err) {
+		if strings.Contains(err.Error(), "no kind is registered for the type") || apierrors.IsNotFound(err) {
 			doneMpi = true
 		} else {
 			return nil, nnfv1alpha1.NewWorkflowError("Could not delete container MPIJob(s)").WithError(err)

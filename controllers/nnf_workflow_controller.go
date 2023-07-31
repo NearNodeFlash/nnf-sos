@@ -431,6 +431,8 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	switch dwArgs["command"] {
+	case "container":
+		return r.checkContainerPorts(ctx, workflow, index)
 	default:
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
@@ -460,9 +462,6 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 			// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
 			return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
 		}
-
-	case "container":
-		return r.checkContainerPorts(ctx, workflow, index)
 	}
 
 	return nil, nil
@@ -1012,28 +1011,29 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
-	if dwArgs["command"] == "container" {
+	switch dwArgs["command"] {
+	case "container":
 		res, err := r.deleteContainers(ctx, workflow, index)
 		if res != nil || err != nil {
 			return res, err
 		}
-	}
+	default:
+		// Delete the NnfDataMovement and NnfAccess for this directive before removing the NnfStorage.
+		// copy_in/out directives can reference NnfStorage from a different directive, so all the NnfAccesses
+		// need to be removed first.
+		childObjects := []dwsv1alpha2.ObjectList{
+			&nnfv1alpha1.NnfDataMovementList{},
+			&nnfv1alpha1.NnfAccessList{},
+		}
 
-	// Delete the NnfDataMovement and NnfAccess for this directive before removing the NnfStorage.
-	// copy_in/out directives can reference NnfStorage from a different directive, so all the NnfAccesses
-	// need to be removed first.
-	childObjects := []dwsv1alpha2.ObjectList{
-		&nnfv1alpha1.NnfDataMovementList{},
-		&nnfv1alpha1.NnfAccessList{},
-	}
+		deleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not delete NnfDataMovement and NnfAccess children").WithError(err).WithUserMessage("could not stop data movement and unmount file systems")
+		}
 
-	deleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha1.DirectiveIndexLabel: strconv.Itoa(index)})
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not delete NnfDataMovement and NnfAccess children").WithError(err).WithUserMessage("could not stop data movement and unmount file systems")
-	}
-
-	if !deleteStatus.Complete() {
-		return Requeue("delete").withDeleteStatus(deleteStatus), nil
+		if !deleteStatus.Complete() {
+			return Requeue("delete").withDeleteStatus(deleteStatus), nil
+		}
 	}
 
 	return nil, nil
