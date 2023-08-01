@@ -167,14 +167,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				FileSystemType: fsType,
 				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{},
 			},
-			Status: nnfv1alpha1.NnfStorageStatus{
-				MgsNode: "",
-				AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetStatus{{
-					Status:          "Ready",
-					Health:          "OK",
-					AllocationCount: 0,
-				}},
-			},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
 	}
