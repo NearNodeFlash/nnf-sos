@@ -35,7 +35,7 @@ const (
 	// the error string is put in workflow.Status.Message.
 	SeverityMinor ResourceErrorSeverity = "Minor"
 
-	// Major errors are may or may not succeed. These are transient errors that could persistent
+	// Major errors may or may not succeed. These are transient errors that could be persistent
 	// due to an underlying problem (e.g., errors from OS calls)
 	SeverityMajor ResourceErrorSeverity = "Major"
 
@@ -98,9 +98,12 @@ func (e *ResourceErrorInfo) WithUserMessage(format string, a ...any) *ResourceEr
 }
 
 func (e *ResourceErrorInfo) WithError(err error) *ResourceErrorInfo {
-	debugMessageList := []string{}
+	if err == nil {
+		return e
+	}
 
 	// Concatenate the parent and child debug messages
+	debugMessageList := []string{}
 	if e.DebugMessage != "" {
 		debugMessageList = append(debugMessageList, e.DebugMessage)
 	}

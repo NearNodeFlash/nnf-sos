@@ -176,8 +176,8 @@ type WorkflowStatus struct {
 	// User readable reason and status message.
 	// - Completed: The workflow has reached the state in workflow.Status.State.
 	// - DriverWait: The underlying drivers are currently running.
-	// - TransientCondition: A driver has encountered an error that might not be recoverable.
-	// - Error: A driver has encountered an error that will no recover.
+	// - TransientCondition: A driver has encountered an error that might be recoverable.
+	// - Error: A driver has encountered an error that will not recover.
 	// +kubebuilder:validation:Enum=Completed;DriverWait;TransientCondition;Error
 	Status string `json:"status,omitempty"`
 
