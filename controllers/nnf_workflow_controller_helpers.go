@@ -1325,12 +1325,12 @@ func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *
 		if strings.Contains(err.Error(), "no kind is registered for the type") || apierrors.IsNotFound(err) {
 			doneMpi = true
 		} else {
-			return nil, nnfv1alpha1.NewWorkflowError("Could not delete container MPIJob(s)").WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("could not delete container MPIJob(s)").WithError(err).WithMajor().WithInternal()
 		}
 	} else if len(mpiJobList.Items) > 0 {
 		if err := r.DeleteAllOf(ctx, &mpiJobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return nil, nnfv1alpha1.NewWorkflowError("Could not delete container MPIJob(s)").WithError(err)
+				return nil, dwsv1alpha2.NewResourceError("could not delete container MPIJob(s)").WithError(err).WithMajor().WithInternal()
 			}
 		}
 	} else {
@@ -1343,12 +1343,12 @@ func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *
 		if apierrors.IsNotFound(err) {
 			doneNonMpi = true
 		} else {
-			return nil, nnfv1alpha1.NewWorkflowError("Could not delete container Job(s)").WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("could not delete container Job(s)").WithError(err).WithMajor().WithInternal()
 		}
 	} else if len(jobList.Items) > 0 {
 		if err := r.DeleteAllOf(ctx, &jobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return nil, nnfv1alpha1.NewWorkflowError("Could not delete container Job(s)").WithError(err)
+				return nil, dwsv1alpha2.NewResourceError("could not delete container Job(s)").WithError(err).WithMajor().WithInternal()
 			}
 		}
 	} else {
@@ -1538,7 +1538,7 @@ func (r *NnfWorkflowReconciler) getMPIJobChildrenJobs(ctx context.Context, workf
 
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs for MPIJob %s", mpiJob.Name).WithError(err)
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs for MPIJob %s", mpiJob.Name).WithError(err).WithMajor()
 	}
 
 	// Create a new list so we don't alter the loop iterator
@@ -1568,7 +1568,7 @@ func (r *NnfWorkflowReconciler) getMPIJobs(ctx context.Context, workflow *dwsv1a
 
 	jobList := &mpiv2beta1.MPIJobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("could not retrieve MPIJobs").WithError(err)
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve MPIJobs").WithError(err).WithMajor()
 	}
 
 	return jobList, nil
@@ -1592,8 +1592,6 @@ func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
 func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, profile *nnfv1alpha1.NnfContainerProfile) ([]nnfContainerVolume, *result, error) {
 	volumes := []nnfContainerVolume{}
-
-	// TODO: ssh is necessary for mpi see setupSSHAuthVolumes(manager, podSpec) in nnf-dm
 
 	for arg, val := range dwArgs {
 		volName, cmd := "", ""
@@ -1750,9 +1748,9 @@ func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflo
 					workflow.Status.Env[name] = val
 					return nil, nil // done
 				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInvalidConfiguration {
-					return nil, nnfv1alpha1.NewWorkflowError("error requesting ports for container workflow: Invalid NnfPortManager configuration").WithFatal()
+					return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("could not request ports for container workflow: Invalid NnfPortManager configuration").WithFatal().WithUser()
 				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInsufficientResources {
-					return nil, nnfv1alpha1.NewWorkflowError("error requesting ports for container workflow: InsufficientResources").WithFatal()
+					return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("could not request ports for container workflow: InsufficientResources").WithFatal()
 				}
 			}
 		}
@@ -1776,7 +1774,7 @@ func getContainerPortManager(ctx context.Context, cl client.Client) (*nnfv1alpha
 		},
 	}
 	if err := cl.Get(ctx, client.ObjectKeyFromObject(pm), pm); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("error retrieving NnfPortManager").WithError(err).WithFatal()
+		return nil, err
 	}
 
 	return pm, nil
