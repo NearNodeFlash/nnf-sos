@@ -14,7 +14,14 @@ spec:
     singular: nnfstorage
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfStorage is the Schema for the storages API
@@ -144,9 +151,6 @@ spec:
                       description: AllocationCount is the total number of allocations
                         that currently exist
                       type: integer
-                    error:
-                      description: Error is the human readable error string
-                      type: string
                     health:
                       description: Health reflects the health of this allocation set
                       type: string
@@ -163,17 +167,28 @@ spec:
                   debugMessage:
                     description: Internal debug message for the error
                     type: string
-                  recoverable:
-                    description: Indication if the error is likely recoverable or
-                      not
-                    type: boolean
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant
                       to an end user
                     type: string
                 required:
                 - debugMessage
-                - recoverable
+                - severity
+                - type
                 type: object
               mgsNode:
                 description: MgsNode is the NID of the MGS.

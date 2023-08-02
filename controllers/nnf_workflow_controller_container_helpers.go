@@ -238,7 +238,7 @@ func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(c.workflow, job, c.scheme); err != nil {
-		return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.GetName()).WithError(err)
+		return err
 	}
 
 	return nil

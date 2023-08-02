@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,6 +23,7 @@ import (
 	"context"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 
@@ -85,7 +86,7 @@ const (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-
+	log := r.Log.WithValues("NnfStorage", req.NamespacedName)
 	metrics.NnfStorageReconcilesTotal.Inc()
 
 	storage := &nnfv1alpha1.NnfStorage{}
@@ -101,6 +102,11 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() {
+		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
+			storage.Status.SetResourceErrorAndLog(err, log)
+		}
+	}()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -187,7 +193,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Wait for all the allocation sets to be ready
 	for _, allocationSet := range storage.Status.AllocationSets {
 		if allocationSet.Status != nnfv1alpha1.ResourceReady {
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
@@ -279,7 +285,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 
 		if err != nil {
 			if !apierrors.IsConflict(err) {
-				storage.Status.AllocationSets[allocationSetIndex].Error = err.Error()
+				return nil, err
 			}
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -306,7 +312,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	var status nnfv1alpha1.NnfResourceStatusType = nnfv1alpha1.ResourceReady
 
 	allocationSet.AllocationCount = 0
-	allocationSet.Error = ""
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
 	matchLabels := dwsv1alpha2.MatchingOwner(storage)
@@ -356,12 +361,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			nodeAllocation.StorageGroup.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileSystem.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileShare.Status.UpdateIfWorseThan(&status)
-
-			for _, condition := range nodeAllocation.Conditions {
-				if condition.Reason == nnfv1alpha1.ConditionFailed {
-					allocationSet.Error = condition.Message
-				}
-			}
 		}
 
 		if nnfNodeStorage.Status.Error != nil {

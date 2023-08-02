@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -106,9 +106,6 @@ type NnfStorageAllocationSetStatus struct {
 	// Health reflects the health of this allocation set
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	// Error is the human readable error string
-	Error string `json:"error,omitempty"`
-
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
@@ -135,6 +132,8 @@ type NnfStorageStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // NnfStorage is the Schema for the storages API
 type NnfStorage struct {

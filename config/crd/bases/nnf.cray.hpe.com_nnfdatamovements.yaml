@@ -23,6 +23,9 @@ spec:
       jsonPath: .status.status
       name: STATUS
       type: string
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
@@ -232,6 +235,35 @@ spec:
                   operation ended.
                 format: date-time
                 type: string
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
               message:
                 description: Message contains any text that explains the Status. If
                   Data Movement failed or storeStdout is enabled, this will contain
