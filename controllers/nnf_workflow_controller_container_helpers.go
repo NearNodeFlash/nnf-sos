@@ -434,7 +434,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 		return nil, dwsv1alpha2.NewResourceError(
 			"number of ports found in NnfPortManager's allocation (%d) does not equal the profile's requested ports (%d)",
 			len(ports), expectedPorts).
-			WithUserMessage("requested ports do not meet the number of allocated ports").WithFatal().WithInternal()
+			WithUserMessage("requested ports do not meet the number of allocated ports").WithFatal()
 	}
 
 	return ports, nil
