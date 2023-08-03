@@ -116,6 +116,14 @@ func (r *NnfStorageProfile) validateContentLustre() error {
 		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
 	}
 
+	if r.Data.LustreStorage.StandaloneMGT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+		return fmt.Errorf("cannot set both standaloneMgt and externalMgs")
+	}
+
+	if r.Data.LustreStorage.StandaloneMGT && r.Data.LustreStorage.CombinedMGTMDT {
+		return fmt.Errorf("cannot set standaloneMgt and combinedMgtMdt")
+	}
+
 	for _, target := range []string{"mgt", "mdt", "mgtmdt", "ost"} {
 		targetMiscOptions := r.GetLustreMiscOptions(target)
 		err := r.validateLustreTargetMiscOptions(targetMiscOptions)

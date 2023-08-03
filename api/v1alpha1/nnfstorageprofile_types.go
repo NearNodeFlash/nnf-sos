@@ -83,6 +83,10 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:default:=false
 	ExclusiveMDT bool `json:"exclusiveMdt,omitempty"`
 
+	// StandAloneMGT creates only a Lustre MGT without an MDT or OST
+	// +kubebuilder:default:=false
+	StandaloneMGT bool `json:"standaloneMgt,omitempty"`
+
 	// MgtCmdLines contains commands to create an MGT target.
 	MgtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtCommandlines,omitempty"`
 

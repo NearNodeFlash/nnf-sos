@@ -165,8 +165,11 @@ var _ = Describe("Access Controller Test", func() {
 			}
 
 			By("Set NNF Access Desired State to unmounted")
-			access.Spec.DesiredState = "unmounted"
-			Expect(k8sClient.Update(context.TODO(), access)).To(Succeed())
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				access.Spec.DesiredState = "unmounted"
+				return k8sClient.Update(context.TODO(), access)
+			}).Should(Succeed())
 
 			By("Verify NNF Access goes Ready in unmounted state")
 			Eventually(func(g Gomega) bool {
