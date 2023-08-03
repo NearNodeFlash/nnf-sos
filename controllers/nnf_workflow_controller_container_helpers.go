@@ -152,12 +152,22 @@ func (c *nnfUserContainer) createMPIJob() error {
 	c.applyPermissions(launcherSpec, &mpiJob.Spec, false)
 	c.applyPermissions(workerSpec, &mpiJob.Spec, true)
 
+	// Get the ports from the port manager
+	ports, err := c.getHostPorts()
+	if err != nil {
+		return err
+	}
+	// Add the ports to the worker spec and add environment variable for both launcher/worker
+	addHostPorts(workerSpec, ports)
+	addPortsEnvVars(launcherSpec, ports)
+	addPortsEnvVars(workerSpec, ports)
+
 	c.addNnfVolumes(launcherSpec)
 	c.addNnfVolumes(workerSpec)
 	c.addEnvVars(launcherSpec, true)
 	c.addEnvVars(workerSpec, true)
 
-	err := c.client.Create(c.ctx, mpiJob)
+	err = c.client.Create(c.ctx, mpiJob)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
@@ -193,6 +203,14 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 
 	podSpec.RestartPolicy = corev1.RestartPolicyNever
 	podSpec.Subdomain = c.workflow.Name // service name == workflow name
+
+	// Get the ports from the port manager
+	ports, err := c.getHostPorts()
+	if err != nil {
+		return err
+	}
+	addHostPorts(podSpec, ports)
+	addPortsEnvVars(podSpec, ports)
 
 	c.applyTolerations(podSpec)
 	c.applyPermissions(podSpec, nil, false)
@@ -388,6 +406,86 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 				}
 			}
 		}
+	}
+}
+
+func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
+	ports := []uint16{}
+	expectedPorts := int(c.profile.Data.NumPorts)
+
+	if expectedPorts < 1 {
+		return ports, nil
+	}
+
+	pm, err := getContainerPortManager(c.ctx, c.client)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the ports from the port manager for this workflow
+	for _, alloc := range pm.Status.Allocations {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+			ports = append(ports, alloc.Ports...)
+		}
+	}
+
+	// Make sure we found the number of ports in the port manager that we expect
+	if len(ports) != expectedPorts {
+		return nil, dwsv1alpha2.NewResourceError(
+			"number of ports found in NnfPortManager's allocation (%d) does not equal the profile's requested ports (%d)",
+			len(ports), expectedPorts).
+			WithUserMessage("requested ports do not meet the number of allocated ports").WithFatal()
+	}
+
+	return ports, nil
+}
+
+// Given a list of ports, add HostPort entries for all containers in a PodSpec
+func addHostPorts(spec *corev1.PodSpec, ports []uint16) {
+
+	// Nothing to add
+	if len(ports) < 1 {
+		return
+	}
+
+	// Add the ports to the containers
+	for idx := range spec.Containers {
+		container := &spec.Containers[idx]
+
+		for _, port := range ports {
+			container.Ports = append(container.Ports, corev1.ContainerPort{
+				ContainerPort: int32(port),
+				HostPort:      int32(port),
+			})
+		}
+	}
+}
+
+// Given a list of ports, convert it into an environment variable name and comma separated value
+func getContainerPortsEnvVar(ports []uint16) (string, string) {
+	portStr := []string{}
+	for _, port := range ports {
+		portStr = append(portStr, strconv.Itoa(int(port)))
+	}
+
+	return "NNF_CONTAINER_PORTS", strings.Join(portStr, ",")
+}
+
+// Add a environment variable for the container ports to all containers in a PodSpec
+func addPortsEnvVars(spec *corev1.PodSpec, ports []uint16) {
+	if len(ports) < 1 {
+		return
+	}
+
+	// Add port environment variable to containers
+	for idx := range spec.Containers {
+		container := &spec.Containers[idx]
+
+		name, val := getContainerPortsEnvVar(ports)
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  name,
+			Value: val,
+		})
 	}
 }
 

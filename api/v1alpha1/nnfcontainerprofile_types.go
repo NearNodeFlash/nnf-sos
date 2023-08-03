@@ -62,6 +62,12 @@ type NnfContainerProfileData struct {
 	// this profile.
 	GroupID *uint32 `json:"groupID,omitempty"`
 
+	// Number of ports to open for communication with the user container. These ports are opened on
+	// the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
+	// The requested ports are made available as environment variables inside the container and in
+	// the DWS workflow (NNF_CONTAINER_PORTS).
+	NumPorts int32 `json:"numPorts,omitempty"`
+
 	// Spec to define the containers created from container profile. This is used for non-MPI
 	// containers.
 	// Either this or MPISpec must be provided, but not both.

@@ -69,6 +69,7 @@ metadata:
   name: example-mpi
 data:
   retryLimit: 6
+  numPorts: 1
   storages:
     - name: DW_JOB_foo_local_storage
       optional: false
@@ -98,3 +99,42 @@ data:
             containers:
               - name: example-mpi
                 image: nnf-mfu:latest
+
+---
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfContainerProfile
+metadata:
+  name: example-mpi-webserver
+data:
+  retryLimit: 6
+  numPorts: 1
+  storages:
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
+      pvcMode: ReadWriteMany
+  mpiSpec:
+    runPolicy:
+      cleanPodPolicy: Running
+    mpiReplicaSpecs:
+      Launcher:
+        template:
+          spec:
+            containers:
+              - name: example-mpi-webserver
+                image: ghcr.io/nearnodeflash/nnf-container-example:latest
+                command:
+                  - mpirun
+                  - python3
+                  - -m
+                  - http.server
+                  - $(NNF_CONTAINER_PORTS)
+      Worker:
+        template:
+          spec:
+            containers:
+              - name: example-mpi-webserver
+                image: ghcr.io/nearnodeflash/nnf-container-example:latest

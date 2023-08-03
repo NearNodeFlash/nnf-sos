@@ -159,23 +159,31 @@ func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr
 	// Free unused allocations. This will check if the Status.Allocations exist in
 	// the list of desired allocations in the Spec field and mark any unused allocations
 	// as freed.
-	failedIndices := make([]int, 0)
+	allocsToRemove := make([]int, 0)
 	for idx := range mgr.Status.Allocations {
 		status := &mgr.Status.Allocations[idx]
 
 		if !r.isAllocationNeeded(mgr, status) {
 			log.Info("Allocation unused", "requester", status.Requester, "status", status.Status)
-			if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
-				status.Requester = nil
-				status.Status = nnfv1alpha1.NnfPortManagerAllocationStatusFree
-			} else if status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusFree {
-				failedIndices = append(failedIndices, idx)
-			}
+
+			// TODO: allow for cooldown
+			// if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+			// 	status.Requester = nil
+			// 	status.Status = nnfv1alpha1.NnfPortManagerAllocationStatusCooldown
+			// } else if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusCooldown {
+			// 	if now() - status.timeFreed > cooldownPeriod {
+			// 		allocsToRemove = append(allocsToRemove, idx)
+			// 	}
+			// } else if status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusFree {
+			// 	allocsToRemove = append(allocsToRemove, idx)
+			// }
+
+			allocsToRemove = append(allocsToRemove, idx)
 		}
 	}
 
-	for idx := range failedIndices {
-		failedIdx := failedIndices[len(failedIndices)-1-idx] // remove in reverse order
+	for idx := range allocsToRemove {
+		failedIdx := allocsToRemove[len(allocsToRemove)-1-idx] // remove in reverse order
 		mgr.Status.Allocations = append(mgr.Status.Allocations[:failedIdx], mgr.Status.Allocations[failedIdx+1:]...)
 	}
 }
