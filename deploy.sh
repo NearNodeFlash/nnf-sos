@@ -56,8 +56,8 @@ if [[ $CMD == 'deploy' ]]; then
     # Deploy the nnfportmanager after everything else
     echo "Waiting for the nnfportmamanger CRD to become ready..."
     while :; do
-        kubectl get crds nnfportmanagers.nnf.cray.hpe.com && break
         sleep 1
+        kubectl get crds nnfportmanagers.nnf.cray.hpe.com && break
     done
     $KUSTOMIZE build config/ports| kubectl apply --server-side=true --force-conflicts -f -
 fi
