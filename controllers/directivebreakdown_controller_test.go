@@ -138,4 +138,85 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)
 		}).ShouldNot(Succeed())
 	})
+
+	It("Creates a DirectiveBreakdown with a lustre jobdw and standaloneMgt", func() {
+		By("Setting standaloneMgt in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Creating a DirectiveBreakdown")
+		directiveBreakdown := &dwsv1alpha2.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "standalone-lustre-jobdw-test",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.DirectiveBreakdownSpec{
+				Directive: "#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB",
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), directiveBreakdown)).To(Succeed())
+
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
+			return directiveBreakdown.Status.Error
+		}).ShouldNot(BeNil())
+	})
+
+	It("Creates a DirectiveBreakdown with an xfs jobdw and standaloneMgt", func() {
+		By("Setting standaloneMgt in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Creating a DirectiveBreakdown")
+		directiveBreakdown := &dwsv1alpha2.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "standalone-xfs-jobdw-test",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.DirectiveBreakdownSpec{
+				Directive: "#DW jobdw name=jobdw-xfs type=xfs capacity=1GiB",
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), directiveBreakdown)).To(Succeed())
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
+			return directiveBreakdown.Status.Ready
+		}).Should(BeTrue())
+	})
+
+	It("Creates a DirectiveBreakdown with a create_persistent and standaloneMgt", func() {
+		By("Setting standaloneMgt in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Creating a DirectiveBreakdown")
+		directiveBreakdown := &dwsv1alpha2.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "standalone-lustre-persistent-test",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.DirectiveBreakdownSpec{
+				Directive: "#DW create_persistent name=persistent-lustre type=lustre capacity=1GiB",
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), directiveBreakdown)).To(Succeed())
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
+			return directiveBreakdown.Status.Ready
+		}).Should(BeTrue())
+	})
 })

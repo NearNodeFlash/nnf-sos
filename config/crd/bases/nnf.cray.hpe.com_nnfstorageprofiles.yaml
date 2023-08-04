@@ -337,6 +337,11 @@ spec:
                     required:
                     - colocateComputes
                     type: object
+                  standaloneMgt:
+                    default: false
+                    description: StandAloneMGT creates only a Lustre MGT without an
+                      MDT or OST
+                    type: boolean
                 type: object
               pinned:
                 default: false
