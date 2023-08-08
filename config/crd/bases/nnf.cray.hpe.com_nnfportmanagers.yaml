@@ -198,8 +198,14 @@ spec:
                       enum:
                       - InUse
                       - Free
+                      - Cooldown
                       - InvalidConfiguration
                       - InsufficientResources
+                      type: string
+                    timeUnallocated:
+                      description: TimeUnallocated is when the port was unallocated.
+                        This is to ensure the proper cooldown duration.
+                      format: date-time
                       type: string
                   required:
                   - status

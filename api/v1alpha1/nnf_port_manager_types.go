@@ -60,12 +60,13 @@ type NnfPortManagerSpec struct {
 // AllocationStatus is the current status of a port requestor. A port that is in use by the respective owner
 // will have a status of "InUse". A port that is freed by the owner but not yet reclaimed by the port manager
 // will have a status of "Free". Any other status value indicates a failure of the port allocation.
-// +kubebuilder:validation:Enum:=InUse;Free;InvalidConfiguration;InsufficientResources
+// +kubebuilder:validation:Enum:=InUse;Free;Cooldown;InvalidConfiguration;InsufficientResources
 type NnfPortManagerAllocationStatusStatus string
 
 const (
 	NnfPortManagerAllocationStatusInUse                 NnfPortManagerAllocationStatusStatus = "InUse"
 	NnfPortManagerAllocationStatusFree                  NnfPortManagerAllocationStatusStatus = "Free"
+	NnfPortManagerAllocationStatusCooldown              NnfPortManagerAllocationStatusStatus = "Cooldown"
 	NnfPortManagerAllocationStatusInvalidConfiguration  NnfPortManagerAllocationStatusStatus = "InvalidConfiguration"
 	NnfPortManagerAllocationStatusInsufficientResources NnfPortManagerAllocationStatusStatus = "InsufficientResources"
 	// NOTE: You must ensure any new value is added to the above kubebuilder validation enum
@@ -82,6 +83,10 @@ type NnfPortManagerAllocationStatus struct {
 
 	// Status is the ownership status of the port.
 	Status NnfPortManagerAllocationStatusStatus `json:"status"`
+
+	// TimeUnallocated is when the port was unallocated. This is to ensure the proper cooldown
+	// duration.
+	TimeUnallocated *metav1.Time `json:"timeUnallocated,omitempty"`
 }
 
 // PortManagerStatus is the current status of the port manager.

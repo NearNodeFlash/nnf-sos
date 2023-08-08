@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -21,6 +21,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -57,15 +58,12 @@ type AllocationStatus = nnfv1alpha1.NnfPortManagerAllocationStatus
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the NnfPortManager object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := log.FromContext(ctx)
+	unsatisfiedRequests := 0
 
 	mgr := &nnfv1alpha1.NnfPortManager{}
 	if err := r.Get(ctx, req.NamespacedName, mgr); err != nil {
@@ -96,19 +94,22 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Free any unused allocations
-	r.cleanupUnusedAllocations(log, mgr)
+	r.cleanupUnusedAllocations(log, mgr, config.Spec.PortsCooldownInSeconds)
 
 	// For each "requester" in the mgr.Spec.Allocations, try to satisfy the request by
 	// allocating the desired ports.
 	for _, spec := range mgr.Spec.Allocations {
+		var ports []uint16
+		var status nnfv1alpha1.NnfPortManagerAllocationStatusStatus
+		var allocationStatus *nnfv1alpha1.NnfPortManagerAllocationStatus
 
-		// If the specification is already included in the allocations, continue
-		if r.isAllocated(mgr, spec) {
+		// If the specification is already included in the allocations and InUse, continue
+		allocationStatus = r.findAllocationStatus(mgr, spec)
+		if allocationStatus != nil && allocationStatus.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
 			continue
 		}
 
-		var ports []uint16
-		var status nnfv1alpha1.NnfPortManagerAllocationStatusStatus
+		// Determine if the port manager is ready and find a free port
 		if mgr.Status.Status != nnfv1alpha1.NnfPortManagerStatusReady {
 			ports, status = nil, nnfv1alpha1.NnfPortManagerAllocationStatusInvalidConfiguration
 		} else {
@@ -116,19 +117,40 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		log.Info("Allocation", "requester", spec.Requester, "count", spec.Count, "ports", ports, "status", status)
-		allocationStatus := AllocationStatus{
-			Requester: &corev1.ObjectReference{},
-			Ports:     ports,
-			Status:    status,
+
+		// Port could not be allocated - try again next time
+		if status != nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+			unsatisfiedRequests++
+			log.Info("Allocation unsatisfied", "requester", spec.Requester, "count", spec.Count, "ports", ports, "status", status)
 		}
 
-		spec.Requester.DeepCopyInto(allocationStatus.Requester)
+		// Create a new entry if not already present, otherwise update
+		if allocationStatus == nil {
+			allocationStatus := AllocationStatus{
+				Requester: &corev1.ObjectReference{},
+				Ports:     ports,
+				Status:    status,
+			}
 
-		if mgr.Status.Allocations == nil {
-			mgr.Status.Allocations = make([]nnfv1alpha1.NnfPortManagerAllocationStatus, 0)
+			spec.Requester.DeepCopyInto(allocationStatus.Requester)
+
+			if mgr.Status.Allocations == nil {
+				mgr.Status.Allocations = make([]nnfv1alpha1.NnfPortManagerAllocationStatus, 0)
+			}
+
+			mgr.Status.Allocations = append(mgr.Status.Allocations, allocationStatus)
+		} else {
+			allocationStatus.Status = status
+			allocationStatus.Ports = ports
 		}
+	}
 
-		mgr.Status.Allocations = append(mgr.Status.Allocations, allocationStatus)
+	// If there aren't enough free ports, then requeue so that something eventually frees up
+	if unsatisfiedRequests > 0 {
+		log.Info("Unsatisfied requests are pending -- requeuing")
+		return ctrl.Result{
+			RequeueAfter: time.Duration(config.Spec.PortsCooldownInSeconds+1) * time.Second,
+		}, nil
 	}
 
 	return res, nil
@@ -137,7 +159,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 // isAllocationNeeded returns true if the provided Port Allocation Status has a matching value
 // requester in the specification, and false otherwise.
 func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha1.NnfPortManager, status *AllocationStatus) bool {
-	if status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+	if status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusInUse && status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusInsufficientResources {
 		return false
 	}
 
@@ -154,7 +176,7 @@ func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha1.NnfPortMa
 	return false
 }
 
-func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr *nnfv1alpha1.NnfPortManager) {
+func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr *nnfv1alpha1.NnfPortManager, cooldown int) {
 
 	// Free unused allocations. This will check if the Status.Allocations exist in
 	// the list of desired allocations in the Spec field and mark any unused allocations
@@ -164,21 +186,25 @@ func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr
 		status := &mgr.Status.Allocations[idx]
 
 		if !r.isAllocationNeeded(mgr, status) {
-			log.Info("Allocation unused", "requester", status.Requester, "status", status.Status)
 
-			// TODO: allow for cooldown
-			// if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
-			// 	status.Requester = nil
-			// 	status.Status = nnfv1alpha1.NnfPortManagerAllocationStatusCooldown
-			// } else if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusCooldown {
-			// 	if now() - status.timeFreed > cooldownPeriod {
-			// 		allocsToRemove = append(allocsToRemove, idx)
-			// 	}
-			// } else if status.Status != nnfv1alpha1.NnfPortManagerAllocationStatusFree {
-			// 	allocsToRemove = append(allocsToRemove, idx)
-			// }
-
-			allocsToRemove = append(allocsToRemove, idx)
+			// If there's no cooldown or the cooldown period has expired, remove it
+			// If no longer needed,  set the allocation status to cooldown and record the unallocated time
+			now := metav1.Now()
+			if cooldown == 0 {
+				allocsToRemove = append(allocsToRemove, idx)
+				log.Info("Allocation unused - removing", "requester", status.Requester, "status", status.Status)
+			} else if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusCooldown {
+				period := now.Sub(status.TimeUnallocated.Time)
+				log.Info("Allocation unused - checking cooldown", "requester", status.Requester, "status", status.Status, "period", period, "time", status.TimeUnallocated.String())
+				if period >= time.Duration(cooldown)*time.Second {
+					allocsToRemove = append(allocsToRemove, idx)
+					log.Info("Allocation unused - removing after cooldown", "requester", status.Requester, "status", status.Status)
+				}
+			} else if status.TimeUnallocated == nil {
+				status.TimeUnallocated = &now
+				status.Status = nnfv1alpha1.NnfPortManagerAllocationStatusCooldown
+				log.Info("Allocation unused -- cooldown set", "requester", status.Requester, "status", status.Status)
+			}
 		}
 	}
 
@@ -214,7 +240,8 @@ func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alph
 
 	portsInUse := make([]uint16, 0)
 	for _, status := range mgr.Status.Allocations {
-		if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+		if status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse ||
+			status.Status == nnfv1alpha1.NnfPortManagerAllocationStatusCooldown {
 			portsInUse = append(portsInUse, status.Ports...)
 		}
 	}

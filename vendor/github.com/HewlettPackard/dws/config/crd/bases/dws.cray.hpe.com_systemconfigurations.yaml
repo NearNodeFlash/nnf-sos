@@ -177,6 +177,13 @@ spec:
                   - type: string
                   x-kubernetes-int-or-string: true
                 type: array
+              portsCooldownInSeconds:
+                default: 60
+                description: PortsCooldownInSeconds is the number of seconds to wait
+                  before a port can be reused. Defaults to 60 seconds (to match the
+                  typical value for the kernel's TIME_WAIT). A value of 0 means the
+                  ports can be reused immediately.
+                type: integer
               storageNodes:
                 description: StorageNodes is the list of storage nodes on the system
                 items:
@@ -212,6 +219,8 @@ spec:
                   - type
                   type: object
                 type: array
+            required:
+            - portsCooldownInSeconds
             type: object
           status:
             description: SystemConfigurationStatus defines the status of SystemConfiguration
