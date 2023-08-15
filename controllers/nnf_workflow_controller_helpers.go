@@ -763,18 +763,16 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 func handleWorkflowError(err error, driverStatus *dwsv1alpha2.WorkflowDriverStatus) {
 	e, ok := err.(*dwsv1alpha2.ResourceErrorInfo)
 	if ok {
-		switch e.Severity {
-		case dwsv1alpha2.SeverityMinor:
-			driverStatus.Status = dwsv1alpha2.StatusRunning
-		case dwsv1alpha2.SeverityMajor:
-			driverStatus.Status = dwsv1alpha2.StatusTransientCondition
-		case dwsv1alpha2.SeverityFatal:
+		status, err := e.Severity.ToStatus()
+		if err != nil {
 			driverStatus.Status = dwsv1alpha2.StatusError
+			driverStatus.Message = "Internal error: " + err.Error()
+			driverStatus.Error = err.Error()
+		} else {
+			driverStatus.Status = status
+			driverStatus.Message = e.UserMessage
+			driverStatus.Error = e.Error()
 		}
-
-		driverStatus.Message = e.UserMessage
-		driverStatus.Error = e.Error()
-
 	} else {
 		driverStatus.Status = dwsv1alpha2.StatusError
 		driverStatus.Message = "Internal error: " + err.Error()
