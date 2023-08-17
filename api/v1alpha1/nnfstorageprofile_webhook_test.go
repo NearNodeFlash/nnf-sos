@@ -114,8 +114,8 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
 	})
 
-	It("should accept standaloneMgt", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGT = true
+	It("should accept standaloneMgtPoolName", func() {
+		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
@@ -150,15 +150,15 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("should not accept standaloneMgt with externalMgs", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGT = true
+	It("should not accept standaloneMgtPoolName with externalMgs", func() {
+		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
-	It("should not accept standaloneMgt with combinedMgtMdt", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGT = true
+	It("should not accept standaloneMgtPoolName with combinedMgtMdt", func() {
+		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 		nnfProfile.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil

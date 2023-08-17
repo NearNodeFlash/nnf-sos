@@ -147,6 +147,22 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// If this PersistentStorageInstance is for a standalone MGT, add a label so it can be easily found
+	if argsMap["type"] == "lustre" && len(pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
+		labels := persistentStorage.GetLabels()
+		if _, ok := labels[nnfv1alpha1.StandaloneMGTLabel]; !ok {
+			labels[nnfv1alpha1.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
+			persistentStorage.SetLabels(labels)
+			if err := r.Update(ctx, persistentStorage); err != nil {
+				if !apierrors.IsConflict(err) {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+	}
+
 	// Create the Servers resource
 	servers, err := r.createServers(ctx, persistentStorage)
 	if err != nil {

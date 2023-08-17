@@ -139,11 +139,11 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).ShouldNot(Succeed())
 	})
 
-	It("Creates a DirectiveBreakdown with a lustre jobdw and standaloneMgt", func() {
-		By("Setting standaloneMgt in the storage profile")
+	It("Creates a DirectiveBreakdown with a lustre jobdw and standaloneMgtPoolName", func() {
+		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 
@@ -166,11 +166,11 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).ShouldNot(BeNil())
 	})
 
-	It("Creates a DirectiveBreakdown with an xfs jobdw and standaloneMgt", func() {
-		By("Setting standaloneMgt in the storage profile")
+	It("Creates a DirectiveBreakdown with an xfs jobdw and standaloneMgtPoolName", func() {
+		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 
@@ -193,11 +193,11 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(BeTrue())
 	})
 
-	It("Creates a DirectiveBreakdown with a create_persistent and standaloneMgt", func() {
-		By("Setting standaloneMgt in the storage profile")
+	It("Creates a DirectiveBreakdown with a create_persistent and standaloneMgtPoolName", func() {
+		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGT = true
+			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 
