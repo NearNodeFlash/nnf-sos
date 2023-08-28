@@ -52,14 +52,12 @@ type NnfContainerProfileData struct {
 	// +kubebuilder:default:=6
 	RetryLimit int32 `json:"retryLimit"`
 
-	// UserID specifies the user ID that is allowed to use this profile. If this
-	// is specified, only Workflows that have a matching user ID can select
-	// this profile.
+	// UserID specifies the user ID that is allowed to use this profile. If this is specified, only
+	// Workflows that have a matching user ID can select this profile.
 	UserID *uint32 `json:"userID,omitempty"`
 
-	// GroupID specifies the group ID that is allowed to use this profile. If this
-	// is specified, only Workflows that have a matching group ID can select
-	// this profile.
+	// GroupID specifies the group ID that is allowed to use this profile. If this is specified,
+	// only Workflows that have a matching group ID can select this profile.
 	GroupID *uint32 `json:"groupID,omitempty"`
 
 	// Number of ports to open for communication with the user container. These ports are opened on
@@ -68,14 +66,26 @@ type NnfContainerProfileData struct {
 	// the DWS workflow (NNF_CONTAINER_PORTS).
 	NumPorts int32 `json:"numPorts,omitempty"`
 
-	// Spec to define the containers created from container profile. This is used for non-MPI
-	// containers.
+	// Spec to define the containers created from this profile. This is used for non-MPI containers.
+	// Refer to the K8s documentation for `PodSpec` for more definition:
+	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
 	// Either this or MPISpec must be provided, but not both.
 	Spec *corev1.PodSpec `json:"spec,omitempty"`
 
-	// MPIJobSpec to define the containers created from container profile. This is used for MPI
-	// containers via MPIJobs. See mpi-operator for more details.
+	// MPIJobSpec to define the MPI containers created from this profile. This functionality is
+	// provided via mpi-operator, a 3rd party tool to assist in running MPI applications across
+	// worker containers.
 	// Either this or Spec must be provided, but not both.
+	//
+	// All the fields defined drive mpi-operator behavior. See the type definition of MPISpec for
+	// more detail:
+	// https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
+	//
+	// Note: most of these fields are fully customizable with a few exceptions. These fields are
+	// overridden by NNF software to ensure proper behavior to interface with the DWS workflow
+	// - Replicas
+	// - RunPolicy.BackoffLimit (this is set above by `RetryLimit`)
+	// - Worker/Launcher.RestartPolicy
 	MPISpec *mpiv2beta1.MPIJobSpec `json:"mpiSpec,omitempty"`
 }
 
