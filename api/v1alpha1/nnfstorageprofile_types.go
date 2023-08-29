@@ -67,7 +67,7 @@ type NnfStorageProfileLustreData struct {
 
 	// ExternalMGS specifies the use of an existing MGS rather than creating one. This can
 	// be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
-	// Instance that was created with the "StandalonMGTPoolName" option. In the latter case, the format
+	// Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
 	// is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
 	// be picked from the pool.
 	ExternalMGS string `json:"externalMgs,omitempty"`

@@ -610,7 +610,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 						break
 					}
 
-					// If no MGS was picked yet, pick one from the pool of PersistentStorageInstances with the right label
+					// If no MGS was picked yet, pick one randomly from the pool of PersistentStorageInstances with the right label
 					if mgsNid == "" {
 						persistentMgsReference, mgsNid, err = r.getLustreMgsFromPool(ctx, strings.TrimPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:"))
 						if err != nil {
