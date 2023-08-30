@@ -40,13 +40,21 @@ type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
-	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to
-	// 0.  A value of 0 disables this behavior.
+	// Containers are launched in the PreRun state. Allow this many seconds for the containers to
+	// start before declaring an error to the workflow.
+	// Defaults to 60.  A value of 0 disables this behavior.
+	// +kubebuilder:default:=60
+	// +kubebuilder:validation:Minimum:=0
+	PreRunTimeoutSeconds int64 `json:"preRunTimeoutSeconds,omitempty"`
+
+	// Containers are expected to complete in the PostRun State. Allow this many seconds for the
+	// containers to exit before declaring an error the workflow.
+	// Defaults to 0. A value of 0 disables this behavior.
 	// +kubebuilder:validation:Minimum:=0
 	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
 
 	// Specifies the number of times a container will be retried upon a failure. A new pod is
-	// deployed on each retry.  Defaults to 6 by kubernetes itself and must be set. A value of 0
+	// deployed on each retry. Defaults to 6 by kubernetes itself and must be set. A value of 0
 	// disables retries.
 	// +kubebuilder:validation:Minimum:=0
 	// +kubebuilder:default:=6

@@ -8629,16 +8629,25 @@ spec:
                 description: Pinned is true if this instance is an immutable copy
                 type: boolean
               postRunTimeoutSeconds:
-                description: Stop any containers after X seconds once a workflow has
-                  transitioned to PostRun. Defaults to 0.  A value of 0 disables this
+                description: Containers are expected to complete in the PostRun State.
+                  Allow this many seconds for the containers to exit before declaring
+                  an error the workflow. Defaults to 0. A value of 0 disables this
                   behavior.
+                format: int64
+                minimum: 0
+                type: integer
+              preRunTimeoutSeconds:
+                default: 60
+                description: Containers are launched in the PreRun state. Allow this
+                  many seconds for the containers to start before declaring an error
+                  to the workflow. Defaults to 60.  A value of 0 disables this behavior.
                 format: int64
                 minimum: 0
                 type: integer
               retryLimit:
                 default: 6
                 description: Specifies the number of times a container will be retried
-                  upon a failure. A new pod is deployed on each retry.  Defaults to
+                  upon a failure. A new pod is deployed on each retry. Defaults to
                   6 by kubernetes itself and must be set. A value of 0 disables retries.
                 format: int32
                 minimum: 0
