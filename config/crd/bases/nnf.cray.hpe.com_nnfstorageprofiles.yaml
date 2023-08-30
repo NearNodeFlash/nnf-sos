@@ -133,8 +133,13 @@ spec:
                       colocated with any other target on the chosen server.
                     type: boolean
                   externalMgs:
-                    description: ExternalMGS contains the NIDs of a pre-existing MGS
-                      that should be used
+                    description: ExternalMGS specifies the use of an existing MGS
+                      rather than creating one. This can be either the NID(s) of a
+                      pre-existing MGS that should be used, or it can be an NNF Persistent
+                      Instance that was created with the "StandaloneMGTPoolName" option.
+                      In the latter case, the format is "pool:poolName" where "poolName"
+                      is the argument from "StandaloneMGTPoolName". A single MGS will
+                      be picked from the pool.
                     type: string
                   mdtCommandlines:
                     description: MdtCmdLines contains commands to create an MDT target.
@@ -337,11 +342,12 @@ spec:
                     required:
                     - colocateComputes
                     type: object
-                  standaloneMgt:
-                    default: false
-                    description: StandAloneMGT creates only a Lustre MGT without an
-                      MDT or OST
-                    type: boolean
+                  standaloneMgtPoolName:
+                    description: StandaloneMGTPoolName creates a Lustre MGT without
+                      a MDT or OST. This option can only be used when creating a persistent
+                      Lustre instance. The MGS is placed into a named pool that can
+                      be used by the "ExternalMGS" option. Multiple pools can be created.
+                    type: string
                 type: object
               pinned:
                 default: false

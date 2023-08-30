@@ -65,7 +65,11 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:default:=false
 	CombinedMGTMDT bool `json:"combinedMgtMdt,omitempty"`
 
-	// ExternalMGS contains the NIDs of a pre-existing MGS that should be used
+	// ExternalMGS specifies the use of an existing MGS rather than creating one. This can
+	// be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
+	// Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
+	// is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
+	// be picked from the pool.
 	ExternalMGS string `json:"externalMgs,omitempty"`
 
 	// CapacityMGT specifies the size of the MGT device.
@@ -83,9 +87,10 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:default:=false
 	ExclusiveMDT bool `json:"exclusiveMdt,omitempty"`
 
-	// StandAloneMGT creates only a Lustre MGT without an MDT or OST
-	// +kubebuilder:default:=false
-	StandaloneMGT bool `json:"standaloneMgt,omitempty"`
+	// StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
+	// a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
+	// Multiple pools can be created.
+	StandaloneMGTPoolName string `json:"standaloneMgtPoolName,omitempty"`
 
 	// MgtCmdLines contains commands to create an MGT target.
 	MgtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtCommandlines,omitempty"`

@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"strconv"
@@ -594,6 +595,33 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			nnfStorage.Spec.UserID = workflow.Spec.UserID
 			nnfStorage.Spec.GroupID = workflow.Spec.GroupID
 
+			// determine the NID of the external MGS if necessary
+			mgsNid := ""
+			persistentMgsReference := corev1.ObjectReference{}
+
+			if dwArgs["type"] == "lustre" && len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
+				// If the prefix on the ExternalMGS field is "pool:", then this is pool name instead of a NID.
+				if strings.HasPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:") {
+					// Copy the existing PersistentStorageInstance data if present to prevent picking a different
+					// MGS
+					for _, allocationSet := range nnfStorage.Spec.AllocationSets {
+						mgsNid = allocationSet.NnfStorageLustreSpec.ExternalMgsNid
+						persistentMgsReference = allocationSet.NnfStorageLustreSpec.PersistentMgsReference
+						break
+					}
+
+					// If no MGS was picked yet, pick one randomly from the pool of PersistentStorageInstances with the right label
+					if mgsNid == "" {
+						persistentMgsReference, mgsNid, err = r.getLustreMgsFromPool(ctx, strings.TrimPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:"))
+						if err != nil {
+							return err
+						}
+					}
+
+				} else {
+					mgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
+				}
+			}
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
@@ -607,8 +635,9 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = "z" + string(s.GetUID())[:7]
-					if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
-						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
+					if len(mgsNid) > 0 {
+						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = mgsNid
+						nnfAllocSet.NnfStorageLustreSpec.PersistentMgsReference = persistentMgsReference
 					}
 				}
 
@@ -649,6 +678,46 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	}
 
 	return nnfStorage, nil
+}
+
+func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool string) (corev1.ObjectReference, string, error) {
+	persistentStorageList := &dwsv1alpha2.PersistentStorageInstanceList{}
+	if err := r.List(ctx, persistentStorageList, client.MatchingLabels(map[string]string{nnfv1alpha1.StandaloneMGTLabel: pool})); err != nil {
+		return corev1.ObjectReference{}, "", err
+	}
+
+	// Choose an MGS at random from the list of persistent storages
+	persistentStorage := persistentStorageList.Items[rand.Intn(len(persistentStorageList.Items))]
+
+	// Find the NnfStorage for the PersistentStorage so we can get the LNid
+	nnfStorage := &nnfv1alpha1.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      persistentStorage.Name,
+			Namespace: persistentStorage.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("could not get persistent NnfStorage %v for MGS", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+	}
+
+	if nnfStorage.Spec.FileSystemType != "lustre" {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("invalid file systems type '%s' for persistent MGS", nnfStorage.Spec.FileSystemType).WithFatal()
+	}
+
+	if len(nnfStorage.Spec.AllocationSets) != 1 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of allocation sets '%d' for persistent MGS", len(nnfStorage.Spec.AllocationSets)).WithFatal()
+	}
+
+	if len(nnfStorage.Status.MgsNode) == 0 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no LNid listed for persistent MGS").WithFatal()
+	}
+
+	return corev1.ObjectReference{
+		Kind:      reflect.TypeOf(dwsv1alpha2.PersistentStorageInstance{}).Name(),
+		Name:      persistentStorage.Name,
+		Namespace: persistentStorage.Namespace,
+	}, nnfStorage.Status.MgsNode, nil
 }
 
 func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {
@@ -1046,6 +1115,7 @@ func (r *NnfWorkflowReconciler) addPersistentStorageReference(ctx context.Contex
 	reference := corev1.ObjectReference{
 		Name:      indexedResourceName(workflow, index),
 		Namespace: workflow.Namespace,
+		Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
 	}
 
 	found := false
@@ -1076,6 +1146,7 @@ func (r *NnfWorkflowReconciler) removePersistentStorageReference(ctx context.Con
 	reference := corev1.ObjectReference{
 		Name:      indexedResourceName(workflow, index),
 		Namespace: workflow.Namespace,
+		Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
 	}
 
 	for i, existingReference := range persistentStorage.Spec.ConsumerReferences {

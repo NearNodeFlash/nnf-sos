@@ -504,9 +504,9 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mgtmdt", useKey})
 		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
-		} else if nnfStorageProfile.Data.LustreStorage.StandaloneMGT {
+		} else if len(nnfStorageProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
 			if argsMap["command"] != "create_persistent" {
-				return dwsv1alpha2.NewResourceError("").WithUserMessage("standaloneMgt option can only be used with 'create_persistent' directive").WithFatal().WithUser()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("standaloneMgtPoolName option can only be used with 'create_persistent' directive").WithFatal().WithUser()
 			}
 
 			lustreComponents = []lustreComponentType{lustreComponentType{dwsv1alpha2.AllocateSingleServer, mgtCapacity, "mgt", mgtKey}}
