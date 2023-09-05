@@ -35,10 +35,16 @@ spec:
                 format: int32
                 type: integer
               mpiSpec:
-                description: MPIJobSpec to define the containers created from container
-                  profile. This is used for MPI containers via MPIJobs. See mpi-operator
-                  for more details. Either this or Spec must be provided, but not
-                  both.
+                description: "MPIJobSpec to define the MPI containers created from
+                  this profile. This functionality is provided via mpi-operator, a
+                  3rd party tool to assist in running MPI applications across worker
+                  containers. Either this or Spec must be provided, but not both.
+                  \n All the fields defined drive mpi-operator behavior. See the type
+                  definition of MPISpec for more detail: https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
+                  \n Note: most of these fields are fully customizable with a few
+                  exceptions. These fields are overridden by NNF software to ensure
+                  proper behavior to interface with the DWS workflow - Replicas -
+                  RunPolicy.BackoffLimit (this is set above by `RetryLimit`) - Worker/Launcher.RestartPolicy"
                 properties:
                   mpiImplementation:
                     default: OpenMPI
@@ -8644,9 +8650,10 @@ spec:
                 minimum: 0
                 type: integer
               spec:
-                description: Spec to define the containers created from container
-                  profile. This is used for non-MPI containers. Either this or MPISpec
-                  must be provided, but not both.
+                description: 'Spec to define the containers created from this profile.
+                  This is used for non-MPI containers. Refer to the K8s documentation
+                  for `PodSpec` for more definition: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+                  Either this or MPISpec must be provided, but not both.'
                 properties:
                   activeDeadlineSeconds:
                     description: Optional duration in seconds the pod may be active
