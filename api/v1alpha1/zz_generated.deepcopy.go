@@ -206,6 +206,16 @@ func (in *NnfContainerProfileData) DeepCopyInto(out *NnfContainerProfileData) {
 		*out = make([]NnfContainerProfileStorage, len(*in))
 		copy(*out, *in)
 	}
+	if in.PreRunTimeoutSeconds != nil {
+		in, out := &in.PreRunTimeoutSeconds, &out.PreRunTimeoutSeconds
+		*out = new(int64)
+		**out = **in
+	}
+	if in.PostRunTimeoutSeconds != nil {
+		in, out := &in.PostRunTimeoutSeconds, &out.PostRunTimeoutSeconds
+		*out = new(int64)
+		**out = **in
+	}
 	if in.UserID != nil {
 		in, out := &in.UserID, &out.UserID
 		*out = new(uint32)

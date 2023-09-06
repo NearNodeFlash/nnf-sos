@@ -111,11 +111,14 @@ func (r *NnfContainerProfile) validateContent() error {
 	}
 
 	if mpiJob {
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
-		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
+		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PreRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
+		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
 			return fmt.Errorf("both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
 		}
-
 		// Don't allow users to set the backoff limit directly
 		if r.Data.MPISpec.RunPolicy.BackoffLimit != nil && r.Data.RetryLimit > 0 {
 			return fmt.Errorf("MPISpec.RunPolicy.BackoffLimit is set. Use RetryLimit instead")
@@ -130,8 +133,12 @@ func (r *NnfContainerProfile) validateContent() error {
 			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
 		}
 	} else {
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
-		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
+		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PreRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
+		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
 			return fmt.Errorf("both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
 		}
 

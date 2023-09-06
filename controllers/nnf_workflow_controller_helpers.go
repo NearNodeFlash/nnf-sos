@@ -1334,7 +1334,10 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	// timeout is hit. This needs to be handled slightly differently depending on if the job is MPI
 	// or not. Once set, k8s will take care of stopping the pods for us.
 	timeoutElapsed := false
-	timeout := time.Duration(profile.Data.PreRunTimeoutSeconds) * time.Second
+	timeout := time.Duration(0)
+	if profile.Data.PreRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PreRunTimeoutSeconds) * time.Second
+	}
 	timeoutMessage := fmt.Sprintf("user container(s) failed to start after %d seconds", int(timeout.Seconds()))
 
 	// Check if PreRunTimeoutSeconds has elapsed and set the flag. The logic will check once more to
@@ -1569,7 +1572,10 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	}
 	isMPIJob := profile.Data.MPISpec != nil
 
-	timeout := time.Duration(profile.Data.PostRunTimeoutSeconds) * time.Second
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
+	}
 
 	if isMPIJob {
 		// We should expect at least 2 conditions: created and running
@@ -1627,7 +1633,10 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	}
 	isMPIJob := profile.Data.MPISpec != nil
 
-	timeout := time.Duration(profile.Data.PostRunTimeoutSeconds) * time.Second
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
+	}
 	timeoutMessage := fmt.Sprintf("user container(s) failed to complete after %d seconds", int(timeout.Seconds()))
 
 	if isMPIJob {
