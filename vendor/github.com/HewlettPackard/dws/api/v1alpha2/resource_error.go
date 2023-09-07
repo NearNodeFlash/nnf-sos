@@ -174,6 +174,10 @@ func (e *ResourceErrorInfo) Error() string {
 	return fmt.Sprintf("%s error: %s", strings.ToLower(string(e.Type)), message)
 }
 
+func (e *ResourceErrorInfo) GetUserMessage() string {
+	return fmt.Sprintf("%s error: %s", string(e.Type), e.UserMessage)
+}
+
 func (e *ResourceError) SetResourceErrorAndLog(err error, log logr.Logger) {
 	e.SetResourceError(err)
 	if err == nil {
