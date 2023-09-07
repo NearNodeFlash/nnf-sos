@@ -839,7 +839,7 @@ func handleWorkflowError(err error, driverStatus *dwsv1alpha2.WorkflowDriverStat
 			driverStatus.Error = err.Error()
 		} else {
 			driverStatus.Status = status
-			driverStatus.Message = e.UserMessage
+			driverStatus.Message = e.GetUserMessage()
 			driverStatus.Error = e.Error()
 		}
 	} else {
