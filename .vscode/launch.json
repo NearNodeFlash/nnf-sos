@@ -23,12 +23,10 @@
             "mode": "test",
             "program": "${relativeFileDirname}",
             "args": [
-                "-v=4",
                 "-ginkgo.v",
-                "-ginkgo.progress"
             ],
             "env": {
-                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.25.0-darwin-amd64",
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.26.0-darwin-amd64",
                 "GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT": "10m",
                 "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "100ms"
             },

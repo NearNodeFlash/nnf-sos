@@ -28,6 +28,7 @@ import (
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.openly.dev/pointy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -120,7 +121,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow a negative postRunTimeoutSeconds", func() {
-		nnfProfile.Data.PostRunTimeoutSeconds = -1
+		nnfProfile.Data.PostRunTimeoutSeconds = pointy.Int64(-1)
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
@@ -207,12 +208,60 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
+	DescribeTable("Should allow a user to set PreRunTimeoutSeconds",
+
+		func(timeout, expected *int64, succeed bool) {
+			nnfProfile.Data.Spec = &corev1.PodSpec{Containers: []corev1.Container{
+				{Name: "test", Image: "alpine:latest"},
+			}}
+			nnfProfile.Data.MPISpec = nil
+
+			nnfProfile.Data.PreRunTimeoutSeconds = timeout
+			if succeed {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+				Expect(nnfProfile.Data.PreRunTimeoutSeconds).To(Equal(expected))
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+
+		},
+		Entry("to 0", pointy.Int64(0), pointy.Int64(0), true),
+		Entry("to 45", pointy.Int64(45), pointy.Int64(45), true),
+		Entry("to nil and get the default(60)", nil, pointy.Int64(60), true),
+		Entry("to -1 and fail", pointy.Int64(-1), nil, false),
+	)
+
+	DescribeTable("Should allow a user to set PostRunTimeoutSeconds",
+
+		func(timeout, expected *int64, succeed bool) {
+			nnfProfile.Data.Spec = &corev1.PodSpec{Containers: []corev1.Container{
+				{Name: "test", Image: "alpine:latest"},
+			}}
+			nnfProfile.Data.MPISpec = nil
+
+			nnfProfile.Data.PostRunTimeoutSeconds = timeout
+			if succeed {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+				Expect(nnfProfile.Data.PostRunTimeoutSeconds).To(Equal(expected))
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+
+		},
+		Entry("to 0", pointy.Int64(0), pointy.Int64(0), true),
+		Entry("to 45", pointy.Int64(45), pointy.Int64(45), true),
+		Entry("to nil and get the default(60)", nil, pointy.Int64(60), true),
+		Entry("to -1 and fail", pointy.Int64(-1), nil, false),
+	)
+
 	It("Should not allow setting both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
 		nnfProfile.Data.Spec = nil
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 
 		timeout := int64(10)
-		nnfProfile.Data.PostRunTimeoutSeconds = timeout
+		nnfProfile.Data.PostRunTimeoutSeconds = &timeout
 		nnfProfile.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds = &timeout
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
@@ -221,7 +270,28 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow setting both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
 		timeout := int64(10)
-		nnfProfile.Data.PostRunTimeoutSeconds = timeout
+		nnfProfile.Data.PostRunTimeoutSeconds = &timeout
+		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting both PreRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
+		nnfProfile.Data.Spec = nil
+		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+
+		timeout := int64(10)
+		nnfProfile.Data.PreRunTimeoutSeconds = &timeout
+		nnfProfile.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds = &timeout
+
+		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+		nnfProfile = nil
+	})
+
+	It("Should not allow setting both PreRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
+		timeout := int64(10)
+		nnfProfile.Data.PreRunTimeoutSeconds = &timeout
 		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
@@ -240,7 +310,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should allow a zero postRunTimeoutSeconds", func() {
-		nnfProfile.Data.PostRunTimeoutSeconds = 0
+		nnfProfile.Data.PostRunTimeoutSeconds = pointy.Int64(0)
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 

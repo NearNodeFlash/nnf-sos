@@ -1325,10 +1325,36 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	if err != nil {
 		return nil, err
 	}
+	isMPIJob := profile.Data.MPISpec != nil
 
-	if profile.Data.MPISpec != nil {
+	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
+	// up to the workflow in every one of our return cases. Each return path will check for
+	// timeoutElapsed and bubble up a fatal error.
+	// We must also set the Jobs' activeDeadline timeout so that the containers are stopped once the
+	// timeout is hit. This needs to be handled slightly differently depending on if the job is MPI
+	// or not. Once set, k8s will take care of stopping the pods for us.
+	timeoutElapsed := false
+	timeout := time.Duration(0)
+	if profile.Data.PreRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PreRunTimeoutSeconds) * time.Second
+	}
+	timeoutMessage := fmt.Sprintf("user container(s) failed to start after %d seconds", int(timeout.Seconds()))
+
+	// Check if PreRunTimeoutSeconds has elapsed and set the flag. The logic will check once more to
+	// see if it started or not. If not, then the job(s) activeDeadline will be set to stop the
+	// jobs/pods.
+	if timeout > 0 && metav1.Now().Sub(workflow.Status.DesiredStateChange.Time) >= timeout {
+		timeoutElapsed = true
+	}
+
+	if isMPIJob {
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 1)
 		if result != nil {
+			// If timeout, don't allow requeue and return an error
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("could not retrieve MPIJobs to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal()
+			}
 			return result, nil
 		}
 
@@ -1341,21 +1367,53 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			}
 		}
 
+		// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.
+		// If no timeout, then just requeue.
 		if !running {
+			if timeoutElapsed {
+				r.Log.Info("container prerun timeout occurred, attempting to set MPIJob activeDeadlineSeconds")
+				if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, time.Duration(1*time.Millisecond)); err != nil {
+					return nil, dwsv1alpha2.NewResourceError("could not set timeout on MPIJobs").
+						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+				} else {
+					return nil, dwsv1alpha2.NewResourceError("MPIJob timeout set").WithUserMessage(timeoutMessage).WithFatal()
+				}
+			}
 			return Requeue(fmt.Sprintf("pending MPIJob start for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 		}
 	} else {
 		jobList, err := r.getContainerJobs(ctx, workflow, index)
 		if err != nil {
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal().WithError(err)
+			}
 			return nil, err
 		}
 
 		// Jobs may not be queryable yet, so requeue
 		if len(jobList.Items) < 1 {
+			// If timeout, don't allow a requeue and return an error
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("no Jobs found in JobList to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal()
+			}
 			return Requeue(fmt.Sprintf("pending job creation for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 		}
 
 		for _, job := range jobList.Items {
+
+			// Attempt to set the timeout on all the Jobs in the list
+			if timeoutElapsed {
+				r.Log.Info("container prerun timeout occurred, attempting to set Job activeDeadlineSeconds")
+				if err := r.setJobTimeout(ctx, job, time.Duration(1*time.Millisecond)); err != nil {
+					return nil, dwsv1alpha2.NewResourceError("could not set timeout on MPIJobs").
+						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+				} else {
+					continue
+				}
+			}
+
 			// If we have any conditions, the job already finished
 			if len(job.Status.Conditions) > 0 {
 				continue
@@ -1365,6 +1423,11 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			if job.Status.Ready == nil || *job.Status.Ready < 1 {
 				return Requeue(fmt.Sprintf("pending container start for job '%s'", job.Name)).after(2 * time.Second), nil
 			}
+		}
+
+		// Report the timeout error
+		if timeoutElapsed {
+			return nil, dwsv1alpha2.NewResourceError("job(s) timeout set").WithUserMessage(timeoutMessage).WithFatal()
 		}
 	}
 
@@ -1451,64 +1514,70 @@ func (r *NnfWorkflowReconciler) getMPIJobConditions(ctx context.Context, workflo
 	return mpiJob, nil
 }
 
+func (r *NnfWorkflowReconciler) setJobTimeout(ctx context.Context, job batchv1.Job, timeout time.Duration) error {
+	// If desired, set the ActiveDeadline on the job to kill pods. Use the job's creation
+	// timestamp to determine how long the job/pod has been running at this point. Then, add
+	// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
+	// terminate the pods once the deadline is hit.
+	if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
+		var deadline int64
+		deadline = int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
+
+		// Update the job with the deadline
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			j := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace}}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(j), j); err != nil {
+				return client.IgnoreNotFound(err)
+			}
+
+			j.Spec.ActiveDeadlineSeconds = &deadline
+			return r.Update(ctx, j)
+		})
+
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("error updating job '%s' activeDeadlineSeconds:", job.Name)
+		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) setMPIJobTimeout(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob, timeout time.Duration) error {
+	// Set the ActiveDeadLineSeconds on each of the k8s jobs created by MPIJob/mpi-operator. We
+	// need to retrieve the jobs in a different way than non-MPI jobs since the jobs are created
+	// by the MPIJob.
+	jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("setMPIJobTimeout: no MPIJob JobList found for workflow '%s'", workflow.Name).WithMajor()
+	}
+
+	if len(jobList.Items) < 1 {
+		return dwsv1alpha2.NewResourceError("setMPIJobTimeout: no MPIJob jobs found for workflow '%s'", workflow.Name).WithMajor()
+	}
+
+	for _, job := range jobList.Items {
+		if err := r.setJobTimeout(ctx, job, timeout); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
 	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
-	timeout := time.Duration(profile.Data.PostRunTimeoutSeconds) * time.Second
+	isMPIJob := profile.Data.MPISpec != nil
 
-	setTimeout := func(job batchv1.Job) error {
-		// If desired, set the ActiveDeadline on the job to kill pods. Use the job's creation
-		// timestamp to determine how long the job/pod has been running at this point. Then, add
-		// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
-		// terminate the pods once the deadline is hit.
-		if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
-			deadline := int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
-
-			// Update the job with the deadline
-			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				j := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace}}
-				if err := r.Get(ctx, client.ObjectKeyFromObject(j), j); err != nil {
-					return client.IgnoreNotFound(err)
-				}
-
-				j.Spec.ActiveDeadlineSeconds = &deadline
-				return r.Update(ctx, j)
-			})
-
-			if err != nil {
-				return dwsv1alpha2.NewResourceError("error updating job '%s' activeDeadlineSeconds:", job.Name)
-			}
-		}
-
-		return nil
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
 	}
 
-	setMPITimeout := func(mpiJob *mpiv2beta1.MPIJob) error {
-		// Set the ActiveDeadLineSeconds on each of the k8s jobs created by MPIJob/mpi-operator. We
-		// need to retrieve the jobs in a different way than non-MPI jobs since the jobs are created
-		// by the MPIJob.
-		jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
-		if err != nil {
-			return dwsv1alpha2.NewResourceError("waitForContainersToFinish: no MPIJob JobList found for workflow '%s', index: %d", workflow.Name, index).WithMajor()
-		}
-
-		if len(jobList.Items) < 1 {
-			return dwsv1alpha2.NewResourceError("waitForContainersToFinish: no MPIJob jobs found for workflow '%s', index: %d", workflow.Name, index).WithMajor()
-		}
-
-		for _, job := range jobList.Items {
-			if err := setTimeout(job); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	if profile.Data.MPISpec != nil {
+	if isMPIJob {
 		// We should expect at least 2 conditions: created and running
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 2)
 		if result != nil {
@@ -1525,7 +1594,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		}
 
 		if !finished {
-			if err := setMPITimeout(mpiJob); err != nil {
+			if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, timeout); err != nil {
 				return nil, err
 			}
 			return Requeue(fmt.Sprintf("pending MPIJob completion for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
@@ -1545,7 +1614,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		for _, job := range jobList.Items {
 			// Jobs will have conditions when finished
 			if len(job.Status.Conditions) <= 0 {
-				if err := setTimeout(job); err != nil {
+				if err := r.setJobTimeout(ctx, job, timeout); err != nil {
 					return nil, err
 				}
 				return Requeue("pending container finish").after(2 * time.Second).withObject(&job), nil
@@ -1562,8 +1631,15 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	if err != nil {
 		return nil, err
 	}
+	isMPIJob := profile.Data.MPISpec != nil
 
-	if profile.Data.MPISpec != nil {
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
+	}
+	timeoutMessage := fmt.Sprintf("user container(s) failed to complete after %d seconds", int(timeout.Seconds()))
+
+	if isMPIJob {
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 2)
 		if result != nil {
 			return result, nil
@@ -1571,7 +1647,12 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 
 		for _, c := range mpiJob.Status.Conditions {
 			if c.Type == mpiv2beta1.JobFailed {
-				return nil, dwsv1alpha2.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal()
+				if c.Reason == "DeadlineExceeded" {
+					return nil, dwsv1alpha2.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
+						WithUserMessage(timeoutMessage)
+				}
+				return nil, dwsv1alpha2.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
+					WithUserMessage("user container(s) failed to run successfully after %d attempts", profile.Data.RetryLimit+1)
 			}
 		}
 	} else {
@@ -1587,6 +1668,9 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 		for _, job := range jobList.Items {
 			for _, condition := range job.Status.Conditions {
 				if condition.Type != batchv1.JobComplete {
+					if condition.Reason == "DeadlineExceeded" {
+						return nil, dwsv1alpha2.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal().WithUserMessage(timeoutMessage)
+					}
 					return nil, dwsv1alpha2.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal()
 				}
 			}
