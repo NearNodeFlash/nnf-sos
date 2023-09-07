@@ -1,4 +1,4 @@
-# github.com/HewlettPackard/dws v0.0.1-0.20230613201835-73abc41bd83c
+# github.com/HewlettPackard/dws v0.0.1-0.20230907181649-2f6d9fca4249
 ## explicit; go 1.19
 github.com/HewlettPackard/dws/api/v1alpha2
 github.com/HewlettPackard/dws/config/crd/bases
@@ -287,6 +287,9 @@ go.opencensus.io/internal
 go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/tracestate
+# go.openly.dev/pointy v1.3.0
+## explicit; go 1.18
+go.openly.dev/pointy
 # go.uber.org/atomic v1.11.0
 ## explicit; go 1.18
 go.uber.org/atomic

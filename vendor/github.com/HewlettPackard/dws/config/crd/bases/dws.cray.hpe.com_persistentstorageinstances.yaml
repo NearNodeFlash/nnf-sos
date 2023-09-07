@@ -207,7 +207,14 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: PersistentStorageInstance is the Schema for the Persistentstorageinstances
@@ -335,17 +342,28 @@ spec:
                   debugMessage:
                     description: Internal debug message for the error
                     type: string
-                  recoverable:
-                    description: Indication if the error is likely recoverable or
-                      not
-                    type: boolean
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant
                       to an end user
                     type: string
                 required:
                 - debugMessage
-                - recoverable
+                - severity
+                - type
                 type: object
               servers:
                 description: Servers refers to the Servers resource that provides

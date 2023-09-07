@@ -21,7 +21,9 @@ package v1alpha1
 
 import (
 	"fmt"
+	"os"
 	"reflect"
+	"strings"
 
 	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,6 +50,55 @@ var _ webhook.Validator = &NnfContainerProfile{}
 func (r *NnfContainerProfile) ValidateCreate() error {
 	nnfcontainerprofilelog.Info("validate create", "name", r.Name)
 
+	// If it's not pinned, then it's being made available for users to select
+	// and it must be in the correct namespace.
+	profileNamespace := os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE")
+	if !r.Data.Pinned && r.GetNamespace() != profileNamespace {
+		err := fmt.Errorf("incorrect namespace for profile that is intended to be selected by users; the namespace should be '%s'", profileNamespace)
+		nnfstorageprofilelog.Error(err, "invalid")
+		return err
+	}
+
+	if err := r.validateContent(); err != nil {
+		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
+		return err
+	}
+
+	return nil
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
+	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
+
+	obj := old.(*NnfContainerProfile)
+
+	if obj.Data.Pinned != r.Data.Pinned {
+		err := fmt.Errorf("the pinned flag is immutable")
+		nnfcontainerprofilelog.Error(err, "invalid")
+		return err
+	}
+
+	if obj.Data.Pinned {
+		// Allow metadata to be updated, for things like finalizers,
+		// ownerReferences, and labels, but do not allow Data to be
+		// updated.
+		if !reflect.DeepEqual(r.Data, obj.Data) {
+			err := fmt.Errorf("update on pinned resource not allowed")
+			nnfcontainerprofilelog.Error(err, "invalid")
+			return err
+		}
+	}
+
+	if err := r.validateContent(); err != nil {
+		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
+		return err
+	}
+
+	return nil
+}
+
+func (r *NnfContainerProfile) validateContent() error {
 	mpiJob := r.Data.MPISpec != nil
 	nonmpiJob := r.Data.Spec != nil
 
@@ -60,11 +111,14 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 	}
 
 	if mpiJob {
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
-		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
+		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PreRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
+		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
 			return fmt.Errorf("both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
 		}
-
 		// Don't allow users to set the backoff limit directly
 		if r.Data.MPISpec.RunPolicy.BackoffLimit != nil && r.Data.RetryLimit > 0 {
 			return fmt.Errorf("MPISpec.RunPolicy.BackoffLimit is set. Use RetryLimit instead")
@@ -79,8 +133,12 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
 		}
 	} else {
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once Postrun starts, so we can't set them both
-		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds > 0 {
+		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
+		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
+			return fmt.Errorf("both PreRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
+		}
+		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
+		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
 			return fmt.Errorf("both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
 		}
 
@@ -89,22 +147,12 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 		}
 	}
 
-	return nil
-}
-
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
-	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
-
-	obj := old.(*NnfContainerProfile)
-	if obj.Data.Pinned {
-		// Allow metadata to be updated, for things like finalizers,
-		// ownerReferences, and labels, but do not allow Data to be
-		// updated.
-		if !reflect.DeepEqual(r.Data, obj.Data) {
-			err := fmt.Errorf("update on pinned resource not allowed")
-			nnfcontainerprofilelog.Error(err, "invalid")
-			return err
+	// Ensure only DW_GLOBAL_ storages have PVCMode
+	for _, storage := range r.Data.Storages {
+		if !strings.HasPrefix(storage.Name, "DW_GLOBAL_") {
+			if storage.PVCMode != "" {
+				return fmt.Errorf("PVCMode is only supported for global lustre storages (DW_GLOBAL_)")
+			}
 		}
 	}
 
@@ -114,7 +162,5 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateDelete() error {
 	nnfcontainerprofilelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }

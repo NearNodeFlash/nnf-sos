@@ -22,6 +22,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"strconv"
@@ -34,7 +35,6 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
 	"github.com/go-logr/logr"
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,16 +54,6 @@ type result struct {
 	reason       string
 	object       client.Object
 	deleteStatus *dwsv1alpha2.DeleteStatus
-}
-
-// This struct contains all the necessary information for mounting container storages
-type nnfContainerVolume struct {
-	name           string
-	command        string
-	directiveName  string
-	directiveIndex int
-	mountPath      string
-	envVarName     string
 }
 
 // When workflow stages cannot advance they return a Requeue result with a particular reason.
@@ -115,6 +105,8 @@ func (r *result) info() []interface{} {
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha2.Workflow) error {
 
+	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace})
+
 	var createPersistentCount, deletePersistentCount, directiveCount, containerCount int
 	for index, directive := range wf.Spec.DWDirectives {
 
@@ -128,7 +120,7 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 
 		case "copy_in", "copy_out":
 			if err := r.validateStagingDirective(ctx, wf, directive); err != nil {
-				return nnfv1alpha1.NewWorkflowError("Invalid staging Directive: " + directive).WithFatal().WithError(err)
+				return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("invalid staging Directive: '%v'", directive)
 			}
 
 		case "create_persistent":
@@ -139,27 +131,28 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 
 		case "persistentdw":
 			if err := r.validatePersistentInstanceDirective(ctx, wf, directive); err != nil {
-				return nnfv1alpha1.NewWorkflowError("Could not validate persistent instance: " + directive).WithFatal().WithError(err)
+				return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("could not validate persistent instance: '%s'", directive)
 			}
 
 		case "container":
 			containerCount++
 
 			if err := r.validateContainerDirective(ctx, wf, index); err != nil {
-				return nnfv1alpha1.NewWorkflowError("Could not validate container directive: " + directive).WithFatal().WithError(err)
+				return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("could not validate container directive: '%s'", directive)
 			}
 		}
 	}
 
+	log.Info("counts", "directive", directiveCount, "create", createPersistentCount, "delete", deletePersistentCount)
 	if directiveCount > 1 {
 		// Ensure create_persistent or destroy_persistent are singletons in the workflow
 		if createPersistentCount+deletePersistentCount > 0 {
-			return nnfv1alpha1.NewWorkflowError("Only a single create_persistent or destroy_persistent directive is allowed per workflow").WithFatal()
+			return dwsv1alpha2.NewResourceError("").WithUserMessage("only a single create_persistent or destroy_persistent directive is allowed per workflow").WithFatal().WithUser()
 		}
 
 		// Only allow 1 container directive (for now)
 		if containerCount > 1 {
-			return nnfv1alpha1.NewWorkflowError("Only a single container directive is supported per workflow").WithFatal()
+			return dwsv1alpha2.NewResourceError("").WithUserMessage("only a single container directive is supported per workflow").WithFatal().WithUser()
 		}
 	}
 
@@ -181,32 +174,32 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 		if strings.HasPrefix(arg, "$DW_JOB_") {
 			index := findDirectiveIndexByName(wf, name, "jobdw")
 			if index == -1 {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Job storage instance '%s' not found", name)).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("job storage instance '%s' not found", name).WithFatal().WithUser()
 			}
 
 			args, err := dwdparse.BuildArgsMap(wf.Spec.DWDirectives[index])
 			if err != nil {
-				return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + wf.Spec.DWDirectives[index]).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("invalid DW directive: '%s'", wf.Spec.DWDirectives[index]).WithFatal()
 			}
 
 			fsType, exists := args["type"]
 			if !exists {
-				return nnfv1alpha1.NewWorkflowError("Invalid DW directive match for staging argument")
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("invalid DW directive match for staging argument").WithFatal()
 			}
 
 			if fsType == "raw" {
-				return nnfv1alpha1.NewWorkflowError("Data movement can not be used with raw allocations").WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("data movement can not be used with raw allocations").WithFatal().WithUser()
 			}
 		} else if strings.HasPrefix(arg, "$DW_PERSISTENT_") {
 			if err := r.validatePersistentInstanceForStaging(ctx, name, wf.Namespace); err != nil {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("Persistent storage instance '%s' not found", name)).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("persistent storage instance '%s' not found", name).WithFatal().WithUser()
 			}
 			if findDirectiveIndexByName(wf, name, "persistentdw") == -1 {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", name)).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("persistentdw directive mentioning '%s' not found", name).WithFatal().WithUser()
 			}
 		} else {
 			if r.findLustreFileSystemForPath(ctx, arg, r.Log) == nil {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("global Lustre file system containing '%s' not found", arg)).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("global Lustre file system containing '%s' not found", arg).WithFatal().WithUser()
 			}
 		}
 
@@ -215,15 +208,15 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 
 	args, err := dwdparse.BuildArgsMap(directive)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("invalid DW directive: '%s'", directive).WithFatal()
 	}
 
 	if err := validateStagingArgument(args["source"]); err != nil {
-		return err
+		return dwsv1alpha2.NewResourceError("Invalid source argument: '%s'", args["source"]).WithError(err)
 	}
 
 	if err := validateStagingArgument(args["destination"]); err != nil {
-		return err
+		return dwsv1alpha2.NewResourceError("Invalid destination argument: '%s'", args["destination"]).WithError(err)
 	}
 
 	return nil
@@ -233,13 +226,13 @@ func (r *NnfWorkflowReconciler) validateStagingDirective(ctx context.Context, wf
 func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) error {
 	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("invalid DW directive: " + workflow.Spec.DWDirectives[index]).WithFatal()
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("invalid DW directive: '%s'", workflow.Spec.DWDirectives[index]).WithFatal()
 	}
 
-	// Ensure the supplied profile exists or use the default
-	profile, err := r.findContainerProfile(ctx, workflow, index)
+	// Ensure the supplied profile exists
+	profile, err := findContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+		return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("no valid container profile found").WithError(err).WithFatal()
 	}
 
 	// Check to see if the container storage argument is in the list of storages in the container profile
@@ -249,7 +242,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 				return nil
 			}
 		}
-		return fmt.Errorf("storage '%s' not found in container profile '%s'", storageName, profile.Name)
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("storage '%s' not found in container profile '%s'", storageName, profile.Name).WithFatal().WithUser()
 	}
 
 	checkContainerFs := func(idx int) error {
@@ -260,7 +253,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 			if args["command"] == "persistentdw" {
 				psi, err := r.getPersistentStorageInstance(ctx, args["name"], workflow.Namespace)
 				if err != nil {
-					return "", fmt.Errorf("could not retrieve persistent instance '%s' for container directive: %s", args["name"], err)
+					return "", fmt.Errorf("could not retrieve persistent instance %s for container directive: %v", args["name"], err)
 				}
 
 				return psi.Spec.FsType, nil
@@ -275,7 +268,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		}
 
 		if strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" {
-			return fmt.Errorf("unsupported container filesystem: %s", t)
+			return dwsv1alpha2.NewResourceError("").WithUserMessage("unsupported container filesystem: %s", t).WithFatal().WithUser()
 		}
 
 		return nil
@@ -292,32 +285,41 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 			if strings.HasPrefix(arg, "DW_JOB_") {
 				idx := findDirectiveIndexByName(workflow, storageName, "jobdw")
 				if idx == -1 {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("jobdw directive mentioning '%s' not found", storageName)).WithFatal()
+					return dwsv1alpha2.NewResourceError("").WithUserMessage("jobdw directive mentioning '%s' not found", storageName).WithFatal().WithUser()
 				}
 				if err := checkContainerFs(idx); err != nil {
-					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+					return err
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
-					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+					return err
 				}
 				suppliedStorageArguments = append(suppliedStorageArguments, arg)
 			} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
-				if err := r.validatePersistentInstanceForStaging(ctx, storageName, workflow.Namespace); err != nil {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistent storage instance '%s' not found", storageName)).WithFatal()
+				if err := r.validatePersistentInstance(ctx, storageName, workflow.Namespace); err != nil {
+					return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("persistent storage instance '%s' not found", storageName).WithFatal()
 				}
 				idx := findDirectiveIndexByName(workflow, storageName, "persistentdw")
 				if idx == -1 {
-					return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("persistentdw directive mentioning '%s' not found", storageName)).WithFatal()
+					return dwsv1alpha2.NewResourceError("").WithUserMessage("persistentdw directive mentioning '%s' not found", storageName).WithFatal().WithUser()
 				}
 				if err := checkContainerFs(idx); err != nil {
-					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+					return err
 				}
 				if err := checkStorageIsInProfile(arg); err != nil {
-					return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+					return err
+				}
+				suppliedStorageArguments = append(suppliedStorageArguments, arg)
+			} else if strings.HasPrefix(arg, "DW_GLOBAL_") {
+				// Look up the global lustre fs by path rather than LustreFilesystem name
+				if globalLustre := r.findLustreFileSystemForPath(ctx, storageName, r.Log); globalLustre == nil {
+					return dwsv1alpha2.NewResourceError("").WithUserMessage("global Lustre file system containing '%s' not found", storageName).WithFatal().WithUser()
+				}
+				if err := checkStorageIsInProfile(arg); err != nil {
+					return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("storage '%s' is not present in the container profile", arg).WithUser().WithFatal()
 				}
 				suppliedStorageArguments = append(suppliedStorageArguments, arg)
 			} else {
-				return nnfv1alpha1.NewWorkflowError(fmt.Sprintf("unrecognized container argument: %s", arg)).WithFatal()
+				return dwsv1alpha2.NewResourceError("").WithUserMessage("unrecognized container argument: %s", arg).WithFatal().WithUser()
 			}
 		}
 	}
@@ -336,8 +338,8 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 		for _, storage := range profile.Data.Storages {
 			if !storage.Optional {
 				if !findInStorageArguments(storage.Name) {
-					return fmt.Errorf("storage '%s' in container profile '%s' is not optional: storage argument not found in the supplied arguments",
-						storage.Name, profile.Name)
+					return dwsv1alpha2.NewResourceError("").WithUserMessage("storage '%s' in container profile '%s' is not optional: storage argument not found in the supplied arguments",
+						storage.Name, profile.Name).WithUser().WithFatal()
 				}
 			}
 		}
@@ -346,7 +348,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 	}
 
 	if err := checkNonOptionalStorages(suppliedStorageArguments); err != nil {
-		return nnfv1alpha1.NewWorkflowError(err.Error()).WithFatal()
+		return err
 	}
 
 	return nil
@@ -356,11 +358,29 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 func (r *NnfWorkflowReconciler) validatePersistentInstanceForStaging(ctx context.Context, name string, namespace string) error {
 	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
 	if err != nil {
-		return err
+		return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance '%s'", name).WithFatal().WithUser()
 	}
 
 	if psi.Spec.FsType == "raw" {
-		return nnfv1alpha1.NewWorkflowError("Data movement can not be used with raw allocations").WithFatal()
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("data movement can not be used with raw allocations").WithFatal().WithUser()
+	}
+
+	if !psi.DeletionTimestamp.IsZero() {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("Persistent storage instance '%s' is deleting", name).WithUser().WithFatal()
+	}
+
+	return nil
+}
+
+// validatePersistentInstance validates the persistentdw directive.
+func (r *NnfWorkflowReconciler) validatePersistentInstance(ctx context.Context, name string, namespace string) error {
+	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance %s", name).WithFatal().WithUser()
+	}
+
+	if !psi.DeletionTimestamp.IsZero() {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("Persistent storage instance '%s' is deleting", name).WithUser().WithFatal()
 	}
 
 	return nil
@@ -371,16 +391,16 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.
 	// Validate that the persistent instance is available and not in the process of being deleted
 	args, err := dwdparse.BuildArgsMap(directive)
 	if err != nil {
-		return nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + directive).WithFatal()
+		return dwsv1alpha2.NewResourceError("invalid DW directive: %s", directive).WithFatal()
 	}
 
 	psi, err := r.getPersistentStorageInstance(ctx, args["name"], wf.Namespace)
 	if err != nil {
-		return err
+		return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance '%s'", args["name"]).WithFatal().WithUser()
 	}
 
 	if !psi.DeletionTimestamp.IsZero() {
-		return nnfv1alpha1.NewWorkflowError("Persistent storage instance " + args["name"] + " is deleting").WithFatal()
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("Persistent storage instance '%s' is deleting", args["name"]).WithUser().WithFatal()
 	}
 
 	return nil
@@ -458,8 +478,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 				})
 
 			if err != nil {
-				log.Error(err, "failed to create or update DirectiveBreakdown", "name", directiveBreakdown.Name)
-				return nil, fmt.Errorf("CreateOrUpdate failed for DirectiveBreakdown %v: %w", client.ObjectKeyFromObject(directiveBreakdown), err)
+				return nil, dwsv1alpha2.NewResourceError("CreateOrUpdate failed for DirectiveBreakdown: %v", client.ObjectKeyFromObject(directiveBreakdown)).WithError(err)
 			}
 
 			if result == controllerutil.OperationResultCreated {
@@ -480,8 +499,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 
 func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, dbd *dwsv1alpha2.DirectiveBreakdown, servers *dwsv1alpha2.Servers) error {
 	if len(dbd.Status.Storage.AllocationSets) != 0 && len(dbd.Status.Storage.AllocationSets) != len(servers.Spec.AllocationSets) {
-		err := fmt.Errorf("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive)
-		return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+		return dwsv1alpha2.NewResourceError("Servers resource does not meet storage requirements for directive '%s'", dbd.Spec.Directive).WithUserMessage("Allocation request does not meet directive requirements").WithWLM().WithFatal()
 	}
 
 	for _, breakdownAllocationSet := range dbd.Status.Storage.AllocationSets {
@@ -495,8 +513,7 @@ func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, d
 
 			if breakdownAllocationSet.AllocationStrategy == dwsv1alpha2.AllocateSingleServer {
 				if len(serverAllocationSet.Storage) != 1 || serverAllocationSet.Storage[0].AllocationCount != 1 {
-					err := fmt.Errorf("Allocation set %s expected single allocation", breakdownAllocationSet.Label)
-					return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+					return dwsv1alpha2.NewResourceError("allocation set %s expected single allocation", breakdownAllocationSet.Label).WithUserMessage("storage directive requirements were not satisfied").WithWLM().WithFatal()
 				}
 			}
 
@@ -511,8 +528,7 @@ func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, d
 			}
 
 			if totalCapacity < breakdownAllocationSet.MinimumCapacity {
-				err := fmt.Errorf("Allocation set %s specified insufficient capacity", breakdownAllocationSet.Label)
-				return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+				return dwsv1alpha2.NewResourceError("allocation set %s specified insufficient capacity", breakdownAllocationSet.Label).WithUserMessage("storage directive requirements were not satisfied").WithWLM().WithFatal()
 			}
 
 			// Look up each of the storages specified to make sure they exist
@@ -525,18 +541,13 @@ func (r *NnfWorkflowReconciler) validateServerAllocations(ctx context.Context, d
 				}
 
 				if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-					if apierrors.IsNotFound(err) {
-						return nnfv1alpha1.NewWorkflowError("Allocation request did not specify valid storage").WithFatal().WithError(err)
-					}
-
-					return nnfv1alpha1.NewWorkflowError("Could not validate allocation request").WithError(err)
+					return dwsv1alpha2.NewResourceError("could not get storage: %s", client.ObjectKeyFromObject(storage)).WithError(err).WithUserMessage("storage directive requirements were not satisfied").WithFatal()
 				}
 			}
 		}
 
 		if !found {
-			err := fmt.Errorf("Allocation set %s not found in Servers resource", breakdownAllocationSet.Label)
-			return nnfv1alpha1.NewWorkflowError("Allocation request does not meet directive requirements").WithFatal().WithError(err)
+			return dwsv1alpha2.NewResourceError("allocation set %s not found in Servers resource", breakdownAllocationSet.Label).WithUserMessage("storage directive requirements were not satisfied").WithWLM().WithFatal()
 		}
 	}
 
@@ -554,21 +565,20 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 	dwArgs, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Invalid DW directive: " + workflow.Spec.DWDirectives[index]).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("invalid DW directive: %s", workflow.Spec.DWDirectives[index]).WithFatal().WithUser()
 	}
 
 	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {
-		log.Error(err, "Unable to find pinned NnfStorageProfile", "name", pinnedName)
-		return nil, fmt.Errorf("Could not find pinned NnfStorageProfile %v: %w", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}, err)
+		return nil, dwsv1alpha2.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
 	}
 
 	var owner metav1.Object = workflow
 	if dwArgs["command"] == "create_persistent" {
 		psi, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
-			return nil, fmt.Errorf("Could not find PersistentStorageInstance %v for 'create_persistent' directive: %w", dwArgs["name"], err)
+			return nil, dwsv1alpha2.NewResourceError("could not find PersistentStorageInstance: %v", dwArgs["name"]).WithError(err).WithFatal()
 		}
 
 		owner = psi
@@ -585,6 +595,33 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			nnfStorage.Spec.UserID = workflow.Spec.UserID
 			nnfStorage.Spec.GroupID = workflow.Spec.GroupID
 
+			// determine the NID of the external MGS if necessary
+			mgsNid := ""
+			persistentMgsReference := corev1.ObjectReference{}
+
+			if dwArgs["type"] == "lustre" && len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
+				// If the prefix on the ExternalMGS field is "pool:", then this is pool name instead of a NID.
+				if strings.HasPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:") {
+					// Copy the existing PersistentStorageInstance data if present to prevent picking a different
+					// MGS
+					for _, allocationSet := range nnfStorage.Spec.AllocationSets {
+						mgsNid = allocationSet.NnfStorageLustreSpec.ExternalMgsNid
+						persistentMgsReference = allocationSet.NnfStorageLustreSpec.PersistentMgsReference
+						break
+					}
+
+					// If no MGS was picked yet, pick one randomly from the pool of PersistentStorageInstances with the right label
+					if mgsNid == "" {
+						persistentMgsReference, mgsNid, err = r.getLustreMgsFromPool(ctx, strings.TrimPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:"))
+						if err != nil {
+							return err
+						}
+					}
+
+				} else {
+					mgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
+				}
+			}
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
@@ -598,8 +635,9 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = "z" + string(s.GetUID())[:7]
-					if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
-						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
+					if len(mgsNid) > 0 {
+						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = mgsNid
+						nnfAllocSet.NnfStorageLustreSpec.PersistentMgsReference = persistentMgsReference
 					}
 				}
 
@@ -628,8 +666,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 		})
 
 	if err != nil {
-		log.Error(err, "Failed to create or update NnfStorage", "name", nnfStorage.Name)
-		return nnfStorage, fmt.Errorf("CreateOrUpdate failed for NnfStorage %v: %w", client.ObjectKeyFromObject(nnfStorage), err)
+		return nil, dwsv1alpha2.NewResourceError("CreateOrUpdate failed for NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -641,6 +678,46 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	}
 
 	return nnfStorage, nil
+}
+
+func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool string) (corev1.ObjectReference, string, error) {
+	persistentStorageList := &dwsv1alpha2.PersistentStorageInstanceList{}
+	if err := r.List(ctx, persistentStorageList, client.MatchingLabels(map[string]string{nnfv1alpha1.StandaloneMGTLabel: pool})); err != nil {
+		return corev1.ObjectReference{}, "", err
+	}
+
+	// Choose an MGS at random from the list of persistent storages
+	persistentStorage := persistentStorageList.Items[rand.Intn(len(persistentStorageList.Items))]
+
+	// Find the NnfStorage for the PersistentStorage so we can get the LNid
+	nnfStorage := &nnfv1alpha1.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      persistentStorage.Name,
+			Namespace: persistentStorage.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("could not get persistent NnfStorage %v for MGS", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+	}
+
+	if nnfStorage.Spec.FileSystemType != "lustre" {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("invalid file systems type '%s' for persistent MGS", nnfStorage.Spec.FileSystemType).WithFatal()
+	}
+
+	if len(nnfStorage.Spec.AllocationSets) != 1 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of allocation sets '%d' for persistent MGS", len(nnfStorage.Spec.AllocationSets)).WithFatal()
+	}
+
+	if len(nnfStorage.Status.MgsNode) == 0 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no LNid listed for persistent MGS").WithFatal()
+	}
+
+	return corev1.ObjectReference{
+		Kind:      reflect.TypeOf(dwsv1alpha2.PersistentStorageInstance{}).Name(),
+		Name:      persistentStorage.Name,
+		Namespace: persistentStorage.Namespace,
+	}, nnfStorage.Status.MgsNode, nil
 }
 
 func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {
@@ -695,7 +772,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 		})
 
 	if err != nil {
-		return nil, fmt.Errorf("CreateOrUpdate failed for NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
+		return nil, dwsv1alpha2.NewResourceError("CreateOrUpdate failed for NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -722,12 +799,12 @@ func (r *NnfWorkflowReconciler) getDirectiveFileSystemType(ctx context.Context, 
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-			return "", fmt.Errorf("Could not get persistent NnfStorage %v to determine file system type: %w", client.ObjectKeyFromObject(nnfStorage), err)
+			return "", dwsv1alpha2.NewResourceError("could not get persistent NnfStorage %v to determine file system type", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
 		}
 
 		return nnfStorage.Spec.FileSystemType, nil
 	default:
-		return "", fmt.Errorf("Invalid directive '%s' to get file system type", workflow.Spec.DWDirectives[index])
+		return "", dwsv1alpha2.NewResourceError("invalid directive '%s' to get file system type", workflow.Spec.DWDirectives[index]).WithFatal()
 	}
 }
 
@@ -749,18 +826,62 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 		return nil, err
 	}
 
-	return psi, err
+	return psi, nil
 }
 
 func handleWorkflowError(err error, driverStatus *dwsv1alpha2.WorkflowDriverStatus) {
-	e, ok := err.(*nnfv1alpha1.WorkflowError)
+	e, ok := err.(*dwsv1alpha2.ResourceErrorInfo)
 	if ok {
-		e.Inject(driverStatus)
+		status, err := e.Severity.ToStatus()
+		if err != nil {
+			driverStatus.Status = dwsv1alpha2.StatusError
+			driverStatus.Message = "Internal error: " + err.Error()
+			driverStatus.Error = err.Error()
+		} else {
+			driverStatus.Status = status
+			driverStatus.Message = e.GetUserMessage()
+			driverStatus.Error = e.Error()
+		}
 	} else {
 		driverStatus.Status = dwsv1alpha2.StatusError
 		driverStatus.Message = "Internal error: " + err.Error()
 		driverStatus.Error = err.Error()
 	}
+}
+
+func handleWorkflowErrorByIndex(err error, workflow *dwsv1alpha2.Workflow, index int) {
+	// Create a list of the driverStatus array elements that correspond to the current state
+	// of the workflow and are targeted for the Rabbit driver
+	driverList := []*dwsv1alpha2.WorkflowDriverStatus{}
+	driverID := os.Getenv("DWS_DRIVER_ID")
+
+	for i := range workflow.Status.Drivers {
+		driverStatus := &workflow.Status.Drivers[i]
+
+		if driverStatus.DriverID != driverID {
+			continue
+		}
+		if workflow.Status.State != driverStatus.WatchState {
+			continue
+		}
+		if driverStatus.Completed {
+			continue
+		}
+
+		driverList = append(driverList, driverStatus)
+	}
+
+	for _, driverStatus := range driverList {
+		if driverStatus.DWDIndex != index {
+			continue
+		}
+
+		handleWorkflowError(err, driverStatus)
+
+		return
+	}
+
+	panic(index)
 }
 
 // Returns the directive index with the 'name' argument matching name, or -1 if not found
@@ -908,8 +1029,7 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 
 			if err := r.Update(ctx, access); err != nil {
 				if !apierrors.IsConflict(err) {
-					err = fmt.Errorf("Could not update NnfAccess %v: %w", client.ObjectKeyFromObject(access), err)
-					return nil, nnfv1alpha1.NewWorkflowError("Unable to request compute node unmount").WithError(err)
+					return nil, dwsv1alpha2.NewResourceError("could not update NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 				}
 
 				return Requeue("conflict").withObject(access), nil
@@ -932,7 +1052,7 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 	// Check if we should also wait on the NnfAccess for the servers
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowError("Unable to determine directive file system type").WithError(err)
+		return nil, dwsv1alpha2.NewResourceError("unable to determine directive file system type").WithError(err).WithFatal()
 	}
 
 	if fsType == "gfs2" || fsType == "lustre" {
@@ -949,13 +1069,13 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-			err = fmt.Errorf("Could not get NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), err)
-			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("could not get NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 		}
 
 		if access.Status.Error != nil {
-			err = fmt.Errorf("Error on NnfAccess %s: %w", client.ObjectKeyFromObject(access).String(), access.Status.Error)
-			return nil, nnfv1alpha1.NewWorkflowError("Could not access file system on nodes").WithError(err)
+			handleWorkflowErrorByIndex(access.Status.Error, workflow, index)
+
+			return Requeue("mount/unmount error").withObject(access), nil
 		}
 
 		if state == "mounted" {
@@ -984,17 +1104,18 @@ func (r *NnfWorkflowReconciler) addPersistentStorageReference(ctx context.Contex
 
 	persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 	if err != nil {
-		return err
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("PersistentStorage '%v' not found", dwArgs["name"]).WithMajor().WithUser()
 	}
 
 	if persistentStorage.Status.State != dwsv1alpha2.PSIStateActive {
-		return fmt.Errorf("PersistentStorage is not active")
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal().WithUser()
 	}
 
 	// Add a consumer reference to the persistent storage for this directive
 	reference := corev1.ObjectReference{
 		Name:      indexedResourceName(workflow, index),
 		Namespace: workflow.Namespace,
+		Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
 	}
 
 	found := false
@@ -1025,6 +1146,7 @@ func (r *NnfWorkflowReconciler) removePersistentStorageReference(ctx context.Con
 	reference := corev1.ObjectReference{
 		Name:      indexedResourceName(workflow, index),
 		Namespace: workflow.Namespace,
+		Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
 	}
 
 	for i, existingReference := range persistentStorage.Spec.ConsumerReferences {
@@ -1051,419 +1173,55 @@ func (r *NnfWorkflowReconciler) removeAllPersistentStorageReferences(ctx context
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) containerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, index int, log logr.Logger) (*result, error) {
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
 	mpiJob := profile.Data.MPISpec != nil
 
-	username := nnfv1alpha1.ContainerUser
-
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil || len(nnfNodes) <= 0 {
-		return nil, nnfv1alpha1.NewWorkflowError("error obtaining the target NNF nodes for containers:").WithError(err).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err).WithMajor()
 	}
 
 	// Get the NNF volumes to mount into the containers
-	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs)
+	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs, profile)
 	if err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("could not determine the list of volumes need to create container job for workflow: %s", workflow.Name).WithError(err).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err).WithFatal()
 	}
 	if result != nil {
 		return result, nil
 	}
 
-	applyLabels := func(job metav1.Object) error {
-
-		// Apply Job Labels/Owners
-		dwsv1alpha2.InheritParentLabels(job, workflow)
-		dwsv1alpha2.AddOwnerLabels(job, workflow)
-		dwsv1alpha2.AddWorkflowLabels(job, workflow)
-
-		labels := job.GetLabels()
-		labels[nnfv1alpha1.ContainerLabel] = workflow.Name
-		labels[nnfv1alpha1.PinnedContainerProfileLabelName] = profile.GetName()
-		labels[nnfv1alpha1.PinnedContainerProfileLabelNameSpace] = profile.GetNamespace()
-		labels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
-		job.SetLabels(labels)
-
-		if err := ctrl.SetControllerReference(workflow, job, r.Scheme); err != nil {
-			return nnfv1alpha1.NewWorkflowErrorf("setting Job controller reference failed for '%s':", job.GetName()).WithError(err)
-		}
-
-		return nil
-	}
-
-	applyTolerations := func(spec *corev1.PodSpec) {
-		spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
-			Effect:   corev1.TaintEffectNoSchedule,
-			Key:      "cray.nnf.node",
-			Operator: corev1.TolerationOpEqual,
-			Value:    "true",
-		})
-	}
-
-	addInitContainerPasswd := func(spec *corev1.PodSpec, user string, uid, gid int64, image string) {
-		// This script creates an entry in /etc/passwd to map the user to the given UID/GID using an
-		// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
-		// worker nodes. ssh itself requires that the UID is tied to a username in the container.
-		// Since the launcher container is running as non-root, we need to make use of an InitContainer
-		// to edit /etc/passwd and copy it to a volume which can then be mounted into the non-root
-		// container to replace /etc/passwd.
-		script := `# tie the UID/GID to the user
-sed -i '/^$USER/d' /etc/passwd
-echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /etc/passwd
-cp /etc/passwd /config/
-exit 0
-`
-		// Replace the user and UID/GID
-		script = strings.ReplaceAll(script, "$USER", user)
-		script = strings.ReplaceAll(script, "$UID", fmt.Sprintf("%d", uid))
-		script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", gid))
-
-		spec.InitContainers = append(spec.InitContainers, corev1.Container{
-			Name:  "mpi-init-passwd",
-			Image: image,
-			Command: []string{
-				"/bin/sh",
-				"-c",
-				script,
-			},
-			VolumeMounts: []corev1.VolumeMount{
-				{Name: "passwd", MountPath: "/config"},
-			},
-		})
-	}
-
-	addInitContainerWorkerWait := func(spec *corev1.PodSpec, worker int) {
-		// Add an initContainer to ensure that a worker pod is up and discoverable via dns. This
-		// assumes nslookup is available in the container. The nnf-mfu image provides this.
-		script := `# use nslookup to contact workers
-echo "contacting $HOST..."
-for i in $(seq 1 100); do
-   sleep 1
-   echo "attempt $i of 100..."
-   nslookup $HOST
-   if [ $? -eq 0 ]; then
-      echo "successfully contacted $HOST; done"
-      exit 0
-   fi
-done
-echo "failed to contact $HOST"
-exit 1
-`
-		// Build the worker's hostname.domain (e.g. nnf-container-example-worker-0.nnf-container-example-worker.default.svc)
-		// This name comes from mpi-operator.
-		host := strings.ToLower(fmt.Sprintf(
-			"%s-worker-%d.%s-worker.%s.svc", workflow.Name, worker, workflow.Name, workflow.Namespace))
-		script = strings.ReplaceAll(script, "$HOST", host)
-
-		spec.InitContainers = append(spec.InitContainers, corev1.Container{
-			Name:  fmt.Sprintf("mpi-wait-for-worker-%d", worker),
-			Image: spec.Containers[0].Image,
-			Command: []string{
-				"/bin/sh",
-				"-c",
-				script,
-			},
-		})
-	}
-
-	applyPermissions := func(spec *corev1.PodSpec, mpiJobSpec *mpiv2beta1.MPIJobSpec, user string, worker bool) {
-		uid := int64(workflow.Spec.UserID)
-		gid := int64(workflow.Spec.GroupID)
-
-		// Add volume for /etc/passwd to map user to UID/GID
-		spec.Volumes = append(spec.Volumes, corev1.Volume{
-			Name: "passwd",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
-
-		if !worker {
-			// Add SecurityContext if necessary
-			if spec.SecurityContext == nil {
-				spec.SecurityContext = &corev1.PodSecurityContext{}
-			}
-
-			// Add spec level security context to apply FSGroup to all containers. This keeps the
-			// volumes safe from root actions.
-			spec.SecurityContext.FSGroup = &gid
-
-			// Set the ssh key path for non-root users. Defaults to root.
-			if mpiJobSpec != nil {
-				mpiJobSpec.SSHAuthMountPath = fmt.Sprintf("/home/%s/.ssh", username)
-			}
-		}
-
-		// Add user permissions to each container. This needs to be done for each container because
-		// we do not want these permissions on the init container.
-		for idx := range spec.Containers {
-			container := &spec.Containers[idx]
-
-			// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd
-			addInitContainerPasswd(spec, user, uid, gid, container.Image)
-
-			// Add a mount to copy the modified /etc/passwd to
-			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-				Name:      "passwd",
-				MountPath: "/etc/passwd",
-				SubPath:   "passwd",
-			})
-
-			// Add non-root permissions from the workflow's user/group ID for the launcher, but not
-			// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
-			// the worker are executed via the launcher as the `mpiuser` and not root.
-			if !worker {
-				if container.SecurityContext == nil {
-					container.SecurityContext = &corev1.SecurityContext{}
-				}
-				container.SecurityContext.RunAsUser = &uid
-				container.SecurityContext.RunAsGroup = &gid
-				nonRoot := true
-				container.SecurityContext.RunAsNonRoot = &nonRoot
-				su := false
-				container.SecurityContext.AllowPrivilegeEscalation = &su
-			}
-		}
-	}
-
-	addNNFVolumes := func(spec *corev1.PodSpec) {
-		for _, vol := range volumes {
-			// Volumes
-			hostPathType := corev1.HostPathDirectory
-			spec.Volumes = append(spec.Volumes, corev1.Volume{
-				Name: vol.name,
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{
-						Path: vol.mountPath,
-						Type: &hostPathType,
-					},
-				},
-			})
-
-			// Add VolumeMounts and Volume environment variables for all containers
-			for idx := range spec.Containers {
-				container := &spec.Containers[idx]
-
-				container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-					Name:      vol.name,
-					MountPath: vol.mountPath,
-				})
-
-				container.Env = append(container.Env, corev1.EnvVar{
-					Name:  vol.envVarName,
-					Value: vol.mountPath,
-				})
-			}
-		}
-	}
-
-	addEnvVars := func(spec *corev1.PodSpec, mpi bool) {
-		// Add in non-volume environment variables for all containers
-		for idx := range spec.Containers {
-			container := &spec.Containers[idx]
-
-			// Jobs/hostnames and services/subdomains are named differently based on mpi or not. For
-			// MPI, there are launcher/worker pods and the service is named after the worker. For
-			// non-MPI, the jobs are named after the rabbit node.
-			subdomain := ""
-			domain := workflow.Namespace + ".svc.cluster.local"
-			hosts := []string{}
-
-			if mpi {
-				launcher := workflow.Name + "-launcher"
-				worker := workflow.Name + "-worker"
-				subdomain = worker
-
-				hosts = append(hosts, launcher)
-				for i, _ := range nnfNodes {
-					hosts = append(hosts, fmt.Sprintf("%s-%d", worker, i))
-				}
-			} else {
-				subdomain = spec.Subdomain
-				hosts = append(hosts, nnfNodes...)
-			}
-
-			container.Env = append(container.Env,
-				corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
-				corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},
-				corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, " ")})
-		}
-	}
-
-	// MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
-	// a job for the launcher (to run mpirun) and a replicaset for the worker pods. The worker nodes
-	// run an ssh server to listen for mpirun operations from the launcher pod.
-	createMPIJob := func() error {
-		mpiJob := &mpiv2beta1.MPIJob{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      workflow.Name,
-				Namespace: workflow.Namespace,
-			},
-		}
-		profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
-		username = nnfv1alpha1.ContainerMPIUser
-
-		if err := applyLabels(&mpiJob.ObjectMeta); err != nil {
-			return err
-		}
-
-		// Use the profile's backoff limit if not set
-		if mpiJob.Spec.RunPolicy.BackoffLimit == nil {
-			mpiJob.Spec.RunPolicy.BackoffLimit = &profile.Data.RetryLimit
-		}
-
-		// MPIJobs have two pod specs: one for the launcher and one for the workers
-		launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
-		launcherSpec := &launcher.Template.Spec
-		worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
-		workerSpec := &worker.Template.Spec
-
-		// Keep failed pods around for log inspection
-		launcher.RestartPolicy = mpicommonv1.RestartPolicyNever
-		worker.RestartPolicy = mpicommonv1.RestartPolicyNever
-
-		// Add NNF node tolerations
-		applyTolerations(launcherSpec)
-		applyTolerations(workerSpec)
-
-		// Run the launcher on the first NNF node
-		launcherSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNodes[0]}
-
-		// Use initContainers to ensure the workers are up and discoverable before running the launcher command
-		for i := range nnfNodes {
-			addInitContainerWorkerWait(launcherSpec, i)
-		}
-
-		// Target all the NNF nodes for the workers
-		replicas := int32(len(nnfNodes))
-		worker.Replicas = &replicas
-		workerSpec.Affinity = &corev1.Affinity{
-			// Ensure we run a worker on every NNF node
-			NodeAffinity: &corev1.NodeAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					NodeSelectorTerms: []corev1.NodeSelectorTerm{{
-						MatchExpressions: []corev1.NodeSelectorRequirement{{
-							Key:      "kubernetes.io/hostname",
-							Operator: corev1.NodeSelectorOpIn,
-							Values:   nnfNodes,
-						}},
-					}},
-				},
-			},
-			// But make sure it's only 1 per node
-			PodAntiAffinity: &corev1.PodAntiAffinity{
-				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
-					TopologyKey: "kubernetes.io/hostname",
-					LabelSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{
-							{
-								Key:      "training.kubeflow.org/job-name",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{workflow.Name},
-							},
-							{
-								Key:      "training.kubeflow.org/job-role",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{"worker"},
-							},
-						},
-					}},
-				},
-			},
-		}
-
-		// Set the appropriate permissions (UID/GID) from the workflow
-		applyPermissions(launcherSpec, &mpiJob.Spec, username, false)
-		applyPermissions(workerSpec, &mpiJob.Spec, username, true)
-
-		addNNFVolumes(launcherSpec)
-		addNNFVolumes(workerSpec)
-		addEnvVars(launcherSpec, true)
-		addEnvVars(workerSpec, true)
-
-		err = r.Create(ctx, mpiJob)
-		if err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return err
-			}
-		} else {
-			log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
-		}
-
-		return nil
-	}
-
-	// Non-MPI container workflow. In this model, a job is created for each NNF node which ensures
-	// that a pod is executed successfully (or the backOffLimit) is hit. Each container in this model
-	// runs the same image.
-	createNonMPIJob := func() error {
-		// Use one job that we'll use as a base to create all jobs. Each NNF node will get its own job.
-		job := &batchv1.Job{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: workflow.Namespace,
-			},
-		}
-		profile.Data.Spec.DeepCopyInto(&job.Spec.Template.Spec)
-		podSpec := &job.Spec.Template.Spec
-
-		if err := applyLabels(&job.ObjectMeta); err != nil {
-			return err
-		}
-
-		// Use the same labels as the job for the pods
-		job.Spec.Template.Labels = job.DeepCopy().Labels
-
-		job.Spec.BackoffLimit = &profile.Data.RetryLimit
-
-		podSpec.RestartPolicy = corev1.RestartPolicyNever
-		podSpec.Subdomain = workflow.Name // service name == workflow name
-
-		applyTolerations(podSpec)
-		applyPermissions(podSpec, nil, username, false)
-		addNNFVolumes(podSpec)
-		addEnvVars(podSpec, false)
-
-		// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
-		for _, nnfNode := range nnfNodes {
-			job.ObjectMeta.Name = workflow.Name + "-" + nnfNode
-			podSpec.Hostname = nnfNode
-
-			// In our case, the target is only 1 node for the job, so a restartPolicy of Never
-			// is ok because any retry (i.e. new pod) will land on the same node.
-			podSpec.NodeSelector = map[string]string{"kubernetes.io/hostname": nnfNode}
-
-			newJob := &batchv1.Job{}
-			job.DeepCopyInto(newJob)
-
-			err = r.Create(ctx, newJob)
-			if err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return err
-				}
-			} else {
-				log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
-			}
-		}
-
-		return nil
+	c := nnfUserContainer{
+		workflow: workflow,
+		profile:  profile,
+		nnfNodes: nnfNodes,
+		volumes:  volumes,
+		username: nnfv1alpha1.ContainerUser,
+		uid:      int64(workflow.Spec.UserID),
+		gid:      int64(workflow.Spec.GroupID),
+		index:    index,
+		client:   r.Client,
+		log:      r.Log,
+		scheme:   r.Scheme,
+		ctx:      ctx,
 	}
 
 	if mpiJob {
-		if err := createMPIJob(); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update MPIJob").WithFatal().WithError(err)
+		if err := c.createMPIJob(); err != nil {
+			return nil, dwsv1alpha2.NewResourceError("unable to create/update MPIJob").WithMajor().WithError(err)
 		}
 	} else {
+		// For non-MPI jobs, we need to create a service ourselves
 		if err := r.createContainerService(ctx, workflow); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Service").WithFatal().WithError(err)
+			return nil, dwsv1alpha2.NewResourceError("unable to create/update Container Service").WithMajor().WithError(err)
 		}
 
-		if err := createNonMPIJob(); err != nil {
-			return nil, nnfv1alpha1.NewWorkflowError("Unable to create/update Container Jobs").WithFatal().WithError(err)
+		if err := c.createNonMPIJob(); err != nil {
+			return nil, dwsv1alpha2.NewResourceError("unable to create/update Container Jobs").WithMajor().WithError(err)
 		}
 	}
 
@@ -1513,7 +1271,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(&computes), &computes); err != nil {
-		return ret, nnfv1alpha1.NewWorkflowError("could not find Computes resource for workflow")
+		return ret, dwsv1alpha2.NewResourceError("could not find Computes resource for workflow")
 	}
 
 	// Build the list of computes
@@ -1521,12 +1279,12 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 		computeNodes = append(computeNodes, c.Name)
 	}
 	if len(computeNodes) == 0 {
-		return computeNodes, nnfv1alpha1.NewWorkflowError("the Computes resources does not specify any compute nodes")
+		return computeNodes, dwsv1alpha2.NewResourceError("the Computes resources does not specify any compute nodes").WithWLM().WithFatal()
 	}
 
 	systemConfig := &dwsv1alpha2.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
-		return ret, nnfv1alpha1.NewWorkflowError("could not get system configuration")
+		return ret, dwsv1alpha2.NewResourceError("could not get system configuration")
 	}
 
 	// The SystemConfiguration is organized by rabbit. Make a map of computes:rabbit for easy lookup.
@@ -1544,7 +1302,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 	for _, c := range computeNodes {
 		nnfNode, found := computeMap[c]
 		if !found {
-			return ret, nnfv1alpha1.NewWorkflowErrorf("supplied compute node '%s' not found in SystemConfiguration", c)
+			return ret, dwsv1alpha2.NewResourceError("supplied compute node '%s' not found in SystemConfiguration", c).WithFatal()
 		}
 
 		// Add the node to the map
@@ -1563,14 +1321,40 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 
 func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
+	isMPIJob := profile.Data.MPISpec != nil
 
-	if profile.Data.MPISpec != nil {
+	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
+	// up to the workflow in every one of our return cases. Each return path will check for
+	// timeoutElapsed and bubble up a fatal error.
+	// We must also set the Jobs' activeDeadline timeout so that the containers are stopped once the
+	// timeout is hit. This needs to be handled slightly differently depending on if the job is MPI
+	// or not. Once set, k8s will take care of stopping the pods for us.
+	timeoutElapsed := false
+	timeout := time.Duration(0)
+	if profile.Data.PreRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PreRunTimeoutSeconds) * time.Second
+	}
+	timeoutMessage := fmt.Sprintf("user container(s) failed to start after %d seconds", int(timeout.Seconds()))
+
+	// Check if PreRunTimeoutSeconds has elapsed and set the flag. The logic will check once more to
+	// see if it started or not. If not, then the job(s) activeDeadline will be set to stop the
+	// jobs/pods.
+	if timeout > 0 && metav1.Now().Sub(workflow.Status.DesiredStateChange.Time) >= timeout {
+		timeoutElapsed = true
+	}
+
+	if isMPIJob {
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 1)
 		if result != nil {
+			// If timeout, don't allow requeue and return an error
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("could not retrieve MPIJobs to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal()
+			}
 			return result, nil
 		}
 
@@ -1583,21 +1367,53 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			}
 		}
 
+		// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.
+		// If no timeout, then just requeue.
 		if !running {
+			if timeoutElapsed {
+				r.Log.Info("container prerun timeout occurred, attempting to set MPIJob activeDeadlineSeconds")
+				if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, time.Duration(1*time.Millisecond)); err != nil {
+					return nil, dwsv1alpha2.NewResourceError("could not set timeout on MPIJobs").
+						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+				} else {
+					return nil, dwsv1alpha2.NewResourceError("MPIJob timeout set").WithUserMessage(timeoutMessage).WithFatal()
+				}
+			}
 			return Requeue(fmt.Sprintf("pending MPIJob start for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 		}
 	} else {
 		jobList, err := r.getContainerJobs(ctx, workflow, index)
 		if err != nil {
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal().WithError(err)
+			}
 			return nil, err
 		}
 
 		// Jobs may not be queryable yet, so requeue
 		if len(jobList.Items) < 1 {
+			// If timeout, don't allow a requeue and return an error
+			if timeoutElapsed {
+				return nil, dwsv1alpha2.NewResourceError("no Jobs found in JobList to set timeout").
+					WithUserMessage(timeoutMessage).WithFatal()
+			}
 			return Requeue(fmt.Sprintf("pending job creation for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 		}
 
 		for _, job := range jobList.Items {
+
+			// Attempt to set the timeout on all the Jobs in the list
+			if timeoutElapsed {
+				r.Log.Info("container prerun timeout occurred, attempting to set Job activeDeadlineSeconds")
+				if err := r.setJobTimeout(ctx, job, time.Duration(1*time.Millisecond)); err != nil {
+					return nil, dwsv1alpha2.NewResourceError("could not set timeout on MPIJobs").
+						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+				} else {
+					continue
+				}
+			}
+
 			// If we have any conditions, the job already finished
 			if len(job.Status.Conditions) > 0 {
 				continue
@@ -1608,9 +1424,74 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 				return Requeue(fmt.Sprintf("pending container start for job '%s'", job.Name)).after(2 * time.Second), nil
 			}
 		}
+
+		// Report the timeout error
+		if timeoutElapsed {
+			return nil, dwsv1alpha2.NewResourceError("job(s) timeout set").WithUserMessage(timeoutMessage).WithFatal()
+		}
 	}
 
 	return nil, nil
+}
+
+func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	doneMpi := false
+	doneNonMpi := false
+
+	// Set the delete propagation
+	policy := metav1.DeletePropagationBackground
+	deleteAllOptions := &client.DeleteAllOfOptions{
+		DeleteOptions: client.DeleteOptions{
+			PropagationPolicy: &policy,
+		},
+	}
+	// Add workflow matchLabels + directive index (if desired)
+	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	}
+
+	// Delete MPIJobs
+	mpiJobList, err := r.getMPIJobs(ctx, workflow, index)
+	if err != nil {
+		if strings.Contains(err.Error(), "no kind is registered for the type") || apierrors.IsNotFound(err) {
+			doneMpi = true
+		} else {
+			return nil, dwsv1alpha2.NewResourceError("could not delete container MPIJob(s)").WithError(err).WithMajor().WithInternal()
+		}
+	} else if len(mpiJobList.Items) > 0 {
+		if err := r.DeleteAllOf(ctx, &mpiJobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, dwsv1alpha2.NewResourceError("could not delete container MPIJob(s)").WithError(err).WithMajor().WithInternal()
+			}
+		}
+	} else {
+		doneMpi = true
+	}
+
+	// Delete non-MPI Jobs
+	jobList, err := r.getContainerJobs(ctx, workflow, index)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			doneNonMpi = true
+		} else {
+			return nil, dwsv1alpha2.NewResourceError("could not delete container Job(s)").WithError(err).WithMajor().WithInternal()
+		}
+	} else if len(jobList.Items) > 0 {
+		if err := r.DeleteAllOf(ctx, &jobList.Items[0], client.InNamespace(workflow.Namespace), matchLabels, deleteAllOptions); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, dwsv1alpha2.NewResourceError("could not delete container Job(s)").WithError(err).WithMajor().WithInternal()
+			}
+		}
+	} else {
+		doneNonMpi = true
+	}
+
+	if doneMpi && doneNonMpi {
+		return nil, nil
+	}
+
+	return Requeue("pending container deletion"), nil
 }
 
 func (r *NnfWorkflowReconciler) getMPIJobConditions(ctx context.Context, workflow *dwsv1alpha2.Workflow, index, expected int) (*mpiv2beta1.MPIJob, *result) {
@@ -1633,64 +1514,70 @@ func (r *NnfWorkflowReconciler) getMPIJobConditions(ctx context.Context, workflo
 	return mpiJob, nil
 }
 
+func (r *NnfWorkflowReconciler) setJobTimeout(ctx context.Context, job batchv1.Job, timeout time.Duration) error {
+	// If desired, set the ActiveDeadline on the job to kill pods. Use the job's creation
+	// timestamp to determine how long the job/pod has been running at this point. Then, add
+	// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
+	// terminate the pods once the deadline is hit.
+	if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
+		var deadline int64
+		deadline = int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
+
+		// Update the job with the deadline
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			j := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace}}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(j), j); err != nil {
+				return client.IgnoreNotFound(err)
+			}
+
+			j.Spec.ActiveDeadlineSeconds = &deadline
+			return r.Update(ctx, j)
+		})
+
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("error updating job '%s' activeDeadlineSeconds:", job.Name)
+		}
+	}
+
+	return nil
+}
+
+func (r *NnfWorkflowReconciler) setMPIJobTimeout(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob, timeout time.Duration) error {
+	// Set the ActiveDeadLineSeconds on each of the k8s jobs created by MPIJob/mpi-operator. We
+	// need to retrieve the jobs in a different way than non-MPI jobs since the jobs are created
+	// by the MPIJob.
+	jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("setMPIJobTimeout: no MPIJob JobList found for workflow '%s'", workflow.Name).WithMajor()
+	}
+
+	if len(jobList.Items) < 1 {
+		return dwsv1alpha2.NewResourceError("setMPIJobTimeout: no MPIJob jobs found for workflow '%s'", workflow.Name).WithMajor()
+	}
+
+	for _, job := range jobList.Items {
+		if err := r.setJobTimeout(ctx, job, timeout); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
-	timeout := time.Duration(profile.Data.PostRunTimeoutSeconds) * time.Second
+	isMPIJob := profile.Data.MPISpec != nil
 
-	setTimeout := func(job batchv1.Job) error {
-		// If desired, set the ActiveDeadline on the job to kill pods. Use the job's creation
-		// timestamp to determine how long the job/pod has been running at this point. Then, add
-		// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
-		// terminate the pods once the deadline is hit.
-		if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
-			deadline := int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
-
-			// Update the job with the deadline
-			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				j := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace}}
-				if err := r.Get(ctx, client.ObjectKeyFromObject(j), j); err != nil {
-					return client.IgnoreNotFound(err)
-				}
-
-				j.Spec.ActiveDeadlineSeconds = &deadline
-				return r.Update(ctx, j)
-			})
-
-			if err != nil {
-				return nnfv1alpha1.NewWorkflowErrorf("error updating job '%s' activeDeadlineSeconds:", job.Name)
-			}
-		}
-
-		return nil
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
 	}
 
-	setMPITimeout := func(mpiJob *mpiv2beta1.MPIJob) error {
-		// Set the ActiveDeadLineSeconds on each of the k8s jobs created by MPIJob/mpi-operator. We
-		// need to retrieve the jobs in a different way than non-MPI jobs since the jobs are created
-		// by the MPIJob.
-		jobList, err := r.getMPIJobList(ctx, workflow, mpiJob)
-		if err != nil {
-			return nnfv1alpha1.NewWorkflowErrorf("waitForContainersToFinish: no MPIJob JobList found for workflow '%s', index: %d", workflow.Name, index)
-		}
-
-		if len(jobList.Items) < 1 {
-			return nnfv1alpha1.NewWorkflowErrorf("waitForContainersToFinish: no MPIJob jobs found for workflow '%s', index: %d", workflow.Name, index)
-		}
-
-		for _, job := range jobList.Items {
-			if err := setTimeout(job); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	if profile.Data.MPISpec != nil {
+	if isMPIJob {
 		// We should expect at least 2 conditions: created and running
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 2)
 		if result != nil {
@@ -1707,7 +1594,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		}
 
 		if !finished {
-			if err := setMPITimeout(mpiJob); err != nil {
+			if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, timeout); err != nil {
 				return nil, err
 			}
 			return Requeue(fmt.Sprintf("pending MPIJob completion for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
@@ -1720,14 +1607,14 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		}
 
 		if len(jobList.Items) < 1 {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("waitForContainersToFinish: no container jobs found for workflow '%s', index: %d", workflow.Name, index)
+			return nil, dwsv1alpha2.NewResourceError("waitForContainersToFinish: no container jobs found for workflow '%s', index: %d", workflow.Name, index).WithMajor()
 		}
 
 		// Ensure all the jobs are done running before we check the conditions.
 		for _, job := range jobList.Items {
 			// Jobs will have conditions when finished
 			if len(job.Status.Conditions) <= 0 {
-				if err := setTimeout(job); err != nil {
+				if err := r.setJobTimeout(ctx, job, timeout); err != nil {
 					return nil, err
 				}
 				return Requeue("pending container finish").after(2 * time.Second).withObject(&job), nil
@@ -1740,12 +1627,19 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 
 func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
-	profile, err := r.getContainerProfile(ctx, workflow, index)
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
 	if err != nil {
 		return nil, err
 	}
+	isMPIJob := profile.Data.MPISpec != nil
 
-	if profile.Data.MPISpec != nil {
+	timeout := time.Duration(0)
+	if profile.Data.PostRunTimeoutSeconds != nil {
+		timeout = time.Duration(*profile.Data.PostRunTimeoutSeconds) * time.Second
+	}
+	timeoutMessage := fmt.Sprintf("user container(s) failed to complete after %d seconds", int(timeout.Seconds()))
+
+	if isMPIJob {
 		mpiJob, result := r.getMPIJobConditions(ctx, workflow, index, 2)
 		if result != nil {
 			return result, nil
@@ -1753,7 +1647,12 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 
 		for _, c := range mpiJob.Status.Conditions {
 			if c.Type == mpiv2beta1.JobFailed {
-				return nil, nnfv1alpha1.NewWorkflowErrorf("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message)
+				if c.Reason == "DeadlineExceeded" {
+					return nil, dwsv1alpha2.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
+						WithUserMessage(timeoutMessage)
+				}
+				return nil, dwsv1alpha2.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
+					WithUserMessage("user container(s) failed to run successfully after %d attempts", profile.Data.RetryLimit+1)
 			}
 		}
 	} else {
@@ -1763,13 +1662,16 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 		}
 
 		if len(jobList.Items) < 1 {
-			return nil, nnfv1alpha1.NewWorkflowErrorf("checkContainersResults: no container jobs found for workflow '%s', index: %d", workflow.Name, index)
+			return nil, dwsv1alpha2.NewResourceError("checkContainersResults: no container jobs found for workflow '%s', index: %d", workflow.Name, index).WithMajor()
 		}
 
 		for _, job := range jobList.Items {
 			for _, condition := range job.Status.Conditions {
 				if condition.Type != batchv1.JobComplete {
-					return nil, nnfv1alpha1.NewWorkflowErrorf("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message)
+					if condition.Reason == "DeadlineExceeded" {
+						return nil, dwsv1alpha2.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal().WithUserMessage(timeoutMessage)
+					}
+					return nil, dwsv1alpha2.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal()
 				}
 			}
 		}
@@ -1778,7 +1680,8 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) getMPIJobList(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob) (*batchv1.JobList, error) {
+// Given an MPIJob, return a list of all the k8s Jobs owned by the MPIJob
+func (r *NnfWorkflowReconciler) getMPIJobChildrenJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, mpiJob *mpiv2beta1.MPIJob) (*batchv1.JobList, error) {
 	// The k8s jobs that are spawned off by MPIJob do not have labels tied to the workflow.
 	// Therefore, we need to get the k8s jobs manually. To do this, we can query the jobs by the
 	// name of the MPIJob. However, this doesn't account for the namespace. We need another way.
@@ -1788,7 +1691,7 @@ func (r *NnfWorkflowReconciler) getMPIJobList(ctx context.Context, workflow *dws
 
 	jobList := &batchv1.JobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for MPIJob %s", mpiJob.Name).WithError(err)
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs for MPIJob %s", mpiJob.Name).WithError(err).WithMajor()
 	}
 
 	// Create a new list so we don't alter the loop iterator
@@ -1809,126 +1712,39 @@ func (r *NnfWorkflowReconciler) getMPIJobList(ctx context.Context, workflow *dws
 	return jobList, nil
 }
 
-func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*batchv1.JobList, error) {
-	// Get the jobs for this workflow and directive index
+func (r *NnfWorkflowReconciler) getMPIJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*mpiv2beta1.MPIJobList, error) {
+	// Get the MPIJobs for this workflow and directive index
 	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
-	matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
+	}
 
-	jobList := &batchv1.JobList{}
+	jobList := &mpiv2beta1.MPIJobList{}
 	if err := r.List(ctx, jobList, matchLabels); err != nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve Jobs for index %d", index).WithError(err)
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve MPIJobs").WithError(err).WithMajor()
 	}
 
 	return jobList, nil
 }
 
-func (r *NnfWorkflowReconciler) getContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
-	if err != nil {
-		return nil, err
+func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*batchv1.JobList, error) {
+	// Get the jobs for this workflow and directive index
+	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
+	if index >= 0 {
+		matchLabels[nnfv1alpha1.DirectiveIndexLabel] = strconv.Itoa(index)
 	}
 
-	if profile == nil {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
+	jobList := &batchv1.JobList{}
+	if err := r.List(ctx, jobList, matchLabels); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve Jobs").WithError(err).WithMajor()
 	}
 
-	if !profile.Data.Pinned {
-		return nil, nnfv1alpha1.NewWorkflowErrorf("expected pinned container profile '%s'", indexedResourceName(workflow, index)).WithFatal()
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) findPinnedContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	profile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index),
-			Namespace: workflow.Namespace,
-		},
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
-		return nil, err
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) findContainerProfile(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha1.NnfContainerProfile, error) {
-	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-	if err != nil {
-		return nil, err
-	}
-
-	name, found := args["profile"]
-	if !found {
-		return nil, fmt.Errorf("container directive '%s' has no profile key", workflow.Spec.DWDirectives[index])
-	}
-
-	profile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE"),
-		},
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(profile), profile); err != nil {
-		return nil, err
-	}
-
-	return profile, nil
-}
-
-func (r *NnfWorkflowReconciler) createPinnedContainerProfileIfNecessary(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) error {
-	profile, err := r.findPinnedContainerProfile(ctx, workflow, index)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if profile != nil {
-		if !profile.Data.Pinned {
-			return fmt.Errorf("expected pinned container profile, but it was not pinned: %s", profile.Name)
-		}
-
-		return nil
-	}
-
-	profile, err = r.findContainerProfile(ctx, workflow, index)
-	if err != nil {
-		return err
-	}
-
-	pinnedProfile := &nnfv1alpha1.NnfContainerProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index),
-			Namespace: workflow.Namespace,
-		},
-	}
-
-	profile.Data.DeepCopyInto(&pinnedProfile.Data)
-
-	pinnedProfile.Data.Pinned = true
-
-	dwsv1alpha2.AddOwnerLabels(pinnedProfile, workflow)
-
-	if err := controllerutil.SetControllerReference(workflow, pinnedProfile, r.Scheme); err != nil {
-		r.Log.Error(err, "failed to set controller reference on profile", "profile", pinnedProfile)
-		return fmt.Errorf("failed to set controller reference on profile %s", client.ObjectKeyFromObject(pinnedProfile))
-	}
-
-	r.Log.Info("Creating pinned container profile", "resource", client.ObjectKeyFromObject(pinnedProfile))
-	if err := r.Create(ctx, pinnedProfile); err != nil {
-		return err
-	}
-
-	return nil
+	return jobList, nil
 }
 
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
-func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string) ([]nnfContainerVolume, *result, error) {
+func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, profile *nnfv1alpha1.NnfContainerProfile) ([]nnfContainerVolume, *result, error) {
 	volumes := []nnfContainerVolume{}
-
-	// TODO: ssh is necessary for mpi see setupSSHAuthVolumes(manager, podSpec) in nnf-dm
 
 	for arg, val := range dwArgs {
 		volName, cmd := "", ""
@@ -1940,6 +1756,9 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		} else if strings.HasPrefix(arg, "DW_PERSISTENT_") {
 			volName = strings.TrimPrefix(arg, "DW_PERSISTENT_")
 			cmd = "persistentdw"
+		} else if strings.HasPrefix(arg, "DW_GLOBAL_") {
+			volName = strings.TrimPrefix(arg, "DW_GLOBAL_")
+			cmd = "globaldw"
 		} else {
 			continue
 		}
@@ -1956,29 +1775,204 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 			envVarName: strings.ReplaceAll(arg, "-", "_"),
 		}
 
-		// Find the directive index for the given name so we can retrieve its NnfAccess
-		vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
-		if vol.directiveIndex < 0 {
-			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the directive breakdown for '%s'", vol.directiveName)
-		}
+		// For global lustre, a namespace that matches the workflow's namespace must be present in
+		// the LustreFilesystem's Spec.Namespaces list. This results in a matching PVC that can
+		// then be mounted into containers in that namespace.
+		if cmd == "globaldw" {
+			globalLustre := r.findLustreFileSystemForPath(ctx, val, r.Log)
+			if globalLustre == nil {
+				return nil, nil, dwsv1alpha2.NewResourceError("").WithUserMessage("global Lustre file system containing '%s' not found", val).WithUser().WithFatal()
+			}
 
-		nnfAccess := &nnfv1alpha1.NnfAccess{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      workflow.Name + "-" + strconv.Itoa(vol.directiveIndex) + "-servers",
-				Namespace: workflow.Namespace,
-			},
-		}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-			return nil, nil, nnfv1alpha1.NewWorkflowErrorf("could not retrieve the NnfAccess '%s'", nnfAccess.Name)
-		}
+			ns, nsFound := globalLustre.Spec.Namespaces[workflow.Namespace]
+			if !nsFound || len(ns.Modes) < 1 {
+				return nil, nil, dwsv1alpha2.NewResourceError("").WithUserMessage("global Lustre file system containing '%s' is not configured for the '%s' namespace", val, workflow.Namespace).WithUser().WithFatal()
+			}
 
-		if !nnfAccess.Status.Ready {
-			return nil, Requeue(fmt.Sprintf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)).after(2 * time.Second), nil
-		}
+			// Retrieve the desired PVC mode from the container profile. Default to readwritemany.
+			modeStr := strings.ToLower(string(corev1.ReadWriteMany))
+			if profile != nil {
+				for _, storage := range profile.Data.Storages {
+					if storage.Name == arg && storage.PVCMode != "" {
+						modeStr = strings.ToLower(string(storage.PVCMode))
+					}
+				}
+			}
 
-		vol.mountPath = nnfAccess.Spec.MountPath
+			// e.g. PVC name: global-default-readwritemany-pvc
+			vol.pvcName = strings.ToLower(fmt.Sprintf("%s-%s-%s-pvc", globalLustre.Name, globalLustre.Namespace, modeStr))
+			vol.mountPath = globalLustre.Spec.MountRoot
+		} else {
+			// Find the directive index for the given name so we can retrieve its NnfAccess
+			vol.directiveIndex = findDirectiveIndexByName(workflow, vol.directiveName, vol.command)
+			if vol.directiveIndex < 0 {
+				return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the directive breakdown for '%s'", vol.directiveName).WithMajor()
+			}
+
+			nnfAccess := &nnfv1alpha1.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Name + "-" + strconv.Itoa(vol.directiveIndex) + "-servers",
+					Namespace: workflow.Namespace,
+				},
+			}
+			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
+				return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the NnfAccess '%s'", nnfAccess.Name).WithMajor()
+			}
+
+			if !nnfAccess.Status.Ready {
+				return nil, Requeue(fmt.Sprintf("NnfAccess '%s' is not ready to be mounted into container", nnfAccess.Name)).after(2 * time.Second), nil
+			}
+
+			vol.mountPath = nnfAccess.Spec.MountPath
+		}
 		volumes = append(volumes, vol)
 	}
 
 	return volumes, nil, nil
+}
+
+// Use the container profile to determine how many ports are needed and request them from the default NnfPortManager
+func (r *NnfWorkflowReconciler) getContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do here if ports are not requested
+	if profile.Data.NumPorts > 0 {
+		pm, err := getContainerPortManager(ctx, r.Client)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check to see if we've already made an allocation
+		for _, alloc := range pm.Spec.Allocations {
+			if alloc.Requester.UID == workflow.UID {
+				return nil, nil
+			}
+		}
+
+		// Add a port allocation request to the manager for the number of ports specified by the
+		// container profile
+		pm.Spec.Allocations = append(pm.Spec.Allocations, nnfv1alpha1.NnfPortManagerAllocationSpec{
+			Requester: corev1.ObjectReference{
+				Name:      workflow.Name,
+				Namespace: workflow.Namespace,
+				Kind:      reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
+				UID:       workflow.UID,
+			},
+			Count: int(profile.Data.NumPorts),
+		})
+
+		if err := r.Update(ctx, pm); err != nil {
+			if !apierrors.IsConflict(err) {
+				return nil, err
+			}
+			return Requeue("update port manager allocation"), nil
+		}
+
+		r.Log.Info("Ports Requested", "numPorts", profile.Data.NumPorts)
+	}
+
+	return nil, nil
+}
+
+// Ensure that the default NnfPortManager has assigned the appropriate number of requested ports
+func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+
+	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
+	if err != nil {
+		return nil, err
+	}
+
+	// Nothing to do here if ports are not requested
+	r.Log.Info("Checking for requested ports", "numPorts", profile.Data.NumPorts)
+	if profile.Data.NumPorts > 0 {
+		pm, err := getContainerPortManager(ctx, r.Client)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, alloc := range pm.Status.Allocations {
+			if alloc.Requester != nil && alloc.Requester.UID == workflow.UID {
+				if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse && len(alloc.Ports) == int(profile.Data.NumPorts) {
+					// Add workflow env var for the ports
+					name, val := getContainerPortsEnvVar(alloc.Ports)
+					workflow.Status.Env[name] = val
+					return nil, nil // done
+				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInvalidConfiguration {
+					return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("could not request ports for container workflow: Invalid NnfPortManager configuration").WithFatal().WithUser()
+				} else if alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInsufficientResources {
+					return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("could not request ports for container workflow: InsufficientResources").WithFatal()
+				}
+			}
+		}
+
+		return Requeue("NnfPortManager allocation not ready").after(2 * time.Second).withObject(pm), nil
+	}
+
+	return nil, nil
+}
+
+// Retrieve the default NnfPortManager for user containers. Allow a client to be passed in as this
+// is meant to be used by reconcilers or container helpers.
+func getContainerPortManager(ctx context.Context, cl client.Client) (*nnfv1alpha1.NnfPortManager, error) {
+	portManagerName := os.Getenv("NNF_PORT_MANAGER_NAME")
+	portManagerNamespace := os.Getenv("NNF_PORT_MANAGER_NAMESPACE")
+
+	pm := &nnfv1alpha1.NnfPortManager{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      portManagerName,
+			Namespace: portManagerNamespace,
+		},
+	}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(pm), pm); err != nil {
+		return nil, err
+	}
+
+	return pm, nil
+}
+
+// Tell the NnfPortManager that the ports are no longer needed
+// func (r *NnfWorkflowReconciler) releaseContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) releaseContainerPorts(ctx context.Context, workflow *dwsv1alpha2.Workflow) (*result, error) {
+	found := false
+
+	pm, err := getContainerPortManager(ctx, r.Client)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	// Find the allocation in the Status
+	for _, alloc := range pm.Status.Allocations {
+		if alloc.Requester.UID == workflow.UID && alloc.Status == nnfv1alpha1.NnfPortManagerAllocationStatusInUse {
+			found = true
+			break
+		}
+	}
+
+	if found {
+		// Remove the allocation request from the Spec
+		// TODO: For cooldowns, change the status to cooldown/time_wait rather than delete. Can we
+		// even do that from here?
+		for idx, alloc := range pm.Spec.Allocations {
+			if alloc.Requester.UID == workflow.UID {
+				pm.Spec.Allocations = append(pm.Spec.Allocations[:idx], pm.Spec.Allocations[idx+1:]...)
+			}
+		}
+
+		if err := r.Update(ctx, pm); err != nil {
+			if !apierrors.IsConflict(err) {
+				return nil, err
+			}
+		}
+
+		return Requeue("pending port de-allocation"), nil
+	} else {
+		return nil, nil
+	}
 }

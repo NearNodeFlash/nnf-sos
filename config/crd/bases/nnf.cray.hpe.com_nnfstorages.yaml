@@ -14,7 +14,14 @@ spec:
     singular: nnfstorage
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfStorage is the Schema for the storages API
@@ -90,6 +97,45 @@ spec:
                         - name
                         type: object
                       type: array
+                    persistentMgsReference:
+                      description: PersistentMgsReference is a reference to a persistent
+                        storage that is providing the external MGS.
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: 'If referring to a piece of an object instead
+                            of an entire object, this string should contain a valid
+                            JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container
+                            within a pod, this would take on a value like: "spec.containers{name}"
+                            (where "name" refers to the name of the container that
+                            triggered the event) or if no container name is specified
+                            "spec.containers[2]" (container with index 2 in this pod).
+                            This syntax is chosen only to have some well-defined way
+                            of referencing a part of an object. TODO: this design
+                            is not final and this field is subject to change in the
+                            future.'
+                          type: string
+                        kind:
+                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          type: string
+                        name:
+                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        namespace:
+                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          type: string
+                        resourceVersion:
+                          description: 'Specific resourceVersion to which this reference
+                            is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          type: string
+                        uid:
+                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
                     targetType:
                       description: TargetType is the type of Lustre target to be created.
                       enum:
@@ -144,9 +190,6 @@ spec:
                       description: AllocationCount is the total number of allocations
                         that currently exist
                       type: integer
-                    error:
-                      description: Error is the human readable error string
-                      type: string
                     health:
                       description: Health reflects the health of this allocation set
                       type: string
@@ -163,17 +206,28 @@ spec:
                   debugMessage:
                     description: Internal debug message for the error
                     type: string
-                  recoverable:
-                    description: Indication if the error is likely recoverable or
-                      not
-                    type: boolean
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant
                       to an end user
                     type: string
                 required:
                 - debugMessage
-                - recoverable
+                - severity
+                - type
                 type: object
               mgsNode:
                 description: MgsNode is the NID of the MGS.

@@ -68,6 +68,12 @@ type SystemConfigurationSpec struct {
 	// START is an integer value that represents the start of a port range and END is an
 	// integer value that represents the end of the port range (inclusive).
 	Ports []intstr.IntOrString `json:"ports,omitempty"`
+
+	// PortsCooldownInSeconds is the number of seconds to wait before a port can be reused. Defaults
+	// to 60 seconds (to match the typical value for the kernel's TIME_WAIT). A value of 0 means the
+	// ports can be reused immediately.
+	// +kubebuilder:default:=60
+	PortsCooldownInSeconds int `json:"portsCooldownInSeconds"`
 }
 
 // SystemConfigurationStatus defines the status of SystemConfiguration

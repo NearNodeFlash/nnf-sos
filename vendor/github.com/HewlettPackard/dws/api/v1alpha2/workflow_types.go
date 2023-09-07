@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,6 +20,9 @@
 package v1alpha2
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/HewlettPackard/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,13 +95,45 @@ func (s WorkflowState) after(t WorkflowState) bool {
 
 // Strings associated with workflow statuses
 const (
-	StatusPending    = "Pending"
-	StatusQueued     = "Queued"
-	StatusRunning    = "Running"
-	StatusCompleted  = "Completed"
-	StatusError      = "Error"
-	StatusDriverWait = "DriverWait"
+	StatusPending            = "Pending"
+	StatusQueued             = "Queued"
+	StatusRunning            = "Running"
+	StatusCompleted          = "Completed"
+	StatusTransientCondition = "TransientCondition"
+	StatusError              = "Error"
+	StatusDriverWait         = "DriverWait"
 )
+
+// ToStatus will return a Status* string that goes with
+// the given severity.
+func (severity ResourceErrorSeverity) ToStatus() (string, error) {
+	switch severity {
+	case SeverityMinor:
+		return StatusRunning, nil
+	case SeverityMajor:
+		return StatusTransientCondition, nil
+	case SeverityFatal:
+		return StatusError, nil
+	default:
+		return "", fmt.Errorf("unknown severity: %s", string(severity))
+	}
+}
+
+// SeverityStringToStatus will return a Status* string that goes with
+// the given severity.
+// An empty severity string will be considered a minor severity.
+func SeverityStringToStatus(severity string) (string, error) {
+	switch strings.ToLower(severity) {
+	case "", "minor":
+		return SeverityMinor.ToStatus()
+	case "major":
+		return SeverityMajor.ToStatus()
+	case "fatal":
+		return SeverityFatal.ToStatus()
+	default:
+		return "", fmt.Errorf("unknown severity: %s", severity)
+	}
+}
 
 // WorkflowSpec defines the desired state of Workflow
 type WorkflowSpec struct {
@@ -147,8 +182,8 @@ type WorkflowDriverStatus struct {
 
 	// User readable reason.
 	// For the CDS driver, this could be the state of the underlying
-	// data movement request:  Pending, Queued, Running, Completed or Error
-	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;Error;DriverWait
+	// data movement request
+	// +kubebuilder:validation:Enum=Pending;Queued;Running;Completed;TransientCondition;Error;DriverWait
 	Status string `json:"status,omitempty"`
 
 	// Message provides additional details on the current status of the resource
@@ -172,8 +207,12 @@ type WorkflowStatus struct {
 	// Indicates whether State has been reached.
 	Ready bool `json:"ready"`
 
-	// User readable reason and status message
-	// +kubebuilder:validation:Enum=Completed;DriverWait;Error
+	// User readable reason and status message.
+	// - Completed: The workflow has reached the state in workflow.Status.State.
+	// - DriverWait: The underlying drivers are currently running.
+	// - TransientCondition: A driver has encountered an error that might be recoverable.
+	// - Error: A driver has encountered an error that will not recover.
+	// +kubebuilder:validation:Enum=Completed;DriverWait;TransientCondition;Error
 	Status string `json:"status,omitempty"`
 
 	// Message provides additional details on the current status of the resource

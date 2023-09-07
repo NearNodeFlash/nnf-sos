@@ -28,11 +28,23 @@ spec:
           data:
             description: NnfContainerProfileSpec defines the desired state of NnfContainerProfile
             properties:
+              groupID:
+                description: GroupID specifies the group ID that is allowed to use
+                  this profile. If this is specified, only Workflows that have a matching
+                  group ID can select this profile.
+                format: int32
+                type: integer
               mpiSpec:
-                description: MPIJobSpec to define the containers created from container
-                  profile. This is used for MPI containers via MPIJobs. See mpi-operator
-                  for more details. Either this or Spec must be provided, but not
-                  both.
+                description: "MPIJobSpec to define the MPI containers created from
+                  this profile. This functionality is provided via mpi-operator, a
+                  3rd party tool to assist in running MPI applications across worker
+                  containers. Either this or Spec must be provided, but not both.
+                  \n All the fields defined drive mpi-operator behavior. See the type
+                  definition of MPISpec for more detail: https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
+                  \n Note: most of these fields are fully customizable with a few
+                  exceptions. These fields are overridden by NNF software to ensure
+                  proper behavior to interface with the DWS workflow - Replicas -
+                  RunPolicy.BackoffLimit (this is set above by `RetryLimit`) - Worker/Launcher.RestartPolicy"
                 properties:
                   mpiImplementation:
                     default: OpenMPI
@@ -8610,29 +8622,49 @@ spec:
                 required:
                 - mpiReplicaSpecs
                 type: object
+              numPorts:
+                description: Number of ports to open for communication with the user
+                  container. These ports are opened on the targeted NNF nodes and
+                  can be accessed outside of the k8s cluster (e.g. compute nodes).
+                  The requested ports are made available as environment variables
+                  inside the container and in the DWS workflow (NNF_CONTAINER_PORTS).
+                format: int32
+                type: integer
               pinned:
                 default: false
                 description: Pinned is true if this instance is an immutable copy
                 type: boolean
               postRunTimeoutSeconds:
-                description: Stop any containers after X seconds once a workflow has
-                  transitioned to PostRun. Defaults to 0.  A value of 0 disables this
-                  behavior.
+                default: 60
+                description: Containers are expected to complete in the PostRun State.
+                  Allow this many seconds for the containers to exit before declaring
+                  an error the workflow. Defaults to 60 if not set. A value of 0 disables
+                  this behavior.
+                format: int64
+                minimum: 0
+                type: integer
+              preRunTimeoutSeconds:
+                default: 60
+                description: Containers are launched in the PreRun state. Allow this
+                  many seconds for the containers to start before declaring an error
+                  to the workflow. Defaults to 60 if not set. A value of 0 disables
+                  this behavior.
                 format: int64
                 minimum: 0
                 type: integer
               retryLimit:
                 default: 6
                 description: Specifies the number of times a container will be retried
-                  upon a failure. A new pod is deployed on each retry.  Defaults to
+                  upon a failure. A new pod is deployed on each retry. Defaults to
                   6 by kubernetes itself and must be set. A value of 0 disables retries.
                 format: int32
                 minimum: 0
                 type: integer
               spec:
-                description: Spec to define the containers created from container
-                  profile. This is used for non-MPI containers. Either this or MPISpec
-                  must be provided, but not both.
+                description: 'Spec to define the containers created from this profile.
+                  This is used for non-MPI containers. Refer to the K8s documentation
+                  for `PodSpec` for more definition: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+                  Either this or MPISpec must be provided, but not both.'
                 properties:
                   activeDeadlineSeconds:
                     description: Optional duration in seconds the pod may be active
@@ -15730,11 +15762,23 @@ spec:
                         to be mounted, but can be ignored by the user not supplying
                         this filesystem in the #DW directives'
                       type: boolean
+                    pvcMode:
+                      description: For DW_GLOBAL_ (global lustre) storages, the access
+                        mode must match what is configured in the LustreFilesystem
+                        resource for the namespace. Defaults to `ReadWriteMany` for
+                        global lustre, otherwise empty.
+                      type: string
                   required:
                   - name
                   - optional
                   type: object
                 type: array
+              userID:
+                description: UserID specifies the user ID that is allowed to use this
+                  profile. If this is specified, only Workflows that have a matching
+                  user ID can select this profile.
+                format: int32
+                type: integer
             required:
             - retryLimit
             type: object
@@ -15745,6 +15789,8 @@ spec:
             type: string
           metadata:
             type: object
+        required:
+        - data
         type: object
     served: true
     storage: true

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022, 2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -145,6 +145,22 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	if pinnedProfile == nil {
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// If this PersistentStorageInstance is for a standalone MGT, add a label so it can be easily found
+	if argsMap["type"] == "lustre" && len(pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
+		labels := persistentStorage.GetLabels()
+		if _, ok := labels[nnfv1alpha1.StandaloneMGTLabel]; !ok {
+			labels[nnfv1alpha1.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
+			persistentStorage.SetLabels(labels)
+			if err := r.Update(ctx, persistentStorage); err != nil {
+				if !apierrors.IsConflict(err) {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
 	}
 
 	// Create the Servers resource

@@ -52,9 +52,18 @@ if [[ $CMD == 'deploy' ]]; then
     # MPIJobSpec (with large annotations).
     (cd config/examples && $KUSTOMIZE edit set image nnf-mfu=$NNFMFU_IMG)
     $KUSTOMIZE build config/examples | kubectl apply --server-side=true --force-conflicts -f -
+
+    # Deploy the nnfportmanager after everything else
+    echo "Waiting for the nnfportmamanger CRD to become ready..."
+    while :; do
+        sleep 1
+        kubectl get crds nnfportmanagers.nnf.cray.hpe.com && break
+    done
+    $KUSTOMIZE build config/ports| kubectl apply --server-side=true --force-conflicts -f -
 fi
 
 if [[ $CMD == 'undeploy' ]]; then
+    $KUSTOMIZE build config/ports | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build config/examples | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
 fi

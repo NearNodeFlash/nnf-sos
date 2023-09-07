@@ -40,26 +40,61 @@ type NnfContainerProfileData struct {
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 
-	// Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to
-	// 0.  A value of 0 disables this behavior.
+	// Containers are launched in the PreRun state. Allow this many seconds for the containers to
+	// start before declaring an error to the workflow.
+	// Defaults to 60 if not set. A value of 0 disables this behavior.
+	// +kubebuilder:default:=60
 	// +kubebuilder:validation:Minimum:=0
-	PostRunTimeoutSeconds int64 `json:"postRunTimeoutSeconds,omitempty"`
+	PreRunTimeoutSeconds *int64 `json:"preRunTimeoutSeconds,omitempty"`
+
+	// Containers are expected to complete in the PostRun State. Allow this many seconds for the
+	// containers to exit before declaring an error the workflow.
+	// Defaults to 60 if not set. A value of 0 disables this behavior.
+	// +kubebuilder:default:=60
+	// +kubebuilder:validation:Minimum:=0
+	PostRunTimeoutSeconds *int64 `json:"postRunTimeoutSeconds,omitempty"`
 
 	// Specifies the number of times a container will be retried upon a failure. A new pod is
-	// deployed on each retry.  Defaults to 6 by kubernetes itself and must be set. A value of 0
+	// deployed on each retry. Defaults to 6 by kubernetes itself and must be set. A value of 0
 	// disables retries.
 	// +kubebuilder:validation:Minimum:=0
 	// +kubebuilder:default:=6
 	RetryLimit int32 `json:"retryLimit"`
 
-	// Spec to define the containers created from container profile. This is used for non-MPI
-	// containers.
+	// UserID specifies the user ID that is allowed to use this profile. If this is specified, only
+	// Workflows that have a matching user ID can select this profile.
+	UserID *uint32 `json:"userID,omitempty"`
+
+	// GroupID specifies the group ID that is allowed to use this profile. If this is specified,
+	// only Workflows that have a matching group ID can select this profile.
+	GroupID *uint32 `json:"groupID,omitempty"`
+
+	// Number of ports to open for communication with the user container. These ports are opened on
+	// the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
+	// The requested ports are made available as environment variables inside the container and in
+	// the DWS workflow (NNF_CONTAINER_PORTS).
+	NumPorts int32 `json:"numPorts,omitempty"`
+
+	// Spec to define the containers created from this profile. This is used for non-MPI containers.
+	// Refer to the K8s documentation for `PodSpec` for more definition:
+	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
 	// Either this or MPISpec must be provided, but not both.
 	Spec *corev1.PodSpec `json:"spec,omitempty"`
 
-	// MPIJobSpec to define the containers created from container profile. This is used for MPI
-	// containers via MPIJobs. See mpi-operator for more details.
+	// MPIJobSpec to define the MPI containers created from this profile. This functionality is
+	// provided via mpi-operator, a 3rd party tool to assist in running MPI applications across
+	// worker containers.
 	// Either this or Spec must be provided, but not both.
+	//
+	// All the fields defined drive mpi-operator behavior. See the type definition of MPISpec for
+	// more detail:
+	// https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
+	//
+	// Note: most of these fields are fully customizable with a few exceptions. These fields are
+	// overridden by NNF software to ensure proper behavior to interface with the DWS workflow
+	// - Replicas
+	// - RunPolicy.BackoffLimit (this is set above by `RetryLimit`)
+	// - Worker/Launcher.RestartPolicy
 	MPISpec *mpiv2beta1.MPIJobSpec `json:"mpiSpec,omitempty"`
 }
 
@@ -73,6 +108,11 @@ type NnfContainerProfileStorage struct {
 	// the user not supplying this filesystem in the #DW directives
 	//+kubebuilder:default:=false
 	Optional bool `json:"optional"`
+
+	// For DW_GLOBAL_ (global lustre) storages, the access mode must match what is configured in
+	// the LustreFilesystem resource for the namespace. Defaults to `ReadWriteMany` for global
+	// lustre, otherwise empty.
+	PVCMode corev1.PersistentVolumeAccessMode `json:"pvcMode,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -82,7 +122,7 @@ type NnfContainerProfile struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Data NnfContainerProfileData `json:"data,omitempty"`
+	Data NnfContainerProfileData `json:"data"`
 }
 
 // +kubebuilder:object:root=true

@@ -319,6 +319,9 @@ spec:
       jsonPath: .status.ready
       name: READY
       type: boolean
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
@@ -448,17 +451,28 @@ spec:
                   debugMessage:
                     description: Internal debug message for the error
                     type: string
-                  recoverable:
-                    description: Indication if the error is likely recoverable or
-                      not
-                    type: boolean
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant
                       to an end user
                     type: string
                 required:
                 - debugMessage
-                - recoverable
+                - severity
+                - type
                 type: object
               ready:
                 description: Ready indicates whether AllocationSets have been generated
