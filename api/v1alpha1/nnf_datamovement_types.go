@@ -100,6 +100,14 @@ type NnfDataMovementConfig struct {
 	// Note: Enabling this option may degrade performance.
 	// +kubebuilder:default:=false
 	StoreStdout bool `json:"storeStdout,omitempty"`
+
+	// The number of slots specified in the MPI hostfile. A value of 0 disables the use of slots in
+	// the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	Slots *int `json:"slots,omitempty"`
+
+	// The number of max_slots specified in the MPI hostfile. A value of 0 disables the use of slots
+	// in the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	MaxSlots *int `json:"maxSlots,omitempty"`
 }
 
 // DataMovementCommandStatus defines the observed status of the underlying data movement
