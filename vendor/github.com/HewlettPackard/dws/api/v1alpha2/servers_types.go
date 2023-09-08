@@ -20,6 +20,8 @@
 package v1alpha2
 
 import (
+	"github.com/HewlettPackard/dws/utils/updater"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -79,12 +81,16 @@ type ServersStatus struct {
 	Ready          bool                         `json:"ready"`
 	LastUpdate     *metav1.MicroTime            `json:"lastUpdate,omitempty"`
 	AllocationSets []ServersStatusAllocationSet `json:"allocationSets,omitempty"`
+
+	// Error information
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if allocation sets have been generated"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Servers is the Schema for the servers API
@@ -94,6 +100,10 @@ type Servers struct {
 
 	Spec   ServersSpec   `json:"spec,omitempty"`
 	Status ServersStatus `json:"status,omitempty"`
+}
+
+func (s *Servers) GetStatus() updater.Status[*ServersStatus] {
+	return &s.Status
 }
 
 //+kubebuilder:object:root=true

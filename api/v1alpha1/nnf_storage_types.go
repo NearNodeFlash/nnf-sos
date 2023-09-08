@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,6 +22,7 @@ package v1alpha1
 import (
 	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
 	"github.com/HewlettPackard/dws/utils/updater"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,6 +57,10 @@ type NnfStorageLustreSpec struct {
 	// ExternalMgsNid is the NID of the MGS when a pre-existing MGS is
 	// provided by the DataWarp directive (#DW).
 	ExternalMgsNid string `json:"externalMgsNid,omitempty"`
+
+	// PersistentMgsReference is a reference to a persistent storage that is providing
+	// the external MGS.
+	PersistentMgsReference corev1.ObjectReference `json:"persistentMgsReference,omitempty"`
 }
 
 // NnfStorageAllocationSetSpec defines the details for an allocation set
@@ -106,9 +111,6 @@ type NnfStorageAllocationSetStatus struct {
 	// Health reflects the health of this allocation set
 	Health NnfResourceHealthType `json:"health,omitempty"`
 
-	// Error is the human readable error string
-	Error string `json:"error,omitempty"`
-
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
@@ -135,6 +137,8 @@ type NnfStorageStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 
 // NnfStorage is the Schema for the storages API
 type NnfStorage struct {

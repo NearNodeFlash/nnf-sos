@@ -1263,6 +1263,7 @@ var _ = Describe("Integration Test", func() {
 			}).Should(Succeed())
 
 			advanceStateAndCheckReady("Proposal", workflow)
+			Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 0)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -1307,7 +1308,7 @@ var _ = Describe("Integration Test", func() {
 				matchLabels[nnfv1alpha1.DirectiveIndexLabel] = "0"
 
 				jobList := &batchv1.JobList{}
-				Eventually(func(g Gomega) int {
+				Eventually(func() int {
 					Expect(k8sClient.List(context.TODO(), jobList, matchLabels)).To(Succeed())
 					return len(jobList.Items)
 				}).Should(Equal(2))

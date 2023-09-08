@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -153,6 +153,8 @@ type NnfDataMovementStatus struct {
 	// as it executes. The command status is polled at a certain frequency to avoid excessive
 	// updates to the Data Movement resource.
 	CommandStatus *NnfDataMovementCommandStatus `json:"commandStatus,omitempty"`
+
+	dwsv1alpha2.ResourceError `json:",inline"`
 }
 
 // Types describing the various data movement status conditions.
@@ -175,6 +177,7 @@ const (
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // NnfDataMovement is the Schema for the datamovements API

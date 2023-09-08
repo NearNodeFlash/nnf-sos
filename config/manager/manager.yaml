@@ -111,6 +111,10 @@ spec:
             value: nnf-system
           - name: NNF_CONTAINER_PROFILE_NAMESPACE
             value: nnf-system
+          - name: NNF_PORT_MANAGER_NAME
+            value: nnf-port-manager
+          - name: NNF_PORT_MANAGER_NAMESPACE
+            value: nnf-system
         ports:
           - containerPort: 50057
             name: nnf-ec

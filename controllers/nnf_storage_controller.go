@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -21,11 +21,14 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -85,7 +88,7 @@ const (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-
+	log := r.Log.WithValues("NnfStorage", req.NamespacedName)
 	metrics.NnfStorageReconcilesTotal.Inc()
 
 	storage := &nnfv1alpha1.NnfStorage{}
@@ -101,6 +104,11 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() {
+		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
+			storage.Status.SetResourceErrorAndLog(err, log)
+		}
+	}()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -160,7 +168,14 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage.Status.Error = nil
 
 	// For each allocation, create the NnfNodeStorage resources to fan out to the Rabbit nodes
-	for i := range storage.Spec.AllocationSets {
+	for i, allocationSet := range storage.Spec.AllocationSets {
+		// Add a reference to the external MGS PersistentStorageInstance if necessary
+		if allocationSet.NnfStorageLustreSpec.PersistentMgsReference != (corev1.ObjectReference{}) {
+			if err := r.addPersistentStorageReference(ctx, storage, allocationSet.NnfStorageLustreSpec.PersistentMgsReference); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+
 		res, err := r.createNodeStorage(ctx, storage, i)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -187,7 +202,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Wait for all the allocation sets to be ready
 	for _, allocationSet := range storage.Status.AllocationSets {
 		if allocationSet.Status != nnfv1alpha1.ResourceReady {
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
@@ -212,6 +227,69 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage.Status.Status = nnfv1alpha1.ResourceReady
 
 	return ctrl.Result{}, nil
+}
+
+func (r *NnfStorageReconciler) addPersistentStorageReference(ctx context.Context, nnfStorage *nnfv1alpha1.NnfStorage, persistentMgsReference corev1.ObjectReference) error {
+	persistentStorage := &dwsv1alpha2.PersistentStorageInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      persistentMgsReference.Name,
+			Namespace: persistentMgsReference.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(persistentStorage), persistentStorage); err != nil {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("PersistentStorage '%v' not found", client.ObjectKeyFromObject(persistentStorage)).WithMajor()
+	}
+
+	if persistentStorage.Status.State != dwsv1alpha2.PSIStateActive {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal()
+	}
+
+	// Add a consumer reference to the persistent storage for this directive
+	reference := corev1.ObjectReference{
+		Name:      nnfStorage.Name,
+		Namespace: nnfStorage.Namespace,
+		Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
+	}
+
+	for _, existingReference := range persistentStorage.Spec.ConsumerReferences {
+		if existingReference == reference {
+			return nil
+		}
+	}
+
+	persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences, reference)
+
+	return r.Update(ctx, persistentStorage)
+}
+
+func (r *NnfStorageReconciler) removePersistentStorageReference(ctx context.Context, nnfStorage *nnfv1alpha1.NnfStorage, persistentMgsReference corev1.ObjectReference) error {
+	persistentStorage := &dwsv1alpha2.PersistentStorageInstance{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      persistentMgsReference.Name,
+			Namespace: persistentMgsReference.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(persistentStorage), persistentStorage); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	// remove the consumer reference on the persistent storage for this directive
+	reference := corev1.ObjectReference{
+		Name:      nnfStorage.Name,
+		Namespace: nnfStorage.Namespace,
+		Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
+	}
+
+	for i, existingReference := range persistentStorage.Spec.ConsumerReferences {
+		if existingReference == reference {
+			persistentStorage.Spec.ConsumerReferences = append(persistentStorage.Spec.ConsumerReferences[:i], persistentStorage.Spec.ConsumerReferences[i+1:]...)
+			return r.Update(ctx, persistentStorage)
+		}
+	}
+
+	return nil
 }
 
 // Create an NnfNodeStorage if it doesn't exist, or update it if it requires updating. Each
@@ -279,7 +357,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 
 		if err != nil {
 			if !apierrors.IsConflict(err) {
-				storage.Status.AllocationSets[allocationSetIndex].Error = err.Error()
+				return nil, err
 			}
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -306,7 +384,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	var status nnfv1alpha1.NnfResourceStatusType = nnfv1alpha1.ResourceReady
 
 	allocationSet.AllocationCount = 0
-	allocationSet.Error = ""
 
 	nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
 	matchLabels := dwsv1alpha2.MatchingOwner(storage)
@@ -356,12 +433,6 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			nodeAllocation.StorageGroup.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileSystem.Status.UpdateIfWorseThan(&status)
 			nodeAllocation.FileShare.Status.UpdateIfWorseThan(&status)
-
-			for _, condition := range nodeAllocation.Conditions {
-				if condition.Reason == nnfv1alpha1.ConditionFailed {
-					allocationSet.Error = condition.Message
-				}
-			}
 		}
 
 		if nnfNodeStorage.Status.Error != nil {
@@ -432,6 +503,14 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 
 	if !deleteStatus.Complete() {
 		return nodeStoragesExist, nil
+	}
+
+	for _, allocationSet := range storage.Spec.AllocationSets {
+		if allocationSet.NnfStorageLustreSpec.PersistentMgsReference != (corev1.ObjectReference{}) {
+			if err := r.removePersistentStorageReference(ctx, storage, allocationSet.NnfStorageLustreSpec.PersistentMgsReference); err != nil {
+				return nodeStoragesExist, err
+			}
+		}
 	}
 
 	return nodeStoragesDeleted, nil

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -69,7 +69,7 @@ var _ = Describe("Access Controller Test", func() {
 					FileSystemType: "lustre",
 					AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{
 						{
-							Name: "MGTMDT",
+							Name: "mgtmdt",
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
 								FileSystemName: "MGTMDT",
 								TargetType:     "MGTMDT",
@@ -82,7 +82,7 @@ var _ = Describe("Access Controller Test", func() {
 							},
 						},
 						{
-							Name: "OST",
+							Name: "ost",
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
 								FileSystemName: "OST",
 								TargetType:     "OST",
@@ -165,8 +165,11 @@ var _ = Describe("Access Controller Test", func() {
 			}
 
 			By("Set NNF Access Desired State to unmounted")
-			access.Spec.DesiredState = "unmounted"
-			Expect(k8sClient.Update(context.TODO(), access)).To(Succeed())
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				access.Spec.DesiredState = "unmounted"
+				return k8sClient.Update(context.TODO(), access)
+			}).Should(Succeed())
 
 			By("Verify NNF Access goes Ready in unmounted state")
 			Eventually(func(g Gomega) bool {

@@ -93,7 +93,7 @@ spec:
         isRequired: true
         isValueRequired: true
   - command: "container"
-    watchStates: Proposal,PreRun,PostRun,Teardown
+    watchStates: Proposal,Setup,PreRun,PostRun,Teardown
     ruleDefs:
       - key: "^name$"
         type: "string"
@@ -105,7 +105,7 @@ spec:
         pattern: "^[a-z][a-z0-9-]+$"
         isRequired: true
         isValueRequired: true
-      - key: '^(DW_JOB_|DW_PERSISTENT_)[a-z][a-z0-9_]+$'
+      - key: '^(DW_JOB_|DW_PERSISTENT_|DW_GLOBAL_)[a-z][a-z0-9_]+$'
         type: "string"
         isRequired: false
         isValueRequired: true

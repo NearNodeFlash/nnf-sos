@@ -4,36 +4,96 @@ metadata:
   name: sample-nnfcontainerprofile
   namespace: nnf-system
 data:
-  # Specifies the number of times a container will be retried upon a failure. A
-  # new pod is deployed on each retry. Defaults to 6 by kubernetes itself and
-  # must be set. A value of 0 disables retries.
+  # Specifies the number of times a container will be retried upon a failure. A new pod is deployed
+  # on each retry. Defaults to 6 by kubernetes itself and must be set. A value of 0 disables
+  # retries.
   retryLimit: 6
 
-  # Stop any containers after X seconds once a workflow has transitioned to
-  # PostRun. Defaults to 0. A value of 0 disables this behavior.
+  # Stop any containers after X seconds once a workflow has transitioned to PostRun. Defaults to 0.
+  # A value of 0 disables this behavior.
   postRunTimeoutSeconds: 0
 
-  # List of possible filesystems supported by this container profile. These
-  # storages are mounted inside of the container. Any non-optional storage must
-  # be supplied with the container directive as an argument and must reference
-  # a valid jobdw or persistentdw directive's name.
+  # Request the number of ports to open on the targeted rabbits. These ports are accessible outside
+  # of the k8s cluster.  The requested ports are made available as environment variables inside the
+  # container and in the DWS workflow (NNF_CONTAINER_PORTS).
+  numPorts: 0
+
+  # UserID specifies the user ID that is allowed to use this profile. If this is specified, only
+  # Workflows that have a matching user ID can select this profile.
+  userID: 1050
+
+  # GroupID specifies the group ID that is allowed to use this profile. If this is specified,
+  # only Workflows that have a matching group ID can select this profile.
+  groupID: 1050
+
+  # List of possible filesystems supported by this container profile. These storages are mounted
+  # inside of the container. Any non-optional storage must be supplied with the container directive
+  # as an argument and must reference a valid jobdw/persistentdw directive's name or refer to a
+  # LustreFilesystem path.
   #
   # Example:
   #   DW jobdw name=my-gfs2 type=gfs2 capacity=50GB
   #   DW container name=my-container profile=nnfcontainerprofile-sample DW_JOB_foo_local_storage=my-gfs2
   storages:
-    - name: DW_JOB_foo_local_storage
-      optional: false
-    - name: DW_PERSISTENT_foo_persistent_storage
-      optional: true
+  - name: DW_JOB_foo_local_storage
+    optional: false
+  - name: DW_PERSISTENT_foo_persistent_storage
+    optional: true
+  # For Global lustre, pvcMode must match the mode configured in the LustreFilesystem Resource
+  - name: DW_GLOBAL_foo_global_lustre
+    optional: true
+    pvcMode: ReadWriteMany
 
   # Template defines the containers that will be created from container profile.
+  # Note: Only 1 of `spec` or `MPISpec` can be defined, not both.
   template:
+
+    # Spec to define the containers created from this profile. This is used for non-MPI containers.
+    # Refer to the K8s documentation for `PodSpec` for more definition:
+    # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
+    # Either this or MPISpec must be provided, but not both.
     spec:
       containers:
-        - name: sample-nnfcontainerprofile
-          image: alpine:latest
-          command:
-          - /bin/sh
-          - -c
-          - "sleep 15 && exit 0"
+      - name: sample-nnfcontainerprofile
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - "sleep 15 && exit 0"
+
+    # MPIJobSpec to define the MPI containers created from this profile. This functionality is
+    # provided via mpi-operator, a 3rd party tool to assist in running MPI applications across
+    # worker containers.
+    # Either this or Spec must be provided, but not both.
+    #
+    # All the fields defined drive mpi-operator behavior. See the type definition of MPISpec for
+    # more detail:
+    # https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
+    #
+    # Note: most of these fields are fully customizable with a few exceptions. These fields are
+    # overridden by NNF software to ensure proper behavior to interface with the DWS workflow
+    # - Replicas
+    # - RunPolicy.BackoffLimit (this is set above by `RetryLimit`)
+    # - Worker/Launcher.RestartPolicy
+    # - SSHAuthMountPath
+    mpiSpec:
+      runPolicy:
+        cleanPodPolicy: Running
+      mpiReplicaSpecs:
+        Launcher:
+          template:
+            spec:
+              containers:
+              - name: example-mpi
+                image: nnf-mfu:latest
+                command:
+                - mpirun
+                - dcmp
+                - "$(DW_JOB_foo_local_storage)/0"
+                - "$(DW_JOB_foo_local_storage)/1"
+        Worker:
+          template:
+            spec:
+              containers:
+              - name: example-mpi
+                image: nnf-mfu:latest

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -21,6 +21,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +48,14 @@ var _ webhook.Validator = &NnfStorageProfile{}
 func (r *NnfStorageProfile) ValidateCreate() error {
 	nnfstorageprofilelog.V(1).Info("validate create", "name", r.Name)
 
+	// If it's not pinned, then it's being made available for users to select
+	// and it must be in the correct namespace.
+	profileNamespace := os.Getenv("NNF_STORAGE_PROFILE_NAMESPACE")
+	if !r.Data.Pinned && r.GetNamespace() != profileNamespace {
+		err := fmt.Errorf("incorrect namespace for profile that is intended to be selected by users; the namespace should be '%s'", profileNamespace)
+		nnfstorageprofilelog.Error(err, "invalid")
+		return err
+	}
 	if err := r.validateContent(); err != nil {
 		nnfstorageprofilelog.Error(err, "invalid NnfStorageProfile resource")
 		return err
@@ -59,6 +68,11 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) error {
 	nnfstorageprofilelog.V(1).Info("validate update", "name", r.Name)
 
 	obj := old.(*NnfStorageProfile)
+	if obj.Data.Pinned != r.Data.Pinned {
+		err := fmt.Errorf("the pinned flag is immutable")
+		nnfcontainerprofilelog.Error(err, "invalid")
+		return err
+	}
 	if obj.Data.Pinned {
 		// Allow metadata to be updated, for things like finalizers,
 		// ownerReferences, and labels, but do not allow Data to be
@@ -100,6 +114,14 @@ func (r *NnfStorageProfile) validateContent() error {
 func (r *NnfStorageProfile) validateContentLustre() error {
 	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
 		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
+	}
+
+	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+		return fmt.Errorf("cannot set both standaloneMgtPoolName and externalMgs")
+	}
+
+	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && r.Data.LustreStorage.CombinedMGTMDT {
+		return fmt.Errorf("cannot set standaloneMgtPoolName and combinedMgtMdt")
 	}
 
 	for _, target := range []string{"mgt", "mdt", "mgtmdt", "ost"} {

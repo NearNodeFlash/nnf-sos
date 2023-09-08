@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -169,8 +169,6 @@ type NnfNodeStorageAllocationStatus struct {
 	StoragePool NnfResourceStatus `json:"storagePool,omitempty"`
 
 	FileSystem NnfResourceStatus `json:"fileSystem,omitempty"`
-
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // LustreStorageStatus describes the Lustre target created here.
@@ -196,6 +194,8 @@ func (ns *NnfNodeStorage) GetStatus() updater.Status[*NnfNodeStorageStatus] {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // NnfNodeStorageList contains a list of NNF Nodes
 type NnfNodeStorageList struct {
