@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: dws-operator-system
+namespace: dws-system
 
 resources:
 - nnf-ruleset.yaml

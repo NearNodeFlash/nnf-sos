@@ -39,9 +39,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/dwdparse"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/dwdparse"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -83,11 +83,11 @@ type lustreComponentType struct {
 	colocationKey *dwsv1alpha2.AllocationSetColocationConstraint
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns/status,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns/finalizers,verbs=update
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=directivebreakdowns,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=directivebreakdowns/status,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=directivebreakdowns/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the directiveBreakdown closer to the desired state.

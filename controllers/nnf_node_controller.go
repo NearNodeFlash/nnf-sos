@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -48,8 +48,8 @@ import (
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -70,7 +70,7 @@ type NnfNodeReconciler struct {
 	types.NamespacedName
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations,verbs=get;list;watch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/finalizers,verbs=update

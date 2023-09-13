@@ -41,8 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -67,9 +67,9 @@ const (
 	storageStillAllocated deletedStorage = false
 )
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers/status,verbs=get;create;list;watch;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers/finalizers,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers/status,verbs=get;create;list;watch;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers/finalizers,verbs=get;create;list;watch;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;update;patch

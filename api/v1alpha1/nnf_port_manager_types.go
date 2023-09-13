@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	"github.com/HewlettPackard/dws/utils/updater"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

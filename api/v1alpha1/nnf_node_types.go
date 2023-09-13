@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,7 +20,7 @@
 package v1alpha1
 
 import (
-	"github.com/HewlettPackard/dws/utils/updater"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
