@@ -31,11 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	portsutil "github.com/HewlettPackard/dws/utils/ports"
-	"github.com/HewlettPackard/dws/utils/updater"
+	portsutil "github.com/DataWorkflowServices/dws/utils/ports"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	"github.com/go-logr/logr"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -54,7 +54,7 @@ type AllocationStatus = nnfv1alpha1.NnfPortManagerAllocationStatus
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfportmanagers/finalizers,verbs=update
 
 // System Configuration provides the
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations,verbs=get;list;watch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

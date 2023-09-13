@@ -44,9 +44,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/dwdparse"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/dwdparse"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -68,17 +68,17 @@ type NnfWorkflowReconciler struct {
 	ChildObjects []dwsv1alpha2.ObjectList
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=workflows/finalizers,verbs=update
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=directivebreakdowns,verbs=get;create;list;watch;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=workflows,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=workflows/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=directivebreakdowns,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=directivebreakdowns/status,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;create;list;watch;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=computes,verbs=get;create;list;watch;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;create;list;watch;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=computes,verbs=get;create;list;watch;update;patch
 //+kubebuilder:rbac:groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
@@ -172,7 +172,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
-	// If the dws-operator has yet to set the Status.State, just return and wait for it.
+	// If the dws has yet to set the Status.State, just return and wait for it.
 	if workflow.Status.State == "" || workflow.Status.State != workflow.Spec.DesiredState {
 		return ctrl.Result{}, nil
 	}

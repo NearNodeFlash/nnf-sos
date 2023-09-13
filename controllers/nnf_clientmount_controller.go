@@ -39,8 +39,8 @@ import (
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
@@ -60,9 +60,9 @@ type NnfClientMountReconciler struct {
 	Scheme *kruntime.Scheme
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

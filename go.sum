@@ -1,12 +1,12 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/HewlettPackard/dws v0.0.1-0.20230907181649-2f6d9fca4249 h1:t5ibQcHcEL374lxAVVXtHqXOZbPvDVSDSrrAVl7yzBA=
-github.com/HewlettPackard/dws v0.0.1-0.20230907181649-2f6d9fca4249/go.mod h1:YvNzcgAPmwhl/YQj6dMwsB9OpwbI5bp/41kINfFiXX8=
+github.com/DataWorkflowServices/dws v0.0.1-0.20230913193551-2ee6df5c8f3d h1:h1KajEbTArilowKKS7hg3Q2MyBkdk68/AmWJRvgv7xw=
+github.com/DataWorkflowServices/dws v0.0.1-0.20230913193551-2ee6df5c8f3d/go.mod h1:ZQsfcByZ05Ah9yrgOJsN3JPz4jo374DrdVv8kvcIquA=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230613180840-6178f2b04900 h1:jOrP2H+D5amgHIONcucYS3/kJm6QfmqAG23Ke7elunI=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230613180840-6178f2b04900/go.mod h1:O71nfDnuK7MZZYAW9kaOFTMo48nmDlaYnzISXEPsKSw=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230913194514-b3de4661519a h1:IYZulSyDlWL0H4ulbvzR7klbUKNhQxc02Kf9NW/++8U=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230913194514-b3de4661519a/go.mod h1:pFelIrkMeG0HawfIOphB2A79I22/g3Y7lHrWLEjgD/M=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20230526161255-cfb2d89b35d7 h1:y4E3b/Ta6sqv+huYQXYKZmPCMWMZtG2kV8/qgTIpzFI=
 github.com/NearNodeFlash/nnf-ec v0.0.0-20230526161255-cfb2d89b35d7/go.mod h1:11Ol46sAWdqlj3WmIFTzKO+UxQX3lvWBqpe6yaiMEIg=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=

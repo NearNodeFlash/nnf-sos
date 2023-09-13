@@ -57,7 +57,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - clientmounts
   verbs:
@@ -70,13 +70,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - clientmounts/finalizers
   verbs:
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - clientmounts/status
   verbs:
@@ -84,7 +84,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - computes
   verbs:
@@ -95,7 +95,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - directivebreakdowns
   verbs:
@@ -108,13 +108,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - directivebreakdowns/finalizers
   verbs:
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - directivebreakdowns/status
   verbs:
@@ -125,7 +125,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - nnfstorage
   verbs:
@@ -136,7 +136,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - persistentstorageinstances
   verbs:
@@ -149,7 +149,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - persistentstorageinstances/status
   verbs:
@@ -160,7 +160,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - servers
   verbs:
@@ -173,7 +173,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - servers/finalizers
   verbs:
@@ -185,7 +185,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - servers/status
   verbs:
@@ -197,7 +197,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - storages
   verbs:
@@ -209,7 +209,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - storages/status
   verbs:
@@ -217,7 +217,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - systemconfigurations
   verbs:
@@ -226,13 +226,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - systemconfigurations/finalizers
   verbs:
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - systemconfigurations/status
   verbs:
@@ -240,7 +240,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - workflows
   verbs:
@@ -250,7 +250,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dws.cray.hpe.com
+  - dataworkflowservices.github.io
   resources:
   - workflows/finalizers
   verbs:

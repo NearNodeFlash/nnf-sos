@@ -35,15 +35,15 @@ resources:
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - controller: true
-  domain: cray.hpe.com
-  group: dws
+  domain: github.io
+  group: dataworkflowservices
   kind: Workflow
-  version: v1alpha1
+  version: v1alpha2
 - controller: true
-  domain: cray.hpe.com
-  group: nnf
+  domain: github.io
+  group: dataworkflowservices
   kind: DirectiveBreakdown
-  version: v1alpha1
+  version: v1alpha2
 - api:
     crdVersion: v1
     namespaced: true

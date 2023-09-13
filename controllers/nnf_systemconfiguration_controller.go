@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
 
@@ -53,9 +53,9 @@ type NnfSystemConfigurationReconciler struct {
 	Scheme *kruntime.Scheme
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations,verbs=get;list;watch;update
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=systemconfigurations/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch;update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations/finalizers,verbs=update
 //+kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create;update;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
