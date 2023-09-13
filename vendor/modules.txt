@@ -1,4 +1,4 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20230913193551-2ee6df5c8f3d
+# github.com/DataWorkflowServices/dws v0.0.1-0.20230913204342-e78d55d24550
 ## explicit; go 1.19
 github.com/DataWorkflowServices/dws/api/v1alpha2
 github.com/DataWorkflowServices/dws/config/crd/bases
@@ -11,7 +11,7 @@ github.com/DataWorkflowServices/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230913194514-b3de4661519a
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20230913205432-6ec0d2240086
 ## explicit; go 1.19
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
