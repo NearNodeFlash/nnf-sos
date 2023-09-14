@@ -35,9 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/dwdparse"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/dwdparse"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/controllers/metrics"
 )
@@ -55,10 +55,10 @@ type PersistentStorageReconciler struct {
 	ChildObjects []dwsv1alpha2.ObjectList
 }
 
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=persistentstorageinstances/status,verbs=get;list;watch;create;update;patch
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=servers,verbs=get;list;watch;create;update;patch;delete;deletecollection
-//+kubebuilder:rbac:groups=dws.cray.hpe.com,resources=nnfstorage,verbs=get;list;watch;update;delete;deletecollection
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances/status,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;list;watch;create;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=nnfstorage,verbs=get;list;watch;update;delete;deletecollection
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the directiveBreakdown closer to the desired state.

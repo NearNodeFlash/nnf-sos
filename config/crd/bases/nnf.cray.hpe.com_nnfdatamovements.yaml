@@ -178,6 +178,16 @@ spec:
                       the output is always logged. Note: Enabling this option may
                       degrade performance.'
                     type: boolean
+                  maxSlots:
+                    description: The number of max_slots specified in the MPI hostfile.
+                      A value of 0 disables the use of slots in the hostfile. Nil
+                      will defer to the value specified in the nnf-dm-config ConfigMap.
+                    type: integer
+                  slots:
+                    description: The number of slots specified in the MPI hostfile.
+                      A value of 0 disables the use of slots in the hostfile. Nil
+                      will defer to the value specified in the nnf-dm-config ConfigMap.
+                    type: integer
                   storeStdout:
                     default: false
                     description: 'Similar to LogStdout, store the command''s stdout

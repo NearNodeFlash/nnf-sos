@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -43,17 +43,17 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 
-	_ "github.com/HewlettPackard/dws/config/crd/bases"
-	_ "github.com/HewlettPackard/dws/config/webhook"
+	_ "github.com/DataWorkflowServices/dws/config/crd/bases"
+	_ "github.com/DataWorkflowServices/dws/config/webhook"
 	_ "github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases"
 
-	dwsctrls "github.com/HewlettPackard/dws/controllers"
+	dwsctrls "github.com/DataWorkflowServices/dws/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -123,7 +123,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 
 	webhookPaths := []string{
-		filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "webhook"),
+		filepath.Join("..", "vendor", "github.com", "DataWorkflowServices", "dws", "config", "webhook"),
 		filepath.Join("..", "config", "dws"),
 	}
 	if env, found := os.LookupEnv("WEBHOOK_DIR"); found {
@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "config", "crd", "bases"),
-			filepath.Join("..", "vendor", "github.com", "HewlettPackard", "dws", "config", "crd", "bases"),
+			filepath.Join("..", "vendor", "github.com", "DataWorkflowServices", "dws", "config", "crd", "bases"),
 			filepath.Join("..", "vendor", "github.com", "NearNodeFlash", "lustre-fs-operator", "config", "crd", "bases"),
 		},
 		//AttachControlPlaneOutput: true,
