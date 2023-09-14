@@ -1,0 +1,544 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.12.0
+  name: clientmounts.dataworkflowservices.github.io
+spec:
+  group: dataworkflowservices.github.io
+  names:
+    kind: ClientMount
+    listKind: ClientMountList
+    plural: clientmounts
+    singular: clientmount
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClientMount is the Schema for the clientmounts API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClientMountSpec defines the desired state of ClientMount
+            properties:
+              desiredState:
+                description: Desired state of the mount point
+                enum:
+                - mounted
+                - unmounted
+                type: string
+              mounts:
+                description: List of mounts to create on this client
+                items:
+                  description: ClientMountInfo defines a single mount
+                  properties:
+                    compute:
+                      description: Compute is the name of the compute node which shares
+                        this mount if present. Empty if not shared.
+                      type: string
+                    device:
+                      description: Description of the device to mount
+                      properties:
+                        deviceReference:
+                          description: ClientMountDeviceReference is an reference
+                            to a different Kubernetes object where device information
+                            can be found
+                          properties:
+                            data:
+                              description: Optional private data for the driver
+                              type: integer
+                            objectReference:
+                              description: Object reference for the device information
+                              properties:
+                                apiVersion:
+                                  description: API version of the referent.
+                                  type: string
+                                fieldPath:
+                                  description: 'If referring to a piece of an object
+                                    instead of an entire object, this string should
+                                    contain a valid JSON/Go field access statement,
+                                    such as desiredState.manifest.containers[2]. For
+                                    example, if the object reference is to a container
+                                    within a pod, this would take on a value like:
+                                    "spec.containers{name}" (where "name" refers to
+                                    the name of the container that triggered the event)
+                                    or if no container name is specified "spec.containers[2]"
+                                    (container with index 2 in this pod). This syntax
+                                    is chosen only to have some well-defined way of
+                                    referencing a part of an object. TODO: this design
+                                    is not final and this field is subject to change
+                                    in the future.'
+                                  type: string
+                                kind:
+                                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                  type: string
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                                namespace:
+                                  description: 'Namespace of the referent. More info:
+                                    https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                  type: string
+                                resourceVersion:
+                                  description: 'Specific resourceVersion to which
+                                    this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                  type: string
+                                uid:
+                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          required:
+                          - objectReference
+                          type: object
+                        lustre:
+                          description: Lustre specific device information
+                          properties:
+                            fileSystemName:
+                              description: Lustre fsname
+                              type: string
+                            mgsAddresses:
+                              description: List of mgsAddresses of the form [address]@[lnet]
+                              type: string
+                          required:
+                          - fileSystemName
+                          - mgsAddresses
+                          type: object
+                        lvm:
+                          description: LVM logical volume specific device information
+                          properties:
+                            deviceType:
+                              description: Type of underlying block deices used for
+                                the PVs
+                              enum:
+                              - nvme
+                              type: string
+                            logicalVolume:
+                              description: LVM logical volume name
+                              type: string
+                            nvmeInfo:
+                              description: List of NVMe namespaces that are used by
+                                the VG
+                              items:
+                                description: ClientMountNVMeDesc uniquely describes
+                                  an NVMe namespace
+                                properties:
+                                  deviceSerial:
+                                    description: Serial number of the base NVMe device
+                                    type: string
+                                  namespaceGUID:
+                                    description: Globally unique namespace ID
+                                    type: string
+                                  namespaceID:
+                                    description: Id of the Namespace on the NVMe device
+                                      (e.g., "2")
+                                    type: string
+                                required:
+                                - deviceSerial
+                                - namespaceGUID
+                                - namespaceID
+                                type: object
+                              type: array
+                            volumeGroup:
+                              description: LVM volume group name
+                              type: string
+                          required:
+                          - deviceType
+                          type: object
+                        type:
+                          description: ClientMountDeviceType specifies the go type
+                            for device type
+                          enum:
+                          - lustre
+                          - lvm
+                          - reference
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    groupID:
+                      description: GroupID to set for the mount
+                      format: int32
+                      type: integer
+                    mountPath:
+                      description: Client path for mount target
+                      type: string
+                    options:
+                      description: Options for the file system mount
+                      type: string
+                    setPermissions:
+                      description: SetPermissions will set UserID and GroupID on the
+                        mount if true
+                      type: boolean
+                    targetType:
+                      description: TargetType determines whether the mount target
+                        is a file or a directory
+                      enum:
+                      - file
+                      - directory
+                      type: string
+                    type:
+                      description: mount type
+                      enum:
+                      - lustre
+                      - xfs
+                      - gfs2
+                      - none
+                      type: string
+                    userID:
+                      description: UserID to set for the mount
+                      format: int32
+                      type: integer
+                  required:
+                  - device
+                  - mountPath
+                  - options
+                  - setPermissions
+                  - targetType
+                  - type
+                  type: object
+                minItems: 1
+                type: array
+              node:
+                description: Name of the client node that is targeted by this mount
+                type: string
+            required:
+            - desiredState
+            - mounts
+            - node
+            type: object
+          status:
+            description: ClientMountStatus defines the observed state of ClientMount
+            properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  recoverable:
+                    description: Indication if the error is likely recoverable or
+                      not
+                    type: boolean
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - recoverable
+                type: object
+              mounts:
+                description: List of mount statuses
+                items:
+                  description: ClientMountInfoStatus is the status for a single mount
+                    point
+                  properties:
+                    ready:
+                      description: Ready indicates whether status.state has been achieved
+                      type: boolean
+                    state:
+                      description: Current state
+                      enum:
+                      - mounted
+                      - unmounted
+                      type: string
+                  required:
+                  - ready
+                  - state
+                  type: object
+                type: array
+            required:
+            - mounts
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: ClientMount is the Schema for the clientmounts API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClientMountSpec defines the desired state of ClientMount
+            properties:
+              desiredState:
+                description: Desired state of the mount point
+                enum:
+                - mounted
+                - unmounted
+                type: string
+              mounts:
+                description: List of mounts to create on this client
+                items:
+                  description: ClientMountInfo defines a single mount
+                  properties:
+                    compute:
+                      description: Compute is the name of the compute node which shares
+                        this mount if present. Empty if not shared.
+                      type: string
+                    device:
+                      description: Description of the device to mount
+                      properties:
+                        deviceReference:
+                          description: ClientMountDeviceReference is an reference
+                            to a different Kubernetes object where device information
+                            can be found
+                          properties:
+                            data:
+                              description: Optional private data for the driver
+                              type: integer
+                            objectReference:
+                              description: Object reference for the device information
+                              properties:
+                                apiVersion:
+                                  description: API version of the referent.
+                                  type: string
+                                fieldPath:
+                                  description: 'If referring to a piece of an object
+                                    instead of an entire object, this string should
+                                    contain a valid JSON/Go field access statement,
+                                    such as desiredState.manifest.containers[2]. For
+                                    example, if the object reference is to a container
+                                    within a pod, this would take on a value like:
+                                    "spec.containers{name}" (where "name" refers to
+                                    the name of the container that triggered the event)
+                                    or if no container name is specified "spec.containers[2]"
+                                    (container with index 2 in this pod). This syntax
+                                    is chosen only to have some well-defined way of
+                                    referencing a part of an object. TODO: this design
+                                    is not final and this field is subject to change
+                                    in the future.'
+                                  type: string
+                                kind:
+                                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                  type: string
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  type: string
+                                namespace:
+                                  description: 'Namespace of the referent. More info:
+                                    https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                  type: string
+                                resourceVersion:
+                                  description: 'Specific resourceVersion to which
+                                    this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                  type: string
+                                uid:
+                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          required:
+                          - objectReference
+                          type: object
+                        lustre:
+                          description: Lustre specific device information
+                          properties:
+                            fileSystemName:
+                              description: Lustre fsname
+                              type: string
+                            mgsAddresses:
+                              description: List of mgsAddresses of the form [address]@[lnet]
+                              type: string
+                          required:
+                          - fileSystemName
+                          - mgsAddresses
+                          type: object
+                        lvm:
+                          description: LVM logical volume specific device information
+                          properties:
+                            deviceType:
+                              description: Type of underlying block deices used for
+                                the PVs
+                              enum:
+                              - nvme
+                              type: string
+                            logicalVolume:
+                              description: LVM logical volume name
+                              type: string
+                            nvmeInfo:
+                              description: List of NVMe namespaces that are used by
+                                the VG
+                              items:
+                                description: ClientMountNVMeDesc uniquely describes
+                                  an NVMe namespace
+                                properties:
+                                  deviceSerial:
+                                    description: Serial number of the base NVMe device
+                                    type: string
+                                  namespaceGUID:
+                                    description: Globally unique namespace ID
+                                    type: string
+                                  namespaceID:
+                                    description: Id of the Namespace on the NVMe device
+                                      (e.g., "2")
+                                    type: string
+                                required:
+                                - deviceSerial
+                                - namespaceGUID
+                                - namespaceID
+                                type: object
+                              type: array
+                            volumeGroup:
+                              description: LVM volume group name
+                              type: string
+                          required:
+                          - deviceType
+                          type: object
+                        type:
+                          description: ClientMountDeviceType specifies the go type
+                            for device type
+                          enum:
+                          - lustre
+                          - lvm
+                          - reference
+                          type: string
+                      required:
+                      - type
+                      type: object
+                    groupID:
+                      description: GroupID to set for the mount
+                      format: int32
+                      type: integer
+                    mountPath:
+                      description: Client path for mount target
+                      type: string
+                    options:
+                      description: Options for the file system mount
+                      type: string
+                    setPermissions:
+                      description: SetPermissions will set UserID and GroupID on the
+                        mount if true
+                      type: boolean
+                    targetType:
+                      description: TargetType determines whether the mount target
+                        is a file or a directory
+                      enum:
+                      - file
+                      - directory
+                      type: string
+                    type:
+                      description: mount type
+                      enum:
+                      - lustre
+                      - xfs
+                      - gfs2
+                      - none
+                      type: string
+                    userID:
+                      description: UserID to set for the mount
+                      format: int32
+                      type: integer
+                  required:
+                  - device
+                  - mountPath
+                  - options
+                  - setPermissions
+                  - targetType
+                  - type
+                  type: object
+                minItems: 1
+                type: array
+              node:
+                description: Name of the client node that is targeted by this mount
+                type: string
+            required:
+            - desiredState
+            - mounts
+            - node
+            type: object
+          status:
+            description: ClientMountStatus defines the observed state of ClientMount
+            properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: Indication of how severe the error is. Minor will
+                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              mounts:
+                description: List of mount statuses
+                items:
+                  description: ClientMountInfoStatus is the status for a single mount
+                    point
+                  properties:
+                    ready:
+                      description: Ready indicates whether status.state has been achieved
+                      type: boolean
+                    state:
+                      description: Current state
+                      enum:
+                      - mounted
+                      - unmounted
+                      type: string
+                  required:
+                  - ready
+                  - state
+                  type: object
+                type: array
+            required:
+            - mounts
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -35,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	dwsv1alpha2 "github.com/HewlettPackard/dws/api/v1alpha2"
-	"github.com/HewlettPackard/dws/utils/updater"
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -46,8 +46,8 @@ type DWSStorageReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=dws.cray.hpe.com,resources=storages,verbs=get;create;list;watch;update;patch;delete
-// +kubebuilder:rbac:groups=dws.cray.hpe.com,resources=storages/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=storages,verbs=get;create;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=storages/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch

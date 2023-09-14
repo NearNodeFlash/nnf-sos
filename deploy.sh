@@ -30,7 +30,7 @@ NNFMFU_IMG=$5
 if [[ $CMD == 'deploy' ]]; then
     echo "Waiting for the dws webhook to become ready..."
     while :; do
-        ready=$(kubectl get deployments -n dws-operator-system dws-operator-webhook -o json | jq -Mr '.status.readyReplicas')
+        ready=$(kubectl get deployments -n dws-system dws-webhook -o json | jq -Mr '.status.readyReplicas')
         [[ $ready -ge 1 ]] && break
         sleep 1
     done
