@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"reflect"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,11 +42,129 @@ var _ = Describe("Access Controller Test", func() {
 		"rabbit-nnf-access-test-node-1",
 		"rabbit-nnf-access-test-node-2"}
 
+	nnfNodes := [2]*nnfv1alpha1.NnfNode{}
+	storages := [2]*dwsv1alpha2.Storage{}
+	nodes := [2]*corev1.Node{}
+
+	var systemConfiguration *dwsv1alpha2.SystemConfiguration
+	var storageProfile *nnfv1alpha1.NnfStorageProfile
+	var setup sync.Once
+
 	BeforeEach(func() {
-		for _, nodeName := range nodeNames {
-			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
-			Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed(), "Create Namespace")
+		setup.Do(func() {
+			for _, nodeName := range nodeNames {
+				ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+				Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed(), "Create Namespace")
+			}
+		})
+
+		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+					dwsv1alpha2.SystemConfigurationStorageNode{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-1",
+					},
+					dwsv1alpha2.SystemConfigurationStorageNode{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-2",
+					},
+				},
+			},
 		}
+		Expect(k8sClient.Create(context.TODO(), systemConfiguration)).To(Succeed())
+
+		for i, nodeName := range nodeNames {
+			// Create the node - set it to up as ready
+			nodes[i] = &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+					Labels: map[string]string{
+						"cray.nnf.node": "true",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{
+							Status: corev1.ConditionTrue,
+							Type:   corev1.NodeReady,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), nodes[i])).To(Succeed())
+
+			nnfNodes[i] = &nnfv1alpha1.NnfNode{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-nlc",
+					Namespace: nodeName,
+				},
+				Spec: nnfv1alpha1.NnfNodeSpec{
+					State: nnfv1alpha1.ResourceEnable,
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), nnfNodes[i])).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), nnfNodes[i])).To(Succeed())
+				nnfNodes[i].Status.LNetNid = "1.2.3.4@tcp0"
+				return k8sClient.Update(context.TODO(), nnfNodes[i])
+			}).Should(Succeed(), "set LNet Nid in NnfNode")
+
+			storages[i] = &dwsv1alpha2.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), storages[i])).To(Succeed())
+		}
+
+		// Create a default NnfStorageProfile for the unit tests.
+		storageProfile = createBasicDefaultNnfStorageProfile()
+	})
+
+	AfterEach(func() {
+		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
+		profExpected := &nnfv1alpha1.NnfStorageProfile{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
+		}).ShouldNot(Succeed())
+
+		for i := range nodeNames {
+			Expect(k8sClient.Delete(context.TODO(), storages[i])).To(Succeed())
+			tempStorage := &dwsv1alpha2.Storage{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storages[i]), tempStorage)
+			}).ShouldNot(Succeed())
+
+			Expect(k8sClient.Delete(context.TODO(), nnfNodes[i])).To(Succeed())
+			tempNnfNode := &nnfv1alpha1.NnfNode{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), tempNnfNode)
+			}).ShouldNot(Succeed())
+
+			Expect(k8sClient.Delete(context.TODO(), nodes[i])).To(Succeed())
+			tempNode := &corev1.Node{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nodes[i]), tempNode)
+			}).ShouldNot(Succeed())
+		}
+
+		Expect(k8sClient.Delete(context.TODO(), systemConfiguration)).To(Succeed())
+		tempConfig := &dwsv1alpha2.SystemConfiguration{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(systemConfiguration), tempConfig)
+		}).ShouldNot(Succeed())
 	})
 
 	Describe("Create Client Mounts", func() {
@@ -69,37 +188,36 @@ var _ = Describe("Access Controller Test", func() {
 					FileSystemType: "lustre",
 					AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{
 						{
-							Name: "mgtmdt",
+							Name:     "mgtmdt",
+							Capacity: 50000000000,
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
-								FileSystemName: "MGTMDT",
-								TargetType:     "MGTMDT",
+								FileSystemName: "mgtmdt",
+								TargetType:     "mgtmdt",
 							},
 							Nodes: []nnfv1alpha1.NnfStorageAllocationNodes{
 								{
 									Count: 1,
-									Name:  corev1.NamespaceDefault,
+									Name:  nodeNames[0],
 								},
 							},
 						},
 						{
-							Name: "ost",
+							Name:     "ost",
+							Capacity: 50000000000,
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
-								FileSystemName: "OST",
-								TargetType:     "OST",
+								FileSystemName: "ost",
+								TargetType:     "ost",
 							},
 							Nodes: allocationNodes,
 						},
 					},
-				},
-				Status: nnfv1alpha1.NnfStorageStatus{
-					MgsNode: "127.0.0.1@tcp",
 				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed(), "Create NNF Storage")
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-				storage.Status.MgsNode = "127.0.0.1@tcp"
+				storage.Status.MgsAddress = "127.0.0.1@tcp"
 				return k8sClient.Status().Update(context.TODO(), storage)
 			}).Should(Succeed())
 
@@ -122,6 +240,8 @@ var _ = Describe("Access Controller Test", func() {
 					},
 				},
 			}
+
+			addPinnedStorageProfileLabel(access, storageProfile)
 
 			Expect(k8sClient.Create(context.TODO(), access)).To(Succeed(), "Create NNF Access")
 

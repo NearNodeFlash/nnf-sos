@@ -14,7 +14,17 @@ spec:
     singular: nnfnodestorage
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: READY
+      type: string
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfNodeStorage is the Schema for the NnfNodeStorage API
@@ -36,32 +46,43 @@ spec:
               on a NNF Node. Storage spec are created on bequest of the user and fullfilled
               by the NNF Node Controller.
             properties:
-              capacity:
-                description: Capacity defines the capacity, in bytes, of this storage
-                  specification. The NNF Node itself may split the storage among the
-                  available drives operating in the NNF Node.
-                format: int64
-                type: integer
-              clientEndpoints:
-                description: ClientEndpoints sets which endpoints should have access
-                  to an allocation.
-                items:
-                  description: ClientEndpointsSpec contains information about which
-                    nodes a storage allocation should be visible to
-                  properties:
-                    allocationIndex:
-                      description: Index of the allocation in the NnfNodeStorage
-                      type: integer
-                    nodeNames:
-                      description: List of nodes that should see the allocation
-                      items:
-                        type: string
-                      type: array
-                  required:
-                  - allocationIndex
-                  - nodeNames
-                  type: object
-                type: array
+              blockReference:
+                description: BlockReference is an object reference to an NnfNodeBlockStorage
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string should contain a valid JSON/Go
+                      field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like: "spec.containers{name}"
+                      (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with index 2 in this pod). This syntax is chosen
+                      only to have some well-defined way of referencing a part of
+                      an object. TODO: this design is not final and this field is
+                      subject to change in the future.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               count:
                 description: Count is the number of allocations to make on this node.
                   All of the allocations will be created with the same parameters
@@ -98,9 +119,9 @@ spec:
                       filesystem.
                     maxLength: 8
                     type: string
-                  mgsNode:
-                    description: MgsNode is the NID of the MGS to use. This is used
-                      only when creating MDT and OST targets.
+                  mgsAddress:
+                    description: MgsAddress is the NID of the MGS to use. This is
+                      used only when creating MDT and OST targets.
                     type: string
                   startIndex:
                     description: StartIndex is used to order a series of MDTs or OSTs.  This
@@ -113,28 +134,20 @@ spec:
                   targetType:
                     description: TargetType is the type of Lustre target to be created.
                     enum:
-                    - MGT
-                    - MDT
-                    - MGTMDT
-                    - OST
+                    - mgt
+                    - mdt
+                    - mgtmdt
+                    - ost
                     type: string
                 type: object
-              setOwnerGroup:
-                default: false
-                description: Set the owner and group permissions specified by UserID
-                  and GroupID. This is for Lustre file systems only, and should be
-                  set only after all Lustre targets are created.
-                type: boolean
               userID:
                 description: User ID for file system
                 format: int32
                 type: integer
             required:
-            - clientEndpoints
             - count
             - fileSystemType
             - groupID
-            - setOwnerGroup
             - userID
             type: object
           status:
@@ -147,139 +160,11 @@ spec:
                   description: NnfNodeStorageAllocationStatus defines the allocation
                     status for each allocation in the NnfNodeStorage
                   properties:
-                    capacityAllocated:
-                      description: Total capacity allocated for the storage. This
-                        may differ from the requested storage capacity as the system
-                        may round up to the requested capacity satisify underlying
-                        storage requirements (i.e. block size / stripe size).
-                      format: int64
-                      type: integer
-                    creationTime:
-                      description: Represents the time when the storage was created
-                        by the controller It is represented in RFC3339 form and is
-                        in UTC.
-                      format: date-time
-                      type: string
-                    deletionTime:
-                      description: Represents the time when the storage was deleted
-                        by the controller. This field is updated when the Storage
-                        specification State transitions to 'Delete' by the client.
-                        It is represented in RFC3339 form and is in UTC.
-                      format: date-time
-                      type: string
-                    fileShare:
-                      description: Represents the file share that is supporting this
-                        server. A file share is the combination of a storage group
-                        and the associated file system parameters (type, mountpoint)
-                        that makes up the available storage.
-                      properties:
-                        health:
-                          description: NnfResourceHealthType defines the health of
-                            an NNF resource.
-                          type: string
-                        id:
-                          description: ID reflects the NNF Node unique identifier
-                            for this NNF Server resource.
-                          type: string
-                        name:
-                          description: Name reflects the common name of this NNF Server
-                            resource.
-                          type: string
-                        status:
-                          description: NnfResourceStatusType is the string that indicates
-                            the resource's status
-                          type: string
-                      type: object
-                    fileSystem:
-                      description: NnfResourceStatus provides common fields that are
-                        included in all NNF Resources
-                      properties:
-                        health:
-                          description: NnfResourceHealthType defines the health of
-                            an NNF resource.
-                          type: string
-                        id:
-                          description: ID reflects the NNF Node unique identifier
-                            for this NNF Server resource.
-                          type: string
-                        name:
-                          description: Name reflects the common name of this NNF Server
-                            resource.
-                          type: string
-                        status:
-                          description: NnfResourceStatusType is the string that indicates
-                            the resource's status
-                          type: string
-                      type: object
                     logicalVolume:
                       description: Name of the LVM LV
                       type: string
-                    nvmeList:
-                      description: List of NVMe namespaces used by this allocation
-                      items:
-                        description: NnfNodeStorageNVMeStatus provides a way to uniquely
-                          identify an NVMe namespace in the system
-                        properties:
-                          deviceSerial:
-                            description: Serial number of the base NVMe device
-                            type: string
-                          namespaceGUID:
-                            description: Globally unique namespace ID
-                            type: string
-                          namespaceID:
-                            description: Id of the Namespace on the NVMe device (e.g.,
-                              "2")
-                            type: string
-                        required:
-                        - deviceSerial
-                        - namespaceGUID
-                        - namespaceID
-                        type: object
-                      type: array
-                    storageGroup:
-                      description: Represents the storage group that is supporting
-                        this server. A storage group is the mapping from a group of
-                        drive namespaces to an individual server. This value can be
-                        safely ignored by the client.
-                      properties:
-                        health:
-                          description: NnfResourceHealthType defines the health of
-                            an NNF resource.
-                          type: string
-                        id:
-                          description: ID reflects the NNF Node unique identifier
-                            for this NNF Server resource.
-                          type: string
-                        name:
-                          description: Name reflects the common name of this NNF Server
-                            resource.
-                          type: string
-                        status:
-                          description: NnfResourceStatusType is the string that indicates
-                            the resource's status
-                          type: string
-                      type: object
-                    storagePool:
-                      description: NnfResourceStatus provides common fields that are
-                        included in all NNF Resources
-                      properties:
-                        health:
-                          description: NnfResourceHealthType defines the health of
-                            an NNF resource.
-                          type: string
-                        id:
-                          description: ID reflects the NNF Node unique identifier
-                            for this NNF Server resource.
-                          type: string
-                        name:
-                          description: Name reflects the common name of this NNF Server
-                            resource.
-                          type: string
-                        status:
-                          description: NnfResourceStatusType is the string that indicates
-                            the resource's status
-                          type: string
-                      type: object
+                    ready:
+                      type: boolean
                     volumeGroup:
                       description: Name of the LVM VG
                       type: string
@@ -314,20 +199,11 @@ spec:
                 - severity
                 - type
                 type: object
-              lustreStorage:
-                description: LustreStorageStatus describes the Lustre targets created
-                  here.
-                properties:
-                  nid:
-                    description: Nid (LNet Network Identifier) of this node. This
-                      is populated on MGS nodes only.
-                    type: string
-                type: object
-              ownerGroupStatus:
-                description: OwnerGroupStatus is the status of the operation for setting
-                  the owner and group of a file system
-                type: string
+              ready:
+                type: boolean
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

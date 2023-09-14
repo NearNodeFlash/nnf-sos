@@ -27,21 +27,18 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/mount-utils"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
-
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
@@ -63,6 +60,7 @@ type NnfClientMountReconciler struct {
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -83,17 +81,6 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.ClientMountStatus](clientMount)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { clientMount.Status.SetResourceErrorAndLog(err, log) }()
-
-	// Ensure the NNF Storage Service is running prior to taking any action.
-	ss := nnf.NewDefaultStorageService()
-	storageService := &sf.StorageServiceV150StorageService{}
-	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
-		return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to get redfish storage service status").WithError(err).WithMajor()
-	}
-
-	if storageService.Status.State != sf.ENABLED_RST {
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
-	}
 
 	// Handle cleanup if the resource is being deleted
 	if !clientMount.GetDeletionTimestamp().IsZero() {
@@ -163,17 +150,15 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
 func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, state dwsv1alpha2.ClientMountState) error {
-	log := r.Log.WithValues("ClientMount", types.NamespacedName{Name: clientMount.Name, Namespace: clientMount.Namespace})
-
 	var firstError error
-	for i, mount := range clientMount.Spec.Mounts {
+	for i := range clientMount.Spec.Mounts {
 		var err error
 
 		switch state {
 		case dwsv1alpha2.ClientMountStateMounted:
-			err = r.changeMount(ctx, mount, true, log)
+			err = r.changeMount(ctx, clientMount, i, true)
 		case dwsv1alpha2.ClientMountStateUnmounted:
-			err = r.changeMount(ctx, mount, false, log)
+			err = r.changeMount(ctx, clientMount, i, false)
 		default:
 			return dwsv1alpha2.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
@@ -192,138 +177,80 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 }
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
-func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMountInfo dwsv1alpha2.ClientMountInfo, shouldMount bool, log logr.Logger) error {
+func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int, shouldMount bool) error {
+	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", clientMount.Spec.Mounts[index].Device.DeviceReference.Data)
 
-	if os.Getenv("ENVIRONMENT") == "kind" {
-		if shouldMount {
-			if err := os.MkdirAll(clientMountInfo.MountPath, 0755); err != nil {
-				return dwsv1alpha2.NewResourceError("make directory failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
-			}
+	clientMountInfo := clientMount.Spec.Mounts[index]
+	nnfNodeStorage := r.fakeNnfNodeStorage(clientMount, index)
 
-			log.Info("Fake mounted file system", "Mount path", clientMountInfo.MountPath)
-		} else {
-			// Return if the directory was already removed
-			if _, err := os.Stat(clientMountInfo.MountPath); os.IsNotExist(err) {
-				return nil
-			}
-
-			if err := os.RemoveAll(clientMountInfo.MountPath); err != nil {
-				return dwsv1alpha2.NewResourceError("remove directory failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
-			}
-
-			log.Info("Fake unmounted file system", "Mount path", clientMountInfo.MountPath)
-		}
-
-		if clientMountInfo.SetPermissions {
-			if err := os.Chown(clientMountInfo.MountPath, int(clientMountInfo.UserID), int(clientMountInfo.GroupID)); err != nil {
-				return dwsv1alpha2.NewResourceError("chown failed: %s", clientMountInfo.MountPath).WithError(err).WithMajor()
-			}
-		}
-
-		return nil
-	}
-
-	switch clientMountInfo.Device.Type {
-	case dwsv1alpha2.ClientMountDeviceTypeLustre:
-		mountPath := clientMountInfo.MountPath
-
-		_, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT")
-
-		var mounter mount.Interface
-		if testEnv {
-			mounter = mount.NewFakeMounter([]mount.MountPoint{})
-		} else {
-			mounter = mount.New("")
-		}
-
-		isNotMountPoint, _ := mount.IsNotMountPoint(mounter, mountPath)
-
-		if shouldMount {
-			if isNotMountPoint {
-
-				mountSource := clientMountInfo.Device.Lustre.MgsAddresses +
-					":/" +
-					clientMountInfo.Device.Lustre.FileSystemName
-
-				if !testEnv {
-					if err := os.MkdirAll(mountPath, 0755); err != nil {
-						return dwsv1alpha2.NewResourceError("make directory failed: %s", mountPath).WithError(err).WithMajor()
-					}
-				}
-
-				if err := mounter.Mount(mountSource, mountPath, "lustre", nil); err != nil {
-					return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
-				}
-			}
-		} else {
-			if !isNotMountPoint {
-				if err := mounter.Unmount(mountPath); err != nil {
-					return dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
-				}
-			}
-		}
-
-	case dwsv1alpha2.ClientMountDeviceTypeReference:
-
-		namespacedName := types.NamespacedName{
-			Name:      clientMountInfo.Device.DeviceReference.ObjectReference.Name,
-			Namespace: clientMountInfo.Device.DeviceReference.ObjectReference.Namespace,
-		}
-
-		nodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-		if err := r.Get(ctx, namespacedName, nodeStorage); err != nil {
-			return err
-		}
-
-		allocationStatus := nodeStorage.Status.Allocations[clientMountInfo.Device.DeviceReference.Data]
-		fileShare, err := r.getFileShare(allocationStatus.FileSystem.ID, allocationStatus.FileShare.ID)
-		if err != nil {
-			return dwsv1alpha2.NewResourceError("could not get file share").WithError(err).WithMajor()
-		}
-
-		if shouldMount {
-			fileShare.FileSharePath = clientMountInfo.MountPath
-		} else {
-			fileShare.FileSharePath = ""
-		}
-
-		fileShare, err = r.updateFileShare(allocationStatus.FileSystem.ID, fileShare)
-		if err != nil {
-			return dwsv1alpha2.NewResourceError("could not update file share").WithError(err).WithMajor()
-		}
-
-	default:
-		return dwsv1alpha2.NewResourceError("invalid device type %s", clientMountInfo.Device.Type).WithFatal()
+	_, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("unable to get file system information").WithError(err).WithMajor()
 	}
 
 	if shouldMount {
-		log.Info("Mounted file system", "Mount path", clientMountInfo.MountPath)
+		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMountInfo.Options, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
+		}
+		if mounted {
+			log.Info("Mounted file system", "Mount path", clientMountInfo.MountPath)
+		}
+
+		if clientMount.Spec.Mounts[index].SetPermissions {
+			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
+				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
+			}
+		}
 	} else {
-		log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
+		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
+		}
+		if unmounted {
+			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
+		}
 	}
 
 	return nil
 }
 
-func (r *NnfClientMountReconciler) updateFileShare(fileSystemId string, fileShare *sf.FileShareV120FileShare) (*sf.FileShareV120FileShare, error) {
-	ss := nnf.NewDefaultStorageService()
-
-	if err := ss.StorageServiceIdFileSystemIdExportedShareIdPut(ss.Id(), fileSystemId, fileShare.Id, fileShare); err != nil {
-		return nil, err
+// fakeNnfNodeStorage creates an NnfNodeStorage resource with filled in with only the fields
+// that are necessary to mount the file system. This is done to reduce the API server load
+// because the compute nodes don't need to Get() the actual NnfNodeStorage.
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.ClientMount, index int) *nnfv1alpha1.NnfNodeStorage {
+	nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
+			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
+		},
 	}
 
-	return fileShare, nil
-}
+	// These labels aren't exactly right (NnfStorage owns NnfNodeStorage), but the
+	// labels that are important for doing the mount are there and correct
+	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 
-func (r *NnfClientMountReconciler) getFileShare(fileSystemId string, fileShareId string) (*sf.FileShareV120FileShare, error) {
-	ss := nnf.NewDefaultStorageService()
-	sh := &sf.FileShareV120FileShare{}
-
-	if err := ss.StorageServiceIdFileSystemIdExportedShareIdGet(ss.Id(), fileSystemId, fileShareId, sh); err != nil {
-		return nil, err
+	nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{
+		Name:      "fake",
+		Namespace: "fake",
+		Kind:      "fake",
 	}
 
-	return sh, nil
+	nnfNodeStorage.Spec.UserID = clientMount.Spec.Mounts[index].UserID
+	nnfNodeStorage.Spec.GroupID = clientMount.Spec.Mounts[index].GroupID
+	nnfNodeStorage.Spec.FileSystemType = clientMount.Spec.Mounts[index].Type
+	if nnfNodeStorage.Spec.FileSystemType == "none" {
+		nnfNodeStorage.Spec.FileSystemType = "raw"
+	}
+
+	if clientMount.Spec.Mounts[index].Type == "lustre" {
+		nnfNodeStorage.Spec.LustreStorage.BackFs = "none"
+		nnfNodeStorage.Spec.LustreStorage.TargetType = "ost"
+		nnfNodeStorage.Spec.LustreStorage.FileSystemName = clientMount.Spec.Mounts[index].Device.Lustre.FileSystemName
+		nnfNodeStorage.Spec.LustreStorage.MgsAddress = clientMount.Spec.Mounts[index].Device.Lustre.MgsAddresses
+	}
+
+	return nnfNodeStorage
 }
 
 func filterByRabbitNamespacePrefixForTest() predicate.Predicate {

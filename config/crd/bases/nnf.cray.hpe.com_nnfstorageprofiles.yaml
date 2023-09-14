@@ -47,6 +47,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -59,24 +72,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -88,24 +109,6 @@ spec:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgremove".
                         type: string
-                    type: object
-                  options:
-                    description: Options contains options for libraries.
-                    properties:
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
                     type: object
                 type: object
               lustreStorage:
@@ -360,6 +363,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -372,24 +388,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -410,6 +434,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -422,24 +459,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -451,24 +496,6 @@ spec:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgremove".
                         type: string
-                    type: object
-                  options:
-                    description: Options contains options for libraries.
-                    properties:
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
                     type: object
                 type: object
             required:

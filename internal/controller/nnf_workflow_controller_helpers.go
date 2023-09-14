@@ -605,7 +605,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					// Copy the existing PersistentStorageInstance data if present to prevent picking a different
 					// MGS
 					for _, allocationSet := range nnfStorage.Spec.AllocationSets {
-						mgsNid = allocationSet.NnfStorageLustreSpec.ExternalMgsNid
+						mgsNid = allocationSet.NnfStorageLustreSpec.MgsAddress
 						persistentMgsReference = allocationSet.NnfStorageLustreSpec.PersistentMgsReference
 						break
 					}
@@ -632,11 +632,11 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
 				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
 				if dwArgs["type"] == "lustre" {
-					nnfAllocSet.NnfStorageLustreSpec.TargetType = strings.ToUpper(s.Spec.AllocationSets[i].Label)
+					nnfAllocSet.NnfStorageLustreSpec.TargetType = s.Spec.AllocationSets[i].Label
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
 					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = "z" + string(s.GetUID())[:7]
 					if len(mgsNid) > 0 {
-						nnfAllocSet.NnfStorageLustreSpec.ExternalMgsNid = mgsNid
+						nnfAllocSet.NnfStorageLustreSpec.MgsAddress = mgsNid
 						nnfAllocSet.NnfStorageLustreSpec.PersistentMgsReference = persistentMgsReference
 					}
 				}
@@ -709,7 +709,7 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of allocation sets '%d' for persistent MGS", len(nnfStorage.Spec.AllocationSets)).WithFatal()
 	}
 
-	if len(nnfStorage.Status.MgsNode) == 0 {
+	if len(nnfStorage.Status.MgsAddress) == 0 {
 		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no LNid listed for persistent MGS").WithFatal()
 	}
 
@@ -717,7 +717,7 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 		Kind:      reflect.TypeOf(dwsv1alpha2.PersistentStorageInstance{}).Name(),
 		Name:      persistentStorage.Name,
 		Namespace: persistentStorage.Namespace,
-	}, nnfStorage.Status.MgsNode, nil
+	}, nnfStorage.Status.MgsAddress, nil
 }
 
 func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {
@@ -737,6 +737,12 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 }
 
 func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha1.NnfStorage, workflow *dwsv1alpha2.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha2.WorkflowState, log logr.Logger) (*nnfv1alpha1.NnfAccess, error) {
+	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, parentDwIndex)
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
+	}
+
 	access := &nnfv1alpha1.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, parentDwIndex) + "-servers",
@@ -748,8 +754,9 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 		func() error {
 			dwsv1alpha2.AddWorkflowLabels(access, workflow)
 			dwsv1alpha2.AddOwnerLabels(access, workflow)
-			nnfv1alpha1.AddDataMovementTeardownStateLabel(access, teardownState)
+			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
+			nnfv1alpha1.AddDataMovementTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
 				DesiredState:    "mounted",
@@ -757,8 +764,8 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 				Target:          "all",
 				UserID:          workflow.Spec.UserID,
 				GroupID:         workflow.Spec.GroupID,
-				MountPath:       buildMountPath(workflow, parentDwIndex),
-				MountPathPrefix: buildMountPath(workflow, parentDwIndex),
+				MountPath:       buildServerMountPath(workflow, parentDwIndex),
+				MountPathPrefix: buildServerMountPath(workflow, parentDwIndex),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
@@ -808,8 +815,20 @@ func (r *NnfWorkflowReconciler) getDirectiveFileSystemType(ctx context.Context, 
 	}
 }
 
-func buildMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
-	return fmt.Sprintf("/mnt/nnf/%s-%d", workflow.UID, index)
+func buildComputeMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
+	prefix := os.Getenv("COMPUTE_MOUNT_PREFIX")
+	if len(prefix) == 0 {
+		prefix = "/mnt/nnf"
+	}
+	return fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)
+}
+
+func buildServerMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
+	prefix := os.Getenv("SERVER_MOUNT_PREFIX")
+	if len(prefix) == 0 {
+		prefix = "/mnt/nnf"
+	}
+	return fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)
 }
 
 func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *dwsv1alpha2.Workflow, psiName string) (*dwsv1alpha2.PersistentStorageInstance, error) {

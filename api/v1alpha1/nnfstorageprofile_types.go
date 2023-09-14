@@ -125,6 +125,9 @@ type NnfStorageProfileCmdLines struct {
 	// PvCreate specifies the pvcreate commandline, minus the "pvcreate".
 	PvCreate string `json:"pvCreate,omitempty"`
 
+	// PvRemove specifies the pvremove commandline, minus the "pvremove".
+	PvRemove string `json:"pvRemove,omitempty"`
+
 	// VgCreate specifies the vgcreate commandline, minus the "vgcreate".
 	VgCreate string `json:"vgCreate,omitempty"`
 
@@ -137,49 +140,47 @@ type NnfStorageProfileCmdLines struct {
 	// LvCreate specifies the lvcreate commandline, minus the "lvcreate".
 	LvCreate string `json:"lvCreate,omitempty"`
 
+	// LvChange specifies the various lvchange commandlines, minus the "lvchange"
+	LvChange NnfStorageProfileLVMLvChangeCmdLines `json:"lvChange,omitempty"`
+
 	// LvRemove specifies the lvcreate commandline, minus the "lvremove".
 	LvRemove string `json:"lvRemove,omitempty"`
+
+	// MountRabbit specifies mount options for mounting on the Rabbit.
+	MountRabbit string `json:"mountRabbit,omitempty"`
+
+	// MountCompute specifies mount options for mounting on the Compute.
+	MountCompute string `json:"mountCompute,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines
 type NnfStorageProfileLVMVgChangeCmdLines struct {
-	// The vgchange commandline for activation, minus the "vgchange" command
-	Activate string `json:"activate,omitempty"`
-
-	// The vgchange commandline for deactivation, minus the "vgchange" command
-	Deactivate string `json:"deactivate,omitempty"`
-
 	// The vgchange commandline for lockStart, minus the "vgchange" command
 	LockStart string `json:"lockStart,omitempty"`
+
+	// The vgchange commandline for lockStop, minus the "vgchange" command
+	LockStop string `json:"lockStop,omitempty"`
 }
 
-// NnfStorageProfileMiscOptions defines options to use for the mount library, and other utilities.
-type NnfStorageProfileMiscOptions struct {
-	// MountRabbit specifies mount options for mounting on the Rabbit.
-	// Use one array element per option.  Do not prepend the options with "-o".
-	MountRabbit []string `json:"mountRabbit,omitempty"`
+// NnfStorageProfileLVMVgChangeCmdLines
+type NnfStorageProfileLVMLvChangeCmdLines struct {
+	// The lvchange commandline for activate, minus the "lvchange" command
+	Activate string `json:"activate,omitempty"`
 
-	// MountCompute specifies mount options for mounting on the Compute.
-	// Use one array element per option.  Do not prepend the options with "-o".
-	MountCompute []string `json:"mountCompute,omitempty"`
+	// The lvchange commandline for deactivate, minus the "lvchange" command
+	Deactivate string `json:"deactivate,omitempty"`
 }
 
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
 	// CmdLines contains commands to create volumes and filesystems.
 	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
-
-	// Options contains options for libraries.
-	Options NnfStorageProfileMiscOptions `json:"options,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
 	// CmdLines contains commands to create volumes and filesystems.
 	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
-
-	// Options contains options for libraries.
-	Options NnfStorageProfileMiscOptions `json:"options,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration

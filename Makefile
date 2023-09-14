@@ -231,6 +231,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 	done
 
 ##@ Build
+build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
+build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
+build-daemon: manifests generate fmt vet ## Build standalone clientMount daemon
+	GOOS=linux GOARCH=amd64 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
 
 build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager cmd/main.go

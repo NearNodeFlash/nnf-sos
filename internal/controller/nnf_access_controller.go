@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 
 	corev1 "k8s.io/api/core/v1"
@@ -129,7 +130,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
-		err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
+		err = r.removeBlockStorageAccess(ctx, access, storageMapping)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -216,7 +217,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 	}
 
 	// Add compute node information to the storage map, if necessary.
-	err = r.addNodeStorageEndpoints(ctx, access, storageMapping)
+	err = r.addBlockStorageAccess(ctx, access, storageMapping)
 	if err != nil {
 		if apierrors.IsConflict(err) {
 			return &ctrl.Result{}, nil
@@ -235,7 +236,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 		return nil, dwsv1alpha2.NewResourceError("unable to create ClientMount resources").WithError(err)
 	}
 
-	ready, err := r.getNodeStorageEndpointStatus(ctx, access, storageMapping)
+	ready, err := r.getBlockStorageAccessStatus(ctx, access, storageMapping)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
 	}
@@ -276,7 +277,7 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.N
 		return &ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	err = r.removeNodeStorageEndpoints(ctx, access, storageMapping)
+	err = r.removeBlockStorageAccess(ctx, access, storageMapping)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("unable to remove NnfNodeStorage endpoints").WithError(err)
 	}
@@ -450,7 +451,7 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 	clients := []string{}
 	for _, allocationSetSpec := range nnfStorage.Spec.AllocationSets {
 		if nnfStorage.Spec.FileSystemType == "lustre" {
-			if allocationSetSpec.NnfStorageLustreSpec.TargetType != "OST" {
+			if allocationSetSpec.NnfStorageLustreSpec.TargetType != "ost" {
 				continue
 			}
 		}
@@ -507,12 +508,6 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 // mount information
 func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess, clients []string, nnfStorage *nnfv1alpha1.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
 	allocationSet := nnfStorage.Spec.AllocationSets[setIndex]
-
-	if allocationSet.ExternalMgsNid == "" && allocationSet.TargetType != "MGT" && allocationSet.TargetType != "MGTMDT" {
-		// Look elsewhere for the MGS NID.
-		return nil, nil
-	}
-
 	storageMapping := make(map[string][]dwsv1alpha2.ClientMountInfo)
 
 	for _, client := range clients {
@@ -523,11 +518,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		mountInfo.Device.Type = dwsv1alpha2.ClientMountDeviceTypeLustre
 		mountInfo.Device.Lustre = &dwsv1alpha2.ClientMountDeviceLustre{}
 		mountInfo.Device.Lustre.FileSystemName = allocationSet.FileSystemName
-		if allocationSet.ExternalMgsNid != "" {
-			mountInfo.Device.Lustre.MgsAddresses = allocationSet.ExternalMgsNid
-		} else {
-			mountInfo.Device.Lustre.MgsAddresses = nnfStorage.Status.MgsNode
-		}
+		mountInfo.Device.Lustre.MgsAddresses = nnfStorage.Status.MgsAddress
 
 		// Make it easy for the nnf-dm daemon to find the NnfStorage.
 		mountInfo.Device.DeviceReference = &dwsv1alpha2.ClientMountDeviceReference{
@@ -644,13 +635,6 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 					mountInfo.Device.LVM.VolumeGroup = nnfNodeStorage.Status.Allocations[i].VolumeGroup
 					mountInfo.Device.LVM.LogicalVolume = nnfNodeStorage.Status.Allocations[i].LogicalVolume
 					mountInfo.Device.LVM.DeviceType = dwsv1alpha2.ClientMountLVMDeviceTypeNVMe
-					for _, nvme := range nnfNodeStorage.Status.Allocations[i].NVMeList {
-						nvmeDesc := dwsv1alpha2.ClientMountNVMeDesc{}
-						nvmeDesc.DeviceSerial = nvme.DeviceSerial
-						nvmeDesc.NamespaceID = nvme.NamespaceID
-						nvmeDesc.NamespaceGUID = nvme.NamespaceGUID
-						mountInfo.Device.LVM.NVMeInfo = append(mountInfo.Device.LVM.NVMeInfo, nvmeDesc)
-					}
 				}
 
 				existingStorage[nnfNodeStorage.Namespace] = append(existingStorage[nnfNodeStorage.Namespace], mountInfo)
@@ -724,7 +708,7 @@ type mountReference struct {
 // addNodeStorageEndpoints adds the compute node information to the NnfNodeStorage resource
 // so it can make the NVMe namespaces accessible on the compute node. This is done on the rabbit
 // by creating StorageGroup resources through swordfish for the correct endpoint.
-func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be added for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -754,43 +738,44 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 		}
 	}
 
-	// Loop through the NnfNodeStorages and add clientEndpoint information for each of the
+	// Loop through the NnfNodeStorages and add client access information for each of the
 	// computes that need access to an allocation.
-	for nodeStorageReference, mountRefList := range nodeStorageMap {
+	for nodeBlockStorageReference, mountRefList := range nodeStorageMap {
 		namespacedName := types.NamespacedName{
-			Name:      nodeStorageReference.Name,
-			Namespace: nodeStorageReference.Namespace,
+			Name:      nodeBlockStorageReference.Name,
+			Namespace: nodeBlockStorageReference.Namespace,
 		}
 
-		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-		err := r.Get(ctx, namespacedName, nnfNodeStorage)
+		nnfNodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{}
+		err := r.Get(ctx, namespacedName, nnfNodeBlockStorage)
 		if err != nil {
 			return err
 		}
 
-		oldNnfNodeStorage := *nnfNodeStorage.DeepCopy()
-
+		oldNnfNodeBlockStorage := *nnfNodeBlockStorage.DeepCopy()
 		// The clientEndpoints field is an array of each of the allocations on the Rabbit
 		// node that holds a list of the endpoints to expose the allocation to. The endpoints
 		// are the swordfish endpoints, so 0 is the rabbit, and 1-16 are the computes. Start out
 		// by clearing all compute node endpoints from the allocations.
-		for i := range nnfNodeStorage.Spec.ClientEndpoints {
-			nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames = nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames[:1]
+		for i := range nnfNodeBlockStorage.Spec.Allocations {
+			nnfNodeBlockStorage.Spec.Allocations[i].Access = []string{nnfNodeBlockStorage.Namespace}
 		}
 
 		// Add compute node endpoints for each of the allocations. Increment the compute node
 		// index found from the "storage" resource to account for the 0 index being the rabbit
 		// in swordfish.
 		for _, mountRef := range mountRefList {
-			clientEndpoints := &nnfNodeStorage.Spec.ClientEndpoints[mountRef.allocationIndex].NodeNames
-			*clientEndpoints = append(*clientEndpoints, mountRef.client)
+			// Add the client name to the access list if it's not already there
+			if slices.IndexFunc(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, func(n string) bool { return n == mountRef.client }) < 0 {
+				nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access = append(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, mountRef.client)
+			}
 		}
 
-		if reflect.DeepEqual(oldNnfNodeStorage, *nnfNodeStorage) {
+		if reflect.DeepEqual(oldNnfNodeBlockStorage, *nnfNodeBlockStorage) {
 			continue
 		}
 
-		if err = r.Update(ctx, nnfNodeStorage); err != nil {
+		if err = r.Update(ctx, nnfNodeBlockStorage); err != nil {
 			return err
 		}
 	}
@@ -798,7 +783,7 @@ func (r *NnfAccessReconciler) addNodeStorageEndpoints(ctx context.Context, acces
 	return nil
 }
 
-func (r *NnfAccessReconciler) getNodeStorageEndpointStatus(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (bool, error) {
+func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (bool, error) {
 	// NnfNodeStorage clientReferences only need to be checked for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -850,14 +835,14 @@ func (r *NnfAccessReconciler) getNodeStorageEndpointStatus(ctx context.Context, 
 // removeNodeStorageEndpoints modifies the NnfNodeStorage resources to remove the client endpoints for the
 // compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
 // those compute nodes and remove access to the NVMe namespaces from the computes.
-func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be removed for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
 		return nil
 	}
 
-	nodeStorageMap := make(map[corev1.ObjectReference]bool)
+	nodeBlockStorageMap := make(map[corev1.ObjectReference]bool)
 
 	// Make a map of NnfNodeStorage references that were mounted by this
 	// nnfAccess
@@ -867,25 +852,25 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name() {
 				continue
 			}
 
-			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = true
+			nodeBlockStorageMap[mount.Device.DeviceReference.ObjectReference] = true
 		}
 	}
 
-	// Update each of the NnfNodeStorage resources to remove the clientEndpoints that
-	// were added earlier. Leave the first endpoint since that corresponds to the
+	// Update each of the NnfNodeBlockStorage resources to remove the access that
+	// was added earlier. Leave the first entry since that corresponds to the
 	// rabbit node.
-	for nodeStorageReference := range nodeStorageMap {
+	for nodeBlockStorageReference := range nodeBlockStorageMap {
 		namespacedName := types.NamespacedName{
-			Name:      nodeStorageReference.Name,
-			Namespace: nodeStorageReference.Namespace,
+			Name:      nodeBlockStorageReference.Name,
+			Namespace: nodeBlockStorageReference.Namespace,
 		}
 
-		nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
-		err := r.Get(ctx, namespacedName, nnfNodeStorage)
+		nnfNodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{}
+		err := r.Get(ctx, namespacedName, nnfNodeBlockStorage)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
@@ -893,17 +878,16 @@ func (r *NnfAccessReconciler) removeNodeStorageEndpoints(ctx context.Context, ac
 			return err
 		}
 
-		oldNnfNodeStorage := *nnfNodeStorage.DeepCopy()
+		oldNnfNodeBlockStorage := *nnfNodeBlockStorage.DeepCopy()
 
-		for i := range nnfNodeStorage.Spec.ClientEndpoints {
-			nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames = nnfNodeStorage.Spec.ClientEndpoints[i].NodeNames[:1]
+		for i := range nnfNodeBlockStorage.Spec.Allocations {
+			nnfNodeBlockStorage.Spec.Allocations[i].Access = nnfNodeBlockStorage.Spec.Allocations[i].Access[:1]
 		}
-
-		if reflect.DeepEqual(oldNnfNodeStorage, *nnfNodeStorage) {
+		if reflect.DeepEqual(oldNnfNodeBlockStorage, *nnfNodeBlockStorage) {
 			continue
 		}
 
-		err = r.Update(ctx, nnfNodeStorage)
+		err = r.Update(ctx, nnfNodeBlockStorage)
 		if err != nil {
 			return err
 		}

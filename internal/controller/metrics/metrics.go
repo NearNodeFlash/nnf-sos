@@ -55,6 +55,13 @@ var (
 		},
 	)
 
+	NnfNodeBlockStorageReconcilesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "nnf_node_block_storage_reconciles_total",
+			Help: "Number of total reconciles in nnf_node_block_storage controller",
+		},
+	)
+
 	NnfPersistentStorageReconcilesTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "nnf_persistent_storage_reconciles_total",
@@ -92,6 +99,7 @@ func init() {
 	metrics.Registry.MustRegister(NnfNodeReconcilesTotal)
 	metrics.Registry.MustRegister(NnfNodeECDataReconcilesTotal)
 	metrics.Registry.MustRegister(NnfNodeStorageReconcilesTotal)
+	metrics.Registry.MustRegister(NnfNodeBlockStorageReconcilesTotal)
 	metrics.Registry.MustRegister(NnfPersistentStorageReconcilesTotal)
 	metrics.Registry.MustRegister(NnfServersReconcilesTotal)
 	metrics.Registry.MustRegister(NnfStorageReconcilesTotal)

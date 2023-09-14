@@ -61,8 +61,7 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 				Namespace: key.Namespace,
 			},
 			Spec: nnfv1alpha1.NnfNodeStorageSpec{
-				Count:    1,
-				Capacity: 1024 * 1024 * 1024,
+				Count: 1,
 			},
 		}
 	})
@@ -100,8 +99,8 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 			storage.Spec.LustreStorage = nnfv1alpha1.LustreStorageSpec{
 				FileSystemName: "test",
 				StartIndex:     0,
-				MgsNode:        "test",
-				TargetType:     "MGT",
+				MgsAddress:     "test",
+				TargetType:     "mgt",
 				BackFs:         "zfs",
 			}
 		})

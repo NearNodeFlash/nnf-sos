@@ -86,6 +86,7 @@ func AddWorkflowLabels(child metav1.Object, workflow *Workflow) {
 
 	labels[WorkflowNameLabel] = workflow.Name
 	labels[WorkflowNamespaceLabel] = workflow.Namespace
+	labels[WorkflowUidLabel] = string(workflow.GetUID())
 
 	child.SetLabels(labels)
 }

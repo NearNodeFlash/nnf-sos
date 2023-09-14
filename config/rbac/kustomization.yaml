@@ -7,6 +7,9 @@ resources:
 - service_account.yaml
 - role.yaml
 - role_binding.yaml
+- clientmount_service_account.yaml
+- clientmount_role.yaml
+- clientmount_role_binding.yaml
 - fencing_agent_service_account.yaml
 - fencing_agent_role.yaml
 - fencing_agent_role_binding.yaml

@@ -35,6 +35,9 @@ const (
 
 	// WorkflowNamespaceLabel is defined for resources that relate to the namespace of a DWS Workflow
 	WorkflowNamespaceLabel = "dataworkflowservices.github.io/workflow.namespace"
+
+	// WorkflowNamespaceLabel is defined for resources that relate to the namespace of a DWS Workflow
+	WorkflowUidLabel = "dataworkflowservices.github.io/workflow.uid"
 )
 
 // WorkflowState is the enumeration of the state of the workflow

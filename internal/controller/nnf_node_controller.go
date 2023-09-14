@@ -46,6 +46,7 @@ import (
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
+	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -304,6 +305,23 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 				node.Status.Servers[i].Hostname = compute.Name
 			}
+		}
+	}
+
+	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+	if found || os.Getenv("ENVIRONMENT") == "kind" {
+		node.Status.LNetNid = "1.2.3.4@tcp"
+		return ctrl.Result{}, nil
+	}
+
+	output, err := command.Run("lctl list_nids")
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("Could not find local LNid: %w", err)
+	}
+
+	for _, nid := range strings.Split(string(output), "\n") {
+		if strings.Contains(nid, "@") {
+			node.Status.LNetNid = nid
 		}
 	}
 
