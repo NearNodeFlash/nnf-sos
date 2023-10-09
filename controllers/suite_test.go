@@ -40,6 +40,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/ghodss/yaml"
 
@@ -166,10 +167,12 @@ var _ = BeforeSuite(func() {
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:  scheme.Scheme,
-		Host:    webhookInstallOptions.LocalServingHost,
-		Port:    webhookInstallOptions.LocalServingPort,
-		CertDir: webhookInstallOptions.LocalServingCertDir,
+		Scheme: scheme.Scheme,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Host:    webhookInstallOptions.LocalServingHost,
+			Port:    webhookInstallOptions.LocalServingPort,
+			CertDir: webhookInstallOptions.LocalServingCertDir,
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 

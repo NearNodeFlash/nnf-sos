@@ -33,6 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -52,10 +53,10 @@ func (r *LustreFileSystem) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &LustreFileSystem{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LustreFileSystem) ValidateCreate() error {
+func (r *LustreFileSystem) ValidateCreate() (admission.Warnings, error) {
 	lustrefilesystemlog.Info("validate create", "name", r.Name)
 
-	return r.validateLustreFileSystem()
+	return nil, r.validateLustreFileSystem()
 }
 
 func (r *LustreFileSystem) validateLustreFileSystem() error {
@@ -114,7 +115,7 @@ func (r *LustreFileSystem) validateMountRoot() *field.Error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LustreFileSystem) ValidateUpdate(obj runtime.Object) error {
+func (r *LustreFileSystem) ValidateUpdate(obj runtime.Object) (admission.Warnings, error) {
 	lustrefilesystemlog.Info("validate update", "name", r.Name)
 
 	old := obj.(*LustreFileSystem)
@@ -125,28 +126,28 @@ func (r *LustreFileSystem) ValidateUpdate(obj runtime.Object) error {
 	}
 
 	if r.Spec.Name != old.Spec.Name {
-		return immutableError("Name")
+		return nil, immutableError("Name")
 	}
 
 	if r.Spec.MgsNids != old.Spec.MgsNids {
-		return immutableError("MgsNids")
+		return nil, immutableError("MgsNids")
 	}
 
 	if r.Spec.MountRoot != old.Spec.MountRoot {
-		return immutableError("MountRoot")
+		return nil, immutableError("MountRoot")
 	}
 
 	if r.Spec.StorageClassName != old.Spec.StorageClassName {
-		return immutableError("StorageClassName")
+		return nil, immutableError("StorageClassName")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *LustreFileSystem) ValidateDelete() error {
+func (r *LustreFileSystem) ValidateDelete() (admission.Warnings, error) {
 	lustrefilesystemlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }

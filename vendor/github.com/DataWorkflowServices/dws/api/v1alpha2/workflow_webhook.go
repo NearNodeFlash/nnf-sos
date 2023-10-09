@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 )
@@ -75,50 +76,50 @@ func (w *Workflow) Default() {
 var _ webhook.Validator = &Workflow{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (w *Workflow) ValidateCreate() error {
+func (w *Workflow) ValidateCreate() (admission.Warnings, error) {
 
 	specPath := field.NewPath("Spec")
 
 	if w.Spec.DesiredState != StateProposal {
 		s := fmt.Sprintf("desired state must start in %s", StateProposal)
-		return field.Invalid(specPath.Child("DesiredState"), w.Spec.DesiredState, s)
+		return nil, field.Invalid(specPath.Child("DesiredState"), w.Spec.DesiredState, s)
 	}
 	if w.Spec.Hurry == true {
-		return field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
+		return nil, field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
 	}
 	if w.Status.State != "" {
-		return field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set on creation")
+		return nil, field.Forbidden(field.NewPath("Status").Child("State"), "the status state may not be set on creation")
 	}
 
-	return checkDirectives(w, &ValidatingRuleParser{})
+	return nil, checkDirectives(w, &ValidatingRuleParser{})
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (w *Workflow) ValidateUpdate(old runtime.Object) error {
+func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 
 	oldWorkflow, ok := old.(*Workflow)
 	if !ok {
 		err := fmt.Errorf("invalid Workflow resource")
 		workflowlog.Error(err, "old runtime.Object is not a Workflow resource")
 
-		return err
+		return nil, err
 	}
 
 	if w.Spec.Hurry == true && w.Spec.DesiredState != StateTeardown {
 		s := fmt.Sprintf("the hurry flag may be set only in %s", StateTeardown)
-		return field.Invalid(field.NewPath("Spec").Child("Hurry"), w.Spec.Hurry, s)
+		return nil, field.Invalid(field.NewPath("Spec").Child("Hurry"), w.Spec.Hurry, s)
 	}
 
 	// Check that immutable fields haven't changed.
 	err := validateWorkflowImmutable(w, oldWorkflow)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Initial setup of the Workflow by the dws controller requires setting the status
 	// state to proposal and adding a finalizer.
 	if oldWorkflow.Status.State == "" && w.Spec.DesiredState == StateProposal {
-		return nil
+		return nil, nil
 	}
 
 	// Validate the elements in the Drivers array
@@ -131,22 +132,22 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 		// Elements with watchStates not equal to the current state should not change
 		if driverStatus.WatchState != oldWorkflow.Status.State {
 			if !reflect.DeepEqual(oldWorkflow.Status.Drivers[i], driverStatus) {
-				return driverError("driver entry for non-current state cannot be changed")
+				return nil, driverError("driver entry for non-current state cannot be changed")
 			}
 			continue
 		}
 
 		if driverStatus.Completed == true {
 			if driverStatus.Status != StatusCompleted {
-				return driverError("driver cannot be completed without status=Completed")
+				return nil, driverError("driver cannot be completed without status=Completed")
 			}
 
 			if driverStatus.Error != "" {
-				return driverError("driver cannot be completed when error is present")
+				return nil, driverError("driver cannot be completed when error is present")
 			}
 		} else {
 			if oldWorkflow.Status.Drivers[i].Completed == true {
-				return driverError("driver cannot change from completed state")
+				return nil, driverError("driver cannot change from completed state")
 			}
 		}
 	}
@@ -158,28 +159,28 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) error {
 	// Workflow that don't change the state are fine too (immutable fields were
 	// already checked)
 	if newState == StateTeardown || newState == oldState {
-		return nil
+		return nil, nil
 	}
 
 	// Error checks
 	if oldState.after(newState) {
-		return field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "DesiredState cannot progress backwards")
+		return nil, field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "DesiredState cannot progress backwards")
 	}
 
 	if oldState.next() != newState {
-		return field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "states cannot be skipped")
+		return nil, field.Invalid(field.NewPath("Spec").Child("DesiredState"), w.Spec.DesiredState, "states cannot be skipped")
 	}
 
 	if !oldWorkflow.Status.Ready {
-		return field.Invalid(field.NewPath("Status").Child("State"), oldWorkflow.Status.State, "current desired state not yet achieved")
+		return nil, field.Invalid(field.NewPath("Status").Child("State"), oldWorkflow.Status.State, "current desired state not yet achieved")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (w *Workflow) ValidateDelete() error {
-	return nil
+func (w *Workflow) ValidateDelete() (admission.Warnings, error) {
+	return nil, nil
 }
 
 func validateWorkflowImmutable(newWorkflow *Workflow, oldWorkflow *Workflow) error {

@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
 	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
@@ -451,7 +450,7 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 
 // If the SystemConfiguration resource changes, generate a reconcile.Request
 // for the NnfNode resource that this pod created.
-func systemConfigurationMapFunc(o client.Object) []reconcile.Request {
+func systemConfigurationMapFunc(context.Context, client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{NamespacedName: types.NamespacedName{
 			Name:      NnfNlcResourceName,
@@ -472,6 +471,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha1.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Watches(&source.Kind{Type: &dwsv1alpha2.SystemConfiguration{}}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
+		Watches(&dwsv1alpha2.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		Complete(r)
 }

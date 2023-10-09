@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -39,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
@@ -109,8 +111,7 @@ func main() {
 
 	options := ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "6cf68fa5.cray.hpe.com",
@@ -171,9 +172,10 @@ type nodeLocalController struct{}
 
 func (*nodeLocalController) GetType() string { return NodeLocalController }
 func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
-	namespaces := []string{"default", os.Getenv("NNF_NODE_NAME")}
-
-	options.NewCache = cache.MultiNamespacedCacheBuilder(namespaces)
+	namespaceCache := make(map[string]cache.Config)
+	namespaceCache[corev1.NamespaceDefault] = cache.Config{}
+	namespaceCache[os.Getenv("NNF_NODE_NAME")] = cache.Config{}
+	options.Cache = cache.Options{DefaultNamespaces: namespaceCache}
 }
 
 func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
@@ -214,8 +216,8 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 // Type StorageController defines the initializer for the NNF Storage Controller
 type storageController struct{}
 
-func (*storageController) GetType() string                     { return StorageController }
-func (*storageController) SetNamespaces(options *ctrl.Options) { options.Namespace = "" }
+func (*storageController) GetType() string             { return StorageController }
+func (*storageController) SetNamespaces(*ctrl.Options) { /* nop */ }
 
 func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
 	if err := (&controllers.NnfSystemConfigurationReconciler{

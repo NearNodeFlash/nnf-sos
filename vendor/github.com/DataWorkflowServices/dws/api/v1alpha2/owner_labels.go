@@ -263,7 +263,7 @@ func DeleteChildren(ctx context.Context, c client.Client, childObjectLists []Obj
 	return DeleteChildrenWithLabels(ctx, c, childObjectLists, parent, client.MatchingLabels(map[string]string{}))
 }
 
-func OwnerLabelMapFunc(o client.Object) []reconcile.Request {
+func OwnerLabelMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
 	labels := o.GetLabels()
 
 	ownerName, exists := labels[OwnerNameLabel]

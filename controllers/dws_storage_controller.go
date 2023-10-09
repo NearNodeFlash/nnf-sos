@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -238,7 +237,7 @@ func (r *DWSStorageReconciler) isKubernetesNodeReady(ctx context.Context, storag
 func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Setup to watch the NNF Node resource
-	nnfNodeMapFunc := func(o client.Object) []reconcile.Request {
+	nnfNodeMapFunc := func(ctx context.Context, o client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{
 			Name:      o.GetNamespace(),
 			Namespace: corev1.NamespaceDefault,
@@ -246,7 +245,7 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// Setup to watch the Kubernetes Node resource
-	nodeMapFunc := func(o client.Object) []reconcile.Request {
+	nodeMapFunc := func(ctx context.Context, o client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{
 			Name: o.GetName(),
 		}}}
@@ -254,7 +253,7 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha2.Storage{}).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfNode{}}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
-		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
+		Watches(&nnfv1alpha1.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
+		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
 		Complete(r)
 }
