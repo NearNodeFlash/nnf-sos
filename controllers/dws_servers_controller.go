@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -382,7 +381,7 @@ func (r *DWSServersReconciler) checkDeletedStorage(ctx context.Context, servers 
 
 // Map a NnfStorage resource to a Servers resource. There isn't an owner reference between
 // these objects
-func nnfStorageServersMapFunc(o client.Object) []reconcile.Request {
+func nnfStorageServersMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		// The servers resource has the same name/namespace as the NnfStorage resource
 		{NamespacedName: types.NamespacedName{
@@ -398,6 +397,6 @@ func (r *DWSServersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha2.Servers{}).
-		Watches(&source.Kind{Type: &nnfv1alpha1.NnfStorage{}}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
+		Watches(&nnfv1alpha1.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
 		Complete(r)
 }

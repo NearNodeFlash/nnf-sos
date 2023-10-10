@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -196,7 +195,7 @@ func (r *NnfSystemConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		Watches(&source.Kind{Type: &corev1.Namespace{}}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		For(&dwsv1alpha2.SystemConfiguration{})
 
 	return builder.Complete(r)
