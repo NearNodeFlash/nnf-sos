@@ -294,13 +294,13 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.7
+KUSTOMIZE_VERSION ?= v5.1.1
 CONTROLLER_TOOLS_VERSION ?= v0.12.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(LOCALBIN) ## Download kustomize locally if necessary.
-	if [[ ! -s $(LOCALBIN)/kustomize || $$($(LOCALBIN)/kustomize version | awk '{print $$1}' | awk -F/ '{print $$2}') != $(KUSTOMIZE_VERSION) ]]; then \
+	if [[ ! -s $(LOCALBIN)/kustomize || ! $$($(LOCALBIN)/kustomize version) =~ $(KUSTOMIZE_VERSION) ]]; then \
 	  rm -f $(LOCALBIN)/kustomize && \
 	  { curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }; \
 	fi
