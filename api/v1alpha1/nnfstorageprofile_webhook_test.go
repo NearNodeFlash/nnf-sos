@@ -217,7 +217,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 		// The defaults are found in the kubebuilder validation
 		// statements in nnfstorageprofile_types.go.
-		Expect(newProfile.Data.LustreStorage.CapacityMGT).To(Equal("1GiB"))
+		Expect(newProfile.Data.LustreStorage.CapacityMGT).To(Equal("5GiB"))
 		Expect(newProfile.Data.LustreStorage.CapacityMDT).To(Equal("5GiB"))
 	})
 

@@ -74,7 +74,7 @@ type NnfStorageProfileLustreData struct {
 
 	// CapacityMGT specifies the size of the MGT device.
 	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
-	// +kubebuilder:default:="1GiB"
+	// +kubebuilder:default:="5GiB"
 	CapacityMGT string `json:"capacityMgt,omitempty"`
 
 	// CapacityMDT specifies the size of the MDT device.  This is also
