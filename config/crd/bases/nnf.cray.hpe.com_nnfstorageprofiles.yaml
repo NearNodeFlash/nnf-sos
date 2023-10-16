@@ -118,7 +118,7 @@ spec:
                     pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
                     type: string
                   capacityMgt:
-                    default: 1GiB
+                    default: 5GiB
                     description: CapacityMGT specifies the size of the MGT device.
                     pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
                     type: string
