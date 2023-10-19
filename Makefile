@@ -1,4 +1,4 @@
-# Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+# Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -262,11 +262,13 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY) $(NNFMFU_TAG_BASE):$(NNFMFU_VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin $(OVERLAY) $(IMAGE_TAG_BASE) $(VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples examples $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION)
+	./deploy.sh deploy $(KUSTOMIZE) config/begin config/begin-examples
 
 undeploy: VERSION ?= $(shell cat .version)
 undeploy: .version kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	./deploy.sh undeploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY)
+	./deploy.sh undeploy $(KUSTOMIZE) config/$(OVERLAY) config/examples
 
 # Let .version be phony so that a git update to the workarea can be reflected
 # in it each time it's needed.
@@ -289,6 +291,7 @@ clean-bin:
 	fi
 
 ## Tool Binaries
+KUSTOMIZE_IMAGE_TAG ?= ./hack/make-kustomization.sh
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
