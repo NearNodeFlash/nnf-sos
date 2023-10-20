@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	"github.com/DataWorkflowServices/dws/controllers/metrics"
+	"github.com/DataWorkflowServices/dws/internal/controller/metrics"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 

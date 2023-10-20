@@ -148,7 +148,7 @@ vet: ## Run go vet against code.
 ##@ Test
 
 # Explicitly specifying directories to test here to avoid running tests in .dws-operator for the time being.
-# ./controllers/...
+# ./internal/...
 # ./api/...
 # Below is a list of ginkgo test flags that may be used to generate different test patterns.
 # Specifying 'count=1' is the idiomatic way to disable test caching
@@ -214,10 +214,10 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
 EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
-TESTDIRS ?= controllers api
+TESTDIRS ?= internal api
 FAILFAST ?= no
 test: manifests generate fmt vet envtest ## Run tests.
-	find controllers -name "*.db" -type d -exec rm -rf {} +
+	find internal -name "*.db" -type d -exec rm -rf {} +
 	source test-tools.sh; prefix_webhook_names config/webhook ${ENVTEST_ASSETS_DIR}/webhook
 	if [[ "${FAILFAST}" == yes ]]; then \
 		failfast="-ginkgo.fail-fast"; \
@@ -233,10 +233,10 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager cmd/main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run cmd/main.go
 
 docker-build: VERSION ?= $(shell cat .version)
 docker-build: .version ## Build docker image with the manager.
