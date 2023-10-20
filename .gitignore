@@ -32,6 +32,8 @@ kind-config.yaml
 standalone-playground
 nnf-sos
 .version
+config/begin/*
+config/begin-examples/*
 
 # .vscode log files
 .vscode/*.log
