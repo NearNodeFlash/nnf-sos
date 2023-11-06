@@ -56,9 +56,16 @@ if [[ $CMD == 'deploy' ]]; then
         kubectl get crds nnfportmanagers.nnf.cray.hpe.com && break
     done
     $KUSTOMIZE build config/ports| kubectl apply --server-side=true --force-conflicts -f -
+
+    # Deploy the ServiceMonitor resource if its CRD is found. The CRD would
+    # have been installed by a metrics service such as Prometheus.
+    if kubectl get crd servicemonitors.monitoring.coreos.com > /dev/null 2>&1; then
+        $KUSTOMIZE build config/prometheus | kubectl apply -f-
+    fi
 fi
 
 if [[ $CMD == 'undeploy' ]]; then
+    $KUSTOMIZE build config/prometheus | kubectl delete --ignore-not-found -f-
     $KUSTOMIZE build config/ports | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build $OVERLAY_DIR | kubectl delete --ignore-not-found -f -
