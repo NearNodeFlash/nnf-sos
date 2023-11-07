@@ -35,7 +35,7 @@ const (
 	DataMovementNamespace = "nnf-dm-system"
 )
 
-// NnfDataMovementSpec defines the desired state of DataMovement
+// NnfDataMovementSpec defines the desired state of NnfDataMovement
 type NnfDataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -66,7 +66,7 @@ type NnfDataMovementSpec struct {
 	UserConfig *NnfDataMovementConfig `json:"userConfig,omitempty"`
 }
 
-// DataMovementSpecSourceDestination defines the desired source or destination of data movement
+// NnfDataMovementSpecSourceDestination defines the desired source or destination of data movement
 type NnfDataMovementSpecSourceDestination struct {
 
 	// Path describes the location of the user data relative to the storage instance
@@ -110,7 +110,7 @@ type NnfDataMovementConfig struct {
 	MaxSlots *int `json:"maxSlots,omitempty"`
 }
 
-// DataMovementCommandStatus defines the observed status of the underlying data movement
+// NnfDataMovementCommandStatus defines the observed status of the underlying data movement
 // command (MPI File Utils' `dcp` command).
 type NnfDataMovementCommandStatus struct {
 	// The command that was executed during data movement.
@@ -134,7 +134,7 @@ type NnfDataMovementCommandStatus struct {
 	LastMessageTime metav1.MicroTime `json:"lastMessageTime,omitempty"`
 }
 
-// DataMovementStatus defines the observed state of DataMovement
+// NnfDataMovementStatus defines the observed state of NnfDataMovement
 type NnfDataMovementStatus struct {
 	// Current state of data movement.
 	// +kubebuilder:validation:Enum=Starting;Running;Finished
@@ -188,7 +188,7 @@ const (
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
-// NnfDataMovement is the Schema for the datamovements API
+// NnfDataMovement is the Schema for the nnfdatamovements API
 type NnfDataMovement struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
