@@ -26,6 +26,10 @@ import (
 
 const (
 	DataMovementWorkerLabel = "dm.cray.hpe.com/worker"
+
+	// The name of the expected Data Movement manager. This is to ensure Data Movement is ready in
+	// the DataIn/DataOut stages before attempting data movement operations.
+	DataMovementManagerName = "nnf-dm-manager-controller-manager"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -58,7 +62,8 @@ type NnfDataMovementManagerStatus struct {
 
 	// Ready indicates that the Data Movement Manager has achieved the desired readiness state
 	// and all managed resources are initialized.
-	Ready bool `json:"ready,omitempty"`
+	// +kubebuilder:default:=false
+	Ready bool `json:"ready"`
 }
 
 //+kubebuilder:object:root=true

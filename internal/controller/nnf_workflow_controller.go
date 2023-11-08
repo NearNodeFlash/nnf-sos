@@ -608,6 +608,18 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		}
 	}
 
+	// Verify data movement is ready
+	dmm := &nnfv1alpha1.NnfDataMovementManager{ObjectMeta: metav1.ObjectMeta{
+		Name:      nnfv1alpha1.DataMovementManagerName,
+		Namespace: nnfv1alpha1.DataMovementNamespace,
+	}}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(dmm), dmm); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not get NnfDataMovementManager %v", client.ObjectKeyFromObject(dmm)).WithError(err).WithUserMessage("could not determine data movement readiness")
+	}
+	if !dmm.Status.Ready {
+		return Requeue("pending data movement readiness").withObject(dmm), nil
+	}
+
 	// Retrieve the target storage that is to perform the data movement.
 	// For copy_in, the destination is the Rabbit and therefore the target
 	// For copy_out, the source is the Rabbit and therefore the target

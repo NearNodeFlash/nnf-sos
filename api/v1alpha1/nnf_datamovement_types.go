@@ -26,12 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 const (
-	// The required namespace for an NNF Data Movement operation. This is for system wide (lustre) data movement.
-	// Individual nodes may also perform data movement in which case they use the NNF Node Name as the namespace.
+	// The required namespace for an NNF Data Movement operation. This is for system wide (lustre)
+	// data movement.  Individual nodes may also perform data movement in which case they use the
+	// NNF Node Name as the namespace.
 	DataMovementNamespace = "nnf-dm-system"
 )
 
