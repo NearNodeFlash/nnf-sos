@@ -32,7 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: NnfDataMovement is the Schema for the datamovements API
+        description: NnfDataMovement is the Schema for the nnfdatamovements API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -47,7 +47,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NnfDataMovementSpec defines the desired state of DataMovement
+            description: NnfDataMovementSpec defines the desired state of NnfDataMovement
             properties:
               cancel:
                 default: false
@@ -204,7 +204,7 @@ spec:
                 type: integer
             type: object
           status:
-            description: DataMovementStatus defines the observed state of DataMovement
+            description: NnfDataMovementStatus defines the observed state of NnfDataMovement
             properties:
               commandStatus:
                 description: CommandStatus reflects the current status of the underlying

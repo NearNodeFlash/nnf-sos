@@ -327,6 +327,22 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfdatamovementmanagers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfdatamovementmanagers/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
   - nnfdatamovements
   verbs:
   - create

@@ -1,0 +1,24 @@
+# permissions for end users to edit nnfdatamovementmanagers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nnfdatamovementmanager-editor-role
+rules:
+  - apiGroups:
+      - dm.cray.hpe.com
+    resources:
+      - nnfdatamovementmanagers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - dm.cray.hpe.com
+    resources:
+      - nnfdatamovementmanagers/status
+    verbs:
+      - get

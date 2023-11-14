@@ -153,7 +153,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		// persistentdw directive checks that the nnfStorage associated with the
 		// PersistentStorageInstance (by name) is present and its Status is 'Ready'
-		// For this test, create such an nnfStorage so the datamovement pieces can
+		// For this test, create such an nnfStorage so the nnfdatamovement pieces can
 		// operate.
 		// An alternative is to create a workflow with 'create_persistent'
 		// as its directive and actually create the full-blown persistent instance.. (painful)

@@ -74,6 +74,8 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfaccesses,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementmanagers,verbs=get;list;watch
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementmanagers/status,verbs=get;list;watch;
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;create;list;watch;update;patch
@@ -687,7 +689,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
 					if !errors.IsAlreadyExists(err) {
-						return nil, dwsv1alpha2.NewResourceError("could not create DataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
+						return nil, dwsv1alpha2.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 					}
 				}
 			}
@@ -723,7 +725,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
 			if !errors.IsAlreadyExists(err) {
-				return nil, dwsv1alpha2.NewResourceError("could not create DataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
+				return nil, dwsv1alpha2.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 			}
 		}
 	}
@@ -742,7 +744,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not list DataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha2.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	// Since the Finish state is only called when copy_in / copy_out directives are present - the lack of any items
@@ -945,7 +947,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not list DataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha2.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	for _, dm := range dataMovementList.Items {
@@ -990,7 +992,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 
 	dataMovementList := &nnfv1alpha1.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not list DataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha2.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	for _, dm := range dataMovementList.Items {
