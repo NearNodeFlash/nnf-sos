@@ -617,7 +617,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfDataMovementManager %v", client.ObjectKeyFromObject(dmm)).WithError(err).WithUserMessage("could not determine data movement readiness")
 	}
 	if !dmm.Status.Ready {
-		return Requeue("pending data movement readiness").withObject(dmm), nil
+		return Requeue("pending data movement readiness").withObject(dmm).after(2 * time.Second), nil
 	}
 
 	// Retrieve the target storage that is to perform the data movement.
