@@ -22,6 +22,8 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 
 const (
@@ -78,6 +80,10 @@ type NnfDataMovementManager struct {
 
 	Spec   NnfDataMovementManagerSpec   `json:"spec,omitempty"`
 	Status NnfDataMovementManagerStatus `json:"status,omitempty"`
+}
+
+func (m *NnfDataMovementManager) GetStatus() updater.Status[*NnfDataMovementManagerStatus] {
+	return &m.Status
 }
 
 //+kubebuilder:object:root=true
