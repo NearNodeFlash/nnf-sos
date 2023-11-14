@@ -7637,9 +7637,12 @@ spec:
               NnfDataMovementManager
             properties:
               ready:
+                default: false
                 description: Ready indicates that the Data Movement Manager has achieved
                   the desired readiness state and all managed resources are initialized.
                 type: boolean
+            required:
+            - ready
             type: object
         type: object
     served: true

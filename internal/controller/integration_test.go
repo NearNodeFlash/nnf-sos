@@ -63,6 +63,7 @@ var _ = Describe("Integration Test", func() {
 		nodeNames          []string
 		setup              sync.Once
 		storageProfile     *nnfv1alpha1.NnfStorageProfile
+		dmm                *nnfv1alpha1.NnfDataMovementManager
 	)
 
 	advanceState := func(state dwsv1alpha2.WorkflowState, w *dwsv1alpha2.Workflow, testStackOffset int) {
@@ -966,19 +967,44 @@ var _ = Describe("Integration Test", func() {
 					WLMID:        "Test WLMID",
 				},
 			}
+
+			dmm = &nnfv1alpha1.NnfDataMovementManager{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfv1alpha1.DataMovementManagerName,
+					Namespace: nnfv1alpha1.DataMovementNamespace,
+				},
+				Spec: nnfv1alpha1.NnfDataMovementManagerSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:  "dm-worker-dummy",
+								Image: "nginx",
+							}},
+						},
+					},
+				},
+				Status: nnfv1alpha1.NnfDataMovementManagerStatus{
+					Ready: true,
+				},
+			}
+
 		})
 
 		// Bring the workflow up to Data In; assign the necessary servers and computes
 		// resource. This isn't meant to be a vigorous test of the proposal and setup
 		// stages; that is provided by the topmost integration test.
 		JustBeforeEach(func() {
-			By("Create the workflow")
+			By("Creating the workflow")
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
 
 			By("Checking for workflow creation")
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
 			}).Should(Succeed())
+
+			By("Creating the NnfDataMovementManager")
+			Expect(k8sClient.Create(context.TODO(), dmm)).To(Succeed())
+			WaitForDMMReady(dmm)
 
 			/*************************** Proposal ****************************/
 
@@ -1034,6 +1060,10 @@ var _ = Describe("Integration Test", func() {
 
 			advanceStateAndCheckReady(dwsv1alpha2.StateTeardown, workflow)
 
+			Expect(k8sClient.Delete(context.TODO(), dmm)).To(Succeed())
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmm), dmm)
+			}).ShouldNot(Succeed())
 		})
 
 		var lustre *lusv1beta1.LustreFileSystem

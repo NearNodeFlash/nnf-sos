@@ -43,10 +43,6 @@ import (
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
-// TODO:
-// BeforeEach - initialize the workflow
-// AfterEach - destroy the workflow
-
 var (
 	baseWorkflowUserID  uint32 = 1042
 	baseWorkflowGroupID uint32 = 1043
@@ -120,6 +116,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
+
 	})
 
 	getErroredDriverStatus := func(workflow *dwsv1alpha2.Workflow) *dwsv1alpha2.WorkflowDriverStatus {
@@ -387,6 +384,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	})
 
 	When("Using copy_in directives", func() {
+		var (
+			dmm *nnfv1alpha1.NnfDataMovementManager
+		)
 
 		JustBeforeEach(func() {
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
@@ -418,6 +418,28 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 
 			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tests
+
+			dmm = &nnfv1alpha1.NnfDataMovementManager{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfv1alpha1.DataMovementManagerName,
+					Namespace: nnfv1alpha1.DataMovementNamespace,
+				},
+				Spec: nnfv1alpha1.NnfDataMovementManagerSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:  "name-manager dummy",
+								Image: "nginx",
+							}},
+						},
+					},
+				},
+				Status: nnfv1alpha1.NnfDataMovementManagerStatus{
+					Ready: true,
+				},
+			}
+			Expect(k8sClient.Create(ctx, dmm)).To(Succeed())
+			WaitForDMMReady(dmm)
 		})
 
 		BeforeEach(func() {
@@ -438,6 +460,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		AfterEach(func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
 			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+
+			Expect(k8sClient.Delete(context.TODO(), dmm)).To(Succeed())
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmm), dmm)
+			}).ShouldNot(Succeed())
 		})
 
 		When("using $DW_JOB_ references", func() {
@@ -1408,3 +1435,14 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 		Expect(createNnfStorageProfile(profileInvalid, false)).To(BeNil())
 	})
 })
+
+func WaitForDMMReady(dmm *nnfv1alpha1.NnfDataMovementManager) {
+	Eventually(func(g Gomega) bool {
+		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmm), dmm)).To(Succeed())
+		if !dmm.Status.Ready {
+			dmm.Status.Ready = true
+			g.Expect(k8sClient.Status().Update(context.TODO(), dmm)).To(Succeed())
+		}
+		return dmm.Status.Ready
+	}).Should(BeTrue())
+}
