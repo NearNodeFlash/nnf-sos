@@ -977,7 +977,7 @@ var _ = Describe("Integration Test", func() {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{{
-								Name:  "name-manager dummy",
+								Name:  "dm-worker-dummy",
 								Image: "nginx",
 							}},
 						},
