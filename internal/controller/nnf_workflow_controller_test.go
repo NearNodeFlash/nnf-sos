@@ -514,6 +514,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
 						"Namespace": Equal(workflow.Namespace),
 					}))
+
+				Expect(dm.Spec.Profile).To(Equal(nnfv1alpha1.DataMovementProfileDefault))
 			})
 		})
 
@@ -521,7 +523,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
-					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_PERSISTENT_%s/my-persistent-file.out", strings.ReplaceAll(persistentStorageName, "-", "_")),
+					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in profile=test destination=$DW_PERSISTENT_%s/my-persistent-file.out", strings.ReplaceAll(persistentStorageName, "-", "_")),
 				}
 
 				createPersistentStorageInstance(persistentStorageName, "lustre")
@@ -581,6 +583,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Name":      Equal(persistentStorageName),
 						"Namespace": Equal(workflow.Namespace),
 					}))
+				Expect(dm.Spec.Profile).To(Equal("test"))
 			})
 		})
 	}) // When("Using copy_in directives", func()

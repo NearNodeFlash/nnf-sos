@@ -660,6 +660,12 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		return path
 	}
 
+	// Use a non-default profile for data movement, if supplied
+	dmProfile, found := dwArgs["profile"]
+	if !found {
+		dmProfile = nnfv1alpha1.DataMovementProfileDefault
+	}
+
 	switch fsType {
 	case "xfs", "gfs2":
 
@@ -690,6 +696,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 						},
 						UserId:  workflow.Spec.UserID,
 						GroupId: workflow.Spec.GroupID,
+						Profile: dmProfile,
 					},
 				}
 
@@ -726,6 +733,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				},
 				UserId:  workflow.Spec.UserID,
 				GroupId: workflow.Spec.GroupID,
+				Profile: dmProfile,
 			},
 		}
 
