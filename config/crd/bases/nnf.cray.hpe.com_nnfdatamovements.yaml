@@ -109,6 +109,12 @@ spec:
                   operation.
                 format: int32
                 type: integer
+              profile:
+                default: default
+                description: Profile specifies the name of profile in the nnf-dm-config
+                  ConfigMap to be used for configuring data movement. Defaults to
+                  the default profile.
+                type: string
               source:
                 description: Source describes the source of the data movement operation
                 properties:

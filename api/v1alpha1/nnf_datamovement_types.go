@@ -31,6 +31,10 @@ const (
 	// data movement.  Individual nodes may also perform data movement in which case they use the
 	// NNF Node Name as the namespace.
 	DataMovementNamespace = "nnf-dm-system"
+
+	// The name of the default profile stored in the nnf-dm-config ConfigMap that is used to
+	// configure Data Movement.
+	DataMovementProfileDefault = "default"
 )
 
 // NnfDataMovementSpec defines the desired state of NnfDataMovement
@@ -57,6 +61,11 @@ type NnfDataMovementSpec struct {
 	// Set to true if the data movement operation should be canceled.
 	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
+
+	// Profile specifies the name of profile in the nnf-dm-config ConfigMap to be used for
+	// configuring data movement. Defaults to the default profile.
+	// +kubebuilder:default:=default
+	Profile string `json:"profile,omitempty"`
 
 	// User defined configuration on how data movement should be performed. This overrides the
 	// configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
