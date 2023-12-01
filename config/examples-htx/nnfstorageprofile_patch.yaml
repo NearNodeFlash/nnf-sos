@@ -1,0 +1,10 @@
+apiVersion: nnf.cray.hpe.com/v1alpha1
+kind: NnfStorageProfile
+metadata:
+  name: placeholder
+  namespace: nnf-system
+data:
+  lustreStorage:
+    combinedMgtMdt: false
+    # use compute-node-2 lustre server
+    externalMgs: 10.1.1.23@tcp

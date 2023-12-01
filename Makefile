@@ -100,6 +100,9 @@ ENVTEST_K8S_VERSION = 1.28.0
 #   make deploy OVERLAY=dp0
 OVERLAY ?= kind
 
+# Tell Kustomize to deploy the default examples config, or an overlay
+OVERLAY_EXAMPLES ?= examples
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -263,7 +266,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 deploy: VERSION ?= $(shell cat .version)
 deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE_IMAGE_TAG) config/begin $(OVERLAY) $(IMAGE_TAG_BASE) $(VERSION)
-	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples examples $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples $(OVERLAY_EXAMPLES) $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION)
 	./deploy.sh deploy $(KUSTOMIZE) config/begin config/begin-examples
 
 undeploy: VERSION ?= $(shell cat .version)
