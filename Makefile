@@ -271,7 +271,7 @@ deploy: .version kustomize ## Deploy controller to the K8s cluster specified in 
 
 undeploy: VERSION ?= $(shell cat .version)
 undeploy: .version kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	./deploy.sh undeploy $(KUSTOMIZE) config/$(OVERLAY) config/examples
+	./deploy.sh undeploy $(KUSTOMIZE) config/$(OVERLAY) config/$(OVERLAY_EXAMPLES)
 
 # Let .version be phony so that a git update to the workarea can be reflected
 # in it each time it's needed.
