@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -35,9 +35,9 @@ type NnfNodeBlockStorageAllocationSpec struct {
 }
 
 // NnfNodeBlockStorageSpec defines the desired storage attributes on a NNF Node.
-// Storage spec are created on bequest of the user and fullfilled by the NNF Node Controller.
+// Storage spec are created on request of the user and fullfilled by the NNF Node Controller.
 type NnfNodeBlockStorageSpec struct {
-	// Allocations is the list of storage allocation to make
+	// Allocations is the list of storage allocations to make
 	Allocations []NnfNodeBlockStorageAllocationSpec `json:"allocations,omitempty"`
 }
 
@@ -58,7 +58,7 @@ type NnfNodeBlockStorageDeviceStatus struct {
 	NamespaceId string `json:"namespaceId"`
 
 	// Total capacity allocated for the storage. This may differ from the requested storage
-	// capacity as the system may round up to the requested capacity satisify underlying
+	// capacity as the system may round up to the requested capacity to satisify underlying
 	// storage requirements (i.e. block size / stripe size).
 	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 }
@@ -72,13 +72,14 @@ type NnfNodeBlockStorageAccessStatus struct {
 }
 
 type NnfNodeBlockStorageAllocationStatus struct {
+	// Accesses is map of node name to the access status
 	Accesses map[string]NnfNodeBlockStorageAccessStatus `json:"accesses,omitempty"`
 
 	// List of NVMe namespaces used by this allocation
 	Devices []NnfNodeBlockStorageDeviceStatus `json:"devices,omitempty"`
 
 	// Total capacity allocated for the storage. This may differ from the requested storage
-	// capacity as the system may round up to the requested capacity satisify underlying
+	// capacity as the system may round up to the requested capacity to satisify underlying
 	// storage requirements (i.e. block size / stripe size).
 	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 
