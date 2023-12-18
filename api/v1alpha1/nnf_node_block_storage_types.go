@@ -72,7 +72,7 @@ type NnfNodeBlockStorageAccessStatus struct {
 }
 
 type NnfNodeBlockStorageAllocationStatus struct {
-	// Accesses is map of node name to the access status
+	// Accesses is a map of node name to the access status
 	Accesses map[string]NnfNodeBlockStorageAccessStatus `json:"accesses,omitempty"`
 
 	// List of NVMe namespaces used by this allocation
