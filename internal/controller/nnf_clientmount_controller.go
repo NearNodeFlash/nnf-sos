@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -230,7 +231,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.C
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha1.DirectiveIndexLabel] = clientMount.Spec.Mounts[index].Device.DeviceReference.Data
+	labels[nnfv1alpha1.DirectiveIndexLabel] = fmt.Sprintf("%d", clientMount.Spec.Mounts[index].Device.DeviceReference.Data)
 	nnfNodeStorage.SetLabels(labels)
 
 	nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{
