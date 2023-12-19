@@ -42,11 +42,11 @@ spec:
             type: object
           spec:
             description: NnfNodeBlockStorageSpec defines the desired storage attributes
-              on a NNF Node. Storage spec are created on bequest of the user and fullfilled
+              on a NNF Node. Storage spec are created on request of the user and fullfilled
               by the NNF Node Controller.
             properties:
               allocations:
-                description: Allocations is the list of storage allocation to make
+                description: Allocations is the list of storage allocations to make
                 items:
                   properties:
                     access:
@@ -81,11 +81,12 @@ spec:
                             description: Redfish ID for the storage group
                             type: string
                         type: object
+                      description: Accesses is a map of node name to the access status
                       type: object
                     capacityAllocated:
                       description: Total capacity allocated for the storage. This
                         may differ from the requested storage capacity as the system
-                        may round up to the requested capacity satisify underlying
+                        may round up to the requested capacity to satisify underlying
                         storage requirements (i.e. block size / stripe size).
                       format: int64
                       type: integer
@@ -100,7 +101,7 @@ spec:
                             description: Total capacity allocated for the storage.
                               This may differ from the requested storage capacity
                               as the system may round up to the requested capacity
-                              satisify underlying storage requirements (i.e. block
+                              to satisify underlying storage requirements (i.e. block
                               size / stripe size).
                             format: int64
                             type: integer

@@ -940,7 +940,7 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 				func() error {
 					dwsv1alpha2.InheritParentLabels(clientMount, access)
 					dwsv1alpha2.AddOwnerLabels(clientMount, access)
-					setTargetDirectiveIndexLabel(access, targetIndex)
+					setTargetDirectiveIndexLabel(clientMount, targetIndex)
 
 					clientMount.Spec.Node = clientName
 					clientMount.Spec.DesiredState = dwsv1alpha2.ClientMountState(access.Spec.DesiredState)
