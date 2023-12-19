@@ -21,7 +21,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -179,7 +178,7 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
 func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int, shouldMount bool) error {
-	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", clientMount.Spec.Mounts[index].Device.DeviceReference.Data)
+	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
 
 	clientMountInfo := clientMount.Spec.Mounts[index]
 	nnfNodeStorage := r.fakeNnfNodeStorage(clientMount, index)
@@ -231,7 +230,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.C
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha1.DirectiveIndexLabel] = fmt.Sprintf("%d", clientMount.Spec.Mounts[index].Device.DeviceReference.Data)
+	labels[nnfv1alpha1.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 
 	nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{

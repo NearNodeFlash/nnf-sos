@@ -1022,6 +1022,34 @@ func addDirectiveIndexLabel(object metav1.Object, index int) {
 	object.SetLabels(labels)
 }
 
+func getDirectiveIndexLabel(object metav1.Object) string {
+	labels := object.GetLabels()
+	if labels == nil {
+		return ""
+	}
+
+	return labels[nnfv1alpha1.DirectiveIndexLabel]
+}
+
+func setTargetDirectiveIndexLabel(object metav1.Object, value string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[nnfv1alpha1.TargetDirectiveIndexLabel] = value
+	object.SetLabels(labels)
+}
+
+func getTargetDirectiveIndexLabel(object metav1.Object) string {
+	labels := object.GetLabels()
+	if labels == nil {
+		return ""
+	}
+
+	return labels[nnfv1alpha1.TargetDirectiveIndexLabel]
+}
+
 func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int, accessSuffix string) (*result, error) {
 	if !(accessSuffix == "computes" || accessSuffix == "servers") {
 		panic(fmt.Sprint("unhandled NnfAccess suffix", accessSuffix))

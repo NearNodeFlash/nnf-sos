@@ -590,6 +590,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 		}
 
 		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+
 			// Loop through each allocation to pull out the device information and build the
 			// mount information
 			for i := 0; i < nnfNodeStorage.Spec.Count; i++ {
@@ -899,6 +900,28 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 // manageClientMounts creates or updates the ClientMount resources based on the information in the storageMapping map.
 func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
+
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
+		return dwsv1alpha2.NewResourceError("invalid StorageReference kind %s", access.Spec.StorageReference.Kind).WithFatal()
+	}
+
+	nnfStorage := &nnfv1alpha1.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      access.Spec.StorageReference.Name,
+			Namespace: access.Spec.StorageReference.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
+		return dwsv1alpha2.NewResourceError("could not get NnfStorage %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err).WithMajor()
+	}
+
+	// The targetIndex is the directive index of the NnfStorage. This is needed in clientmountd because
+	// some blockdevice/filesystem names (e.g., lvm volume group) are generated with the directive index.
+	// The directive index of the NnfAccess/ClientMount might be different from the NnfStorage during
+	// data movement mounts, persistent storage mounts, and user container mounts.
+	targetIndex := getDirectiveIndexLabel(nnfStorage)
+
 	g := new(errgroup.Group)
 
 	for clientName, storageList := range storageMapping {
@@ -917,6 +940,7 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 				func() error {
 					dwsv1alpha2.InheritParentLabels(clientMount, access)
 					dwsv1alpha2.AddOwnerLabels(clientMount, access)
+					setTargetDirectiveIndexLabel(access, targetIndex)
 
 					clientMount.Spec.Node = clientName
 					clientMount.Spec.DesiredState = dwsv1alpha2.ClientMountState(access.Spec.DesiredState)
