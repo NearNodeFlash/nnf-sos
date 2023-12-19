@@ -97,7 +97,7 @@ func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, erro
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			if _, err := command.Run(fmt.Sprintf("lvremove --yes %s", args)); err != nil {
 				return false, fmt.Errorf("could not destroy logical volume %s: %w", lv.Name, err)
 			}
@@ -129,7 +129,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			if existingLV.Attrs[4] == 'a' {
 				return false, nil
 			}
@@ -148,7 +148,7 @@ func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, 
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			if existingLV.Attrs[4] != 'a' {
 				return false, nil
 			}
