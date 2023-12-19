@@ -73,7 +73,7 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			return false, nil
 		}
 	}

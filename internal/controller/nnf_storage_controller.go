@@ -487,15 +487,17 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 				nnfNodeStorage.Spec.GroupID = storage.Spec.GroupID
 				nnfNodeStorage.Spec.Count = node.Count
 				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
-				nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
-				nnfNodeStorage.Spec.LustreStorage.FileSystemName = allocationSet.FileSystemName
-				nnfNodeStorage.Spec.LustreStorage.BackFs = allocationSet.BackFs
-				nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
-				nnfNodeStorage.Spec.LustreStorage.MgsAddress = mgsAddress
+				if storage.Spec.FileSystemType == "lustre" {
+					nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
+					nnfNodeStorage.Spec.LustreStorage.FileSystemName = allocationSet.FileSystemName
+					nnfNodeStorage.Spec.LustreStorage.BackFs = allocationSet.BackFs
+					nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
+					nnfNodeStorage.Spec.LustreStorage.MgsAddress = mgsAddress
 
-				// If this isn't the first allocation, then change MGTMDT to MDT so that we only get a single MGT
-				if allocationSet.TargetType == "mgtmdt" && startIndex != 0 {
-					nnfNodeStorage.Spec.LustreStorage.TargetType = "mdt"
+					// If this isn't the first allocation, then change MGTMDT to MDT so that we only get a single MGT
+					if allocationSet.TargetType == "mgtmdt" && startIndex != 0 {
+						nnfNodeStorage.Spec.LustreStorage.TargetType = "mdt"
+					}
 				}
 
 				return nil
