@@ -314,7 +314,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, nil
 	}
 
-	output, err := command.Run("lctl list_nids")
+	output, err := command.Run("lctl list_nids", log)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("Could not find local LNid: %w", err)
 	}

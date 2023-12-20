@@ -33,7 +33,7 @@ import (
 
 var log logr.Logger
 
-func RunWithTimeout(args string, timeout int) (string, error) {
+func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
 
 	ctx := context.Background()
 	if timeout > 0 {
@@ -48,8 +48,7 @@ func RunWithTimeout(args string, timeout int) (string, error) {
 	shellCmd.Stdout = &stdout
 	shellCmd.Stderr = &stderr
 
-	log.Info("Run", "command", args)
-
+	log.V(1).Info("Command Run", "command", args)
 	err := shellCmd.Run()
 	if err != nil {
 		return stdout.String(), fmt.Errorf("command: %s - stderr: %s - stdout: %s - error: %w", args, stderr.String(), stdout.String(), err)
@@ -59,7 +58,7 @@ func RunWithTimeout(args string, timeout int) (string, error) {
 	return stdout.String(), nil
 }
 
-func Run(args string) (string, error) {
+func Run(args string, log logr.Logger) (string, error) {
 	timeoutString, found := os.LookupEnv("NNF_COMMAND_TIMEOUT_SECONDS")
 	if found {
 		timeout, err := strconv.Atoi(timeoutString)
@@ -67,8 +66,8 @@ func Run(args string) (string, error) {
 			return "", err
 		}
 
-		return RunWithTimeout(args, timeout)
+		return RunWithTimeout(args, timeout, log)
 	}
 
-	return RunWithTimeout(args, 0)
+	return RunWithTimeout(args, 0, log)
 }

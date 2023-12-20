@@ -64,7 +64,7 @@ func (z *Zpool) parseArgs(args string) string {
 }
 
 func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
-	output, err := command.Run("zpool list -H")
+	output, err := command.Run("zpool list -H", z.Log)
 	if err != nil {
 		if err != nil {
 			return false, fmt.Errorf("could not list zpools")
@@ -82,7 +82,7 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 		}
 	}
 
-	if _, err := command.Run(fmt.Sprintf("zpool create %s", z.parseArgs(z.CommandArgs.Create))); err != nil {
+	if _, err := command.Run(fmt.Sprintf("zpool create %s", z.parseArgs(z.CommandArgs.Create)), z.Log); err != nil {
 		if err != nil {
 			return false, fmt.Errorf("could not create file system: %w", err)
 		}
@@ -92,7 +92,10 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 }
 
 func (z *Zpool) Destroy(ctx context.Context) (bool, error) {
-	_, _ = command.Run(fmt.Sprintf("zpool destroy %s", z.Name))
+	_, err := command.Run(fmt.Sprintf("zpool destroy %s", z.Name), z.Log)
+	if err != nil {
+		return false, fmt.Errorf("could not destroy zpool %s", z.Name)
+	}
 
 	return false, nil
 }
@@ -111,7 +114,7 @@ func (z *Zpool) GetDevice() string {
 }
 
 func (z *Zpool) CheckFormatted() bool {
-	output, err := command.Run(fmt.Sprintf("zfs get -H lustre:fsname %s", z.GetDevice()))
+	output, err := command.Run(fmt.Sprintf("zfs get -H lustre:fsname %s", z.GetDevice()), z.Log)
 	if err != nil {
 		return false
 	}

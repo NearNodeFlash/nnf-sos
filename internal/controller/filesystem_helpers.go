@@ -192,7 +192,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	for _, device := range devices {
-		pv := lvm.NewPhysicalVolume(ctx, device)
+		pv := lvm.NewPhysicalVolume(ctx, device, log)
 		lvmDesc.PhysicalVolumes = append(lvmDesc.PhysicalVolumes, pv)
 	}
 
@@ -207,8 +207,8 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	lvmDesc.Log = log
-	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes)
-	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup)
+	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes, log)
+	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, log)
 
 	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
 	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
@@ -257,7 +257,7 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.MountTarget = "directory"
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
-	fs.CommandArgs.Mkfs = cmdLines.Mkfs
+	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
 	fs.CommandArgs.Vars = map[string]string{
 		"$CLUSTER_NAME": nnfNodeStorage.Namespace,
 		"$LOCK_SPACE":   fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5]),

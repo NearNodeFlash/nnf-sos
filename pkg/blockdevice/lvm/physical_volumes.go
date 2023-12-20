@@ -25,15 +25,19 @@ import (
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/NearNodeFlash/nnf-sos/pkg/var_handler"
+	"github.com/go-logr/logr"
 )
 
 type PhysicalVolume struct {
 	Device string
+
+	Log logr.Logger
 }
 
-func NewPhysicalVolume(ctx context.Context, device string) *PhysicalVolume {
+func NewPhysicalVolume(ctx context.Context, device string, log logr.Logger) *PhysicalVolume {
 	return &PhysicalVolume{
 		Device: device,
+		Log:    log,
 	}
 }
 
@@ -53,7 +57,7 @@ func (pv *PhysicalVolume) Create(ctx context.Context, rawArgs string) (bool, err
 		return false, err
 	}
 
-	existingPVs, err := pvsListVolumes(ctx)
+	existingPVs, err := pvsListVolumes(ctx, pv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -65,7 +69,7 @@ func (pv *PhysicalVolume) Create(ctx context.Context, rawArgs string) (bool, err
 	}
 
 	// No existing LVM PV found. Create one
-	if _, err := command.Run(fmt.Sprintf("pvcreate %s", args)); err != nil {
+	if _, err := command.Run(fmt.Sprintf("pvcreate %s", args), pv.Log); err != nil {
 		if err != nil {
 			return false, fmt.Errorf("could not create LVM physical volume: %w", err)
 		}
@@ -80,7 +84,7 @@ func (pv *PhysicalVolume) Remove(ctx context.Context, rawArgs string) (bool, err
 		return false, err
 	}
 
-	existingPVs, err := pvsListVolumes(ctx)
+	existingPVs, err := pvsListVolumes(ctx, pv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -88,7 +92,7 @@ func (pv *PhysicalVolume) Remove(ctx context.Context, rawArgs string) (bool, err
 	for _, existingPV := range existingPVs {
 		if existingPV.Name == pv.Device {
 			// LVM PV found. Delete it
-			if _, err := command.Run(fmt.Sprintf("pvremove --yes %s", args)); err != nil {
+			if _, err := command.Run(fmt.Sprintf("pvremove --yes %s", args), pv.Log); err != nil {
 				if err != nil {
 					return false, fmt.Errorf("could not destroy LVM physical volume: %w", err)
 				}

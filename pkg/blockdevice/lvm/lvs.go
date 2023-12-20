@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/go-logr/logr"
 )
 
 type lvsOutput struct {
@@ -42,8 +43,8 @@ type lvsLogicalVolume struct {
 	Size   string `json:"lv_size"`
 }
 
-func lvsListVolumes(ctx context.Context) ([]lvsLogicalVolume, error) {
-	output, err := command.Run("lvs --reportformat json")
+func lvsListVolumes(ctx context.Context, log logr.Logger) ([]lvsLogicalVolume, error) {
+	output, err := command.Run("lvs --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list logical volumes: %w", err)
 	}

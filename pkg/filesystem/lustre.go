@@ -86,7 +86,7 @@ func (l *LustreFileSystem) Create(ctx context.Context, complete bool) (bool, err
 		return false, nil
 	}
 
-	if _, err := command.Run(fmt.Sprintf("mkfs -t lustre %s", l.parseArgs(l.CommandArgs.Mkfs))); err != nil {
+	if _, err := command.Run(fmt.Sprintf("mkfs -t lustre %s", l.parseArgs(l.CommandArgs.Mkfs)), l.Log); err != nil {
 		if err != nil {
 			return false, fmt.Errorf("could not create file system: %w", err)
 		}
@@ -136,7 +136,7 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 		mountCmd = mountCmd + " -o " + l.parseArgs(l.CommandArgs.MountTarget)
 	}
 
-	if _, err := command.Run(mountCmd); err != nil {
+	if _, err := command.Run(mountCmd, l.Log); err != nil {
 		if _, err := l.BlockDevice.Deactivate(ctx); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
 		}
@@ -165,7 +165,7 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path)); err != nil {
+		if _, err := command.Run(fmt.Sprintf("umount %s", path), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 
@@ -224,7 +224,7 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, options strin
 		mountCmd = mountCmd + " -o " + l.parseArgs(options)
 	}
 
-	if _, err := command.Run(mountCmd); err != nil {
+	if _, err := command.Run(mountCmd, l.Log); err != nil {
 		return false, fmt.Errorf("could not mount file system %s: %w", path, err)
 	}
 
@@ -249,7 +249,7 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path)); err != nil {
+		if _, err := command.Run(fmt.Sprintf("umount %s", path), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 

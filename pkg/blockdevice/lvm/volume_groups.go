@@ -26,23 +26,27 @@ import (
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/NearNodeFlash/nnf-sos/pkg/var_handler"
+	"github.com/go-logr/logr"
 )
 
 type VolumeGroup struct {
 	Name            string
 	PhysicalVolumes []*PhysicalVolume
 	Shared          bool
+
+	Log logr.Logger
 }
 
-func NewVolumeGroup(ctx context.Context, name string, pvs []*PhysicalVolume) *VolumeGroup {
+func NewVolumeGroup(ctx context.Context, name string, pvs []*PhysicalVolume, log logr.Logger) *VolumeGroup {
 	return &VolumeGroup{
 		Name:            name,
 		PhysicalVolumes: pvs,
+		Log:             log,
 	}
 }
 
 func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
-	existingVGs, err := vgsListVolumes(ctx)
+	existingVGs, err := vgsListVolumes(ctx, vg.Log)
 	if err != nil {
 		return false, err
 	}
@@ -82,7 +86,7 @@ func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error)
 		return false, err
 	}
 
-	existingVGs, err := vgsListVolumes(ctx)
+	existingVGs, err := vgsListVolumes(ctx, vg.Log)
 	if err != nil {
 		return false, err
 	}
@@ -93,7 +97,7 @@ func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error)
 		}
 	}
 
-	if _, err := command.Run(fmt.Sprintf("vgcreate %s", args)); err != nil {
+	if _, err := command.Run(fmt.Sprintf("vgcreate %s", args), vg.Log); err != nil {
 		return false, fmt.Errorf("could not create volume group: %w", err)
 	}
 
@@ -106,7 +110,7 @@ func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error)
 		return false, err
 	}
 
-	if _, err := command.Run(fmt.Sprintf("vgchange %s", args)); err != nil {
+	if _, err := command.Run(fmt.Sprintf("vgchange %s", args), vg.Log); err != nil {
 		return false, err
 	}
 
@@ -127,7 +131,7 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 		return false, nil
 	}
 
-	lvs, err := lvsListVolumes(ctx)
+	lvs, err := lvsListVolumes(ctx, vg.Log)
 	for _, lv := range lvs {
 		if lv.VGName == vg.Name && lv.Attrs[4] == 'a' {
 			return false, nil
@@ -143,14 +147,14 @@ func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error)
 		return false, err
 	}
 
-	existingVGs, err := vgsListVolumes(ctx)
+	existingVGs, err := vgsListVolumes(ctx, vg.Log)
 	if err != nil {
 		return false, err
 	}
 
 	for _, existingVG := range existingVGs {
 		if existingVG.Name == vg.Name {
-			if _, err := command.Run(fmt.Sprintf("vgremove --yes %s", args)); err != nil {
+			if _, err := command.Run(fmt.Sprintf("vgremove --yes %s", args), vg.Log); err != nil {
 				return false, fmt.Errorf("could not destroy volume group: %w", err)
 			}
 

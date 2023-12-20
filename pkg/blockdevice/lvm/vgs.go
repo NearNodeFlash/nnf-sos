@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/go-logr/logr"
 )
 
 type vgsOutput struct {
@@ -43,8 +44,8 @@ type vgsVolumeGroup struct {
 	Size    string `json:"vg_size"`
 }
 
-func vgsListVolumes(ctx context.Context) ([]vgsVolumeGroup, error) {
-	output, err := command.Run("vgs --reportformat json")
+func vgsListVolumes(ctx context.Context, log logr.Logger) ([]vgsVolumeGroup, error) {
+	output, err := command.Run("vgs --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list volume groups: %w", err)
 	}

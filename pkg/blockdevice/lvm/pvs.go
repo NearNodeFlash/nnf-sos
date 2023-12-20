@@ -25,6 +25,7 @@ import (
 	"fmt"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/go-logr/logr"
 )
 
 type pvsOutput struct {
@@ -42,8 +43,8 @@ type pvsPhysicalVolume struct {
 	Size   string `json:"pv_size"`
 }
 
-func pvsListVolumes(ctx context.Context) ([]pvsPhysicalVolume, error) {
-	output, err := command.Run("pvs --reportformat json")
+func pvsListVolumes(ctx context.Context, log logr.Logger) ([]pvsPhysicalVolume, error) {
+	output, err := command.Run("pvs --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list physical volumes: %w", err)
 	}

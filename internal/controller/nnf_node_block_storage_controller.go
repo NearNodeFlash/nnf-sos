@@ -365,7 +365,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				}
 			}
 
-			foundDevices, err := nvme.NvmeListDevices()
+			foundDevices, err := nvme.NvmeListDevices(log)
 			if err != nil {
 				return nil, err
 			}
@@ -383,7 +383,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 				path := findMatchingNvmeDevice()
 				if path == "" {
-					err := nvme.NvmeRescanDevices()
+					err := nvme.NvmeRescanDevices(log)
 					if err != nil {
 						return nil, dwsv1alpha2.NewResourceError("could not rescan devices after failing to find device path for %v", allocatedDevice).WithError(err).WithMajor()
 					}

@@ -26,17 +26,22 @@ import (
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/NearNodeFlash/nnf-sos/pkg/var_handler"
+
+	"github.com/go-logr/logr"
 )
 
 type LogicalVolume struct {
 	Name        string
 	VolumeGroup *VolumeGroup
+
+	Log logr.Logger
 }
 
-func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup) *LogicalVolume {
+func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup, log logr.Logger) *LogicalVolume {
 	return &LogicalVolume{
 		Name:        name,
 		VolumeGroup: vg,
+		Log:         log,
 	}
 }
 
@@ -67,7 +72,7 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	existingLVs, err := lvsListVolumes(ctx)
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -78,7 +83,7 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 		}
 	}
 
-	if _, err := command.Run(fmt.Sprintf("lvcreate --yes %s", args)); err != nil {
+	if _, err := command.Run(fmt.Sprintf("lvcreate --yes %s", args), lv.Log); err != nil {
 		return false, fmt.Errorf("could not create logical volume %s: %w", lv.Name, err)
 	}
 
@@ -91,14 +96,14 @@ func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	existingLVs, err := lvsListVolumes(ctx)
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
 
 	for _, existingLV := range existingLVs {
 		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
-			if _, err := command.Run(fmt.Sprintf("lvremove --yes %s", args)); err != nil {
+			if _, err := command.Run(fmt.Sprintf("lvremove --yes %s", args), lv.Log); err != nil {
 				return false, fmt.Errorf("could not destroy logical volume %s: %w", lv.Name, err)
 			}
 
@@ -115,7 +120,7 @@ func (lv *LogicalVolume) Change(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	if _, err := command.Run(fmt.Sprintf("lvchange %s", args)); err != nil {
+	if _, err := command.Run(fmt.Sprintf("lvchange %s", args), lv.Log); err != nil {
 		return false, fmt.Errorf("could not change logical volume %s: %w", lv.Name, err)
 	}
 
@@ -123,7 +128,7 @@ func (lv *LogicalVolume) Change(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, error) {
-	existingLVs, err := lvsListVolumes(ctx)
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -142,7 +147,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 }
 
 func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, error) {
-	existingLVs, err := lvsListVolumes(ctx)
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}

@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/go-logr/logr"
 )
 
 type NvmeDevice struct {
@@ -53,10 +54,10 @@ type nvmeListVerboseDevices struct {
 	Devices []nvmeListVerboseDevice `json:"Devices"`
 }
 
-func NvmeListDevices() ([]NvmeDevice, error) {
+func NvmeListDevices(log logr.Logger) ([]NvmeDevice, error) {
 	devices := []NvmeDevice{}
 
-	data, err := command.Run("nvme list -v --output-format=json")
+	data, err := command.Run("nvme list -v --output-format=json", log)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,7 @@ func NvmeListDevices() ([]NvmeDevice, error) {
 	return devices, nil
 }
 
-func NvmeRescanDevices() error {
+func NvmeRescanDevices(log logr.Logger) error {
 	devices, err := ioutil.ReadDir("/dev/")
 	if err != nil {
 		return fmt.Errorf("could not read /dev: %w", err)
@@ -91,7 +92,7 @@ func NvmeRescanDevices() error {
 		}
 	}
 
-	if _, err := command.Run("nvme ns-rescan " + strings.Join(nvmeDevices, " ")); err != nil {
+	if _, err := command.Run("nvme ns-rescan "+strings.Join(nvmeDevices, " "), log); err != nil {
 		return fmt.Errorf("could not rescan NVMe devices: %w", err)
 	}
 

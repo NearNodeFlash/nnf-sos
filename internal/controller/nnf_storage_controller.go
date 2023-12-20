@@ -675,6 +675,10 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		nnfStorage.Status.SetResourceError(clientMount.Status.Error)
 	}
 
+	if len(clientMount.Status.Mounts) == 0 {
+		return &ctrl.Result{}, nil
+	}
+
 	switch clientMount.Status.Mounts[0].State {
 	case dwsv1alpha2.ClientMountStateMounted:
 		if clientMount.Status.Mounts[0].Ready == false {

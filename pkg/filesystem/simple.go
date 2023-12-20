@@ -90,7 +90,7 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 		return false, nil
 	}
 
-	if _, err := command.Run(fmt.Sprintf("mkfs -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mkfs))); err != nil {
+	if _, err := command.Run(fmt.Sprintf("mkfs -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mkfs)), f.Log); err != nil {
 		if err != nil {
 			return false, fmt.Errorf("could not create file system: %w", err)
 		}
@@ -171,7 +171,7 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, options strin
 		mountCmd = mountCmd + " -o " + f.parseArgs(options)
 	}
 
-	if _, err := command.Run(mountCmd); err != nil {
+	if _, err := command.Run(mountCmd, f.Log); err != nil {
 		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
 		}
@@ -200,7 +200,7 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path)); err != nil {
+		if _, err := command.Run(fmt.Sprintf("umount %s", path), f.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 
