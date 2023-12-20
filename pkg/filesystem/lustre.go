@@ -82,7 +82,11 @@ func (l *LustreFileSystem) Create(ctx context.Context, complete bool) (bool, err
 	}
 
 	// If the device is already formatted, don't run the mkfs again
-	if l.BlockDevice.CheckFormatted() {
+	formatted, err := l.BlockDevice.CheckFormatted()
+	if err != nil {
+		return false, fmt.Errorf("could not determine if device is formatted: %w", err)
+	}
+	if formatted {
 		return false, nil
 	}
 
@@ -130,12 +134,11 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 		return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
 	}
 
-	// Run the mount command
-	mountCmd := fmt.Sprintf("mount -t lustre %s %s", l.BlockDevice.GetDevice(), path)
-	if l.CommandArgs.MountTarget != "" {
-		mountCmd = mountCmd + " -o " + l.parseArgs(l.CommandArgs.MountTarget)
-	}
+	// Build the mount command from the args provided
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.MountTarget))
 
+	// Run the mount command
 	if _, err := command.Run(mountCmd, l.Log); err != nil {
 		if _, err := l.BlockDevice.Deactivate(ctx); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
@@ -188,7 +191,7 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (l *LustreFileSystem) Mount(ctx context.Context, path string, options string, complete bool) (bool, error) {
+func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -215,15 +218,11 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, options strin
 		return false, fmt.Errorf("could not create mount directory %s: %w", path, err)
 	}
 
-	// Run the mount command
-	if len(options) == 0 {
-		options = l.CommandArgs.Mount
-	}
-	mountCmd := fmt.Sprintf("mount -t lustre %s:/%s %s", l.MgsAddress, l.Name, path)
-	if len(options) > 0 {
-		mountCmd = mountCmd + " -o " + l.parseArgs(options)
-	}
+	// Build the mount command from the args provided
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.Mount))
 
+	// Run the mount command
 	if _, err := command.Run(mountCmd, l.Log); err != nil {
 		return false, fmt.Errorf("could not mount file system %s: %w", path, err)
 	}

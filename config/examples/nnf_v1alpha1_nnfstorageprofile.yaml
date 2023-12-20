@@ -10,15 +10,19 @@ data:
     mgtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --mgs --backfstype=$BACKFS $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     mdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     mgtMdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     ostCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     ostOptions:
       scale: 5
       colocateComputes: true
@@ -28,6 +32,8 @@ data:
       count: 1
     mgtOptions:
       count: 1
+    MountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+    MountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
   gfs2Storage:
     commandlines:
       pvCreate: $DEVICE
@@ -43,6 +49,8 @@ data:
         deactivate: --activate n $VG_NAME/$LV_NAME
       lvRemove: $VG_NAME
       mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
+      mountRabbit: $DEVICE $MOUNT_PATH
+      mountCompute: $DEVICE $MOUNT_PATH
   xfsStorage:
     commandlines:
       pvCreate: $DEVICE
@@ -58,6 +66,8 @@ data:
         deactivate: --activate n $VG_NAME/$LV_NAME
       lvRemove: $VG_NAME
       mkfs: $DEVICE
+      mountRabbit: $DEVICE $MOUNT_PATH
+      mountCompute: $DEVICE $MOUNT_PATH
   rawStorage:
     commandlines:
       pvCreate: $DEVICE

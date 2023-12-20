@@ -38,5 +38,5 @@ type BlockDevice interface {
 	GetDevice() string
 
 	// Check if the block device has already been formatted for a file system
-	CheckFormatted() bool
+	CheckFormatted() (bool, error)
 }

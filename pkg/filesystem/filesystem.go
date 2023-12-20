@@ -35,7 +35,7 @@ type FileSystem interface {
 	Deactivate(ctx context.Context) (bool, error)
 
 	// Mount the file system
-	Mount(ctx context.Context, path string, options string, complete bool) (bool, error)
+	Mount(ctx context.Context, path string, complete bool) (bool, error)
 
 	// Unmount the file system
 	Unmount(ctx context.Context, path string) (bool, error)

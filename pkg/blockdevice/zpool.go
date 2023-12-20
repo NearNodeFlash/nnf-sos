@@ -113,15 +113,15 @@ func (z *Zpool) GetDevice() string {
 	return fmt.Sprintf("%s/%s", z.Name, z.DataSet)
 }
 
-func (z *Zpool) CheckFormatted() bool {
+func (z *Zpool) CheckFormatted() (bool, error) {
 	output, err := command.Run(fmt.Sprintf("zfs get -H lustre:fsname %s", z.GetDevice()), z.Log)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("could not run zfs to check for zpool device %w", err)
 	}
 
 	if len(output) == 0 {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }

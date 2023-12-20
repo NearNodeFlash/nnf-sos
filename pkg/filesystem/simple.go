@@ -82,7 +82,15 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 	}
 
 	// If the device is already formatted, don't run the mkfs again
-	if f.BlockDevice.CheckFormatted() {
+	formatted, err := f.BlockDevice.CheckFormatted()
+	if err != nil {
+		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
+			return false, fmt.Errorf("could not deactivate block device after format shows completed: %w", err)
+		}
+
+		return false, fmt.Errorf("could not determine if device is formatted: %w", err)
+	}
+	if formatted {
 		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after format shows completed: %w", err)
 		}
@@ -115,7 +123,7 @@ func (f *SimpleFileSystem) Deactivate(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (f *SimpleFileSystem) Mount(ctx context.Context, path string, options string, complete bool) (bool, error) {
+func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -162,14 +170,9 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, options strin
 		return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
 	}
 
-	// Run the mount command
-	if len(options) == 0 {
-		options = f.CommandArgs.Mount
-	}
-	mountCmd := fmt.Sprintf("mount -t %s %s %s", f.Type, f.BlockDevice.GetDevice(), path)
-	if len(options) > 0 {
-		mountCmd = mountCmd + " -o " + f.parseArgs(options)
-	}
+	// Build the mount command from the args provided
+	f.CommandArgs.Vars["$MOUNT_PATH"] = path
+	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
 	if _, err := command.Run(mountCmd, f.Log); err != nil {
 		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
@@ -232,7 +235,7 @@ func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, gr
 		return false, nil
 	}
 
-	if _, err := f.Mount(ctx, f.TempDir, "", false); err != nil {
+	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
 		return false, fmt.Errorf("could not mount temp dir '%s' to set permissions: %w", f.TempDir, err)
 	}
 

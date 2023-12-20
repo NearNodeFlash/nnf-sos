@@ -66,7 +66,7 @@ func (m *MockFileSystem) Deactivate(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (m *MockFileSystem) Mount(ctx context.Context, path string, options string, complete bool) (bool, error) {
+func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete == true {
 		return false, nil
 	}

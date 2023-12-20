@@ -190,7 +190,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	}
 
 	if shouldMount {
-		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMountInfo.Options, clientMount.Status.Mounts[index].Ready)
+		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
 		}

@@ -64,6 +64,6 @@ func (m *MockBlockDevice) GetDevice() string {
 	return "/dev/mock"
 }
 
-func (m *MockBlockDevice) CheckFormatted() bool {
-	return false
+func (m *MockBlockDevice) CheckFormatted() (bool, error) {
+	return false, nil
 }

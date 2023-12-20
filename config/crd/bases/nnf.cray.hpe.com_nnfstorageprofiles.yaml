@@ -154,6 +154,12 @@ spec:
                           argument to specify persistent mount options for the lustre
                           targets.
                         type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
                           minus the "zpool create". This is where you may specify
@@ -182,9 +188,7 @@ spec:
                           use the --mountfsoptions argument to mkfs.lustre instead.
                           Use one array element per option. Do not prepend the options
                           with "-o".
-                        items:
-                          type: string
-                        type: array
+                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -204,6 +208,12 @@ spec:
                           argument to specify persistent mount options for the lustre
                           targets.
                         type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
                           minus the "zpool create". This is where you may specify
@@ -221,6 +231,12 @@ spec:
                           the zfs create options.  See zfsprops(7). Use the --mountfsoptions
                           argument to specify persistent mount options for the lustre
                           targets.
+                        type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
                         type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
@@ -250,9 +266,7 @@ spec:
                           use the --mountfsoptions argument to mkfs.lustre instead.
                           Use one array element per option. Do not prepend the options
                           with "-o".
-                        items:
-                          type: string
-                        type: array
+                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -283,9 +297,7 @@ spec:
                           use the --mountfsoptions argument to mkfs.lustre instead.
                           Use one array element per option. Do not prepend the options
                           with "-o".
-                        items:
-                          type: string
-                        type: array
+                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -295,6 +307,14 @@ spec:
                     required:
                     - colocateComputes
                     type: object
+                  mountCompute:
+                    description: MountCompute specifies mount options for mounting
+                      on the Compute.
+                    type: string
+                  mountRabbit:
+                    description: MountRabbit specifies mount options for mounting
+                      on the Rabbit.
+                    type: string
                   ostCommandlines:
                     description: OstCmdLines contains commands to create an OST target.
                     properties:
@@ -304,6 +324,12 @@ spec:
                           the zfs create options.  See zfsprops(7). Use the --mountfsoptions
                           argument to specify persistent mount options for the lustre
                           targets.
+                        type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
                         type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
@@ -333,9 +359,7 @@ spec:
                           use the --mountfsoptions argument to mkfs.lustre instead.
                           Use one array element per option. Do not prepend the options
                           with "-o".
-                        items:
-                          type: string
-                        type: array
+                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create

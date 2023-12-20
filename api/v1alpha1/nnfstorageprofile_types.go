@@ -35,6 +35,11 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
 	// Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
 	Mkfs string `json:"mkfs,omitempty"`
+
+	// MountTarget specifies the mount command line for the lustre target.
+	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
+	// argument to mkfs.lustre instead.
+	MountTarget string `json:"mountTarget,omitempty"`
 }
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
@@ -42,7 +47,7 @@ type NnfStorageProfileLustreMiscOptions struct {
 	// MountTarget specifies mount options for the mount-utils library to mount a lustre target on the Rabbit.
 	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions argument to mkfs.lustre instead.
 	// Use one array element per option. Do not prepend the options with "-o".
-	MountTarget []string `json:"mountTarget,omitempty"`
+	MountTarget string `json:"mountTarget,omitempty"`
 
 	// ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
 	// to the compute nodes in a workflow
@@ -115,6 +120,12 @@ type NnfStorageProfileLustreData struct {
 
 	// OstOptions contains options to use for libraries used for an OST target.
 	OstOptions NnfStorageProfileLustreMiscOptions `json:"ostOptions,omitempty"`
+
+	// MountRabbit specifies mount options for mounting on the Rabbit.
+	MountRabbit string `json:"mountRabbit,omitempty"`
+
+	// MountCompute specifies mount options for mounting on the Compute.
+	MountCompute string `json:"mountCompute,omitempty"`
 }
 
 // NnfStorageProfileCmdLines defines commandlines to use for mkfs, and other utilities.

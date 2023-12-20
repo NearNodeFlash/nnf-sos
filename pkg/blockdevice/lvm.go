@@ -213,15 +213,15 @@ func (l *Lvm) GetDevice() string {
 	return fmt.Sprintf("/dev/mapper/%s-%s", strings.Replace(l.VolumeGroup.Name, "-", "--", -1), strings.Replace(l.LogicalVolume.Name, "-", "--", -1))
 }
 
-func (l *Lvm) CheckFormatted() bool {
+func (l *Lvm) CheckFormatted() (bool, error) {
 	output, err := command.Run(fmt.Sprintf("wipefs --noheadings --output type %s", l.GetDevice()), l.Log)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("could not run wipefs to determine if device is formatted: %w", err)
 	}
 
 	if len(output) == 0 {
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
