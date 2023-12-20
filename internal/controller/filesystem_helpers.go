@@ -153,8 +153,9 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
+	// This is for the fake NnfNodeStorage case. We don't need to create the zpool BlockDevice
 	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name() {
-		return nil, nil
+		return newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	}
 
 	nnfNodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{
