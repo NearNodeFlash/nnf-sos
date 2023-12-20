@@ -181,14 +181,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -259,14 +251,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -290,14 +274,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -308,12 +284,12 @@ spec:
                     - colocateComputes
                     type: object
                   mountCompute:
-                    description: MountCompute specifies mount options for mounting
-                      on the Compute.
+                    description: MountCompute specifies mount options for making the
+                      Lustre client mount on the Compute.
                     type: string
                   mountRabbit:
-                    description: MountRabbit specifies mount options for mounting
-                      on the Rabbit.
+                    description: MountRabbit specifies mount options for making the
+                      Lustre client mount on the Rabbit.
                     type: string
                   ostCommandlines:
                     description: OstCmdLines contains commands to create an OST target.
@@ -352,14 +328,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        type: string
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create

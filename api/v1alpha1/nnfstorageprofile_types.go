@@ -24,7 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities.
+// NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities
+// for Lustre allocations.
 type NnfStorageProfileLustreCmdLines struct {
 	// ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
 	// This is where you may specify zpool create options, and the virtual device (vdev) such as
@@ -44,11 +45,6 @@ type NnfStorageProfileLustreCmdLines struct {
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
 type NnfStorageProfileLustreMiscOptions struct {
-	// MountTarget specifies mount options for the mount-utils library to mount a lustre target on the Rabbit.
-	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions argument to mkfs.lustre instead.
-	// Use one array element per option. Do not prepend the options with "-o".
-	MountTarget string `json:"mountTarget,omitempty"`
-
 	// ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
 	// to the compute nodes in a workflow
 	// +kubebuilder:default:=false
@@ -121,14 +117,15 @@ type NnfStorageProfileLustreData struct {
 	// OstOptions contains options to use for libraries used for an OST target.
 	OstOptions NnfStorageProfileLustreMiscOptions `json:"ostOptions,omitempty"`
 
-	// MountRabbit specifies mount options for mounting on the Rabbit.
+	// MountRabbit specifies mount options for making the Lustre client mount on the Rabbit.
 	MountRabbit string `json:"mountRabbit,omitempty"`
 
-	// MountCompute specifies mount options for mounting on the Compute.
+	// MountCompute specifies mount options for making the Lustre client mount on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
 }
 
-// NnfStorageProfileCmdLines defines commandlines to use for mkfs, and other utilities.
+// NnfStorageProfileCmdLines defines commandlines to use for mkfs, and other utilities for storage
+// allocations that use LVM and a simple file system type (e.g., gfs2)
 type NnfStorageProfileCmdLines struct {
 	// Mkfs specifies the mkfs commandline, minus the "mkfs".
 	Mkfs string `json:"mkfs,omitempty"`
