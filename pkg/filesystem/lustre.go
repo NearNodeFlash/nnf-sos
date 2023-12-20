@@ -99,7 +99,6 @@ func (l *LustreFileSystem) Create(ctx context.Context, complete bool) (bool, err
 }
 
 func (l *LustreFileSystem) Destroy(ctx context.Context) (bool, error) {
-
 	return false, nil
 }
 
@@ -135,6 +134,9 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 	}
 
 	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
 	l.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.MountTarget))
 
@@ -219,6 +221,9 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 	}
 
 	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
 	l.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.Mount))
 
