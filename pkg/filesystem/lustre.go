@@ -135,7 +135,7 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 
 	// Build the mount command from the args provided
 	if l.CommandArgs.Vars == nil {
-		l.CommandArgs.Vars = make(map[string]string)
+		l.CommandArgs.Vars = map[string]string{}
 	}
 	l.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.MountTarget))

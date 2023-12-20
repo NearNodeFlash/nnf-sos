@@ -116,11 +116,16 @@ func (z *Zpool) GetDevice() string {
 func (z *Zpool) CheckFormatted() (bool, error) {
 	output, err := command.Run(fmt.Sprintf("zfs get -H lustre:fsname %s", z.GetDevice()), z.Log)
 	if err != nil {
+		// If the error is because the data set doesn't exist yet, then that means it's not formatted
+		if strings.Contains(err.Error(), "dataset does not exist") {
+			return false, nil
+		}
+
 		return false, fmt.Errorf("could not run zfs to check for zpool device %w", err)
 	}
 
 	if len(output) == 0 {
-		return false, nil
+		return false, fmt.Errorf("zfs get returned no output")
 	}
 
 	return true, nil
