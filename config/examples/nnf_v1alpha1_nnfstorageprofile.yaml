@@ -32,8 +32,8 @@ data:
       count: 1
     mgtOptions:
       count: 1
-    MountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
-    MountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
+    mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+    mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
   gfs2Storage:
     commandlines:
       pvCreate: $DEVICE

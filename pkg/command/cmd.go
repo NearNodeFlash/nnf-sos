@@ -48,7 +48,7 @@ func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
 	shellCmd.Stdout = &stdout
 	shellCmd.Stderr = &stderr
 
-	log.V(1).Info("Command Run", "command", args)
+	log.Info("Command Run", "command", args)
 	err := shellCmd.Run()
 	if err != nil {
 		return stdout.String(), fmt.Errorf("command: %s - stderr: %s - stdout: %s - error: %w", args, stderr.String(), stdout.String(), err)
