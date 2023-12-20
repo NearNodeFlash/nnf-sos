@@ -171,6 +171,9 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 	}
 
 	// Build the mount command from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
 	f.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
