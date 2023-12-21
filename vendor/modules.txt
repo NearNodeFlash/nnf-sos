@@ -1,4 +1,4 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20231031201121-13a5a69a969e
+# github.com/DataWorkflowServices/dws v0.0.1-0.20231221163856-c438e3e7bc20
 ## explicit; go 1.19
 github.com/DataWorkflowServices/dws/api/v1alpha2
 github.com/DataWorkflowServices/dws/config/crd/bases
@@ -275,6 +275,9 @@ github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
+# github.com/takama/daemon v1.0.0
+## explicit; go 1.14
+github.com/takama/daemon
 # go.chromium.org/luci v0.0.0-20230227223707-c4460eb434d8
 ## explicit; go 1.19
 go.chromium.org/luci/common/runtime/goroutine
@@ -303,7 +306,9 @@ go.uber.org/zap/internal/pool
 go.uber.org/zap/zapcore
 # golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 ## explicit; go 1.18
+golang.org/x/exp/constraints
 golang.org/x/exp/maps
+golang.org/x/exp/slices
 # golang.org/x/net v0.13.0
 ## explicit; go 1.17
 golang.org/x/net/context
@@ -329,6 +334,9 @@ golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
+golang.org/x/sys/windows/svc
+golang.org/x/sys/windows/svc/mgr
 # golang.org/x/term v0.12.0
 ## explicit; go 1.17
 golang.org/x/term

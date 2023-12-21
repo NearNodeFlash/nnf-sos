@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -56,11 +57,39 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	var (
 		key                   types.NamespacedName
 		workflow              *dwsv1alpha2.Workflow
+		setup                 sync.Once
 		storageProfile        *nnfv1alpha1.NnfStorageProfile
+		nnfNode               *nnfv1alpha1.NnfNode
+		namespace             *corev1.Namespace
 		persistentStorageName string
 	)
 
 	BeforeEach(func() {
+		setup.Do(func() {
+			namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+				Name: "rabbit-node",
+			}}
+
+			Expect(k8sClient.Create(context.TODO(), namespace)).To(Succeed())
+
+			nnfNode = &nnfv1alpha1.NnfNode{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-nlc",
+					Namespace: "rabbit-node",
+				},
+				Spec: nnfv1alpha1.NnfNodeSpec{
+					State: nnfv1alpha1.ResourceEnable,
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNode), nnfNode)).To(Succeed())
+				nnfNode.Status.LNetNid = "1.2.3.4@tcp0"
+				return k8sClient.Update(context.TODO(), nnfNode)
+			}).Should(Succeed(), "set LNet Nid in NnfNode")
+		})
 		wfid := uuid.NewString()[0:8]
 		persistentStorageName = "persistent-" + uuid.NewString()[:8]
 
@@ -116,7 +145,6 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
-
 	})
 
 	getErroredDriverStatus := func(workflow *dwsv1alpha2.Workflow) *dwsv1alpha2.WorkflowDriverStatus {
@@ -506,7 +534,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal(buildMountPath(workflow, 0) + "/my-file.out"))
+				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, 0) + "/my-file.out"))
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
@@ -575,7 +603,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal(buildMountPath(workflow, 0) + "/my-persistent-file.out"))
+				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, 0) + "/my-persistent-file.out"))
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{

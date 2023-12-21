@@ -132,6 +132,9 @@ spec:
               health:
                 description: NnfResourceHealthType defines the health of an NNF resource.
                 type: string
+              lnetNid:
+                description: LNetNid is the LNet address for the NNF node
+                type: string
               servers:
                 items:
                   description: NnfServerStatus defines the observed status of servers

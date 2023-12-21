@@ -55,6 +55,9 @@ type NnfNodeStatus struct {
 	// Fenced is true when the NNF Node is fenced by the STONITH agent, and false otherwise.
 	Fenced bool `json:"fenced,omitempty"`
 
+	// LNetNid is the LNet address for the NNF node
+	LNetNid string `json:"lnetNid,omitempty"`
+
 	Capacity          int64 `json:"capacity,omitempty"`
 	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
 

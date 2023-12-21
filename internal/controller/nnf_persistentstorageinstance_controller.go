@@ -199,7 +199,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		var complete bool = true
 		// Status section should be usable now, check for Ready
 		for _, set := range nnfStorage.Status.AllocationSets {
-			if set.Status != "Ready" {
+			if set.Ready == false {
 				complete = false
 			}
 		}

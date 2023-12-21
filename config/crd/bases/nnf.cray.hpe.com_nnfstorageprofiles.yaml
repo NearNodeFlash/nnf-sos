@@ -47,6 +47,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -59,24 +72,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -88,24 +109,6 @@ spec:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgremove".
                         type: string
-                    type: object
-                  options:
-                    description: Options contains options for libraries.
-                    properties:
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
                     type: object
                 type: object
               lustreStorage:
@@ -151,6 +154,12 @@ spec:
                           argument to specify persistent mount options for the lustre
                           targets.
                         type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
                           minus the "zpool create". This is where you may specify
@@ -172,16 +181,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        items:
-                          type: string
-                        type: array
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -201,6 +200,12 @@ spec:
                           argument to specify persistent mount options for the lustre
                           targets.
                         type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
                           minus the "zpool create". This is where you may specify
@@ -218,6 +223,12 @@ spec:
                           the zfs create options.  See zfsprops(7). Use the --mountfsoptions
                           argument to specify persistent mount options for the lustre
                           targets.
+                        type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
                         type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
@@ -240,16 +251,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        items:
-                          type: string
-                        type: array
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -273,16 +274,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        items:
-                          type: string
-                        type: array
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -292,6 +283,14 @@ spec:
                     required:
                     - colocateComputes
                     type: object
+                  mountCompute:
+                    description: MountCompute specifies mount options for making the
+                      Lustre client mount on the Compute.
+                    type: string
+                  mountRabbit:
+                    description: MountRabbit specifies mount options for making the
+                      Lustre client mount on the Rabbit.
+                    type: string
                   ostCommandlines:
                     description: OstCmdLines contains commands to create an OST target.
                     properties:
@@ -301,6 +300,12 @@ spec:
                           the zfs create options.  See zfsprops(7). Use the --mountfsoptions
                           argument to specify persistent mount options for the lustre
                           targets.
+                        type: string
+                      mountTarget:
+                        description: MountTarget specifies the mount command line
+                          for the lustre target. For persistent mount options for
+                          lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
                         type: string
                       zpoolCreate:
                         description: ZpoolCreate specifies the zpool create commandline,
@@ -323,16 +328,6 @@ spec:
                         description: Count specifies how many Lustre targets to create
                         minimum: 1
                         type: integer
-                      mountTarget:
-                        description: MountTarget specifies mount options for the mount-utils
-                          library to mount a lustre target on the Rabbit. For persistent
-                          mount options for lustre targets, do not use this array;
-                          use the --mountfsoptions argument to mkfs.lustre instead.
-                          Use one array element per option. Do not prepend the options
-                          with "-o".
-                        items:
-                          type: string
-                        type: array
                       scale:
                         description: Scale provides a unitless value to determine
                           how many Lustre targets to create
@@ -360,6 +355,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -372,24 +380,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -410,6 +426,19 @@ spec:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
                     properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
                       lvCreate:
                         description: LvCreate specifies the lvcreate commandline,
                           minus the "lvcreate".
@@ -422,24 +451,32 @@ spec:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
                         type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
                         type: string
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
                         properties:
-                          activate:
-                            description: The vgchange commandline for activation,
-                              minus the "vgchange" command
-                            type: string
-                          deactivate:
-                            description: The vgchange commandline for deactivation,
-                              minus the "vgchange" command
-                            type: string
                           lockStart:
                             description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
                               the "vgchange" command
                             type: string
                         type: object
@@ -451,24 +488,6 @@ spec:
                         description: VgCreate specifies the vgcreate commandline,
                           minus the "vgremove".
                         type: string
-                    type: object
-                  options:
-                    description: Options contains options for libraries.
-                    properties:
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit. Use one array element per option.  Do not
-                          prepend the options with "-o".
-                        items:
-                          type: string
-                        type: array
                     type: object
                 type: object
             required:

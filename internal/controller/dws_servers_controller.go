@@ -194,10 +194,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		allocationSet := nnfStorage.Status.AllocationSets[storageIndex]
-
-		if allocationSet.Status != nnfv1alpha1.ResourceReady {
-			ready = false
-		}
+		ready = allocationSet.Ready
 
 		// Increment the actual and expected allocation counts from this allocationSet
 		actualAllocations += allocationSet.AllocationCount
@@ -231,32 +228,32 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 			matchLabels,
 		}
 
-		nnfNodeStorageList := &nnfv1alpha1.NnfNodeStorageList{}
-		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+		nnfNodeBlockStorageList := &nnfv1alpha1.NnfNodeBlockStorageList{}
+		if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
 			return ctrl.Result{}, err
 		}
 
-		if len(nnfNodeStorageList.Items) != len(nnfStorage.Spec.AllocationSets[storageIndex].Nodes) {
+		if len(nnfNodeBlockStorageList.Items) != len(nnfStorage.Spec.AllocationSets[storageIndex].Nodes) {
 			ready = false
 		}
 
 		capacityAllocatedMap := make(map[string]int64)
 
-		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+		for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
 			// There can be multiple allocations per Rabbit. Add them all up and present a
 			// single size for the servers resource
 			var allocationSize int64
-			for _, nnfNodeAllocation := range nnfNodeStorage.Status.Allocations {
+			for _, nnfNodeAllocation := range nnfNodeBlockStorage.Status.Allocations {
 				if nnfNodeAllocation.CapacityAllocated == 0 {
 					ready = false
 				}
 				allocationSize += nnfNodeAllocation.CapacityAllocated
 			}
 
-			if _, exists := capacityAllocatedMap[nnfNodeStorage.Namespace]; exists {
-				capacityAllocatedMap[nnfNodeStorage.Namespace] += allocationSize
+			if _, exists := capacityAllocatedMap[nnfNodeBlockStorage.Namespace]; exists {
+				capacityAllocatedMap[nnfNodeBlockStorage.Namespace] += allocationSize
 			} else {
-				capacityAllocatedMap[nnfNodeStorage.Namespace] = allocationSize
+				capacityAllocatedMap[nnfNodeBlockStorage.Namespace] = allocationSize
 			}
 		}
 

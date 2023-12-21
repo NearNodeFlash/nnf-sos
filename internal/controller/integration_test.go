@@ -269,63 +269,15 @@ var _ = Describe("Integration Test", func() {
 
 	BeforeEach(func() {
 
+		// Initialize node names - currently set to three to satisify the lustre requirement of single MDT, MGT, OST
+		// NOTE: Node names require the "rabbit" prefix to ensure client mounts occur on the correct controller
+		nodeNames = []string{
+			"rabbit-test-node-0",
+			"rabbit-test-node-1",
+			"rabbit-test-node-2",
+		}
+
 		setup.Do(func() {
-
-			// Initialize node names - currently set to three to satisify the lustre requirement of single MDT, MGT, OST
-			// NOTE: Node names require the "rabbit" prefix to ensure client mounts occur on the correct controller
-			nodeNames = []string{
-				"rabbit-test-node-0",
-				"rabbit-test-node-1",
-				"rabbit-test-node-2",
-			}
-
-			// Build the config map that ties everything together; this also
-			// creates a namespace for each compute node which is required for
-			// client mount.
-			computeNameGeneratorFunc := func() func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
-				nextComputeIndex := 0
-				return func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
-					computes := make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 16)
-					for i := 0; i < 16; i++ {
-						name := fmt.Sprintf("compute%d", i+nextComputeIndex)
-
-						computes[i].Name = name
-						computes[i].Index = i
-					}
-					nextComputeIndex += 16
-					return computes
-				}
-			}
-
-			generator := computeNameGeneratorFunc()
-			configSpec := dwsv1alpha2.SystemConfigurationSpec{}
-			for _, nodeName := range nodeNames {
-				storageNode := dwsv1alpha2.SystemConfigurationStorageNode{
-					Type: "Rabbit",
-					Name: nodeName,
-				}
-
-				storageNode.ComputesAccess = generator()
-				configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
-				for _, computeAccess := range storageNode.ComputesAccess {
-					compute := dwsv1alpha2.SystemConfigurationComputeNode{Name: computeAccess.Name}
-					configSpec.ComputeNodes = append(configSpec.ComputeNodes, compute)
-				}
-			}
-
-			config := &dwsv1alpha2.SystemConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "default",
-					Namespace: corev1.NamespaceDefault,
-				},
-				Spec: configSpec,
-			}
-
-			Expect(k8sClient.Create(context.TODO(), config)).To(Succeed())
-
-			// Each node gets a namespace, a node, and an NNF Node. Node would typically be handled
-			// by kubernetes and then an NNF Node & Namespace are started by the NLC; but for test
-			// we have to bootstrap all that.
 			for _, nodeName := range nodeNames {
 				// Create the namespace
 				ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
@@ -333,73 +285,123 @@ var _ = Describe("Integration Test", func() {
 				}}
 
 				Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed())
-
-				// Create the node - set it to up as ready
-				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      nodeName,
-						Namespace: corev1.NamespaceDefault,
-						Labels: map[string]string{
-							"cray.nnf.node": "true",
-						},
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{
-								Status: corev1.ConditionTrue,
-								Type:   corev1.NodeReady,
-							},
-						},
-					},
-				}
-
-				Expect(k8sClient.Create(context.TODO(), node)).To(Succeed())
-
-				// Create the NNF Node resource
-				nnfNode := &nnfv1alpha1.NnfNode{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "nnf-nlc",
-						Namespace: nodeName,
-					},
-					Spec: nnfv1alpha1.NnfNodeSpec{
-						Name:  nodeName,
-						State: nnfv1alpha1.ResourceEnable,
-					},
-					Status: nnfv1alpha1.NnfNodeStatus{},
-				}
-
-				Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
-
-				// Create the DWS Storage resource
-				storage := &dwsv1alpha2.Storage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      nodeName,
-						Namespace: corev1.NamespaceDefault,
-					},
-				}
-
-				Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
-
-				// Check that the DWS storage resource was updated with the compute node information
-
-				Eventually(func() error {
-					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
-				}).Should(Succeed())
-
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-					return len(storage.Status.Access.Computes) == 16
-				}).Should(BeTrue())
-
-				// Check that a namespace was created for each compute node
-				for i := 0; i < len(nodeNames)*16; i++ {
-					namespace := &corev1.Namespace{}
-					Eventually(func() error {
-						return k8sClient.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("compute%d", i)}, namespace)
-					}).Should(Succeed())
-				}
 			}
 		}) // once
+
+		// Build the config map that ties everything together; this also
+		// creates a namespace for each compute node which is required for
+		// client mount.
+		computeNameGeneratorFunc := func() func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
+			nextComputeIndex := 0
+			return func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
+				computes := make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 16)
+				for i := 0; i < 16; i++ {
+					name := fmt.Sprintf("compute%d", i+nextComputeIndex)
+
+					computes[i].Name = name
+					computes[i].Index = i
+				}
+				nextComputeIndex += 16
+				return computes
+			}
+		}
+
+		generator := computeNameGeneratorFunc()
+		configSpec := dwsv1alpha2.SystemConfigurationSpec{}
+		for _, nodeName := range nodeNames {
+			storageNode := dwsv1alpha2.SystemConfigurationStorageNode{
+				Type: "Rabbit",
+				Name: nodeName,
+			}
+
+			storageNode.ComputesAccess = generator()
+			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
+			for _, computeAccess := range storageNode.ComputesAccess {
+				compute := dwsv1alpha2.SystemConfigurationComputeNode{Name: computeAccess.Name}
+				configSpec.ComputeNodes = append(configSpec.ComputeNodes, compute)
+			}
+		}
+
+		config := &dwsv1alpha2.SystemConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: configSpec,
+		}
+
+		Expect(k8sClient.Create(context.TODO(), config)).To(Succeed())
+
+		// Each node gets a namespace, a node, and an NNF Node. Node would typically be handled
+		// by kubernetes and then an NNF Node & Namespace are started by the NLC; but for test
+		// we have to bootstrap all that.
+
+		for _, nodeName := range nodeNames {
+			// Create the node - set it to up as ready
+			node := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+					Labels: map[string]string{
+						"cray.nnf.node": "true",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{
+							Status: corev1.ConditionTrue,
+							Type:   corev1.NodeReady,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), node)).To(Succeed())
+
+			// Create the NNF Node resource
+			nnfNode := &nnfv1alpha1.NnfNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-nlc",
+					Namespace: nodeName,
+				},
+				Spec: nnfv1alpha1.NnfNodeSpec{
+					Name:  nodeName,
+					State: nnfv1alpha1.ResourceEnable,
+				},
+				Status: nnfv1alpha1.NnfNodeStatus{},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
+
+			// Create the DWS Storage resource
+			storage := &dwsv1alpha2.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
+
+			// Check that the DWS storage resource was updated with the compute node information
+
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
+			}).Should(Succeed())
+
+			Eventually(func() bool {
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+				return len(storage.Status.Access.Computes) == 16
+			}).Should(BeTrue())
+
+			// Check that a namespace was created for each compute node
+			for i := 0; i < len(nodeNames)*16; i++ {
+				namespace := &corev1.Namespace{}
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), types.NamespacedName{Name: fmt.Sprintf("compute%d", i)}, namespace)
+				}).Should(Succeed())
+			}
+		}
 
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
@@ -422,6 +424,58 @@ var _ = Describe("Integration Test", func() {
 		profExpected := &nnfv1alpha1.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
+		}).ShouldNot(Succeed())
+
+		for _, nodeName := range nodeNames {
+			storage := &dwsv1alpha2.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Expect(k8sClient.Delete(context.TODO(), storage)).To(Succeed())
+			tempStorage := &dwsv1alpha2.Storage{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), tempStorage)
+			}).ShouldNot(Succeed())
+
+			nnfNode := &nnfv1alpha1.NnfNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-nlc",
+					Namespace: nodeName,
+				},
+			}
+			Expect(k8sClient.Delete(context.TODO(), nnfNode)).To(Succeed())
+			tempNnfNode := &nnfv1alpha1.NnfNode{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNode), tempNnfNode)
+			}).ShouldNot(Succeed())
+
+			node := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Expect(k8sClient.Delete(context.TODO(), node)).To(Succeed())
+			tempNode := &corev1.Node{}
+			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node), tempNode)
+			}).ShouldNot(Succeed())
+
+		}
+
+		config := &dwsv1alpha2.SystemConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+
+		Expect(k8sClient.Delete(context.TODO(), config)).To(Succeed())
+		tempConfig := &dwsv1alpha2.SystemConfiguration{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(config), tempConfig)
 		}).ShouldNot(Succeed())
 	})
 
@@ -1493,7 +1547,7 @@ var _ = Describe("Integration Test", func() {
 			nnfstorage := &nnfv1alpha1.NnfStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbdServer), nnfstorage)).To(Succeed())
 			for _, comp := range nnfstorage.Spec.AllocationSets {
-				Expect(comp.ExternalMgsNid).To(Equal(desiredNid))
+				Expect(comp.MgsAddress).To(Equal(desiredNid))
 			}
 		}
 

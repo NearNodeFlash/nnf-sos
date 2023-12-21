@@ -4,6 +4,7 @@
 resources:
   - bases/nnf.cray.hpe.com_nnfnodes.yaml
   - bases/nnf.cray.hpe.com_nnfnodestorages.yaml
+  - bases/nnf.cray.hpe.com_nnfnodeblockstorages.yaml
   - bases/nnf.cray.hpe.com_nnfstorages.yaml
   - bases/nnf.cray.hpe.com_nnfdatamovements.yaml
   - bases/nnf.cray.hpe.com_nnfdatamovementmanagers.yaml

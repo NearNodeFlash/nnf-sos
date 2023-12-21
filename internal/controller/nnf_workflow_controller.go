@@ -37,6 +37,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -459,7 +460,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 			return Requeue("error").withObject(nnfStorage), nil
 		}
 
-		if nnfStorage.Status.Status != nnfv1alpha1.ResourceReady {
+		if nnfStorage.Status.Ready == false {
 			// RequeueAfter is necessary for persistent storage that isn't owned by this workflow
 			return Requeue("allocation set not ready").after(2 * time.Second).withObject(nnfStorage), nil
 		}
@@ -807,13 +808,6 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		return unmountResult, nil
 	}
 
-	access := &nnfv1alpha1.NnfAccess{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      indexedResourceName(workflow, index) + "-computes",
-			Namespace: workflow.Namespace,
-		},
-	}
-
 	// Create container service and jobs
 	if dwArgs["command"] == "container" {
 		result, err := r.userContainerHandler(ctx, workflow, dwArgs, index, log)
@@ -828,11 +822,25 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		return nil, nil
 	}
 
+	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
+	}
+
+	access := &nnfv1alpha1.NnfAccess{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(workflow, index) + "-computes",
+			Namespace: workflow.Namespace,
+		},
+	}
+
 	// Create an NNFAccess for the compute clients
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, access,
 		func() error {
 			dwsv1alpha2.AddWorkflowLabels(access, workflow)
 			dwsv1alpha2.AddOwnerLabels(access, workflow)
+			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
 
 			access.Spec.TeardownState = dwsv1alpha2.StatePostRun
@@ -840,7 +848,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
-			access.Spec.MountPath = buildMountPath(workflow, index)
+			access.Spec.MountPath = buildComputeMountPath(workflow, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
 				Name:      workflow.Name,
 				Namespace: workflow.Namespace,
@@ -930,7 +938,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		return nil, dwsv1alpha2.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
 	}
 
-	workflow.Status.Env[envName] = buildMountPath(workflow, index)
+	workflow.Status.Env[envName] = buildComputeMountPath(workflow, index)
 
 	// Containers do not have NNFAccesses, so only do this after r.waitForContainersToStart() would have returned
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
