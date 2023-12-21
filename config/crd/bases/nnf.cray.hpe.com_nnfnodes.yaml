@@ -56,7 +56,7 @@ spec:
             description: NnfNodeSpec defines the desired state of NNF Node
             properties:
               name:
-                description: The unique name for this NNF Node https://connect.us.cray.com/confluence/display/HSOS/Shasta+HSS+Component+Naming+Convention#ShastaHSSComponentNamingConvention-2.1.4.3MountainCabinetComponents
+                description: The unique name for this NNF Node
                 type: string
               pod:
                 description: Pod name for this NNF Node
