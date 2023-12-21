@@ -233,6 +233,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.C
 	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
 	labels[nnfv1alpha1.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[dwsv1alpha2.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 
 	nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{

@@ -36,7 +36,7 @@ type KindFileSystem struct {
 }
 
 // Check that LustreFileSystem implements the FileSystem interface
-var _ FileSystem = &MockFileSystem{}
+var _ FileSystem = &KindFileSystem{}
 
 func (m *KindFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
 	if complete == true {
@@ -73,7 +73,7 @@ func (m *KindFileSystem) Deactivate(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (m *KindFileSystem) Mount(ctx context.Context, path string, options string, complete bool) (bool, error) {
+func (m *KindFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete == true {
 		return false, nil
 	}

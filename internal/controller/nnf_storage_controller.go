@@ -571,6 +571,11 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		return nil, nil
 	}
 
+	// Don't create the clientmount in kind until the kind environment creates fake file systems.
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		return nil, nil
+	}
+
 	if nnfStorage.Spec.FileSystemType != "lustre" {
 		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid file system type '%s' for setLustreOwnerGroup", nnfStorage.Spec.FileSystemType).WithFatal()
 	}

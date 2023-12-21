@@ -1032,6 +1032,25 @@ func getDirectiveIndexLabel(object metav1.Object) string {
 	return labels[nnfv1alpha1.DirectiveIndexLabel]
 }
 
+func setTargetOwnerUIDLabel(object metav1.Object, value string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[nnfv1alpha1.TargetOwnerUidLabel] = value
+	object.SetLabels(labels)
+}
+
+func getTargetOwnerUIDLabel(object metav1.Object) string {
+	labels := object.GetLabels()
+	if labels == nil {
+		return ""
+	}
+
+	return labels[nnfv1alpha1.TargetOwnerUidLabel]
+}
+
 func setTargetDirectiveIndexLabel(object metav1.Object, value string) {
 	labels := object.GetLabels()
 	if labels == nil {

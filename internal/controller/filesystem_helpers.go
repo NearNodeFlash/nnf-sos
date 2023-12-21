@@ -334,16 +334,18 @@ func newMockFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
-	workflowUid, ok := labels[dwsv1alpha2.WorkflowUidLabel]
+	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
+	// This is important for persistent instances
+	nnfStorageUid, ok := labels[dwsv1alpha2.OwnerUidLabel]
 	if !ok {
-		return "", fmt.Errorf("missing Workflow UID label on NnfNodeStorage")
+		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
 	}
 	directiveIndex, ok := labels[nnfv1alpha1.DirectiveIndexLabel]
 	if !ok {
 		return "", fmt.Errorf("missing directive index label on NnfNodeStorage")
 	}
 
-	return fmt.Sprintf("%s_%s_%d", workflowUid, directiveIndex, index), nil
+	return fmt.Sprintf("%s_%s_%d", nnfStorageUid, directiveIndex, index), nil
 }
 
 func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, error) {
