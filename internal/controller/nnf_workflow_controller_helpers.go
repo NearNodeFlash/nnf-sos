@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -820,7 +821,7 @@ func buildComputeMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
 	if len(prefix) == 0 {
 		prefix = "/mnt/nnf"
 	}
-	return fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)
+	return filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index))
 }
 
 func buildServerMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
@@ -828,7 +829,7 @@ func buildServerMountPath(workflow *dwsv1alpha2.Workflow, index int) string {
 	if len(prefix) == 0 {
 		prefix = "/mnt/nnf"
 	}
-	return fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)
+	return filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index))
 }
 
 func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *dwsv1alpha2.Workflow, psiName string) (*dwsv1alpha2.PersistentStorageInstance, error) {
