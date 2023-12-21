@@ -251,8 +251,7 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.MountTarget = "file"
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
-	fs.CommandArgs.Mkfs = "bind"
-	fs.CommandArgs.Mount = "$DEVICE $MOUNT_PATH"
+	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
 
 	return &fs, nil
 }

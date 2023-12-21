@@ -159,7 +159,6 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	for i := 0; i < nnfNodeStorage.Spec.Count; i++ {
 		result, err := r.createAllocation(ctx, nnfNodeStorage, i)
 		if err != nil {
-
 			return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to format file system for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
@@ -242,31 +241,28 @@ func (r *NnfNodeStorageReconciler) createAllocation(ctx context.Context, nnfNode
 
 	// We don't need to activate the block device here. It will be activated either when there is a mkfs, or when it's used
 	// by a ClientMount
-	if fileSystem != nil {
-		ran, err = fileSystem.Create(ctx, allocationStatus.Ready)
-		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
-		}
-		if ran {
-			log.Info("Created file system", "allocation", index)
-		}
+	ran, err = fileSystem.Create(ctx, allocationStatus.Ready)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
+	}
+	if ran {
+		log.Info("Created file system", "allocation", index)
+	}
 
-		ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
-		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
-		}
-		if ran {
-			log.Info("Activated file system", "allocation", index)
-		}
+	ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
+	}
+	if ran {
+		log.Info("Activated file system", "allocation", index)
+	}
 
-		ran, err = fileSystem.SetPermissions(ctx, nnfNodeStorage.Spec.UserID, nnfNodeStorage.Spec.GroupID, allocationStatus.Ready)
-		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not set file system permissions").WithError(err).WithMajor()
-		}
-		if ran {
-			log.Info("Set file system permission", "allocation", index)
-		}
-
+	ran, err = fileSystem.SetPermissions(ctx, nnfNodeStorage.Spec.UserID, nnfNodeStorage.Spec.GroupID, allocationStatus.Ready)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not set file system permissions").WithError(err).WithMajor()
+	}
+	if ran {
+		log.Info("Set file system permission", "allocation", index)
 	}
 
 	allocationStatus.Ready = true
