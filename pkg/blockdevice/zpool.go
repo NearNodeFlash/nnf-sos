@@ -121,11 +121,11 @@ func (z *Zpool) CheckFormatted() (bool, error) {
 			return false, nil
 		}
 
-		return false, fmt.Errorf("could not run zfs to check for zpool device %w", err)
+		return false, fmt.Errorf("could not run 'zfs get' to check for zpool device %w", err)
 	}
 
 	if len(output) == 0 {
-		return false, fmt.Errorf("zfs get returned no output")
+		return false, fmt.Errorf("'zfs get' returned no output")
 	}
 
 	return true, nil

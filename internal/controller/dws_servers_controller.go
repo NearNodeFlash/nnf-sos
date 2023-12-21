@@ -194,10 +194,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		allocationSet := nnfStorage.Status.AllocationSets[storageIndex]
-
-		if allocationSet.Ready == false {
-			ready = false
-		}
+		ready = allocationSet.Ready
 
 		// Increment the actual and expected allocation counts from this allocationSet
 		actualAllocations += allocationSet.AllocationCount
