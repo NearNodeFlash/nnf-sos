@@ -32,7 +32,6 @@ type NnfNodeSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// The unique name for this NNF Node
-	// https://connect.us.cray.com/confluence/display/HSOS/Shasta+HSS+Component+Naming+Convention#ShastaHSSComponentNamingConvention-2.1.4.3MountainCabinetComponents
 	Name string `json:"name,omitempty"`
 
 	// Pod name for this NNF Node
