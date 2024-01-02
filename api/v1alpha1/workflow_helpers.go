@@ -30,6 +30,10 @@ const (
 	// directive index of the storage they're targeting.
 	TargetDirectiveIndexLabel = "nnf.cray.hpe.com/target_directive_index"
 
+	// TargetOwnerUidLabel is used for ClientMount resources to indicate the UID of the
+	// parent NnfStorage it's targeting
+	TargetOwnerUidLabel = "nnf.cray.hpe.com/target_owner_uid"
+
 	// PinnedStorageProfileLabelName is a label applied to NnfStorage objects to show
 	// which pinned storage profile is being used.
 	PinnedStorageProfileLabelName = "nnf.cray.hpe.com/pinned_storage_profile_name"

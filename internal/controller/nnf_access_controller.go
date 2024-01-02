@@ -528,7 +528,6 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		if os.Getenv("ENVIRONMENT") == "kind" {
 			mountInfo.UserID = access.Spec.UserID
 			mountInfo.GroupID = access.Spec.GroupID
-			mountInfo.SetPermissions = true
 		}
 
 		storageMapping[client] = append(storageMapping[client], mountInfo)
@@ -621,7 +620,6 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 				if os.Getenv("ENVIRONMENT") == "kind" {
 					mountInfo.UserID = access.Spec.UserID
 					mountInfo.GroupID = access.Spec.GroupID
-					mountInfo.SetPermissions = true
 				}
 
 				// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
@@ -941,6 +939,7 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 					dwsv1alpha2.InheritParentLabels(clientMount, access)
 					dwsv1alpha2.AddOwnerLabels(clientMount, access)
 					setTargetDirectiveIndexLabel(clientMount, targetIndex)
+					setTargetOwnerUIDLabel(clientMount, string(nnfStorage.GetUID()))
 
 					clientMount.Spec.Node = clientName
 					clientMount.Spec.DesiredState = dwsv1alpha2.ClientMountState(access.Spec.DesiredState)
