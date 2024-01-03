@@ -580,6 +580,11 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid file system type '%s' for setLustreOwnerGroup", nnfStorage.Spec.FileSystemType).WithFatal()
 	}
 
+	// If this NnfStorage is for a standalone MGT, then we don't need to set the owner and group
+	if len(nnfStorage.Spec.AllocationSets) == 1 && nnfStorage.Spec.AllocationSets[0].Name == "mgt" {
+		return nil, nil
+	}
+
 	index := func() int {
 		for i, allocationSet := range nnfStorage.Spec.AllocationSets {
 			if allocationSet.Name == "ost" {
