@@ -327,6 +327,22 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfdatamovementmanagers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfdatamovementmanagers/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
   - nnfdatamovements
   verbs:
   - create
@@ -337,6 +353,33 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeblockstorages
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeblockstorages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodeblockstorages/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
@@ -407,6 +450,14 @@ rules:
   resources:
   - nnfnodestorages/finalizers
   verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodestorages/status
+  verbs:
+  - get
+  - patch
   - update
 - apiGroups:
   - nnf.cray.hpe.com

@@ -1,6 +1,6 @@
 apiVersion: nnf.cray.hpe.com/v1alpha1
-kind: DataMovement
+kind: NnfDataMovement
 metadata:
-  name: datamovement-sample
+  name: nnfdatamovement-sample
 spec:
   # Add fields here

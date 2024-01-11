@@ -1,4 +1,4 @@
-# Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+# Copyright 2020-2023 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -24,14 +24,15 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 
 # Copy the go source
-COPY main.go main.go
+COPY cmd/ cmd/
 COPY api/ api/
-COPY controllers/ controllers/
+COPY internal/ internal/
+COPY pkg/ pkg/
 COPY vendor/ vendor/
 COPY config/ config/
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager cmd/main.go
 
 ENTRYPOINT ["/bin/sh"]
 

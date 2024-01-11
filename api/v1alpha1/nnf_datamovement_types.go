@@ -26,16 +26,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 const (
-	// The required namespace for an NNF Data Movement operation. This is for system wide (lustre) data movement.
-	// Individual nodes may also perform data movement in which case they use the NNF Node Name as the namespace.
+	// The required namespace for an NNF Data Movement operation. This is for system wide (lustre)
+	// data movement.  Individual nodes may also perform data movement in which case they use the
+	// NNF Node Name as the namespace.
 	DataMovementNamespace = "nnf-dm-system"
+
+	// The name of the default profile stored in the nnf-dm-config ConfigMap that is used to
+	// configure Data Movement.
+	DataMovementProfileDefault = "default"
 )
 
-// NnfDataMovementSpec defines the desired state of DataMovement
+// NnfDataMovementSpec defines the desired state of NnfDataMovement
 type NnfDataMovementSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -60,13 +62,18 @@ type NnfDataMovementSpec struct {
 	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
 
+	// Profile specifies the name of profile in the nnf-dm-config ConfigMap to be used for
+	// configuring data movement. Defaults to the default profile.
+	// +kubebuilder:default:=default
+	Profile string `json:"profile,omitempty"`
+
 	// User defined configuration on how data movement should be performed. This overrides the
 	// configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
 	// Copy Offload API.
 	UserConfig *NnfDataMovementConfig `json:"userConfig,omitempty"`
 }
 
-// DataMovementSpecSourceDestination defines the desired source or destination of data movement
+// NnfDataMovementSpecSourceDestination defines the desired source or destination of data movement
 type NnfDataMovementSpecSourceDestination struct {
 
 	// Path describes the location of the user data relative to the storage instance
@@ -110,7 +117,7 @@ type NnfDataMovementConfig struct {
 	MaxSlots *int `json:"maxSlots,omitempty"`
 }
 
-// DataMovementCommandStatus defines the observed status of the underlying data movement
+// NnfDataMovementCommandStatus defines the observed status of the underlying data movement
 // command (MPI File Utils' `dcp` command).
 type NnfDataMovementCommandStatus struct {
 	// The command that was executed during data movement.
@@ -134,7 +141,7 @@ type NnfDataMovementCommandStatus struct {
 	LastMessageTime metav1.MicroTime `json:"lastMessageTime,omitempty"`
 }
 
-// DataMovementStatus defines the observed state of DataMovement
+// NnfDataMovementStatus defines the observed state of NnfDataMovement
 type NnfDataMovementStatus struct {
 	// Current state of data movement.
 	// +kubebuilder:validation:Enum=Starting;Running;Finished
@@ -188,7 +195,7 @@ const (
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
-// NnfDataMovement is the Schema for the datamovements API
+// NnfDataMovement is the Schema for the nnfdatamovements API
 type NnfDataMovement struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

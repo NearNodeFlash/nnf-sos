@@ -1,6 +1,6 @@
 domain: cray.hpe.com
 layout:
-- go.kubebuilder.io/v3
+- go.kubebuilder.io/v4
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
@@ -34,6 +34,15 @@ resources:
   kind: NnfNodeStorage
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfNodeBlockStorage
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
+  version: v1alpha1
 - controller: true
   domain: github.io
   group: dataworkflowservices
@@ -58,6 +67,14 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovement
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfDataMovementManager
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:

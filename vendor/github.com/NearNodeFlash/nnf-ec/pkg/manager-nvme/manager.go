@@ -394,9 +394,20 @@ func (s *Storage) initialize() error {
 		"unallocatedBytes", s.unallocatedBytes,
 		"virtualizationManagement", s.virtManagementEnabled)
 
-	ns, err := s.device.IdentifyNamespace(CommonNamespaceIdentifier)
-	if err != nil {
-		return fmt.Errorf("Initialize Storage %s: Failed to identify common namespace: Error: %w", s.id, err)
+	var ns *nvme.IdNs
+	identifySuccess := false
+	for retryCount := 0; !identifySuccess; retryCount++ {
+		var err error
+		ns, err = s.device.IdentifyNamespace(CommonNamespaceIdentifier)
+		if err != nil {
+			if retryCount >= 2 {
+				return fmt.Errorf("Initialize Storage %s: Failed to identify common namespace, retried %d times: Error: %w", s.id, retryCount, err)
+			}
+
+			s.log.Info("identify common namespace attempt failed, retrying", "retryCount", retryCount)
+		} else {
+			identifySuccess = true
+		}
 	}
 
 	// Workaround for SSST drives that improperly report only one NumberOfLBAFormats, but actually

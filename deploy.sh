@@ -23,9 +23,8 @@ set -e
 
 CMD=$1
 KUSTOMIZE=$2
-IMG=$3
-OVERLAY=$4
-NNFMFU_IMG=$5
+OVERLAY_DIR=$3
+OVERLAY_EXAMPLES_DIR=$4
 
 if [[ $CMD == 'deploy' ]]; then
     echo "Waiting for the dws webhook to become ready..."
@@ -35,11 +34,9 @@ if [[ $CMD == 'deploy' ]]; then
         sleep 1
     done
 
-    (cd config/manager && $KUSTOMIZE edit set image controller=$IMG)
-
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
-    $KUSTOMIZE build config/$OVERLAY | kubectl apply --server-side=true --force-conflicts -f -
+    $KUSTOMIZE build $OVERLAY_DIR | kubectl apply --server-side=true --force-conflicts -f -
 
     echo "Waiting for the nnf-sos webhook to become ready..."
     while :; do
@@ -50,8 +47,7 @@ if [[ $CMD == 'deploy' ]]; then
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
-    (cd config/examples && $KUSTOMIZE edit set image nnf-mfu=$NNFMFU_IMG)
-    $KUSTOMIZE build config/examples | kubectl apply --server-side=true --force-conflicts -f -
+    $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl apply --server-side=true --force-conflicts -f -
 
     # Deploy the nnfportmanager after everything else
     echo "Waiting for the nnfportmamanger CRD to become ready..."
@@ -60,10 +56,19 @@ if [[ $CMD == 'deploy' ]]; then
         kubectl get crds nnfportmanagers.nnf.cray.hpe.com && break
     done
     $KUSTOMIZE build config/ports| kubectl apply --server-side=true --force-conflicts -f -
+
+    # Deploy the ServiceMonitor resource if its CRD is found. The CRD would
+    # have been installed by a metrics service such as Prometheus.
+    if kubectl get crd servicemonitors.monitoring.coreos.com > /dev/null 2>&1; then
+        $KUSTOMIZE build config/prometheus | kubectl apply -f-
+    fi
 fi
 
 if [[ $CMD == 'undeploy' ]]; then
+    if kubectl get crd servicemonitors.monitoring.coreos.com > /dev/null 2>&1; then
+        $KUSTOMIZE build config/prometheus | kubectl delete --ignore-not-found -f-
+    fi
     $KUSTOMIZE build config/ports | kubectl delete --ignore-not-found -f -
-    $KUSTOMIZE build config/examples | kubectl delete --ignore-not-found -f -
-    $KUSTOMIZE build config/$OVERLAY | kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build $OVERLAY_DIR | kubectl delete --ignore-not-found -f -
 fi

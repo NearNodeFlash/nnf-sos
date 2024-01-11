@@ -1,2 +1,5 @@
+# Adds namespace to all resources.
+namespace: nnf-system
+
 resources:
 - monitor.yaml

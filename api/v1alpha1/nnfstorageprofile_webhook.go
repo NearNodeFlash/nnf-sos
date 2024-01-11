@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -45,7 +47,7 @@ func (r *NnfStorageProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &NnfStorageProfile{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfStorageProfile) ValidateCreate() error {
+func (r *NnfStorageProfile) ValidateCreate() (admission.Warnings, error) {
 	nnfstorageprofilelog.V(1).Info("validate create", "name", r.Name)
 
 	// If it's not pinned, then it's being made available for users to select
@@ -54,24 +56,24 @@ func (r *NnfStorageProfile) ValidateCreate() error {
 	if !r.Data.Pinned && r.GetNamespace() != profileNamespace {
 		err := fmt.Errorf("incorrect namespace for profile that is intended to be selected by users; the namespace should be '%s'", profileNamespace)
 		nnfstorageprofilelog.Error(err, "invalid")
-		return err
+		return nil, err
 	}
 	if err := r.validateContent(); err != nil {
 		nnfstorageprofilelog.Error(err, "invalid NnfStorageProfile resource")
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) error {
+func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	nnfstorageprofilelog.V(1).Info("validate update", "name", r.Name)
 
 	obj := old.(*NnfStorageProfile)
 	if obj.Data.Pinned != r.Data.Pinned {
 		err := fmt.Errorf("the pinned flag is immutable")
 		nnfcontainerprofilelog.Error(err, "invalid")
-		return err
+		return nil, err
 	}
 	if obj.Data.Pinned {
 		// Allow metadata to be updated, for things like finalizers,
@@ -81,23 +83,23 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) error {
 			msg := "update on pinned resource not allowed"
 			err := fmt.Errorf(msg)
 			nnfstorageprofilelog.Error(err, "invalid")
-			return err
+			return nil, err
 		}
 	}
 
 	if err := r.validateContent(); err != nil {
 		nnfstorageprofilelog.Error(err, "invalid NnfStorageProfile resource")
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfStorageProfile) ValidateDelete() error {
+func (r *NnfStorageProfile) ValidateDelete() (admission.Warnings, error) {
 	//nnfstorageprofilelog.V(1).Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }
 
 func (r *NnfStorageProfile) validateContent() error {
@@ -141,4 +143,35 @@ func (r *NnfStorageProfile) validateLustreTargetMiscOptions(targetMiscOptions Nn
 	}
 
 	return nil
+}
+
+type VarHandler struct {
+	VarMap map[string]string
+}
+
+func NewVarHandler(vars map[string]string) *VarHandler {
+	v := &VarHandler{}
+	v.VarMap = vars
+	return v
+}
+
+// ListToVars splits the value of one of its variables, and creates a new
+// indexed variable for each of the items in the split.
+func (v *VarHandler) ListToVars(listVarName, newVarPrefix string) error {
+	theList, ok := v.VarMap[listVarName]
+	if !ok {
+		return fmt.Errorf("Unable to find the variable named %s", listVarName)
+	}
+
+	for i, val := range strings.Split(theList, " ") {
+		v.VarMap[fmt.Sprintf("%s%d", newVarPrefix, i+1)] = val
+	}
+	return nil
+}
+
+func (v *VarHandler) ReplaceAll(s string) string {
+	for key, value := range v.VarMap {
+		s = strings.ReplaceAll(s, key, value)
+	}
+	return s
 }

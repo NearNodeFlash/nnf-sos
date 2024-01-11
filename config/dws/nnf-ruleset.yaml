@@ -81,6 +81,11 @@ spec:
         type: "string"
         isRequired: true
         isValueRequired: true
+      - key: "^profile$"
+        type: "string"
+        pattern: "^[a-z][a-z0-9-]+$"
+        isRequired: false
+        isValueRequired: true
   - command: "copy_out"
     watchStates: Proposal,DataOut,Teardown
     ruleDefs:
@@ -91,6 +96,11 @@ spec:
       - key: "^destination$"
         type: "string"
         isRequired: true
+        isValueRequired: true
+      - key: "^profile$"
+        type: "string"
+        pattern: "^[a-z][a-z0-9-]+$"
+        isRequired: false
         isValueRequired: true
   - command: "container"
     watchStates: Proposal,Setup,PreRun,PostRun,Teardown
