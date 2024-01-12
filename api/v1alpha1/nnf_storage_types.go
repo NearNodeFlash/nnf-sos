@@ -47,16 +47,16 @@ type NnfStorageLustreSpec struct {
 	FileSystemName string `json:"fileSystemName,omitempty"`
 
 	// TargetType is the type of Lustre target to be created.
-	// +kubebuilder:validation:Enum=MGT;MDT;MGTMDT;OST
+	// +kubebuilder:validation:Enum=mgt;mdt;mgtmdt;ost
 	TargetType string `json:"targetType,omitempty"`
 
 	// BackFs is the type of backing filesystem to use.
 	// +kubebuilder:validation:Enum=ldiskfs;zfs
 	BackFs string `json:"backFs,omitempty"`
 
-	// ExternalMgsNid is the NID of the MGS when a pre-existing MGS is
-	// provided by the DataWarp directive (#DW).
-	ExternalMgsNid string `json:"externalMgsNid,omitempty"`
+	// MgsAddress is the NID of the MGS when a pre-existing MGS is
+	// provided in the NnfStorageProfile
+	MgsAddress string `json:"mgsAddress,omitempty"`
 
 	// PersistentMgsReference is a reference to a persistent storage that is providing
 	// the external MGS.
@@ -105,11 +105,7 @@ type NnfStorageSpec struct {
 
 // NnfStorageAllocationSetStatus contains the status information for an allocation set
 type NnfStorageAllocationSetStatus struct {
-	// Status reflects the status of this allocation set
-	Status NnfResourceStatusType `json:"status,omitempty"`
-
-	// Health reflects the health of this allocation set
-	Health NnfResourceHealthType `json:"health,omitempty"`
+	Ready bool `json:"ready,omitempty"`
 
 	// AllocationCount is the total number of allocations that currently
 	// exist
@@ -118,10 +114,8 @@ type NnfStorageAllocationSetStatus struct {
 
 // NnfStorageStatus defines the observed status of NNF Storage.
 type NnfStorageStatus struct {
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// MgsNode is the NID of the MGS.
-	MgsNode string `json:"mgsNode,omitempty"`
+	// MgsAddress is the NID of the MGS.
+	MgsAddress string `json:"mgsAddress,omitempty"`
 
 	// AllocationsSets holds the status information for each of the AllocationSets
 	// from the spec.
@@ -129,10 +123,8 @@ type NnfStorageStatus struct {
 
 	dwsv1alpha2.ResourceError `json:",inline"`
 
-	// Status reflects the status of this NNF Storage
-	Status NnfResourceStatusType `json:"status,omitempty"`
-
-	// TODO: Conditions
+	// Ready reflects the status of this NNF Storage
+	Ready bool `json:"ready,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -30,8 +30,11 @@ testbin/*
 commands.log
 kind-config.yaml
 standalone-playground
+mount-daemon/clientmount
 nnf-sos
 .version
+config/begin/*
+config/begin-examples/*
 
 # .vscode log files
 .vscode/*.log

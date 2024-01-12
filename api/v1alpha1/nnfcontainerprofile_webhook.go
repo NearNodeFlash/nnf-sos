@@ -30,6 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -47,7 +48,7 @@ func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &NnfContainerProfile{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfContainerProfile) ValidateCreate() error {
+func (r *NnfContainerProfile) ValidateCreate() (admission.Warnings, error) {
 	nnfcontainerprofilelog.Info("validate create", "name", r.Name)
 
 	// If it's not pinned, then it's being made available for users to select
@@ -56,19 +57,19 @@ func (r *NnfContainerProfile) ValidateCreate() error {
 	if !r.Data.Pinned && r.GetNamespace() != profileNamespace {
 		err := fmt.Errorf("incorrect namespace for profile that is intended to be selected by users; the namespace should be '%s'", profileNamespace)
 		nnfstorageprofilelog.Error(err, "invalid")
-		return err
+		return nil, err
 	}
 
 	if err := r.validateContent(); err != nil {
 		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
+func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	nnfcontainerprofilelog.Info("validate update", "name", r.Name)
 
 	obj := old.(*NnfContainerProfile)
@@ -76,7 +77,7 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 	if obj.Data.Pinned != r.Data.Pinned {
 		err := fmt.Errorf("the pinned flag is immutable")
 		nnfcontainerprofilelog.Error(err, "invalid")
-		return err
+		return nil, err
 	}
 
 	if obj.Data.Pinned {
@@ -86,16 +87,16 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) error {
 		if !reflect.DeepEqual(r.Data, obj.Data) {
 			err := fmt.Errorf("update on pinned resource not allowed")
 			nnfcontainerprofilelog.Error(err, "invalid")
-			return err
+			return nil, err
 		}
 	}
 
 	if err := r.validateContent(); err != nil {
 		nnfcontainerprofilelog.Error(err, "invalid NnfContainerProfile resource")
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (r *NnfContainerProfile) validateContent() error {
@@ -160,7 +161,7 @@ func (r *NnfContainerProfile) validateContent() error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *NnfContainerProfile) ValidateDelete() error {
+func (r *NnfContainerProfile) ValidateDelete() (admission.Warnings, error) {
 	nnfcontainerprofilelog.Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }

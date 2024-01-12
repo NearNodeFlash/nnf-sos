@@ -34,6 +34,7 @@ const (
 	OwnerKindLabel      = "dataworkflowservices.github.io/owner.kind"
 	OwnerNameLabel      = "dataworkflowservices.github.io/owner.name"
 	OwnerNamespaceLabel = "dataworkflowservices.github.io/owner.namespace"
+	OwnerUidLabel       = "dataworkflowservices.github.io/owner.uid"
 )
 
 // +kubebuilder:object:generate=false
@@ -51,6 +52,7 @@ func AddOwnerLabels(child metav1.Object, owner metav1.Object) {
 	labels[OwnerKindLabel] = reflect.Indirect(reflect.ValueOf(owner)).Type().Name()
 	labels[OwnerNameLabel] = owner.GetName()
 	labels[OwnerNamespaceLabel] = owner.GetNamespace()
+	labels[OwnerUidLabel] = string(owner.GetUID())
 
 	child.SetLabels(labels)
 }
@@ -73,6 +75,7 @@ func RemoveOwnerLabels(child metav1.Object) {
 	delete(labels, OwnerKindLabel)
 	delete(labels, OwnerNameLabel)
 	delete(labels, OwnerNamespaceLabel)
+	delete(labels, OwnerUidLabel)
 
 	child.SetLabels(labels)
 }
@@ -86,6 +89,7 @@ func AddWorkflowLabels(child metav1.Object, workflow *Workflow) {
 
 	labels[WorkflowNameLabel] = workflow.Name
 	labels[WorkflowNamespaceLabel] = workflow.Namespace
+	labels[WorkflowUidLabel] = string(workflow.GetUID())
 
 	child.SetLabels(labels)
 }
@@ -263,7 +267,7 @@ func DeleteChildren(ctx context.Context, c client.Client, childObjectLists []Obj
 	return DeleteChildrenWithLabels(ctx, c, childObjectLists, parent, client.MatchingLabels(map[string]string{}))
 }
 
-func OwnerLabelMapFunc(o client.Object) []reconcile.Request {
+func OwnerLabelMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
 	labels := o.GetLabels()
 
 	ownerName, exists := labels[OwnerNameLabel]

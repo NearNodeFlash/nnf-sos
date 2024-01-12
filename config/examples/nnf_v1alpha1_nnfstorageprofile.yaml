@@ -6,19 +6,23 @@ metadata:
 data:
   default: true
   lustreStorage:
-    combinedMgtMdt: true
+    combinedMgtMdt: false
     mgtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mgs $VOL_NAME
+      mkfs: --mgs --backfstype=$BACKFS $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     mdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mdt --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+      mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     mgtMdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mgs --mdt --fsname=$FS_NAME --index=$INDEX $VOL_NAME
+      mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     ostCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --ost --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $VOL_NAME
+      mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mountTarget: $ZVOL_NAME $MOUNT_PATH
     ostOptions:
       scale: 5
       colocateComputes: true
@@ -28,38 +32,55 @@ data:
       count: 1
     mgtOptions:
       count: 1
+    mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+    mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
   gfs2Storage:
     commandlines:
       pvCreate: $DEVICE
-      vgCreate: $VG_NAME $DEVICE_LIST
+      pvRemove: $DEVICE
+      vgCreate: --shared $VG_NAME $DEVICE_LIST
       vgChange:
-        activate: --activate ys $VG_NAME
-        deactivate: --activate n $VG_NAME
         lockStart: --lock-start $VG_NAME
+        lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --activate ys --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvChange:
+        activate: --activate ys $VG_NAME/$LV_NAME
+        deactivate: --activate n $VG_NAME/$LV_NAME
       lvRemove: $VG_NAME
       mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
+      mountRabbit: $DEVICE $MOUNT_PATH
+      mountCompute: $DEVICE $MOUNT_PATH
   xfsStorage:
     commandlines:
       pvCreate: $DEVICE
-      vgCreate: $VG_NAME $DEVICE_LIST
+      pvRemove: $DEVICE
+      vgCreate: --shared $VG_NAME $DEVICE_LIST
       vgChange:
-        activate: --activate y $VG_NAME
-        deactivate: --activate n $VG_NAME
+        lockStart: --lock-start $VG_NAME
+        lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvChange:
+        activate: --activate y $VG_NAME/$LV_NAME
+        deactivate: --activate n $VG_NAME/$LV_NAME
       lvRemove: $VG_NAME
       mkfs: $DEVICE
+      mountRabbit: $DEVICE $MOUNT_PATH
+      mountCompute: $DEVICE $MOUNT_PATH
   rawStorage:
     commandlines:
       pvCreate: $DEVICE
-      vgCreate: $VG_NAME $DEVICE_LIST
+      pvRemove: $DEVICE
+      vgCreate: --shared $VG_NAME $DEVICE_LIST
       vgChange:
-        activate: --activate y $VG_NAME
-        deactivate: --activate n $VG_NAME
+        lockStart: --lock-start $VG_NAME
+        lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvChange:
+        activate: --activate y $VG_NAME/$LV_NAME
+        deactivate: --activate n $VG_NAME/$LV_NAME
       lvRemove: $VG_NAME
 
 

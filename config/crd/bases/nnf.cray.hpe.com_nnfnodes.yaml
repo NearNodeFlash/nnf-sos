@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.13.0
   name: nnfnodes.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
@@ -56,7 +56,7 @@ spec:
             description: NnfNodeSpec defines the desired state of NNF Node
             properties:
               name:
-                description: The unique name for this NNF Node https://connect.us.cray.com/confluence/display/HSOS/Shasta+HSS+Component+Naming+Convention#ShastaHSSComponentNamingConvention-2.1.4.3MountainCabinetComponents
+                description: The unique name for this NNF Node
                 type: string
               pod:
                 description: Pod name for this NNF Node
@@ -131,6 +131,9 @@ spec:
                 type: boolean
               health:
                 description: NnfResourceHealthType defines the health of an NNF resource.
+                type: string
+              lnetNid:
+                description: LNetNid is the LNet address for the NNF node
                 type: string
               servers:
                 items:

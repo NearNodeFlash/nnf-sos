@@ -17,4 +17,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/nearnodeflash/nnf-sos
-  newTag: 53297ed0c2ce52ddc2113671b3dd3c79f5894dce
+  newTag: 0.1.0

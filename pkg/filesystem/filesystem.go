@@ -1,0 +1,45 @@
+/*
+ * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package filesystem
+
+import "context"
+
+type FileSystem interface {
+	// Create the file system (e.g., mkfs)
+	Create(ctx context.Context, complete bool) (bool, error)
+
+	// Destroy the file system (e.g., wipefs)
+	Destroy(ctx context.Context) (bool, error)
+
+	// Activate the file system (e.g., mount Lustre target)
+	Activate(ctx context.Context, complete bool) (bool, error)
+
+	// Deactivate the file system (e.g., unmount Lustre target)
+	Deactivate(ctx context.Context) (bool, error)
+
+	// Mount the file system
+	Mount(ctx context.Context, path string, complete bool) (bool, error)
+
+	// Unmount the file system
+	Unmount(ctx context.Context, path string) (bool, error)
+
+	// Set the UID and GID for the file system
+	SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error)
+}

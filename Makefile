@@ -1,4 +1,4 @@
-# Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+# Copyright 2021-2024 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -64,7 +64,7 @@ NNFMFU_VERSION ?= master
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.26.0
+ENVTEST_K8S_VERSION = 1.28.0
 
 # Jenkins behaviors
 # pipeline_service builds its target docker image and stores it into 1 of 3 destination folders.
@@ -99,6 +99,9 @@ ENVTEST_K8S_VERSION = 1.26.0
 #   export KUBECONFIG=/my/dp0/kubeconfig.file
 #   make deploy OVERLAY=dp0
 OVERLAY ?= kind
+
+# Tell Kustomize to deploy the default examples config, or an overlay
+OVERLAY_EXAMPLES ?= examples
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -148,7 +151,7 @@ vet: ## Run go vet against code.
 ##@ Test
 
 # Explicitly specifying directories to test here to avoid running tests in .dws-operator for the time being.
-# ./controllers/...
+# ./internal/...
 # ./api/...
 # Below is a list of ginkgo test flags that may be used to generate different test patterns.
 # Specifying 'count=1' is the idiomatic way to disable test caching
@@ -214,10 +217,10 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
 EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
-TESTDIRS ?= controllers api
+TESTDIRS ?= internal api
 FAILFAST ?= no
 test: manifests generate fmt vet envtest ## Run tests.
-	find controllers -name "*.db" -type d -exec rm -rf {} +
+	find internal -name "*.db" -type d -exec rm -rf {} +
 	source test-tools.sh; prefix_webhook_names config/webhook ${ENVTEST_ASSETS_DIR}/webhook
 	if [[ "${FAILFAST}" == yes ]]; then \
 		failfast="-ginkgo.fail-fast"; \
@@ -231,12 +234,16 @@ test: manifests generate fmt vet envtest ## Run tests.
 	done
 
 ##@ Build
+build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
+build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
+build-daemon: manifests generate fmt vet ## Build standalone clientMount daemon
+	GOOS=linux GOARCH=amd64 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager cmd/main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run cmd/main.go
 
 docker-build: VERSION ?= $(shell cat .version)
 docker-build: .version ## Build docker image with the manager.
@@ -260,13 +267,17 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found -f -
 
-deploy: VERSION ?= $(shell cat .version)
-deploy: .version kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	./deploy.sh deploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY) $(NNFMFU_TAG_BASE):$(NNFMFU_VERSION)
+edit-image: VERSION ?= $(shell cat .version)
+edit-image: .version
+	$(KUSTOMIZE_IMAGE_TAG) config/begin $(OVERLAY) $(IMAGE_TAG_BASE) $(VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples $(OVERLAY_EXAMPLES) $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION)
+
+deploy: kustomize edit-image ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	./deploy.sh deploy $(KUSTOMIZE) config/begin config/begin-examples
 
 undeploy: VERSION ?= $(shell cat .version)
 undeploy: .version kustomize ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
-	./deploy.sh undeploy $(KUSTOMIZE) $(IMAGE_TAG_BASE):$(VERSION) $(OVERLAY)
+	./deploy.sh undeploy $(KUSTOMIZE) config/$(OVERLAY) config/$(OVERLAY_EXAMPLES)
 
 # Let .version be phony so that a git update to the workarea can be reflected
 # in it each time it's needed.
@@ -289,18 +300,19 @@ clean-bin:
 	fi
 
 ## Tool Binaries
+KUSTOMIZE_IMAGE_TAG ?= ./hack/make-kustomization.sh
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.7
-CONTROLLER_TOOLS_VERSION ?= v0.12.0
+KUSTOMIZE_VERSION ?= v5.1.1
+CONTROLLER_TOOLS_VERSION ?= v0.13.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(LOCALBIN) ## Download kustomize locally if necessary.
-	if [[ ! -s $(LOCALBIN)/kustomize || $$($(LOCALBIN)/kustomize version | awk '{print $$1}' | awk -F/ '{print $$2}') != $(KUSTOMIZE_VERSION) ]]; then \
+	if [[ ! -s $(LOCALBIN)/kustomize || ! $$($(LOCALBIN)/kustomize version) =~ $(KUSTOMIZE_VERSION) ]]; then \
 	  rm -f $(LOCALBIN)/kustomize && \
 	  { curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }; \
 	fi

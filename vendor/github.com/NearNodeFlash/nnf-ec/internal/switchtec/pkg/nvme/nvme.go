@@ -675,7 +675,7 @@ type IdNs struct {
 	LBAFormats                   [16]struct {
 		MetadataSize        uint16 // MS
 		LBADataSize         uint8  // LBADS Indicates the LBA data size supported in terms of a power-of-two value. If the value is 0, the the LBA format is not supported
-		RelativePerformance uint8  // RP indicates the relative performance of this LBA formt relative to other LBA formats
+		RelativePerformance uint8  // RP indicates the relative performance of this LBA format relative to other LBA formats
 	}
 	Reserved192    [192]uint8
 	VendorSpecific [3712]uint8
