@@ -192,7 +192,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	storagePoolID := fmt.Sprintf("%s-%d", nodeBlockStorage.Name, index)
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeBlockStorage.Spec.Allocations[index].Capacity)
 	if err != nil {
-		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create storage pool").WithError(err).WithMajor()
+		return nil, dwsv1alpha2.NewResourceError("could not create storage pool").WithError(err).WithMajor()
 
 	}
 
@@ -206,7 +206,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	}
 
 	if len(allocationStatus.Devices) != len(vc.Members) {
-		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("unexpected number of namespaces").WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("unexpected number of namespaces").WithFatal()
 	}
 
 	for i, member := range vc.Members {
@@ -236,7 +236,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 		log.Info("Created storage pool", "Id", sp.Id)
 		allocationStatus.StoragePoolId = sp.Id
 
-		return &ctrl.Result{}, nil
+		return nil, nil
 	}
 
 	return nil, nil
@@ -331,7 +331,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			sg, err := r.createStorageGroup(ss, storageGroupId, allocationStatus.StoragePoolId, endpointID)
 			if err != nil {
-				return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not create storage group").WithError(err).WithMajor()
+				return nil, dwsv1alpha2.NewResourceError("could not create storage group").WithError(err).WithMajor()
 			}
 
 			if allocationStatus.Accesses == nil {
@@ -343,7 +343,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				log.Info("Created storage group", "Id", storageGroupId)
 				allocationStatus.Accesses[nodeName] = nnfv1alpha1.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
 
-				return &ctrl.Result{}, nil
+				return nil, nil
 			}
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
