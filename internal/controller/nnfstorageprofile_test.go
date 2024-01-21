@@ -77,6 +77,13 @@ func createBasicDefaultNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
 	return createNnfStorageProfile(storageProfile, true)
 }
 
+// createBasicDefaultNnfStorageProfile creates a simple default storage profile.
+func createBasicPinnedNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
+	storageProfile := basicNnfStorageProfile("durable-" + uuid.NewString()[:8])
+	storageProfile.Data.Pinned = true
+	return createNnfStorageProfile(storageProfile, true)
+}
+
 func verifyPinnedProfile(ctx context.Context, clnt client.Client, namespace string, profileName string) error {
 
 	nnfStorageProfile, err := findPinnedProfile(ctx, clnt, namespace, profileName)

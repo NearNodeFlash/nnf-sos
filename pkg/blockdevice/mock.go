@@ -54,7 +54,7 @@ func (m *MockBlockDevice) Activate(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (m *MockBlockDevice) Deactivate(ctx context.Context) (bool, error) {
+func (m *MockBlockDevice) Deactivate(ctx context.Context, full bool) (bool, error) {
 	m.Log.Info("Deactivated mock block device")
 
 	return true, nil

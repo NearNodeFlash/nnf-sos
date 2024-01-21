@@ -183,6 +183,11 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	lvmDesc := blockdevice.Lvm{}
 	devices := []string{}
 
+	blockIndex := index
+	if nnfNodeStorage.Spec.SharedAllocation {
+		blockIndex = 0
+	}
+
 	if nnfNodeStorage.Spec.BlockReference.Kind == reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name() {
 		nnfNodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
@@ -196,8 +201,8 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 		}
 
-		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[index].Accesses) > 0 {
-			devices = nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
+		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses) > 0 {
+			devices = nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
 		} else {
 			// FIXME: This scenario has been encountered after rapid transitions from Setup to
 			// Teardown. The reason is not yet known, but we need a way to log and capture this
@@ -217,7 +222,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		lvmDesc.PhysicalVolumes = append(lvmDesc.PhysicalVolumes, pv)
 	}
 
-	vgName, err := volumeGroupName(ctx, c, nnfNodeStorage, index)
+	vgName, err := volumeGroupName(ctx, c, nnfNodeStorage, blockIndex)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("could not get volume group name").WithError(err).WithMajor()
 	}
@@ -227,9 +232,14 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		return nil, dwsv1alpha2.NewResourceError("could not get logical volume name").WithError(err).WithMajor()
 	}
 
+	percentVG := 100
+	if nnfNodeStorage.Spec.SharedAllocation {
+		percentVG = 100 / nnfNodeStorage.Spec.Count
+	}
+
 	lvmDesc.Log = log
 	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes, log)
-	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, log)
+	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
 
 	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
 	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
@@ -358,11 +368,18 @@ func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1
 		return "", fmt.Errorf("missing directive index label on NnfNodeStorage")
 	}
 
+	if nnfNodeStorage.Spec.SharedAllocation {
+		return fmt.Sprintf("%s_%s", nnfStorageUid, directiveIndex), nil
+	}
+
 	return fmt.Sprintf("%s_%s_%d", nnfStorageUid, directiveIndex, index), nil
 }
 
 func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, error) {
-	// For now just return "lv" as the lv name. If we end up sharing a volume group for multiple lvs, then
-	// this name needs to be something unique
+	if nnfNodeStorage.Spec.SharedAllocation {
+		// For a shared VG, the LV name must be unique in the VG
+		return fmt.Sprintf("lv-%d", index), nil
+	}
+
 	return "lv", nil
 }

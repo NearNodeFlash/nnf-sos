@@ -75,6 +75,10 @@ type NnfStorageAllocationSetSpec struct {
 	// Lustre specific configuration
 	NnfStorageLustreSpec `json:",inline"`
 
+	// SharedAllocation shares a single block storage allocation between multiple file system allocations
+	// (within the same workflow) on a Rabbit
+	SharedAllocation bool `json:"sharedAllocation"`
+
 	// Nodes is the list of Rabbit nodes to make allocations on
 	Nodes []NnfStorageAllocationNodes `json:"nodes"`
 }

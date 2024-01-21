@@ -130,8 +130,8 @@ var _ = Describe("Access Controller Test", func() {
 			Expect(k8sClient.Create(context.TODO(), storages[i])).To(Succeed())
 		}
 
-		// Create a default NnfStorageProfile for the unit tests.
-		storageProfile = createBasicDefaultNnfStorageProfile()
+		// Create a pinned NnfStorageProfile for the unit tests.
+		storageProfile = createBasicPinnedNnfStorageProfile()
 	})
 
 	AfterEach(func() {

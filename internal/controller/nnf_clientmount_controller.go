@@ -45,6 +45,13 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
+type ClientType string
+
+const (
+	ClientCompute ClientType = "Compute"
+	ClientRabbit  ClientType = "Rabbit"
+)
+
 const (
 	// finalizerNnfClientMount defines the finalizer name that this controller
 	// uses on the ClientMount resource. This prevents the ClientMount resource
@@ -58,6 +65,7 @@ type NnfClientMountReconciler struct {
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
 	SemaphoreForStart chan struct{}
+	ClientType        ClientType
 
 	sync.Mutex
 	started         bool
@@ -216,14 +224,25 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
 
 	clientMountInfo := clientMount.Spec.Mounts[index]
-	nnfNodeStorage := r.fakeNnfNodeStorage(clientMount, index)
+	nnfNodeStorage, err := r.fakeNnfNodeStorage(ctx, clientMount, index)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("unable to build NnfNodeStorage").WithError(err).WithMajor()
+	}
 
-	_, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
+	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
 	if err != nil {
 		return dwsv1alpha2.NewResourceError("unable to get file system information").WithError(err).WithMajor()
 	}
 
 	if shouldMount {
+		activated, err := blockDevice.Activate(ctx)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+		}
+		if activated {
+			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
+		}
+
 		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
@@ -245,6 +264,20 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		if unmounted {
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
 		}
+
+		// If this is an unmount on a compute node, we can fully deactivate the block device since we won't use it
+		// again. If this is a rabbit node, we do a minimal deactivation. For LVM this means leaving the lockspace up
+		fullDeactivate := false
+		if r.ClientType == ClientCompute {
+			fullDeactivate = true
+		}
+		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
+		}
+		if deactivated {
+			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
+		}
 	}
 
 	return nil
@@ -253,7 +286,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.ClientMount, index int) *nnfv1alpha1.NnfNodeStorage {
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int) (*nnfv1alpha1.NnfNodeStorage, error) {
 	nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
@@ -279,6 +312,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.C
 	nnfNodeStorage.Spec.UserID = clientMount.Spec.Mounts[index].UserID
 	nnfNodeStorage.Spec.GroupID = clientMount.Spec.Mounts[index].GroupID
 	nnfNodeStorage.Spec.FileSystemType = clientMount.Spec.Mounts[index].Type
+	nnfNodeStorage.Spec.Count = 1
 	if nnfNodeStorage.Spec.FileSystemType == "none" {
 		nnfNodeStorage.Spec.FileSystemType = "raw"
 	}
@@ -290,7 +324,21 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.C
 		nnfNodeStorage.Spec.LustreStorage.MgsAddress = clientMount.Spec.Mounts[index].Device.Lustre.MgsAddresses
 	}
 
-	return nnfNodeStorage
+	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfNodeStorage)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable to find pinned storage profile").WithError(err).WithMajor()
+	}
+
+	switch nnfNodeStorage.Spec.FileSystemType {
+	case "raw":
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.RawStorage.CmdLines.SharedVg
+	case "xfs":
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.XFSStorage.CmdLines.SharedVg
+	case "gfs2":
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.GFS2Storage.CmdLines.SharedVg
+	}
+
+	return nnfNodeStorage, nil
 }
 
 func filterByRabbitNamespacePrefixForTest() predicate.Predicate {
