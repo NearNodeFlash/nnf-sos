@@ -130,6 +130,11 @@ type NnfStorageProfileCmdLines struct {
 	// Mkfs specifies the mkfs commandline, minus the "mkfs".
 	Mkfs string `json:"mkfs,omitempty"`
 
+	// SharedVg specifies that allocations from a workflow on the same Rabbit should share an
+	// LVM VolumeGroup
+	// +kubebuilder:default:=false
+	SharedVg bool `json:"sharedVg,omitempty"`
+
 	// PvCreate specifies the pvcreate commandline, minus the "pvcreate".
 	PvCreate string `json:"pvCreate,omitempty"`
 

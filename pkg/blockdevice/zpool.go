@@ -105,7 +105,7 @@ func (z *Zpool) Activate(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (z *Zpool) Deactivate(ctx context.Context) (bool, error) {
+func (z *Zpool) Deactivate(ctx context.Context, full bool) (bool, error) {
 	return false, nil
 }
 

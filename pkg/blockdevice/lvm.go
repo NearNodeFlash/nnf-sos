@@ -114,16 +114,6 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 		objectCreated = true
 	}
 
-	if len(l.CommandArgs.VgArgs.LockStop) > 0 {
-		created, err := l.VolumeGroup.LockStop(ctx, l.CommandArgs.VgArgs.LockStop)
-		if err != nil {
-			return false, err
-		}
-		if created {
-			objectCreated = true
-		}
-	}
-
 	return objectCreated, nil
 }
 
@@ -136,6 +126,7 @@ func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
+	// If the node was rebooted, the lockspace may not be started
 	if vgExists && len(l.CommandArgs.VgArgs.LockStart) > 0 {
 		destroyed, err := l.VolumeGroup.LockStart(ctx, l.CommandArgs.VgArgs.LockStart)
 		if err != nil {
@@ -262,7 +253,7 @@ func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 }
 
 // Deactivate the LVM
-func (l *Lvm) Deactivate(ctx context.Context) (bool, error) {
+func (l *Lvm) Deactivate(ctx context.Context, full bool) (bool, error) {
 
 	if len(l.CommandArgs.LvArgs.Deactivate) > 0 {
 		_, err := l.LogicalVolume.Deactivate(ctx, l.CommandArgs.LvArgs.Deactivate)
@@ -271,7 +262,8 @@ func (l *Lvm) Deactivate(ctx context.Context) (bool, error) {
 		}
 	}
 
-	if len(l.CommandArgs.VgArgs.LockStop) > 0 {
+	// If we're doing a full deactivation, then stop the lockspace as well
+	if full && len(l.CommandArgs.VgArgs.LockStop) > 0 {
 		_, err := l.VolumeGroup.LockStop(ctx, l.CommandArgs.VgArgs.LockStop)
 		if err != nil {
 			return false, err

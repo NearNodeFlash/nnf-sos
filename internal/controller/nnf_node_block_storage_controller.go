@@ -268,8 +268,6 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	if len(allocationStatus.StoragePoolId) == 0 {
 		log.Info("Created storage pool", "Id", sp.Id)
 		allocationStatus.StoragePoolId = sp.Id
-
-		return nil, nil
 	}
 
 	return nil, nil
@@ -333,6 +331,8 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		endpointID := endpointRef.OdataId[strings.LastIndex(endpointRef.OdataId, "/")+1:]
 		storageGroupId := fmt.Sprintf("%s-%d-%s", nodeBlockStorage.Name, index, endpointID)
 
+		log.Info("checking storage group", "name", storageGroupId)
+
 		// If the endpoint doesn't need a storage group, remove one if it exists
 		if nodeName == "" {
 			if _, err := r.getStorageGroup(ss, storageGroupId); err != nil {
@@ -379,13 +379,13 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
 			if nodeName != clients[0] {
-				return nil, nil
+				continue
 			}
 
 			// Bail out if this is kind
 			_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 			if found || os.Getenv("ENVIRONMENT") == "kind" {
-				return nil, nil
+				continue
 			}
 
 			// Initialize the path array if it doesn't exist yet

@@ -77,24 +77,12 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 		return false, nil
 	}
 
-	if _, err := f.BlockDevice.Activate(ctx); err != nil {
-		return false, fmt.Errorf("could not activate block device for mounting: %w", err)
-	}
-
 	// If the device is already formatted, don't run the mkfs again
 	formatted, err := f.BlockDevice.CheckFormatted()
 	if err != nil {
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after format shows completed: %w", err)
-		}
-
 		return false, fmt.Errorf("could not determine if device is formatted: %w", err)
 	}
 	if formatted {
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after format shows completed: %w", err)
-		}
-
 		return false, nil
 	}
 
@@ -102,10 +90,6 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 		if err != nil {
 			return false, fmt.Errorf("could not create file system: %w", err)
 		}
-	}
-
-	if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-		return false, fmt.Errorf("could not deactivate block device after mkfs: %w", err)
 	}
 
 	return true, nil
@@ -166,10 +150,6 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 		}
 	}
 
-	if _, err := f.BlockDevice.Activate(ctx); err != nil {
-		return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
-	}
-
 	// Build the mount command from the args provided
 	if f.CommandArgs.Vars == nil {
 		f.CommandArgs.Vars = make(map[string]string)
@@ -178,10 +158,6 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
 	if _, err := command.Run(mountCmd, f.Log); err != nil {
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
-		}
-
 		return false, fmt.Errorf("could not mount file system %s: %w", path, err)
 	}
 
@@ -213,16 +189,7 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		// Remove the file/directory. If it fails don't worry about it.
 		_ = os.Remove(path)
 
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
-		}
-
 		return true, nil
-	}
-
-	// Try to deactivate the block device in case the deactivate failed after the unmount above
-	if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-		return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
 	}
 
 	// file system already unmounted

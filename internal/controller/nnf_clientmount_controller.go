@@ -45,6 +45,16 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
+// WorkflowState is the enumeration of the state of the workflow
+// +kubebuilder:validation:Enum:=Proposal;Setup;DataIn;PreRun;PostRun;DataOut;Teardown
+type ClientType string
+
+// WorkflowState values
+const (
+	ClientCompute ClientType = "Compute"
+	ClientRabbit  ClientType = "Rabbit"
+)
+
 const (
 	// finalizerNnfClientMount defines the finalizer name that this controller
 	// uses on the ClientMount resource. This prevents the ClientMount resource
@@ -58,6 +68,7 @@ type NnfClientMountReconciler struct {
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
 	SemaphoreForStart chan int
+	ClientType        ClientType
 
 	sync.Mutex
 	started         bool
@@ -218,12 +229,20 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	clientMountInfo := clientMount.Spec.Mounts[index]
 	nnfNodeStorage := r.fakeNnfNodeStorage(clientMount, index)
 
-	_, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
+	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
 	if err != nil {
 		return dwsv1alpha2.NewResourceError("unable to get file system information").WithError(err).WithMajor()
 	}
 
 	if shouldMount {
+		activated, err := blockDevice.Activate(ctx)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+		}
+		if activated {
+			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
+		}
+
 		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
@@ -244,6 +263,20 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		if unmounted {
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
+		}
+
+		// If this is an unmount on a compute node, we can fully deactivate the block device since we won't use it
+		// again. If this is a rabbit node, we do a minimal deactivation. For LVM this means leaving the lockspace up
+		fullDeactivate := false
+		if r.ClientType == ClientCompute {
+			fullDeactivate = true
+		}
+		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
+		}
+		if deactivated {
+			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
 		}
 	}
 

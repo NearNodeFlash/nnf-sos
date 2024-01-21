@@ -38,6 +38,10 @@ type NnfNodeStorageSpec struct {
 	// +kubebuilder:validation:Minimum:=0
 	Count int `json:"count"`
 
+	SharedAllocation bool `json:"sharedAllocation"`
+
+	Capacity int64 `json:"capacity,omitempty"`
+
 	// User ID for file system
 	UserID uint32 `json:"userID"`
 

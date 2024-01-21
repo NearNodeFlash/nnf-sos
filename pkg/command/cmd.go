@@ -85,9 +85,9 @@ func runWithTimeout(args string, timeout int, log logr.Logger, uid, gid *uint32)
 	// If UID/GID are set, then run this command with those
 	if uid != nil && gid != nil {
 		shellCmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: *uid, Gid: *gid}}
-		log.V(1).Info("Command Run", "UID", uid, "GID", gid, "command", args)
+		log.Info("Command Run", "UID", uid, "GID", gid, "command", args)
 	} else {
-		log.V(1).Info("Command Run", "command", args)
+		log.Info("Command Run", "command", args)
 	}
 
 	err := shellCmd.Run()
