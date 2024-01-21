@@ -49,7 +49,7 @@ func (m *MockBlockDevice) Destroy(ctx context.Context) (bool, error) {
 }
 
 func (m *MockBlockDevice) Activate(ctx context.Context) (bool, error) {
-	m.Log.Info("Dctivated mock block device")
+	m.Log.Info("Activated mock block device")
 
 	return true, nil
 }

@@ -88,6 +88,11 @@ spec:
                         description: PvRemove specifies the pvremove commandline,
                           minus the "pvremove".
                         type: string
+                      sharedVg:
+                        default: false
+                        description: SharedVg specifies that allocations from a workflow
+                          on the same Rabbit should share an LVM VolumeGroup
+                        type: boolean
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
@@ -396,6 +401,11 @@ spec:
                         description: PvRemove specifies the pvremove commandline,
                           minus the "pvremove".
                         type: string
+                      sharedVg:
+                        default: false
+                        description: SharedVg specifies that allocations from a workflow
+                          on the same Rabbit should share an LVM VolumeGroup
+                        type: boolean
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"
@@ -467,6 +477,11 @@ spec:
                         description: PvRemove specifies the pvremove commandline,
                           minus the "pvremove".
                         type: string
+                      sharedVg:
+                        default: false
+                        description: SharedVg specifies that allocations from a workflow
+                          on the same Rabbit should share an LVM VolumeGroup
+                        type: boolean
                       vgChange:
                         description: VgChange specifies the various vgchange commandlines,
                           minus the "vgchange"

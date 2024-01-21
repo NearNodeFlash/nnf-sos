@@ -60,6 +60,21 @@ func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+func (vg *VolumeGroup) Find(ctx context.Context) (*vgsVolumeGroup, error) {
+	existingVGs, err := vgsListVolumes(ctx, vg.Log)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, existingVG := range existingVGs {
+		if existingVG.Name == vg.Name {
+			return &existingVG, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (vg *VolumeGroup) parseArgs(args string) (string, error) {
 	deviceNames := []string{}
 	for _, pv := range vg.PhysicalVolumes {

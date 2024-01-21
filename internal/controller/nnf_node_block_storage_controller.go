@@ -235,8 +235,6 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	if len(allocationStatus.StoragePoolId) == 0 {
 		log.Info("Created storage pool", "Id", sp.Id)
 		allocationStatus.StoragePoolId = sp.Id
-
-		return nil, nil
 	}
 
 	return nil, nil
@@ -342,8 +340,6 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			if _, ok := allocationStatus.Accesses[nodeName]; !ok {
 				log.Info("Created storage group", "Id", storageGroupId)
 				allocationStatus.Accesses[nodeName] = nnfv1alpha1.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
-
-				return nil, nil
 			}
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access

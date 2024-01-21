@@ -61,6 +61,10 @@ spec:
                       type: integer
                   type: object
                 type: array
+              sharedAllocation:
+                type: boolean
+            required:
+            - sharedAllocation
             type: object
           status:
             properties:

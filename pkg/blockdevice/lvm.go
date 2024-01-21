@@ -109,16 +109,6 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 		objectCreated = true
 	}
 
-	if len(l.CommandArgs.VgArgs.LockStop) > 0 {
-		created, err := l.VolumeGroup.LockStop(ctx, l.CommandArgs.VgArgs.LockStop)
-		if err != nil {
-			return false, err
-		}
-		if created {
-			objectCreated = true
-		}
-	}
-
 	return objectCreated, nil
 }
 

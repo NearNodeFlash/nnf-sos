@@ -104,10 +104,6 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 		}
 	}
 
-	if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-		return false, fmt.Errorf("could not deactivate block device after mkfs: %w", err)
-	}
-
 	return true, nil
 }
 
@@ -124,6 +120,10 @@ func (f *SimpleFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
+	return f.mount(ctx, path, complete, true)
+}
+
+func (f *SimpleFileSystem) mount(ctx context.Context, path string, complete bool, activateBlock bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -166,8 +166,10 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 		}
 	}
 
-	if _, err := f.BlockDevice.Activate(ctx); err != nil {
-		return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
+	if activateBlock {
+		if _, err := f.BlockDevice.Activate(ctx); err != nil {
+			return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
+		}
 	}
 
 	// Build the mount command from the args provided
@@ -178,8 +180,10 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
 	if _, err := command.Run(mountCmd, f.Log); err != nil {
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
+		if activateBlock {
+			if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
+				return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
+			}
 		}
 
 		return false, fmt.Errorf("could not mount file system %s: %w", path, err)
@@ -189,6 +193,10 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 }
 
 func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+	return f.unmount(ctx, path, true)
+}
+
+func (f *SimpleFileSystem) unmount(ctx context.Context, path string, deactivateBlock bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -213,16 +221,20 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		// Remove the file/directory. If it fails don't worry about it.
 		_ = os.Remove(path)
 
-		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-			return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
+		if deactivateBlock {
+			if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
+				return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
+			}
 		}
 
 		return true, nil
 	}
 
 	// Try to deactivate the block device in case the deactivate failed after the unmount above
-	if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
-		return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
+	if deactivateBlock {
+		if _, err := f.BlockDevice.Deactivate(ctx); err != nil {
+			return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
+		}
 	}
 
 	// file system already unmounted
@@ -238,7 +250,7 @@ func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, gr
 		return false, nil
 	}
 
-	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
+	if _, err := f.mount(ctx, f.TempDir, false, false); err != nil {
 		return false, fmt.Errorf("could not mount temp dir '%s' to set permissions: %w", f.TempDir, err)
 	}
 
@@ -249,7 +261,7 @@ func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, gr
 		return false, fmt.Errorf("could not set owner permissions '%s': %w", f.TempDir, err)
 	}
 
-	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
+	if _, err := f.unmount(ctx, f.TempDir, false); err != nil {
 		return false, fmt.Errorf("could not unmount after setting owner permissions '%s': %w", f.TempDir, err)
 	}
 

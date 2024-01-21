@@ -136,6 +136,8 @@ spec:
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
+                    sharedAllocation:
+                      type: boolean
                     targetType:
                       description: TargetType is the type of Lustre target to be created.
                       enum:
@@ -148,6 +150,7 @@ spec:
                   - capacity
                   - name
                   - nodes
+                  - sharedAllocation
                   type: object
                 type: array
               fileSystemType:

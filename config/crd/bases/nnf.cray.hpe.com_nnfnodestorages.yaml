@@ -83,6 +83,9 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              capacity:
+                format: int64
+                type: integer
               count:
                 description: Count is the number of allocations to make on this node.
                   All of the allocations will be created with the same parameters
@@ -140,6 +143,8 @@ spec:
                     - ost
                     type: string
                 type: object
+              sharedAllocation:
+                type: boolean
               userID:
                 description: User ID for file system
                 format: int32
@@ -148,6 +153,7 @@ spec:
             - count
             - fileSystemType
             - groupID
+            - sharedAllocation
             - userID
             type: object
           status:
