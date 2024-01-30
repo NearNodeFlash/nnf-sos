@@ -6,7 +6,7 @@ metadata:
 data:
   default: true
   lustreStorage:
-    combinedMgtMdt: false
+    combinedMgtMdt: true
     mgtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --mgs --backfstype=$BACKFS $ZVOL_NAME
