@@ -65,7 +65,6 @@ type NnfSystemConfigurationReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("SystemConfiguration", req.NamespacedName)
-	log.Info("DEANDEAN")
 
 	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
 
@@ -221,7 +220,6 @@ func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context,
 // done the add/remove of the NoExecute taint, so we don't repeat that cycle.
 func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, validRabbits map[string]struct{}) (bool, error) {
 	var err error
-	r.Log.Info("DEANDEAN labelsAndTaints")
 
 	// Pass 1: apply cray.nnf.node label and NoSchedule taint.
 	// Pass 2: apply NoExecute taint.
@@ -235,7 +233,6 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 
 	updatedNode := false
 	for pass, effect := range taintEffectPerPass {
-		r.Log.Info("DEANDEAN labelsAndTaints", "pass", pass)
 
 		if updatedNode {
 			// The previous pass must be a no-op before we can run the next pass.
@@ -243,8 +240,6 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 		}
 
 		for name := range validRabbits {
-			r.Log.Info("DEANDEAN labelsAndTaints", "name", name)
-
 			doUpdate := false
 			node := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -307,8 +302,6 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 
 			if doUpdate {
 				updatedNode = true
-				r.Log.Info("DEANDEAN labelsAndTaints", "update node", node)
-
 				if err := r.Update(ctx, node); err != nil {
 					log.Error(err, "unable to update taints and/or labels")
 					return false, err
