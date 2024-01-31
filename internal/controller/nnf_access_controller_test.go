@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -85,7 +86,7 @@ var _ = Describe("Access Controller Test", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeName,
 					Labels: map[string]string{
-						"cray.nnf.node": "true",
+						v1alpha1.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{

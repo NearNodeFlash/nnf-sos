@@ -26,24 +26,36 @@ KUSTOMIZE=$2
 OVERLAY_DIR=$3
 OVERLAY_EXAMPLES_DIR=$4
 
-if [[ $CMD == 'deploy' ]]; then
+wait_for_dws_webhook() {
     echo "Waiting for the dws webhook to become ready..."
     while :; do
         ready=$(kubectl get deployments -n dws-system dws-webhook -o json | jq -Mr '.status.readyReplicas')
         [[ $ready -ge 1 ]] && break
         sleep 1
     done
+}
 
-    # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
-    # MPIJobSpec (with large annotations).
-    $KUSTOMIZE build $OVERLAY_DIR | kubectl apply --server-side=true --force-conflicts -f -
-
+wait_for_sos_webhook() {
     echo "Waiting for the nnf-sos webhook to become ready..."
     while :; do
         ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers 2> /dev/null | awk '{print $2}')
         [[ $ready == "2/2" ]] && break
         sleep 1
     done
+}
+
+if [[ $CMD == 'deploy' ]]; then
+    wait_for_dws_webhook
+
+    # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
+    # MPIJobSpec (with large annotations).
+    $KUSTOMIZE build $OVERLAY_DIR | kubectl apply --server-side=true --force-conflicts -f -
+
+    # Everything may have been evicted while taints were being set.  So allow
+    # for some bouncing, even for nnf-sos itself.
+    sleep 1
+    wait_for_dws_webhook
+    wait_for_sos_webhook
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).

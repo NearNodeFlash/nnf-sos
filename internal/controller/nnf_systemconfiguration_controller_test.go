@@ -21,6 +21,7 @@ package controller
 import (
 	"context"
 
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -70,12 +71,12 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 	var sysCfg *dwsv1alpha2.SystemConfiguration
 
 	taintNoSchedule := &corev1.Taint{
-		Key:    "cray.nnf.node",
+		Key:    v1alpha1.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoSchedule,
 	}
 	taintNoExecute := &corev1.Taint{
-		Key:    "cray.nnf.node",
+		Key:    v1alpha1.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoExecute,
 	}
@@ -137,8 +138,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node), tnode))
 			labels := tnode.GetLabels()
-			g.Expect(labels).To(HaveKeyWithValue("cray.nnf.node", "true"))
-			g.Expect(labels).To(HaveKeyWithValue("cray.nnf.node.cleared", "true"))
+			g.Expect(labels).To(HaveKeyWithValue(v1alpha1.RabbitNodeSelectorLabel, "true"))
+			g.Expect(labels).To(HaveKeyWithValue(v1alpha1.TaintsAndLabelsCompletedLabel, "true"))
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeTrue())
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 		}).Should(Succeed(), "verify failed for node %s", node.Name)
@@ -155,7 +156,7 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 			// Remove the "cleared" label from node1.
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
 			labels := node1.GetLabels()
-			delete(labels, "cray.nnf.node.cleared")
+			delete(labels, v1alpha1.TaintsAndLabelsCompletedLabel)
 			node1.SetLabels(labels)
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
 			By("verifying node1 is repaired")
@@ -185,8 +186,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 				tnode := &corev1.Node{}
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node4), tnode))
 				labels := tnode.GetLabels()
-				g.Expect(labels).ToNot(HaveKey("cray.nnf.node"))
-				g.Expect(labels).ToNot(HaveKey("cray.nnf.node.cleared"))
+				g.Expect(labels).ToNot(HaveKey(v1alpha1.RabbitNodeSelectorLabel))
+				g.Expect(labels).ToNot(HaveKey(v1alpha1.TaintsAndLabelsCompletedLabel))
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeFalse())
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 			}).Should(Succeed(), "verify failed for node %s", node4.Name)

@@ -38,6 +38,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -232,7 +233,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 	}
 
 	updatedNode := false
-	for pass, effect := range taintEffectPerPass {
+	for _, effect := range taintEffectPerPass {
 
 		if updatedNode {
 			// The previous pass must be a no-op before we can run the next pass.
@@ -258,18 +259,14 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				labels = make(map[string]string)
 			}
 
-			if pass > 0 {
-				// On this node, do later passes only if we haven't already
-				// completed all passes here.
-				if _, present := labels["cray.nnf.node.cleared"]; present {
-					continue
-				}
+			if _, present := labels[v1alpha1.TaintsAndLabelsCompletedLabel]; present {
+				continue
 			}
 
 			taint := &corev1.Taint{
-				Key:    "cray.nnf.node",
+				Key:    v1alpha1.RabbitNodeTaintKey,
 				Value:  "true",
-				Effect: taintEffectPerPass[pass],
+				Effect: effect,
 			}
 
 			if effect == clearNoExecute {
@@ -281,7 +278,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels["cray.nnf.node.cleared"] = "true"
+				labels[v1alpha1.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
@@ -294,8 +291,8 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels["cray.nnf.node"]; !present {
-				labels["cray.nnf.node"] = "true"
+			if _, present := labels[v1alpha1.RabbitNodeSelectorLabel]; !present {
+				labels[v1alpha1.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}
