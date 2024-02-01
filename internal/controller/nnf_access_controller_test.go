@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -66,11 +67,11 @@ var _ = Describe("Access Controller Test", func() {
 			},
 			Spec: dwsv1alpha2.SystemConfigurationSpec{
 				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
-					dwsv1alpha2.SystemConfigurationStorageNode{
+					{
 						Type: "Rabbit",
 						Name: "rabbit-nnf-access-test-node-1",
 					},
-					dwsv1alpha2.SystemConfigurationStorageNode{
+					{
 						Type: "Rabbit",
 						Name: "rabbit-nnf-access-test-node-2",
 					},
@@ -83,10 +84,9 @@ var _ = Describe("Access Controller Test", func() {
 			// Create the node - set it to up as ready
 			nodes[i] = &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: corev1.NamespaceDefault,
+					Name: nodeName,
 					Labels: map[string]string{
-						"cray.nnf.node": "true",
+						v1alpha1.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{
