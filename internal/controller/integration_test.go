@@ -292,15 +292,13 @@ var _ = Describe("Integration Test", func() {
 		// Build the config map that ties everything together; this also
 		// creates a namespace for each compute node which is required for
 		// client mount.
-		computeNameGeneratorFunc := func() func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
+		computeNameGeneratorFunc := func() func() []string {
 			nextComputeIndex := 0
-			return func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
-				computes := make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 16)
+			return func() []string {
+				computes := make([]string, 16)
 				for i := 0; i < 16; i++ {
 					name := fmt.Sprintf("compute%d", i+nextComputeIndex)
-
-					computes[i].Name = name
-					computes[i].Index = i
+					computes[i] = name
 				}
 				nextComputeIndex += 16
 				return computes
@@ -315,12 +313,16 @@ var _ = Describe("Integration Test", func() {
 				Name: nodeName,
 			}
 
-			storageNode.ComputesAccess = generator()
-			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
-			for _, computeAccess := range storageNode.ComputesAccess {
-				compute := dwsv1alpha2.SystemConfigurationComputeNode{Name: computeAccess.Name}
-				configSpec.ComputeNodes = append(configSpec.ComputeNodes, compute)
+			computeNames := generator()
+			storageNode.ComputesAccess = make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 0)
+			for idx, name := range computeNames {
+				computesAccess := dwsv1alpha2.SystemConfigurationComputeNodeReference{
+					Name:  name,
+					Index: idx,
+				}
+				storageNode.ComputesAccess = append(storageNode.ComputesAccess, computesAccess)
 			}
+			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
 		}
 
 		config := &dwsv1alpha2.SystemConfiguration{

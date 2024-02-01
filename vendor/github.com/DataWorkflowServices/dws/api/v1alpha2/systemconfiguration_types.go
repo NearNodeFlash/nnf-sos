@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -26,12 +26,6 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 
-// SystemConfigurationComputeNode describes a compute node in the system
-type SystemConfigurationComputeNode struct {
-	// Name of the compute node
-	Name string `json:"name"`
-}
-
 // SystemConfigurationComputeNodeReference describes a compute node that
 // has access to a server.
 type SystemConfigurationComputeNodeReference struct {
@@ -57,9 +51,6 @@ type SystemConfigurationStorageNode struct {
 // SystemConfigurationSpec describes the node layout of the system. This is filled in by
 // an administrator at software installation time.
 type SystemConfigurationSpec struct {
-	// ComputeNodes is the list of compute nodes on the system
-	ComputeNodes []SystemConfigurationComputeNode `json:"computeNodes,omitempty"`
-
 	// StorageNodes is the list of storage nodes on the system
 	StorageNodes []SystemConfigurationStorageNode `json:"storageNodes,omitempty"`
 
@@ -112,4 +103,14 @@ type SystemConfigurationList struct {
 
 func init() {
 	SchemeBuilder.Register(&SystemConfiguration{}, &SystemConfigurationList{})
+}
+
+func (in *SystemConfiguration) Computes() []string {
+	computes := make([]string, 0)
+	for _, storageNode := range in.Spec.StorageNodes {
+		for _, computeNode := range storageNode.ComputesAccess {
+			computes = append(computes, computeNode.Name)
+		}
+	}
+	return computes
 }

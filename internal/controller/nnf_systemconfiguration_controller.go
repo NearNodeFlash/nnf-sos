@@ -122,8 +122,8 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 	// make a map of compute node names that need a namespace. The map only contains
 	// keys and empty values, but it makes it easy to search the names.
 	validNamespaces := make(map[string]struct{})
-	for _, compute := range systemConfiguration.Spec.ComputeNodes {
-		validNamespaces[compute.Name] = struct{}{}
+	for _, name := range systemConfiguration.Computes() {
+		validNamespaces[name] = struct{}{}
 	}
 
 	// Delete any namespaces owned by this systemConfiguration resource that aren't included
