@@ -105,11 +105,21 @@ func init() {
 	SchemeBuilder.Register(&SystemConfiguration{}, &SystemConfigurationList{})
 }
 
-func (in *SystemConfiguration) Computes() []string {
-	computes := make([]string, 0)
-	for _, storageNode := range in.Spec.StorageNodes {
-		for _, computeNode := range storageNode.ComputesAccess {
-			computes = append(computes, computeNode.Name)
+func (in *SystemConfiguration) Computes() []*string {
+	// We expect that there can be a large number of compute nodes and we don't
+	// want to duplicate all of those names.
+	// So we'll walk spec.storageNodes twice so we can set the
+	// length/capacity for the array that will hold pointers to the names.
+	num := 0
+	for i1 := range in.Spec.StorageNodes {
+		num += len(in.Spec.StorageNodes[i1].ComputesAccess)
+	}
+	computes := make([]*string, num)
+	idx := 0
+	for i2 := range in.Spec.StorageNodes {
+		for i3 := range in.Spec.StorageNodes[i2].ComputesAccess {
+			computes[idx] = &in.Spec.StorageNodes[i2].ComputesAccess[i3].Name
+			idx++
 		}
 	}
 	return computes
