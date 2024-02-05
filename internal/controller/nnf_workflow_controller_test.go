@@ -362,7 +362,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 	})
 
-	When("Using bad copy_in/copy_out directives", func() {
+	When("Using bad copy_in directives", func() {
 
 		It("Fails missing or malformed jobdw reference", func() {
 			workflow.Spec.DWDirectives = []string{
@@ -399,6 +399,55 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			workflow.Spec.DWDirectives = []string{
 				"#DW jobdw name=test type=lustre capacity=1GiB",
 				"#DW copy_in source=/lus/INCORRECT/my-file.in destination=$DW_JOB_test/my-file.out",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
+				expected := &dwsv1alpha2.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
+		})
+	})
+
+	When("Using bad copy_out directives", func() {
+
+		It("Fails missing or malformed jobdw reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_out source=$DW_JOB_INCORRECT/my-file.in destination=/lus/maui/my-file.out",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
+				expected := &dwsv1alpha2.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
+
+		})
+
+		It("Fails missing or malformed persistentdw reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW create_persistent name=test type=lustre capacity=1GiB",
+				"#DW copy_out source=$DW_PERSISTENT_INCORRECT/my-file.int destination=/lus/maui/my-file.out",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
+				expected := &dwsv1alpha2.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
+		})
+
+		It("Fails missing or malformed global lustre reference", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_out source=$DW_JOB_test/my-file.int destination=/lus/INCORRECT/my-file.out",
 			}
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
