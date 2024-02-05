@@ -26,6 +26,13 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 
+// SystemConfigurationExternalComputeNode describes a compute node that is
+// not directly matched with any of the nodes in the StorageNodes list.
+type SystemConfigurationExternalComputeNode struct {
+	// Name of the compute node
+	Name string `json:"name"`
+}
+
 // SystemConfigurationComputeNodeReference describes a compute node that
 // has access to a server.
 type SystemConfigurationComputeNodeReference struct {
@@ -51,6 +58,10 @@ type SystemConfigurationStorageNode struct {
 // SystemConfigurationSpec describes the node layout of the system. This is filled in by
 // an administrator at software installation time.
 type SystemConfigurationSpec struct {
+	// ExternalComputeNodes is the list of computes nodes that are not
+	// directly matched with any of the StorageNodes.
+	ExternalComputeNodes []SystemConfigurationExternalComputeNode `json:"externalComputeNodes,omitempty"`
+
 	// StorageNodes is the list of storage nodes on the system
 	StorageNodes []SystemConfigurationStorageNode `json:"storageNodes,omitempty"`
 
@@ -114,6 +125,8 @@ func (in *SystemConfiguration) Computes() []*string {
 	for i1 := range in.Spec.StorageNodes {
 		num += len(in.Spec.StorageNodes[i1].ComputesAccess)
 	}
+	// Add room for the external computes.
+	num += len(in.Spec.ExternalComputeNodes)
 	computes := make([]*string, num)
 	idx := 0
 	for i2 := range in.Spec.StorageNodes {
@@ -121,6 +134,11 @@ func (in *SystemConfiguration) Computes() []*string {
 			computes[idx] = &in.Spec.StorageNodes[i2].ComputesAccess[i3].Name
 			idx++
 		}
+	}
+	// Add the external computes.
+	for i4 := range in.Spec.ExternalComputeNodes {
+		computes[idx] = &in.Spec.ExternalComputeNodes[i4].Name
+		idx++
 	}
 	return computes
 }
