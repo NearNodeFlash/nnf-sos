@@ -1021,7 +1021,7 @@ func clientMountName(access *nnfv1alpha1.NnfAccess) string {
 // For rabbit mounts, use unique index mount directories that consist of <namespace>-<index>.  These
 // unique directories guard against potential data loss when doing copy out data movement
 // operations. Having the namespace (rabbit name) included in the mount path ensures that these
-// individual compute mount points are always unique.
+// individual compute mount points are unique.
 //
 // Ex:
 //
@@ -1034,7 +1034,7 @@ func clientMountName(access *nnfv1alpha1.NnfAccess) string {
 //	/mnt/nnf/7b5dda61-9d91-4b50-a0d3-f863d0aac25b-0/0
 //
 // When data movement copies the MountPathPrefix to global lustre, then the contents of these
-// directories are merged together and potential data loss can occur if the contents do not have
+// directories are merged together and data loss can occur if the contents do not have
 // unique filenames.
 func getIndexMountDir(namespace string, index int) string {
 	return fmt.Sprintf("%s-%s", namespace, strconv.Itoa(index))
