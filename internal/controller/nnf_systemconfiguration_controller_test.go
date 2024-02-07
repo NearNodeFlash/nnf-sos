@@ -51,8 +51,17 @@ var _ = Describe("NnfSystemconfigurationController", func() {
 				Namespace: corev1.NamespaceDefault,
 			},
 			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				ComputeNodes: []dwsv1alpha2.SystemConfigurationComputeNode{
-					{Name: "test-compute-0"},
+				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+					{
+						Type: "Rabbit",
+						Name: "rabbit1",
+						ComputesAccess: []dwsv1alpha2.SystemConfigurationComputeNodeReference{
+							{
+								Name:  "test-compute-0",
+								Index: 0,
+							},
+						},
+					},
 				},
 			},
 		}
