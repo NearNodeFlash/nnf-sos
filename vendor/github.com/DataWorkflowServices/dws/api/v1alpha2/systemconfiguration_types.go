@@ -58,7 +58,7 @@ type SystemConfigurationStorageNode struct {
 // SystemConfigurationSpec describes the node layout of the system. This is filled in by
 // an administrator at software installation time.
 type SystemConfigurationSpec struct {
-	// ExternalComputeNodes is the list of computes nodes that are not
+	// ExternalComputeNodes is the list of compute nodes that are not
 	// directly matched with any of the StorageNodes.
 	ExternalComputeNodes []SystemConfigurationExternalComputeNode `json:"externalComputeNodes,omitempty"`
 
