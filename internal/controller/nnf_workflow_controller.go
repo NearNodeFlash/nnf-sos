@@ -647,12 +647,13 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	fsType := targetStorage.Spec.FileSystemType
 
-	getRabbitRelativePath := func(storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path string, index int) string {
+	getRabbitRelativePath := func(storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path, namespace string, index int) string {
 
 		if storageRef.Kind == reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
 			switch fsType {
 			case "xfs", "gfs2":
-				return filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(index), path)
+				idxMount := getIndexMountDir(namespace, index)
+				return filepath.Join(access.Spec.MountPathPrefix, idxMount, path)
 			case "lustre":
 				return access.Spec.MountPath + path
 			}
@@ -688,11 +689,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 					},
 					Spec: nnfv1alpha1.NnfDataMovementSpec{
 						Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-							Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, i),
+							Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, node.Name, i),
 							StorageReference: *sourceStorage,
 						},
 						Destination: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-							Path:             getRabbitRelativePath(destStorage, destAccess, dest, i),
+							Path:             getRabbitRelativePath(destStorage, destAccess, dest, node.Name, i),
 							StorageReference: *destStorage,
 						},
 						UserId:  workflow.Spec.UserID,
@@ -725,11 +726,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			},
 			Spec: nnfv1alpha1.NnfDataMovementSpec{
 				Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-					Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, 0),
+					Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, "", 0),
 					StorageReference: *sourceStorage,
 				},
 				Destination: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-					Path:             getRabbitRelativePath(destStorage, destAccess, dest, 0),
+					Path:             getRabbitRelativePath(destStorage, destAccess, dest, "", 0),
 					StorageReference: *destStorage,
 				},
 				UserId:  workflow.Spec.UserID,
