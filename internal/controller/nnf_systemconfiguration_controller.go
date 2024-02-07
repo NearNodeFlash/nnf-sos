@@ -65,8 +65,6 @@ type NnfSystemConfigurationReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	log := r.Log.WithValues("SystemConfiguration", req.NamespacedName)
-
 	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
 
 	systemConfiguration := &dwsv1alpha2.SystemConfiguration{}
@@ -86,11 +84,6 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 	if !systemConfiguration.GetDeletionTimestamp().IsZero() {
 		if !controllerutil.ContainsFinalizer(systemConfiguration, finalizerNnfSystemConfiguration) {
 			return ctrl.Result{}, nil
-		}
-
-		log.Info("Removing all compute node namespaces due to object deletion")
-		if err := r.deleteNamespaces(ctx, systemConfiguration, map[string]struct{}{}); err != nil {
-			return ctrl.Result{}, err
 		}
 
 		controllerutil.RemoveFinalizer(systemConfiguration, finalizerNnfSystemConfiguration)
