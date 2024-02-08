@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"path"
 	"reflect"
 	"sync"
 
@@ -169,19 +170,18 @@ var _ = Describe("Access Controller Test", func() {
 
 	Describe("Create Client Mounts", func() {
 
-		allocationNodes := make([]nnfv1alpha1.NnfStorageAllocationNodes, len(nodeNames))
-		for idx, nodeName := range nodeNames {
-			allocationNodes[idx] = nnfv1alpha1.NnfStorageAllocationNodes{
-				Count: 1,
-				Name:  nodeName,
-			}
-		}
-
 		It("Creates Lustre Client Mount", func() {
+			allocationNodes := make([]nnfv1alpha1.NnfStorageAllocationNodes, len(nodeNames))
+			for idx, nodeName := range nodeNames {
+				allocationNodes[idx] = nnfv1alpha1.NnfStorageAllocationNodes{
+					Count: 1,
+					Name:  nodeName,
+				}
+			}
 
 			storage := &nnfv1alpha1.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nnf-access-test-storage",
+					Name:      "nnf-access-test-storage-lustre",
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: nnfv1alpha1.NnfStorageSpec{
@@ -214,128 +214,205 @@ var _ = Describe("Access Controller Test", func() {
 				},
 			}
 
-			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed(), "Create NNF Storage")
-			Eventually(func(g Gomega) error {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-				storage.Status.MgsAddress = "127.0.0.1@tcp"
-				return k8sClient.Status().Update(context.TODO(), storage)
-			}).Should(Succeed())
+			verifyClientMount(storage, storageProfile, nodeNames)
+		})
 
-			access := &nnfv1alpha1.NnfAccess{
+		It("Creates XFS Client Mount", func() {
+
+			storage := &nnfv1alpha1.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nnf-access-test-access",
+					Name:      "nnf-access-test-storage-xfs",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha1.NnfAccessSpec{
-					DesiredState:    "mounted",
-					TeardownState:   dwsv1alpha2.StatePreRun,
-					Target:          "all",
-					ClientReference: corev1.ObjectReference{},
-					MountPath:       "./",
-
-					StorageReference: corev1.ObjectReference{
-						Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
-						Name:      storage.Name,
-						Namespace: storage.Namespace,
+				Spec: nnfv1alpha1.NnfStorageSpec{
+					FileSystemType: "xfs",
+					AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{
+						{
+							Name:     "xfs",
+							Capacity: 50000000000,
+							Nodes: []nnfv1alpha1.NnfStorageAllocationNodes{
+								{
+									Count: 1,
+									Name:  nodeNames[0],
+								},
+								{
+									Count: 1,
+									Name:  nodeNames[1],
+								},
+							},
+						},
 					},
 				},
 			}
 
-			addPinnedStorageProfileLabel(access, storageProfile)
+			verifyClientMount(storage, storageProfile, nodeNames)
+		})
 
-			Expect(k8sClient.Create(context.TODO(), access)).To(Succeed(), "Create NNF Access")
+		It("Creates GFS2 Client Mount", func() {
 
-			By("Verify NNF Access goes Ready in mounted state")
-			Eventually(func(g Gomega) bool {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
-				return access.Status.Ready && access.Status.State == "mounted"
-			}).Should(BeTrue())
-
-			By("Verify Client Mounts")
-			for _, nodeName := range nodeNames {
-				mount := &dwsv1alpha2.ClientMount{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      clientMountName(access),
-						Namespace: nodeName,
+			storage := &nnfv1alpha1.NnfStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-access-test-storage-gfs2",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha1.NnfStorageSpec{
+					FileSystemType: "gfs2",
+					AllocationSets: []nnfv1alpha1.NnfStorageAllocationSetSpec{
+						{
+							Name:     "gfs2",
+							Capacity: 50000000000,
+							Nodes: []nnfv1alpha1.NnfStorageAllocationNodes{
+								{
+									Count: 1,
+									Name:  nodeNames[0],
+								},
+								{
+									Count: 1,
+									Name:  nodeNames[1],
+								},
+							},
+						},
 					},
-				}
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(mount), mount)).To(Succeed())
-					g.Expect(mount.Status.Mounts).ToNot(HaveLen(0))
-
-					for _, mountStatus := range mount.Status.Mounts {
-						if mountStatus.Ready == false {
-							return false
-						}
-					}
-					return true
-				}).Should(BeTrue())
-
-				Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
-					"Node":         Equal(nodeName),
-					"DesiredState": Equal(dwsv1alpha2.ClientMountStateMounted),
-					"Mounts":       HaveLen(1),
-				}))
-				Expect(mount.Status.Error).To(BeNil())
-				Expect(mount.Status.Mounts).To(HaveLen(1))
-				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State": Equal(dwsv1alpha2.ClientMountStateMounted),
-					"Ready": BeTrue(),
-				}))
+				},
 			}
 
-			By("Set NNF Access Desired State to unmounted")
-			Eventually(func(g Gomega) error {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
-				access.Spec.DesiredState = "unmounted"
-				return k8sClient.Update(context.TODO(), access)
-			}).Should(Succeed())
-
-			By("Verify NNF Access goes Ready in unmounted state")
-			Eventually(func(g Gomega) bool {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
-				return access.Status.Ready && access.Status.State == "unmounted"
-			}).Should(BeTrue())
-
-			By("Verify Client Mounts go unmounted")
-			for _, nodeName := range nodeNames {
-				mount := &dwsv1alpha2.ClientMount{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      clientMountName(access),
-						Namespace: nodeName,
-					},
-				}
-				Eventually(func(g Gomega) bool {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(mount), mount)).To(Succeed())
-					g.Expect(mount.Status.Mounts).ToNot(HaveLen(0))
-
-					for _, mountStatus := range mount.Status.Mounts {
-						if mountStatus.Ready == false {
-							return false
-						}
-					}
-					return true
-				}).Should(BeTrue())
-
-				Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
-					"Node":         Equal(nodeName),
-					"DesiredState": Equal(dwsv1alpha2.ClientMountStateUnmounted),
-					"Mounts":       HaveLen(1),
-				}))
-				Expect(mount.Status.Error).To(BeNil())
-				Expect(mount.Status.Mounts).To(HaveLen(1))
-				Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-					"State": Equal(dwsv1alpha2.ClientMountStateUnmounted),
-					"Ready": BeTrue(),
-				}))
-			}
-
-			By("Deleting the NNF Access")
-			Expect(k8sClient.Delete(context.TODO(), access)).To(Succeed())
-
-			Eventually(func() error {
-				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
-			}).ShouldNot(Succeed())
+			verifyClientMount(storage, storageProfile, nodeNames)
 		})
 	})
 })
+
+func verifyClientMount(storage *nnfv1alpha1.NnfStorage, storageProfile *nnfv1alpha1.NnfStorageProfile, nodeNames []string) {
+	Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed(), "Create NNF Storage")
+	Eventually(func(g Gomega) error {
+		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+		storage.Status.MgsAddress = "127.0.0.1@tcp"
+		return k8sClient.Status().Update(context.TODO(), storage)
+	}).Should(Succeed())
+
+	mountPath := "/mnt/nnf/12345-0/"
+	access := &nnfv1alpha1.NnfAccess{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nnf-access-test-access-" + storage.Spec.FileSystemType,
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: nnfv1alpha1.NnfAccessSpec{
+
+			DesiredState:    "mounted",
+			TeardownState:   dwsv1alpha2.StatePreRun,
+			Target:          "all",
+			ClientReference: corev1.ObjectReference{},
+			MountPath:       mountPath,
+			MountPathPrefix: mountPath,
+
+			StorageReference: corev1.ObjectReference{
+				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),
+				Name:      storage.Name,
+				Namespace: storage.Namespace,
+			},
+		},
+	}
+
+	addPinnedStorageProfileLabel(access, storageProfile)
+
+	Expect(k8sClient.Create(context.TODO(), access)).To(Succeed(), "Create NNF Access")
+
+	By("Verify NNF Access goes Ready in mounted state")
+	Eventually(func(g Gomega) bool {
+		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+		return access.Status.Ready && access.Status.State == "mounted"
+	}).Should(BeTrue())
+
+	By("Verify Client Mounts")
+	for _, nodeName := range nodeNames {
+		mount := &dwsv1alpha2.ClientMount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clientMountName(access),
+				Namespace: nodeName,
+			},
+		}
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(mount), mount)).To(Succeed())
+			g.Expect(mount.Status.Mounts).ToNot(HaveLen(0))
+
+			for _, mountStatus := range mount.Status.Mounts {
+				if mountStatus.Ready == false {
+					return false
+				}
+			}
+			return true
+		}).Should(BeTrue())
+
+		Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
+			"Node":         Equal(nodeName),
+			"DesiredState": Equal(dwsv1alpha2.ClientMountStateMounted),
+			"Mounts":       HaveLen(1),
+		}))
+
+		Expect(mount.Status.Error).To(BeNil())
+		Expect(mount.Status.Mounts).To(HaveLen(1))
+		Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
+			"State": Equal(dwsv1alpha2.ClientMountStateMounted),
+			"Ready": BeTrue(),
+		}))
+
+		// If not lustre, verify the index mount directory
+		if storage.Spec.FileSystemType != "lustre" {
+			p := path.Join(mountPath, nodeName+"-0")
+			Expect(mount.Spec.Mounts[0].MountPath).To(Equal(p))
+		}
+
+	}
+
+	By("Set NNF Access Desired State to unmounted")
+	Eventually(func(g Gomega) error {
+		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+		access.Spec.DesiredState = "unmounted"
+		return k8sClient.Update(context.TODO(), access)
+	}).Should(Succeed())
+
+	By("Verify NNF Access goes Ready in unmounted state")
+	Eventually(func(g Gomega) bool {
+		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+		return access.Status.Ready && access.Status.State == "unmounted"
+	}).Should(BeTrue())
+
+	By("Verify Client Mounts go unmounted")
+	for _, nodeName := range nodeNames {
+		mount := &dwsv1alpha2.ClientMount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clientMountName(access),
+				Namespace: nodeName,
+			},
+		}
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(mount), mount)).To(Succeed())
+			g.Expect(mount.Status.Mounts).ToNot(HaveLen(0))
+
+			for _, mountStatus := range mount.Status.Mounts {
+				if mountStatus.Ready == false {
+					return false
+				}
+			}
+			return true
+		}).Should(BeTrue())
+
+		Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
+			"Node":         Equal(nodeName),
+			"DesiredState": Equal(dwsv1alpha2.ClientMountStateUnmounted),
+			"Mounts":       HaveLen(1),
+		}))
+		Expect(mount.Status.Error).To(BeNil())
+		Expect(mount.Status.Mounts).To(HaveLen(1))
+		Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
+			"State": Equal(dwsv1alpha2.ClientMountStateUnmounted),
+			"Ready": BeTrue(),
+		}))
+	}
+
+	By("Deleting the NNF Access")
+	Expect(k8sClient.Delete(context.TODO(), access)).To(Succeed())
+
+	Eventually(func() error {
+		return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+	}).ShouldNot(Succeed())
+}
