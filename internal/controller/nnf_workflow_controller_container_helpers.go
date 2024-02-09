@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -266,7 +267,7 @@ func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
 		Effect:   corev1.TaintEffectNoSchedule,
-		Key:      "cray.nnf.node",
+		Key:      v1alpha1.RabbitNodeTaintKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    "true",
 	})

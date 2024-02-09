@@ -152,11 +152,13 @@ spec:
               system. This is filled in by an administrator at software installation
               time.
             properties:
-              computeNodes:
-                description: ComputeNodes is the list of compute nodes on the system
+              externalComputeNodes:
+                description: ExternalComputeNodes is the list of compute nodes that
+                  are not directly matched with any of the StorageNodes.
                 items:
-                  description: SystemConfigurationComputeNode describes a compute
-                    node in the system
+                  description: SystemConfigurationExternalComputeNode describes a
+                    compute node that is not directly matched with any of the nodes
+                    in the StorageNodes list.
                   properties:
                     name:
                       description: Name of the compute node

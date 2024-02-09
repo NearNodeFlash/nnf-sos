@@ -53,7 +53,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 		JustBeforeEach(func() {
 			cfg = &dwsv1alpha2.SystemConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "port-manager-system-config",
+					Name:      "default",
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: dwsv1alpha2.SystemConfigurationSpec{

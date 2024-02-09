@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -26,8 +26,9 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 
-// SystemConfigurationComputeNode describes a compute node in the system
-type SystemConfigurationComputeNode struct {
+// SystemConfigurationExternalComputeNode describes a compute node that is
+// not directly matched with any of the nodes in the StorageNodes list.
+type SystemConfigurationExternalComputeNode struct {
 	// Name of the compute node
 	Name string `json:"name"`
 }
@@ -57,8 +58,9 @@ type SystemConfigurationStorageNode struct {
 // SystemConfigurationSpec describes the node layout of the system. This is filled in by
 // an administrator at software installation time.
 type SystemConfigurationSpec struct {
-	// ComputeNodes is the list of compute nodes on the system
-	ComputeNodes []SystemConfigurationComputeNode `json:"computeNodes,omitempty"`
+	// ExternalComputeNodes is the list of compute nodes that are not
+	// directly matched with any of the StorageNodes.
+	ExternalComputeNodes []SystemConfigurationExternalComputeNode `json:"externalComputeNodes,omitempty"`
 
 	// StorageNodes is the list of storage nodes on the system
 	StorageNodes []SystemConfigurationStorageNode `json:"storageNodes,omitempty"`
@@ -112,4 +114,31 @@ type SystemConfigurationList struct {
 
 func init() {
 	SchemeBuilder.Register(&SystemConfiguration{}, &SystemConfigurationList{})
+}
+
+func (in *SystemConfiguration) Computes() []*string {
+	// We expect that there can be a large number of compute nodes and we don't
+	// want to duplicate all of those names.
+	// So we'll walk spec.storageNodes twice so we can set the
+	// length/capacity for the array that will hold pointers to the names.
+	num := 0
+	for i1 := range in.Spec.StorageNodes {
+		num += len(in.Spec.StorageNodes[i1].ComputesAccess)
+	}
+	// Add room for the external computes.
+	num += len(in.Spec.ExternalComputeNodes)
+	computes := make([]*string, num)
+	idx := 0
+	for i2 := range in.Spec.StorageNodes {
+		for i3 := range in.Spec.StorageNodes[i2].ComputesAccess {
+			computes[idx] = &in.Spec.StorageNodes[i2].ComputesAccess[i3].Name
+			idx++
+		}
+	}
+	// Add the external computes.
+	for i4 := range in.Spec.ExternalComputeNodes {
+		computes[idx] = &in.Spec.ExternalComputeNodes[i4].Name
+		idx++
+	}
+	return computes
 }

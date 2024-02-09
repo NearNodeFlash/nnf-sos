@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -53,4 +53,21 @@ const (
 	// StandaloneMGTLabel is a label applied to the PersistentStorageInstance to show that
 	// it is for a Lustre MGT only. The value for the label is the pool name.
 	StandaloneMGTLabel = "nnf.cray.hpe.com/standalone_mgt"
+
+	// RabbitNodeSelectorLabel is a label applied to each k8s Node that is a Rabbit.
+	// It is used for scheduling NLCs onto the rabbits.
+	// (This is left in its legacy form because so many existing services are
+	// using it in their nodeSelector.)
+	RabbitNodeSelectorLabel = "cray.nnf.node"
+
+	// TaintsAndLabelsCompletedLabel is a label applied to each k8s Node that is a Rabbit.
+	// It is used to indicate that the node has completed the process of applying
+	// the taints and labels that mark it as a rabbit.
+	TaintsAndLabelsCompletedLabel = "nnf.cray.hpe.com/taints_and_labels_completed"
+
+	// RabbitNodeTaintKey is a taint key applied to each k8s Node that is a Rabbit.
+	// It is used for scheduling NLCs onto the rabbits.
+	// (This is left in its legacy form to avoid having existing clusters,
+	// which already have this taint, grind to a halt.)
+	RabbitNodeTaintKey = "cray.nnf.node"
 )

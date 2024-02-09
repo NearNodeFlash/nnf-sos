@@ -625,8 +625,9 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 				// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
 				// to the NnfNodeStorage resource so the client mounter can access the swordfish objects
 				if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+					indexMountDir := getIndexMountDir(nnfNodeStorage.Namespace, i)
+					mountInfo.MountPath = filepath.Join(access.Spec.MountPathPrefix, indexMountDir)
 					mountInfo.Device.Type = dwsv1alpha2.ClientMountDeviceTypeReference
-					mountInfo.MountPath = filepath.Join(access.Spec.MountPathPrefix, strconv.Itoa(i))
 				} else {
 					mountInfo.MountPath = access.Spec.MountPath
 					mountInfo.Device.Type = dwsv1alpha2.ClientMountDeviceTypeLVM
@@ -1015,6 +1016,28 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 func clientMountName(access *nnfv1alpha1.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
+}
+
+// For rabbit mounts, use unique index mount directories that consist of <namespace>-<index>.  These
+// unique directories guard against potential data loss when doing copy out data movement
+// operations. Having the namespace (rabbit name) included in the mount path ensures that these
+// individual compute mount points are unique.
+//
+// Ex:
+//
+//	/mnt/nnf/7b5dda61-9d91-4b50-a0d3-f863d0aac25b-0/rabbit-node-1-0
+//	/mnt/nnf/7b5dda61-9d91-4b50-a0d3-f863d0aac25b-0/rabbit-node-2-0
+//
+// If you did not include the namespace, then the paths would be:
+//
+//	/mnt/nnf/7b5dda61-9d91-4b50-a0d3-f863d0aac25b-0/0
+//	/mnt/nnf/7b5dda61-9d91-4b50-a0d3-f863d0aac25b-0/0
+//
+// When data movement copies the MountPathPrefix to global lustre, then the contents of these
+// directories are merged together and data loss can occur if the contents do not have
+// unique filenames.
+func getIndexMountDir(namespace string, index int) string {
+	return fmt.Sprintf("%s-%s", namespace, strconv.Itoa(index))
 }
 
 // SetupWithManager sets up the controller with the Manager.
