@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+# Copyright 2021-2024 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -26,24 +26,36 @@ KUSTOMIZE=$2
 OVERLAY_DIR=$3
 OVERLAY_EXAMPLES_DIR=$4
 
-if [[ $CMD == 'deploy' ]]; then
+wait_for_dws_webhook() {
     echo "Waiting for the dws webhook to become ready..."
     while :; do
         ready=$(kubectl get deployments -n dws-system dws-webhook -o json | jq -Mr '.status.readyReplicas')
         [[ $ready -ge 1 ]] && break
         sleep 1
     done
+}
+
+wait_for_sos_webhook() {
+    echo "Waiting for the nnf-sos webhook to become ready..."
+    while :; do
+        ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers 2> /dev/null | awk '{print $2}')
+        [[ $ready == "2/2" ]] && break
+        sleep 1
+    done
+}
+
+if [[ $CMD == 'deploy' ]]; then
+    wait_for_dws_webhook
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
     $KUSTOMIZE build $OVERLAY_DIR | kubectl apply --server-side=true --force-conflicts -f -
 
-    echo "Waiting for the nnf-sos webhook to become ready..."
-    while :; do
-        ready=$(kubectl get pods -n nnf-system -l control-plane=controller-manager --no-headers | awk '{print $2}')
-        [[ $ready == "2/2" ]] && break
-        sleep 1
-    done
+    # Everything may have been evicted while taints were being set.  So allow
+    # for some bouncing, even for nnf-sos itself.
+    sleep 1
+    wait_for_dws_webhook
+    wait_for_sos_webhook
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
@@ -70,5 +82,6 @@ if [[ $CMD == 'undeploy' ]]; then
     fi
     $KUSTOMIZE build config/ports | kubectl delete --ignore-not-found -f -
     $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl delete --ignore-not-found -f -
-    $KUSTOMIZE build $OVERLAY_DIR | kubectl delete --ignore-not-found -f -
+    # Do not touch the namespace resource when deleting this service.
+    $KUSTOMIZE build $OVERLAY_DIR | yq eval 'select(.kind != "Namespace")' |  kubectl delete --ignore-not-found -f -
 fi

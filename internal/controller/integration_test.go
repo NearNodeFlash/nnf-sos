@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -42,6 +42,7 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	dwparse "github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
+	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 )
 
@@ -291,15 +292,13 @@ var _ = Describe("Integration Test", func() {
 		// Build the config map that ties everything together; this also
 		// creates a namespace for each compute node which is required for
 		// client mount.
-		computeNameGeneratorFunc := func() func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
+		computeNameGeneratorFunc := func() func() []string {
 			nextComputeIndex := 0
-			return func() []dwsv1alpha2.SystemConfigurationComputeNodeReference {
-				computes := make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 16)
+			return func() []string {
+				computes := make([]string, 16)
 				for i := 0; i < 16; i++ {
 					name := fmt.Sprintf("compute%d", i+nextComputeIndex)
-
-					computes[i].Name = name
-					computes[i].Index = i
+					computes[i] = name
 				}
 				nextComputeIndex += 16
 				return computes
@@ -314,12 +313,16 @@ var _ = Describe("Integration Test", func() {
 				Name: nodeName,
 			}
 
-			storageNode.ComputesAccess = generator()
-			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
-			for _, computeAccess := range storageNode.ComputesAccess {
-				compute := dwsv1alpha2.SystemConfigurationComputeNode{Name: computeAccess.Name}
-				configSpec.ComputeNodes = append(configSpec.ComputeNodes, compute)
+			computeNames := generator()
+			storageNode.ComputesAccess = make([]dwsv1alpha2.SystemConfigurationComputeNodeReference, 0)
+			for idx, name := range computeNames {
+				computesAccess := dwsv1alpha2.SystemConfigurationComputeNodeReference{
+					Name:  name,
+					Index: idx,
+				}
+				storageNode.ComputesAccess = append(storageNode.ComputesAccess, computesAccess)
 			}
+			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
 		}
 
 		config := &dwsv1alpha2.SystemConfiguration{
@@ -340,10 +343,9 @@ var _ = Describe("Integration Test", func() {
 			// Create the node - set it to up as ready
 			node := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: corev1.NamespaceDefault,
+					Name: nodeName,
 					Labels: map[string]string{
-						"cray.nnf.node": "true",
+						v1alpha1.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{
