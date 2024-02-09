@@ -93,11 +93,11 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 
 func (z *Zpool) Destroy(ctx context.Context) (bool, error) {
 	_, err := command.Run(fmt.Sprintf("zpool destroy %s", z.Name), z.Log)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "no such pool") {
 		return false, fmt.Errorf("could not destroy zpool %s", z.Name)
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (z *Zpool) Activate(ctx context.Context) (bool, error) {
