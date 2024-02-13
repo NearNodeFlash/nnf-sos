@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -49,6 +50,10 @@ type NnfDataMovementManagerSpec struct {
 	// Template defines the pod template that is used for the basis of the worker Daemon Set that
 	// manages the per node data movement operations.
 	Template corev1.PodTemplateSpec `json:"template"`
+
+	// UpdateStrategy defines the UpdateStrategy that is used for the basis of the worker Daemon Set
+	// that manages the per node data movement operations.
+	UpdateStrategy appsv1.DaemonSetUpdateStrategy `json:"updateStrategy"`
 
 	// Host Path defines the directory location of shared mounts on an individual worker node.
 	HostPath string `json:"hostPath"`
