@@ -16,6 +16,10 @@ spec:
   selector:
     matchLabels:
       cray.nnf.node: "true"
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "25%"
   template:
     metadata:
       labels:
