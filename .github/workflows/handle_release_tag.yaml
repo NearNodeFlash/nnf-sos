@@ -1,0 +1,26 @@
+name: Handle Release Tag
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-tags: true
+        fetch-depth: 0
+    - name: Repair tag
+      run: git fetch -f origin ${{ github.ref }}:${{ github.ref }}
+    - name: Verify that the tag is annotated
+      run: if test x$(git for-each-ref ${{ github.ref }} | awk '{print $2}') = xtag; then /bin/true; else echo "\"${{ github.ref }}\" does not look like an annotated tag!"; /bin/false; fi
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        #prerelease: true
+        generate_release_notes: true
+
