@@ -82,8 +82,6 @@ type NnfNodeReconciler struct {
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("NnfNode", r.NamespacedName, "State", "Start")
 
-	metrics.NnfNodeReconcilesTotal.Inc()
-
 	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
 	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.
 	if r.NamespacedName.String() != string(types.Separator) {
@@ -222,6 +220,7 @@ func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfNode", req.NamespacedName)
+	metrics.NnfNodeReconcilesTotal.Inc()
 
 	node := &nnfv1alpha1.NnfNode{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
