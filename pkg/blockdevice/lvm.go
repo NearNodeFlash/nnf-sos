@@ -66,6 +66,7 @@ type Lvm struct {
 // Check that Lvm implements the BlockDevice interface
 var _ BlockDevice = &Lvm{}
 
+// Create an LVM Device
 func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 	if complete {
 		return false, nil
