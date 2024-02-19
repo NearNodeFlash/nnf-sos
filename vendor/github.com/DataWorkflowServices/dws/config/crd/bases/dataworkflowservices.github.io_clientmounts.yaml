@@ -270,6 +270,18 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
+    - description: mounted/unmounted
+      jsonPath: .status.desiredState
+      name: DESIREDSTATE
+      type: string
+    - description: mounted/unmounted
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: True if current state is achieved
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
     - jsonPath: .status.error.severity
       name: ERROR
       type: string

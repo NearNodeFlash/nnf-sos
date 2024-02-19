@@ -3,7 +3,7 @@ module github.com/NearNodeFlash/nnf-sos
 go 1.19
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20240207192901-62a0958c23f7
+	github.com/DataWorkflowServices/dws v0.0.1-0.20240219141750-d039433d5151
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20231031201943-531116c1194e
 	github.com/NearNodeFlash/nnf-ec v0.0.0-20231010162453-a8168bb6a52f
 	github.com/ghodss/yaml v1.0.0
@@ -22,7 +22,7 @@ require (
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
-	k8s.io/kubernetes v1.28.4
+	k8s.io/kubernetes v1.15.0-alpha.0
 	k8s.io/mount-utils v0.27.1
 	sigs.k8s.io/controller-runtime v0.16.2
 )
