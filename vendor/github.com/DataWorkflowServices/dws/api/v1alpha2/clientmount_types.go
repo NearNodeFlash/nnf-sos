@@ -189,6 +189,9 @@ type ClientMountStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:storageversion
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".status.desiredState",description="mounted/unmounted"
+//+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="mounted/unmounted"
+//+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
