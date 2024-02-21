@@ -342,8 +342,6 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			if _, ok := allocationStatus.Accesses[nodeName]; !ok {
 				log.Info("Created storage group", "Id", storageGroupId)
 				allocationStatus.Accesses[nodeName] = nnfv1alpha1.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
-
-				return nil, nil
 			}
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
@@ -351,7 +349,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				return nil, nil
 			}
 
-			//
+			// Bail out if this is kind
 			_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 			if found || os.Getenv("ENVIRONMENT") == "kind" {
 				return nil, nil

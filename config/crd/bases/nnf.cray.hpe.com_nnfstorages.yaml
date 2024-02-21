@@ -15,6 +15,9 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: READY
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
