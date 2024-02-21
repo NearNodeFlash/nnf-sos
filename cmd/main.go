@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -179,24 +179,57 @@ func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
 }
 
 func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
+
+	// Coordinate the startup of the NLC controllers that use EC.
+
+	semNnfNodeDone := make(chan int, 1)
+	semNnfNodeDone <- 1
 	if err := (&controllers.NnfNodeReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("NnfNode"),
-		Scheme:         mgr.GetScheme(),
-		NamespacedName: types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+		Client:           mgr.GetClient(),
+		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Scheme:           mgr.GetScheme(),
+		SemaphoreForDone: semNnfNodeDone,
+		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
 
+	semNnfNodeECDone := make(chan int, 1)
+	semNnfNodeECDone <- 1
 	if err := (&controllers.NnfNodeECDataReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		NamespacedName: types.NamespacedName{Name: controllers.NnfNodeECDataResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
-		Options:        opts,
-		RawLog:         ctrl.Log,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		NamespacedName:    types.NamespacedName{Name: controllers.NnfNodeECDataResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+		SemaphoreForStart: semNnfNodeDone,
+		SemaphoreForDone:  semNnfNodeECDone,
+		Options:           opts,
+		RawLog:            ctrl.Log,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
+
+	semNnfNodeBlockStorageDone := make(chan int, 1)
+	semNnfNodeBlockStorageDone <- 1
+	if err := (&controllers.NnfNodeBlockStorageReconciler{
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
+		Scheme:            mgr.GetScheme(),
+		SemaphoreForStart: semNnfNodeECDone,
+		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.NnfNodeStorageReconciler{
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
+		Scheme:            mgr.GetScheme(),
+		SemaphoreForStart: semNnfNodeBlockStorageDone,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	// The NLC controllers that do not use EC do not need startup coordination.
 
 	if err := (&controllers.NnfClientMountReconciler{
 		Client: mgr.GetClient(),
@@ -206,19 +239,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	if err := (&controllers.NnfNodeBlockStorageReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		return err
-	}
-
-	return (&controllers.NnfNodeStorageReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr)
+	return nil
 }
 
 // Type StorageController defines the initializer for the NNF Storage Controller

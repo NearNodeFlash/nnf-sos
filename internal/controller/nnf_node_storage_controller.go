@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,6 +22,8 @@ package controller
 import (
 	"context"
 	"runtime"
+	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,11 +53,30 @@ const (
 // NnfNodeStorageReconciler contains the elements needed during reconciliation for NnfNodeStorage
 type NnfNodeStorageReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *kruntime.Scheme
+	Log               logr.Logger
+	Scheme            *kruntime.Scheme
+	SemaphoreForStart chan int
 
 	types.NamespacedName
 	ChildObjects []dwsv1alpha2.ObjectList
+
+	sync.Mutex
+	started         bool
+	reconcilerAwake bool
+}
+
+func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
+	log := r.Log.WithValues("State", "Start")
+
+	r.SemaphoreForStart <- 1
+
+	log.Info("Ready to start")
+
+	r.Lock()
+	r.started = true
+	r.Unlock()
+
+	return nil
 }
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
@@ -69,6 +90,17 @@ type NnfNodeStorageReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfNodeStorage", req.NamespacedName)
+	r.Lock()
+	if !r.started {
+		r.Unlock()
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+	if !r.reconcilerAwake {
+		log.Info("Reconciler is awake")
+		r.reconcilerAwake = true
+	}
+	r.Unlock()
+
 	metrics.NnfNodeStorageReconcilesTotal.Inc()
 
 	nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{}
@@ -272,6 +304,9 @@ func (r *NnfNodeStorageReconciler) createAllocation(ctx context.Context, nnfNode
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.Add(r); err != nil {
+		return err
+	}
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
