@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/lvm"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -123,6 +124,7 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 	return objectCreated, nil
 }
 
+// Destroy the LVM
 func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 	objectDestroyed := false
 
@@ -171,6 +173,7 @@ func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 	return objectDestroyed, nil
 }
 
+// Activate the LVM
 func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 	// Make sure the that locking has been started on the VG. The node might have been rebooted
 	// since the VG was created
@@ -191,6 +194,7 @@ func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+// Deactivate the LVM
 func (l *Lvm) Deactivate(ctx context.Context) (bool, error) {
 
 	if len(l.CommandArgs.LvArgs.Deactivate) > 0 {
@@ -210,19 +214,52 @@ func (l *Lvm) Deactivate(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
+// GetDevice generates the name used in /dev/mapper for the vg/lv
 func (l *Lvm) GetDevice() string {
+	// Add a hypen to our name to match up with /dev/mapper.
+	//
+	// According to this article, https://access.redhat.com/solutions/656673
+	// the hyphen '-' is used to generate a unique single string to reference the device.
+	// The hyphen is used by LVM2 as the field separator when constructing device-mapper device names
+	// from LVM2 volume group and logical volume names:
+	//		dm name := 'vg_name' + '-' + 'lv_name'
+	// Since LVM2 permits the hyphen as a character within a VG or LV name this scheme requires embedded
+	// hyphens to be escaped when constructing the dm name. The escaping scheme is to double any embedded hyphens so for e.g.:
+	//      Volume Group: my-vg
+	//      Logical Volume: my-lv
+	// Is encoded as: my--vg-my--lv
+	// NOTE!!!
+	// The encoding method might be changed without notice in a future release, so you should always use /dev/vg/lv to access a device, and dmsetup splitname to decode a name.
+
 	return fmt.Sprintf("/dev/mapper/%s-%s", strings.Replace(l.VolumeGroup.Name, "-", "--", -1), strings.Replace(l.LogicalVolume.Name, "-", "--", -1))
 }
 
+// CheckFormatted determines if the device has been formatted
 func (l *Lvm) CheckFormatted() (bool, error) {
-	output, err := command.Run(fmt.Sprintf("wipefs --noheadings --output type %s", l.GetDevice()), l.Log)
-	if err != nil {
-		return false, fmt.Errorf("could not run wipefs to determine if device is formatted: %w", err)
+
+	// HACK: Give the device 10 seconds to appear in /dev/mapper
+	var err error
+	var output string
+	retryPeriod := 10 * time.Second
+
+	// The /dev/mapper device can take a while.
+	// Retry failing wipefs to give it time.
+	device := l.GetDevice()
+	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
+
+		output, err = command.Run(fmt.Sprintf("wipefs --noheadings --output type %s", device), l.Log)
+		if err != nil {
+			continue
+		}
+
+		// With no output, the filesystem hasn't been formatted
+		if len(output) == 0 {
+			return false, nil
+		}
+
+		return true, nil
 	}
 
-	if len(output) == 0 {
-		return false, nil
-	}
-
-	return true, nil
+	// We exhausted our retry time, fail the operation
+	return false, fmt.Errorf("could not run wipefs to determine if device is formatted %w", err)
 }
