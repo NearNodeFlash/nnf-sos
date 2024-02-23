@@ -18,6 +18,7 @@
 # limitations under the License.
 
 set -e
+set -o pipefail
 
 # Deploy/undeploy controller to the K8s cluster specified in ~/.kube/config.
 
@@ -49,7 +50,7 @@ if [[ $CMD == 'deploy' ]]; then
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
-    $KUSTOMIZE build $OVERLAY_DIR | kubectl apply --server-side=true --force-conflicts -f -
+    $KUSTOMIZE build "$OVERLAY_DIR" | kubectl apply --server-side=true --force-conflicts -f -
 
     # Everything may have been evicted while taints were being set.  So allow
     # for some bouncing, even for nnf-sos itself.
@@ -59,7 +60,7 @@ if [[ $CMD == 'deploy' ]]; then
 
     # Use server-side apply to deploy nnfcontainerprofiles successfully since they include
     # MPIJobSpec (with large annotations).
-    $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl apply --server-side=true --force-conflicts -f -
+    $KUSTOMIZE build "$OVERLAY_EXAMPLES_DIR" | kubectl apply --server-side=true --force-conflicts -f -
 
     # Deploy the nnfportmanager after everything else
     echo "Waiting for the nnfportmamanger CRD to become ready..."
@@ -81,7 +82,7 @@ if [[ $CMD == 'undeploy' ]]; then
         $KUSTOMIZE build config/prometheus | kubectl delete --ignore-not-found -f-
     fi
     $KUSTOMIZE build config/ports | kubectl delete --ignore-not-found -f -
-    $KUSTOMIZE build $OVERLAY_EXAMPLES_DIR | kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build "$OVERLAY_EXAMPLES_DIR" | kubectl delete --ignore-not-found -f -
     # Do not touch the namespace resource when deleting this service.
-    $KUSTOMIZE build $OVERLAY_DIR | yq eval 'select(.kind != "Namespace")' |  kubectl delete --ignore-not-found -f -
+    $KUSTOMIZE build "$OVERLAY_DIR" | yq eval 'select(.kind != "Namespace")' |  kubectl delete --ignore-not-found -f -
 fi
