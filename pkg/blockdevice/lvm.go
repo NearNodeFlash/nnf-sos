@@ -22,6 +22,8 @@ package blockdevice
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -237,10 +239,23 @@ func (l *Lvm) GetDevice() string {
 // CheckFormatted determines if the device has been formatted
 func (l *Lvm) CheckFormatted() (bool, error) {
 
-	// HACK: Give the device 10 seconds to appear in /dev/mapper
+	// Default to 10 second timeout
+	retryPeriod := 10 * time.Second
+
+	// Look for environment variable to override
+	timeoutString, found := os.LookupEnv("NNF_WIPEFS_MAPPER_WAIT_COMMAND_TIMEOUT")
+	if found {
+		timeout, err := strconv.Atoi(timeoutString)
+		if err == nil {
+			if timeout > 0 {
+				retryPeriod = time.Duration(timeout) * time.Second
+			}
+		}
+	}
+
+	// Give the device some time to appear in /dev/mapper
 	var err error
 	var output string
-	retryPeriod := 10 * time.Second
 
 	// The /dev/mapper device can take a while.
 	// Retry failing wipefs to give it time.
