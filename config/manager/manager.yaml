@@ -64,6 +64,8 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          - name: NNF_WIPEFS_MAPPER_WAIT_COMMAND_TIMEOUT
+            value: "5"
         ports:
           - containerPort: 50057
             name: nnf-ec
