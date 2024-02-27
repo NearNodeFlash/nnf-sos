@@ -112,10 +112,15 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, nil
 	}
 
-	// make a map of compute node names that need a namespace. The map only contains
+	// make a map of compute node names that need a namespace. The map contains only
 	// keys and empty values, but it makes it easy to search the names.
 	validNamespaces := make(map[string]struct{})
 	for _, name := range systemConfiguration.Computes() {
+		validNamespaces[*name] = struct{}{}
+	}
+
+	// Add external computes to the map.
+	for _, name := range systemConfiguration.ComputesExternal() {
 		validNamespaces[*name] = struct{}{}
 	}
 
