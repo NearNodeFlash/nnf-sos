@@ -254,17 +254,24 @@ func (l *Lvm) CheckFormatted() (bool, error) {
 	}
 
 	// Give the device some time to appear in /dev/mapper
+	// Retry failing wipefs while we wait
 	var err error
 	var output string
-
-	// The /dev/mapper device can take a while.
-	// Retry failing wipefs to give it time.
 	device := l.GetDevice()
 	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
 
 		output, err = command.Run(fmt.Sprintf("wipefs --noheadings --output type %s", device), l.Log)
 		if err != nil {
-			continue
+			// stderr output from wipefs includes:
+			// "probing initialization failed: No such file or directory\n"
+			// Search for "No such file or directory" and continue looping if it is present.
+			// Exit with error if it is not.
+			const wipefsExpectedError = "No such file or directory"
+			if strings.Contains(err.Error(), wipefsExpectedError) {
+				continue
+			}
+
+			return false, fmt.Errorf("could not run wipefs to determine if device is formatted %w", err)
 		}
 
 		// With no output, the filesystem hasn't been formatted
