@@ -3,7 +3,7 @@ module github.com/NearNodeFlash/nnf-sos
 go 1.19
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20240221183421-1a123a9274b6
+	github.com/DataWorkflowServices/dws v0.0.1-0.20240223212516-e29a8a3306e1
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240220213720-51597bca637d
 	github.com/NearNodeFlash/nnf-ec v0.0.0-20231010162453-a8168bb6a52f
 	github.com/ghodss/yaml v1.0.0

@@ -2,6 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataWorkflowServices/dws v0.0.1-0.20240221183421-1a123a9274b6 h1:LYKIIoawsuo+1ByvQaIpgl8vZc2KrE0q7AE7t0YumrI=
 github.com/DataWorkflowServices/dws v0.0.1-0.20240221183421-1a123a9274b6/go.mod h1:vSTBLWbsFjMYxx+sjMDyZpMXLY9m5Bp73cjnmAL30WU=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240223212516-e29a8a3306e1 h1:BSVqA7mYIzb867DGukYIPjL2lsagvlrZ6xHBwC2VzsU=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240223212516-e29a8a3306e1/go.mod h1:vSTBLWbsFjMYxx+sjMDyZpMXLY9m5Bp73cjnmAL30WU=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240220213720-51597bca637d h1:AP1TgQlneYZT/AxkYFyvJp1j86+7MTYOoo3I1Zw3L2E=
@@ -384,6 +386,7 @@ k8s.io/klog/v2 v2.100.1 h1:7WCHKK6K8fNhTqfBhISHQ97KrnJNFZMcQvKp7gP/tmg=
 k8s.io/klog/v2 v2.100.1/go.mod h1:y1WjHnz7Dj687irZUWR/WLkLc5N1YHtjLdmgWjndZn0=
 k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 h1:LyMgNKD2P8Wn1iAwQU5OhxCKlKJy0sHc+PcDwFB24dQ=
 k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9/go.mod h1:wZK2AVp1uHCp4VamDVgBP2COHZjqD1T68Rf0CM3YjSM=
+k8s.io/kubernetes v1.15.0-alpha.0/go.mod h1:ocZa8+6APFNC2tX1DZASIbocyYT5jHzqFVsY5aoB7Jk=
 k8s.io/kubernetes v1.28.4 h1:aRNxs5jb8FVTtlnxeA4FSDBVKuFwA8Gw40/U2zReBYA=
 k8s.io/kubernetes v1.28.4/go.mod h1:BTzDCKYAlu6LL9ITbfjwgwIrJ30hlTgbv0eXDoA/WoA=
 k8s.io/mount-utils v0.27.1 h1:RSd0wslbIuwLRaGGNAGMZ3m9FLcvukxJ3FWlOm76W2A=
