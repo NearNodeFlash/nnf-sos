@@ -220,21 +220,25 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
+	semNnfNodeStorageDone := make(chan int, 1)
+	semNnfNodeStorageDone <- 1
 	if err := (&controllers.NnfNodeStorageReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
 		Scheme:            mgr.GetScheme(),
 		SemaphoreForStart: semNnfNodeBlockStorageDone,
+		SemaphoreForDone:  semNnfNodeStorageDone,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
 
-	// The NLC controllers that do not use EC do not need startup coordination.
+	// The NLC controllers that depend on EC to be ready.
 
 	if err := (&controllers.NnfClientMountReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Scheme:            mgr.GetScheme(),
+		SemaphoreForStart: semNnfNodeStorageDone,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}

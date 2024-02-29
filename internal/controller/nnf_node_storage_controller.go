@@ -56,6 +56,7 @@ type NnfNodeStorageReconciler struct {
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
 	SemaphoreForStart chan int
+	SemaphoreForDone  chan int
 
 	types.NamespacedName
 	ChildObjects []dwsv1alpha2.ObjectList
@@ -76,6 +77,7 @@ func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	r.started = true
 	r.Unlock()
 
+	<-r.SemaphoreForDone
 	return nil
 }
 

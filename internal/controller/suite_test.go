@@ -308,20 +308,24 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	semNnfNodeStorageDone := make(chan int, 1)
+	semNnfNodeStorageDone <- 1
 	err = (&NnfNodeStorageReconciler{
 		Client:            k8sManager.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
 		Scheme:            testEnv.Scheme,
 		SemaphoreForStart: semNnfNodeBlockStorageDone,
+		SemaphoreForDone:  semNnfNodeStorageDone,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	// The NLC controllers that do not use EC do not need startup coordination.
+	// The NLC controllers that depend on EC to be ready.
 
 	err = (&NnfClientMountReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
-		Scheme: testEnv.Scheme,
+		Client:            k8sManager.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Scheme:            testEnv.Scheme,
+		SemaphoreForStart: semNnfNodeStorageDone,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
