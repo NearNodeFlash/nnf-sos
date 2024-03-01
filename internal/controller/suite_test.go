@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -177,21 +177,39 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	/*
-		Start Everything
+		Start DWS pieces
 	*/
-
-	err = (&dwsv1alpha2.Workflow{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
 
 	err = (&dwsctrls.WorkflowReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Workflow"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&dwsctrls.ClientMountReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&dwsv1alpha2.Workflow{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	/*
+		Start NNF-SOS SLC pieces
+	*/
+
+	err = (&NnfSystemConfigurationReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemConfiguration"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&NnfPortManagerReconciler{
+		Client: k8sManager.GetClient(),
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -217,62 +235,6 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&NnfAccessReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfAccess"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfNodeReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNode"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfNodeECDataReconciler{
-		Client:  k8sManager.GetClient(),
-		Scheme:  testEnv.Scheme,
-		Options: nnf.NewMockOptions(false),
-		RawLog:  ctrl.Log,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfNodeStorageReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfNodeBlockStorageReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfStorageReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfSystemConfigurationReconciler{
-		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemConfiguration"),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&NnfPortManagerReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: testEnv.Scheme,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
 	err = (&DWSStorageReconciler{
 		Client: k8sManager.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Storage"),
@@ -287,17 +249,83 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&NnfClientMountReconciler{
+	err = (&NnfAccessReconciler{
 		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfAccess"),
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&dwsctrls.ClientMountReconciler{
+	err = (&NnfStorageReconciler{
 		Client: k8sManager.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
 		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	/*
+		Start NNF-SOS NLC pieces
+	*/
+
+	// Coordinate the startup of the NLC controllers that use EC.
+
+	semNnfNodeDone := make(chan int, 1)
+	semNnfNodeDone <- 1
+	err = (&NnfNodeReconciler{
+		Client:           k8sManager.GetClient(),
+		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
+		Scheme:           testEnv.Scheme,
+		SemaphoreForDone: semNnfNodeDone,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	semNnfNodeECDone := make(chan int, 1)
+	semNnfNodeECDone <- 1
+	err = (&NnfNodeECDataReconciler{
+		Client:            k8sManager.GetClient(),
+		Scheme:            testEnv.Scheme,
+		Options:           nnf.NewMockOptions(false),
+		SemaphoreForStart: semNnfNodeDone,
+		SemaphoreForDone:  semNnfNodeECDone,
+		RawLog:            ctrl.Log,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	semNnfNodeBlockStorageDone := make(chan int, 1)
+	semNnfNodeBlockStorageDone <- 1
+	err = (&NnfNodeBlockStorageReconciler{
+		Client:            k8sManager.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
+		Scheme:            testEnv.Scheme,
+		SemaphoreForStart: semNnfNodeECDone,
+		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	semNnfNodeStorageDone := make(chan int, 1)
+	semNnfNodeStorageDone <- 1
+	err = (&NnfNodeStorageReconciler{
+		Client:            k8sManager.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
+		Scheme:            testEnv.Scheme,
+		SemaphoreForStart: semNnfNodeBlockStorageDone,
+		SemaphoreForDone:  semNnfNodeStorageDone,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// The NLC controllers relying on the readiness of EC.
+
+	err = (&NnfClientMountReconciler{
+		Client:            k8sManager.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
+		Scheme:            testEnv.Scheme,
+		SemaphoreForStart: semNnfNodeStorageDone,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
