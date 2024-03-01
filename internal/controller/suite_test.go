@@ -319,7 +319,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	// The NLC controllers that depend on EC to be ready.
+	// The NLC controllers relying on the readiness of EC.
 
 	err = (&NnfClientMountReconciler{
 		Client:            k8sManager.GetClient(),
