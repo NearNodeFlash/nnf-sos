@@ -232,7 +232,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	// The NLC controllers that depend on EC to be ready.
+	// The NLC controllers relying on the readiness of EC.
 
 	if err := (&controllers.NnfClientMountReconciler{
 		Client:            mgr.GetClient(),
