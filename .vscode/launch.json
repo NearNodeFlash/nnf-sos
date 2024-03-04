@@ -26,7 +26,7 @@
                 "-ginkgo.v",
             ],
             "env": {
-                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.26.0-darwin-amd64",
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.28.0-darwin-arm64",
                 "GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT": "10m",
                 "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "100ms"
             },

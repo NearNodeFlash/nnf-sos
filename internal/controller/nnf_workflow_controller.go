@@ -649,17 +649,24 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	getRabbitRelativePath := func(storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path, namespace string, index int) string {
 
+		relPath := path
+
 		if storageRef.Kind == reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
 			switch fsType {
 			case "xfs", "gfs2":
 				idxMount := getIndexMountDir(namespace, index)
-				return filepath.Join(access.Spec.MountPathPrefix, idxMount, path)
+				relPath = filepath.Join(access.Spec.MountPathPrefix, idxMount, path)
+
+				// Join does a Clean, which removes the trailing slash. Put it back.
+				if strings.HasSuffix(path, "/") {
+					relPath += "/"
+				}
 			case "lustre":
-				return access.Spec.MountPath + path
+				relPath = access.Spec.MountPath + path
 			}
 		}
 
-		return path
+		return relPath
 	}
 
 	// Use a non-default profile for data movement, if supplied
