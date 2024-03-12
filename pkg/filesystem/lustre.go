@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -235,7 +235,7 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 	return true, nil
 }
 
-func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+func (l *LustreFileSystem) Unmount(ctx context.Context, path string, complete bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()

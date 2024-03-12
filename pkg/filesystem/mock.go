@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -75,7 +75,7 @@ func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) 
 	return true, nil
 }
 
-func (m *MockFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+func (m *MockFileSystem) Unmount(ctx context.Context, path string, complete bool) (bool, error) {
 	m.Log.Info("Unmounted mock file system")
 
 	return true, nil

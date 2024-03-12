@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -215,7 +215,6 @@ func (l *Lvm) waitForMapper() error {
 	}
 
 	// Give the device some time to appear in /dev/mapper
-	// Retry failing wipefs while we wait
 	var err error
 	device := l.GetDevice()
 	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
