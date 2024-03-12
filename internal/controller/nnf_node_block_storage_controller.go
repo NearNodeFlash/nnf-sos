@@ -295,7 +295,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 	// Get the Storage resource to map between compute node name and
 	// endpoint index.
 	namespacedName := types.NamespacedName{
-		Name:      nodeBlockStorage.Namespace,
+		Name:      nodeBlockStorage.Namespace, // The namespace tells us which Rabbit we are dealing with
 		Namespace: "default",
 	}
 
