@@ -188,7 +188,11 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 	return true, nil
 }
 
-func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+func (f *SimpleFileSystem) Unmount(ctx context.Context, path string, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -243,13 +247,13 @@ func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, gr
 	}
 
 	if err := os.Chown(f.TempDir, int(userID), int(groupID)); err != nil {
-		if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
+		if _, unmountErr := f.Unmount(ctx, f.TempDir, false); unmountErr != nil {
 			return false, fmt.Errorf("could not unmount after setting owner permissions failed '%s': %w", f.TempDir, unmountErr)
 		}
 		return false, fmt.Errorf("could not set owner permissions '%s': %w", f.TempDir, err)
 	}
 
-	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
+	if _, err := f.Unmount(ctx, f.TempDir, false); err != nil {
 		return false, fmt.Errorf("could not unmount after setting owner permissions '%s': %w", f.TempDir, err)
 	}
 

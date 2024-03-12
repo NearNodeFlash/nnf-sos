@@ -75,7 +75,7 @@ func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) 
 	return true, nil
 }
 
-func (m *MockFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+func (m *MockFileSystem) Unmount(ctx context.Context, path string, complete bool) (bool, error) {
 	m.Log.Info("Unmounted mock file system")
 
 	return true, nil

@@ -234,7 +234,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			}
 		}
 	} else {
-		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
+		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
 		}

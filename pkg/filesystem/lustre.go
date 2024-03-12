@@ -235,7 +235,7 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 	return true, nil
 }
 
-func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+func (l *LustreFileSystem) Unmount(ctx context.Context, path string, complete bool) (bool, error) {
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()

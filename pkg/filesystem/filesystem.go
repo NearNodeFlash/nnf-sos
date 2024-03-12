@@ -38,7 +38,7 @@ type FileSystem interface {
 	Mount(ctx context.Context, path string, complete bool) (bool, error)
 
 	// Unmount the file system
-	Unmount(ctx context.Context, path string) (bool, error)
+	Unmount(ctx context.Context, path string, complete bool) (bool, error)
 
 	// Set the UID and GID for the file system
 	SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error)
