@@ -246,7 +246,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	return nil
 }
 
-// fakeNnfNodeStorage creates an NnfNodeStorage resource with filled in with only the fields
+// fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
 func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.ClientMount, index int) *nnfv1alpha1.NnfNodeStorage {

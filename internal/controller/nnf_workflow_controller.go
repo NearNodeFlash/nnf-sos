@@ -844,7 +844,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 			access.Spec.StorageReference = corev1.ObjectReference{
-				// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
+				// Directive Breakdowns share the same NamespacedName with the Servers it creates,
+				// which shares the same name with the NNFStorage.
 				Name:      name,
 				Namespace: namespace,
 				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),

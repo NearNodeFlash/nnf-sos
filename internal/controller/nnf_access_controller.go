@@ -260,7 +260,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 }
 
 func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
-	// Create the ClientMount resources. One ClientMount resource is created per client
+	// Update client mounts to trigger unmount operation
 	err := r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("unable to update ClientMount resources").WithError(err)
