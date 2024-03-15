@@ -45,7 +45,7 @@ type vgsVolumeGroup struct {
 }
 
 func vgsListVolumes(ctx context.Context, log logr.Logger) ([]vgsVolumeGroup, error) {
-	output, err := command.Run("vgs --reportformat json --nolock", log)
+	output, err := command.Run("vgs --reportformat json --nolocking:", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list volume groups: %w", err)
 	}
