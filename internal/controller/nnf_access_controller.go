@@ -738,7 +738,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 		}
 	}
 
-	// Loop through the NnfNodeStorages and add client access information for each of the
+	// Loop through the NnfNodeBlockStorages and add client access information for each of the
 	// computes that need access to an allocation.
 	for nodeBlockStorageReference, mountRefList := range nodeStorageMap {
 		namespacedName := types.NamespacedName{
