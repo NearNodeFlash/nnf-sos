@@ -44,7 +44,7 @@ type lvsLogicalVolume struct {
 }
 
 func lvsListVolumes(ctx context.Context, log logr.Logger) ([]lvsLogicalVolume, error) {
-	output, err := command.Run("lvs --reportformat json --nolocking", log)
+	output, err := command.Run("lvs --nolock --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list logical volumes: %w", err)
 	}
