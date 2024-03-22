@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: nnfnodestorages.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
@@ -30,21 +30,26 @@ spec:
         description: NnfNodeStorage is the Schema for the NnfNodeStorage API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: NnfNodeStorageSpec defines the desired storage attributes
-              on a NNF Node. Storage spec are created on bequest of the user and fullfilled
-              by the NNF Node Controller.
+            description: |-
+              NnfNodeStorageSpec defines the desired storage attributes on a NNF Node.
+              Storage spec are created on bequest of the user and fullfilled by the NNF Node Controller.
             properties:
               blockReference:
                 description: BlockReference is an object reference to an NnfNodeBlockStorage
@@ -53,45 +58,54 @@ spec:
                     description: API version of the referent.
                     type: string
                   fieldPath:
-                    description: 'If referring to a piece of an object instead of
-                      an entire object, this string should contain a valid JSON/Go
-                      field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within
-                      a pod, this would take on a value like: "spec.containers{name}"
-                      (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]"
-                      (container with index 2 in this pod). This syntax is chosen
-                      only to have some well-defined way of referencing a part of
-                      an object. TODO: this design is not final and this field is
-                      subject to change in the future.'
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
                     type: string
                   kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                     type: string
                   resourceVersion:
-                    description: 'Specific resourceVersion to which this reference
-                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                     type: string
                   uid:
-                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
               count:
-                description: Count is the number of allocations to make on this node.
-                  All of the allocations will be created with the same parameters
+                description: |-
+                  Count is the number of allocations to make on this node. All of the allocations will
+                  be created with the same parameters
                 minimum: 0
                 type: integer
               fileSystemType:
                 default: raw
-                description: FileSystemType defines the type of the desired filesystem,
-                  or raw block device.
+                description: |-
+                  FileSystemType defines the type of the desired filesystem, or raw
+                  block device.
                 enum:
                 - raw
                 - lvm
@@ -105,8 +119,9 @@ spec:
                 format: int32
                 type: integer
               lustreStorage:
-                description: LustreStorageSpec describes the Lustre target created
-                  here, if FileSystemType specifies a Lustre target.
+                description: |-
+                  LustreStorageSpec describes the Lustre target created here, if
+                  FileSystemType specifies a Lustre target.
                 properties:
                   backFs:
                     description: BackFs is the type of backing filesystem to use.
@@ -120,15 +135,16 @@ spec:
                     maxLength: 8
                     type: string
                   mgsAddress:
-                    description: MgsAddress is the NID of the MGS to use. This is
-                      used only when creating MDT and OST targets.
+                    description: |-
+                      MgsAddress is the NID of the MGS to use. This is used only when
+                      creating MDT and OST targets.
                     type: string
                   startIndex:
-                    description: StartIndex is used to order a series of MDTs or OSTs.  This
-                      is used only when creating MDT and OST targets. If count in
-                      the NnfNodeStorageSpec is more than 1, then StartIndex is the
-                      index of the first allocation, and the indexes increment from
-                      there.
+                    description: |-
+                      StartIndex is used to order a series of MDTs or OSTs.  This is used only
+                      when creating MDT and OST targets. If count in the NnfNodeStorageSpec is more
+                      than 1, then StartIndex is the index of the first allocation, and the indexes
+                      increment from there.
                     minimum: 0
                     type: integer
                   targetType:
@@ -177,8 +193,9 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication of how severe the error is. Minor will
-                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major
