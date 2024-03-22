@@ -1,10 +1,10 @@
 name: RPM Build
-on:
-  push:
-    branches:
-      - '*'
-    tags:
-      - 'v*'
+#on:
+#  push:
+#    branches:
+#      - '*'
+#    tags:
+#      - 'v*'
 
 jobs:
   repo_version:
