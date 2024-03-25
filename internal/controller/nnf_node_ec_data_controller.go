@@ -36,6 +36,7 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/go-logr/logr"
 )
 
@@ -117,8 +118,19 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 		go c.Run()
 	}
 
+	// import zpools
+	ran, err := blockdevice.ZpoolImportAll(log)
+	if err != nil {
+		log.Error(err, "failed to import zpools")
+		return err
+	}
+	if ran {
+		log.Info("Imported all available zpools")
+	}
+
 	log.Info("Allow others to start")
 	<-r.SemaphoreForDone
+
 	return nil
 }
 
