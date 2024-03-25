@@ -22,6 +22,7 @@ package blockdevice
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -126,6 +127,25 @@ func (z *Zpool) CheckFormatted() (bool, error) {
 
 	if len(output) == 0 {
 		return false, fmt.Errorf("'zfs get' returned no output")
+	}
+
+	return true, nil
+}
+
+func ZpoolImportAll(log logr.Logger) (bool, error) {
+	// If test environment or KIND, don't do anything
+	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+	if found || os.Getenv("ENVIRONMENT") == "kind" {
+		return false, nil
+	}
+
+	_, err := command.Run("zpool import -a", log)
+	if err != nil {
+		if strings.Contains(err.Error(), "no pools available") {
+			return false, nil
+		} else {
+			return false, fmt.Errorf("could not import zpools: %w", err)
+		}
 	}
 
 	return true, nil
