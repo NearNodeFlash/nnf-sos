@@ -354,7 +354,8 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 
 				for i := range nnfNodeBlockStorage.Spec.Allocations {
 
-					// For lustre - bump up the capacity if less than the floor
+					// For lustre (zfs), bump up the capacity if less than the floor. This is to
+					// ensure that zpool create does not fail if the size is too small.
 					capacity := allocationSet.Capacity
 					if fsType == "lustre" && capacity < minimumLustreAllocationSizeInBytes {
 						capacity = minimumLustreAllocationSizeInBytes
