@@ -64,6 +64,10 @@ const (
 	// ownerAnnotation is a name/namespace pair used on the NnfNodeStorage resources
 	// for owner information. See nnfNodeStorageMapFunc() below.
 	ownerAnnotation = "nnf.cray.hpe.com/owner"
+
+	// Minimum size of lustre allocation sizes. If a user requests less than this, then the capacity
+	// is set to this value.
+	minimumLustreAllocationSizeInBytes = 4000000000
 )
 
 type nodeStoragesState bool
@@ -320,6 +324,8 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
 
 	allocationSet := nnfStorage.Spec.AllocationSets[allocationSetIndex]
+	fsType := nnfStorage.Spec.FileSystemType
+
 	for i, node := range allocationSet.Nodes {
 		// Per Rabbit namespace.
 		nnfNodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{
@@ -347,7 +353,14 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 				}
 
 				for i := range nnfNodeBlockStorage.Spec.Allocations {
-					nnfNodeBlockStorage.Spec.Allocations[i].Capacity = allocationSet.Capacity
+
+					// For lustre (zfs), bump up the capacity if less than the floor. This is to
+					// ensure that zpool create does not fail if the size is too small.
+					capacity := allocationSet.Capacity
+					if fsType == "lustre" && capacity < minimumLustreAllocationSizeInBytes {
+						capacity = minimumLustreAllocationSizeInBytes
+					}
+					nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
 					if len(nnfNodeBlockStorage.Spec.Allocations[i].Access) == 0 {
 						nnfNodeBlockStorage.Spec.Allocations[i].Access = append(nnfNodeBlockStorage.Spec.Allocations[i].Access, node.Name)
 					}
