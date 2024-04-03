@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,7 +23,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"strconv"
@@ -647,21 +646,6 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	fsType := targetStorage.Spec.FileSystemType
 
-	getRabbitRelativePath := func(storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path, namespace string, index int) string {
-
-		if storageRef.Kind == reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
-			switch fsType {
-			case "xfs", "gfs2":
-				idxMount := getIndexMountDir(namespace, index)
-				return filepath.Join(access.Spec.MountPathPrefix, idxMount, path)
-			case "lustre":
-				return access.Spec.MountPath + path
-			}
-		}
-
-		return path
-	}
-
 	// Use a non-default profile for data movement, if supplied
 	dmProfile, found := dwArgs["profile"]
 	if !found {
@@ -689,11 +673,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 					},
 					Spec: nnfv1alpha1.NnfDataMovementSpec{
 						Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-							Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, node.Name, i),
+							Path:             getRabbitRelativePath(fsType, sourceStorage, sourceAccess, source, node.Name, i),
 							StorageReference: *sourceStorage,
 						},
 						Destination: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-							Path:             getRabbitRelativePath(destStorage, destAccess, dest, node.Name, i),
+							Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, node.Name, i),
 							StorageReference: *destStorage,
 						},
 						UserId:  workflow.Spec.UserID,
@@ -726,11 +710,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			},
 			Spec: nnfv1alpha1.NnfDataMovementSpec{
 				Source: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-					Path:             getRabbitRelativePath(sourceStorage, sourceAccess, source, "", 0),
+					Path:             getRabbitRelativePath(fsType, sourceStorage, sourceAccess, source, "", 0),
 					StorageReference: *sourceStorage,
 				},
 				Destination: &nnfv1alpha1.NnfDataMovementSpecSourceDestination{
-					Path:             getRabbitRelativePath(destStorage, destAccess, dest, "", 0),
+					Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, "", 0),
 					StorageReference: *destStorage,
 				},
 				UserId:  workflow.Spec.UserID,
@@ -860,7 +844,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 			access.Spec.StorageReference = corev1.ObjectReference{
-				// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
+				// Directive Breakdowns share the same NamespacedName with the Servers it creates,
+				// which shares the same name with the NNFStorage.
 				Name:      name,
 				Namespace: namespace,
 				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),

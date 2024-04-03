@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -33,8 +34,41 @@ import (
 
 var log logr.Logger
 
-func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
+// Run command and grab the default timeout environment variable, if set
+func Run(args string, log logr.Logger) (string, error) {
+	return run(args, log, nil, nil)
+}
 
+// Run command as a specific UID/GID
+func RunAs(args string, log logr.Logger, uid, gid uint32) (string, error) {
+	return run(args, log, &uid, &gid)
+}
+
+// Run with a specific timeout
+func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
+	return runWithTimeout(args, timeout, log, nil, nil)
+}
+
+// Run command as a specific UID/GID with a specific timeout
+func RunAsWithTimeout(args string, timeout int, log logr.Logger, uid, gid *uint32) (string, error) {
+	return runWithTimeout(args, timeout, log, uid, gid)
+}
+
+func run(args string, log logr.Logger, uid, gid *uint32) (string, error) {
+	timeoutString, found := os.LookupEnv("NNF_COMMAND_TIMEOUT_SECONDS")
+	if found {
+		timeout, err := strconv.Atoi(timeoutString)
+		if err != nil {
+			return "", err
+		}
+
+		return runWithTimeout(args, timeout, log, uid, gid)
+	}
+
+	return runWithTimeout(args, 0, log, uid, gid)
+}
+
+func runWithTimeout(args string, timeout int, log logr.Logger, uid, gid *uint32) (string, error) {
 	ctx := context.Background()
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -48,7 +82,14 @@ func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
 	shellCmd.Stdout = &stdout
 	shellCmd.Stderr = &stderr
 
-	log.V(1).Info("Command Run", "command", args)
+	// If UID/GID are set, then run this command with those
+	if uid != nil && gid != nil {
+		shellCmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: *uid, Gid: *gid}}
+		log.V(1).Info("Command Run", "UID", uid, "GID", gid, "command", args)
+	} else {
+		log.V(1).Info("Command Run", "command", args)
+	}
+
 	err := shellCmd.Run()
 	if err != nil {
 		return stdout.String(), fmt.Errorf("command: %s - stderr: %s - stdout: %s - error: %w", args, stderr.String(), stdout.String(), err)
@@ -56,18 +97,4 @@ func RunWithTimeout(args string, timeout int, log logr.Logger) (string, error) {
 
 	// Command success, return stdout
 	return stdout.String(), nil
-}
-
-func Run(args string, log logr.Logger) (string, error) {
-	timeoutString, found := os.LookupEnv("NNF_COMMAND_TIMEOUT_SECONDS")
-	if found {
-		timeout, err := strconv.Atoi(timeoutString)
-		if err != nil {
-			return "", err
-		}
-
-		return RunWithTimeout(args, timeout, log)
-	}
-
-	return RunWithTimeout(args, 0, log)
 }

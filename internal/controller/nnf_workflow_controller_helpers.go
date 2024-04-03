@@ -965,11 +965,33 @@ func splitStagingArgumentIntoNameAndPath(arg string) (string, string) {
 		varname = strings.SplitN(strings.Replace(arg, "$DW_PERSISTENT_", "", 1), "/", 2)[0]
 	}
 	name := strings.ReplaceAll(varname, "_", "-")
-	var path = "/"
+	var path = ""
 	if strings.Count(arg, "/") >= 1 {
 		path = "/" + strings.SplitN(arg, "/", 2)[1]
 	}
 	return name, path
+}
+
+func getRabbitRelativePath(fsType string, storageRef *corev1.ObjectReference, access *nnfv1alpha1.NnfAccess, path, namespace string, index int) string {
+	relPath := path
+
+	if storageRef.Kind == reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
+		switch fsType {
+		case "xfs", "gfs2":
+			idxMount := getIndexMountDir(namespace, index)
+			relPath = filepath.Join(access.Spec.MountPathPrefix, idxMount, path)
+
+		case "lustre":
+			relPath = filepath.Join(access.Spec.MountPath, path)
+		}
+
+		// Join does a Clean, which removes the trailing slash. Put it back.
+		if strings.HasSuffix(path, "/") {
+			relPath += "/"
+		}
+	}
+
+	return relPath
 }
 
 // indexedResourceName returns a name for a workflow child resource based on the index of the #DW directive

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -65,9 +66,13 @@ type NnfNodeReconciler struct {
 	Log    logr.Logger
 	Scheme *kruntime.Scheme
 
-	Options *nnfec.Options
-
+	Options          *nnfec.Options
+	SemaphoreForDone chan int
 	types.NamespacedName
+
+	sync.Mutex
+	started         bool
+	reconcilerAwake bool
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch
@@ -82,9 +87,13 @@ type NnfNodeReconciler struct {
 func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("NnfNode", r.NamespacedName, "State", "Start")
 
+	log.Info("Ready to start")
+
+	_, testing := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+
 	// During testing, the NNF Node Reconciler is started before the kubeapi-server runs, so any Get() will
 	// fail with 'connection refused'. The test code will instead bootstrap some nodes using the k8s test client.
-	if r.NamespacedName.String() != string(types.Separator) {
+	if !testing {
 
 		// Create a namespace unique to this node based on the node's x-name.
 		namespace := &corev1.Namespace{}
@@ -187,6 +196,12 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	// Subscribe to the NNF Event Manager
 	event.EventManager.Subscribe(r)
 
+	r.Lock()
+	r.started = true
+	r.Unlock()
+
+	log.Info("Allow others to start")
+	<-r.SemaphoreForDone
 	return nil
 }
 
@@ -220,6 +235,17 @@ func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfNode", req.NamespacedName)
+	r.Lock()
+	if !r.started {
+		r.Unlock()
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+	if !r.reconcilerAwake {
+		log.Info("Reconciler is awake")
+		r.reconcilerAwake = true
+	}
+	r.Unlock()
+
 	metrics.NnfNodeReconcilesTotal.Inc()
 
 	node := &nnfv1alpha1.NnfNode{}
