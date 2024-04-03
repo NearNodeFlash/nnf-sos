@@ -114,16 +114,6 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 		objectCreated = true
 	}
 
-	if len(l.CommandArgs.VgArgs.LockStop) > 0 {
-		created, err := l.VolumeGroup.LockStop(ctx, l.CommandArgs.VgArgs.LockStop)
-		if err != nil {
-			return false, err
-		}
-		if created {
-			objectCreated = true
-		}
-	}
-
 	return objectCreated, nil
 }
 
@@ -131,19 +121,9 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 	objectDestroyed := false
 
-	vgExists, err := l.VolumeGroup.Exists(ctx)
+	_, err := l.VolumeGroup.Exists(ctx)
 	if err != nil {
 		return false, err
-	}
-
-	if vgExists && len(l.CommandArgs.VgArgs.LockStart) > 0 {
-		destroyed, err := l.VolumeGroup.LockStart(ctx, l.CommandArgs.VgArgs.LockStart)
-		if err != nil {
-			return false, err
-		}
-		if destroyed {
-			objectDestroyed = true
-		}
 	}
 
 	destroyed, err := l.LogicalVolume.Remove(ctx, l.CommandArgs.LvArgs.Remove)
@@ -266,13 +246,6 @@ func (l *Lvm) Deactivate(ctx context.Context) (bool, error) {
 
 	if len(l.CommandArgs.LvArgs.Deactivate) > 0 {
 		_, err := l.LogicalVolume.Deactivate(ctx, l.CommandArgs.LvArgs.Deactivate)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	if len(l.CommandArgs.VgArgs.LockStop) > 0 {
-		_, err := l.VolumeGroup.LockStop(ctx, l.CommandArgs.VgArgs.LockStop)
 		if err != nil {
 			return false, err
 		}

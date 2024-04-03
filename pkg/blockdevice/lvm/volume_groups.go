@@ -165,6 +165,13 @@ func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, err
 		return false, nil
 	}
 
+	// If the lockspace has already been started, don't restart it.
+	started := false
+	started, err = dlmLockSpaceExists(ctx, vg.Name, vg.Log)
+	if started {
+		return false, nil
+	}
+
 	return vg.Change(ctx, rawArgs)
 }
 
