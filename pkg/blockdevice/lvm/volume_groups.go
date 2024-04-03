@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,7 +22,10 @@ package lvm
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/NearNodeFlash/nnf-sos/pkg/var_handler"
@@ -37,6 +40,7 @@ type VolumeGroup struct {
 	Log logr.Logger
 }
 
+// NewVolumeGroup returns a VolumeGroup for operations.
 func NewVolumeGroup(ctx context.Context, name string, pvs []*PhysicalVolume, log logr.Logger) *VolumeGroup {
 	return &VolumeGroup{
 		Name:            name,
@@ -45,6 +49,7 @@ func NewVolumeGroup(ctx context.Context, name string, pvs []*PhysicalVolume, log
 	}
 }
 
+// Exists determines if the VG exists in the OS
 func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
 	existingVGs, err := vgsListVolumes(ctx, vg.Log)
 	if err != nil {
@@ -58,6 +63,39 @@ func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// WaitForAppearance checks the existence of the VG and
+// waits a brief time for the VG to be created if it is not present
+func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
+
+	// Default to 10 second timeout
+	retryPeriod := 10 * time.Second
+
+	// Look for environment variable to override
+	timeoutString, found := os.LookupEnv("NNF_MAPPER_WAIT_TIMEOUT")
+	if found {
+		timeout, err := strconv.Atoi(timeoutString)
+		if err == nil && timeout > 0 {
+			retryPeriod = time.Duration(timeout) * time.Second
+		}
+	}
+
+	// Give the VG time to appear
+	var exists bool
+	var err error
+	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
+		exists, err = vg.Exists(ctx)
+		if err != nil {
+			return false, err
+		}
+
+		if exists {
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("timeout waiting for VG %w", err)
 }
 
 func (vg *VolumeGroup) parseArgs(args string) (string, error) {
@@ -118,6 +156,15 @@ func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, error) {
+	exists, err := vg.WaitForAppearance(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
 	return vg.Change(ctx, rawArgs)
 }
 

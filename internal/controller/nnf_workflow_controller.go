@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -844,7 +844,8 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 			access.Spec.StorageReference = corev1.ObjectReference{
-				// Directive Breakdowns share the same NamespacedName with the Servers it creates, which shares the same name with the NNFStorage.
+				// Directive Breakdowns share the same NamespacedName with the Servers it creates,
+				// which shares the same name with the NNFStorage.
 				Name:      name,
 				Namespace: namespace,
 				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),

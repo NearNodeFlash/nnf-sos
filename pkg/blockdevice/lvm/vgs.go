@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -45,7 +45,7 @@ type vgsVolumeGroup struct {
 }
 
 func vgsListVolumes(ctx context.Context, log logr.Logger) ([]vgsVolumeGroup, error) {
-	output, err := command.Run("vgs --reportformat json", log)
+	output, err := command.Run("vgs --nolock --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list volume groups: %w", err)
 	}
