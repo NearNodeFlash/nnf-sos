@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: nnfnodeblockstorages.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
@@ -29,21 +29,26 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: NnfNodeBlockStorageSpec defines the desired storage attributes
-              on a NNF Node. Storage spec are created on request of the user and fullfilled
-              by the NNF Node Controller.
+            description: |-
+              NnfNodeBlockStorageSpec defines the desired storage attributes on a NNF Node.
+              Storage spec are created on request of the user and fullfilled by the NNF Node Controller.
             properties:
               allocations:
                 description: Allocations is the list of storage allocations to make
@@ -84,9 +89,9 @@ spec:
                       description: Accesses is a map of node name to the access status
                       type: object
                     capacityAllocated:
-                      description: Total capacity allocated for the storage. This
-                        may differ from the requested storage capacity as the system
-                        may round up to the requested capacity to satisify underlying
+                      description: |-
+                        Total capacity allocated for the storage. This may differ from the requested storage
+                        capacity as the system may round up to the requested capacity to satisify underlying
                         storage requirements (i.e. block size / stripe size).
                       format: int64
                       type: integer
@@ -98,11 +103,10 @@ spec:
                             description: NQN of the base NVMe device
                             type: string
                           capacityAllocated:
-                            description: Total capacity allocated for the storage.
-                              This may differ from the requested storage capacity
-                              as the system may round up to the requested capacity
-                              to satisify underlying storage requirements (i.e. block
-                              size / stripe size).
+                            description: |-
+                              Total capacity allocated for the storage. This may differ from the requested storage
+                              capacity as the system may round up to the requested capacity to satisify underlying
+                              storage requirements (i.e. block size / stripe size).
                             format: int64
                             type: integer
                           namespaceId:
@@ -126,8 +130,9 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication of how severe the error is. Minor will
-                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major

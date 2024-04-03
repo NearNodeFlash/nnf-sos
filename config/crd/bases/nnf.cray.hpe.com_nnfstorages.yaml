@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: nnfstorages.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
@@ -30,29 +30,34 @@ spec:
         description: NnfStorage is the Schema for the storages API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
           spec:
-            description: 'NnfStorageSpec defines the specification for requesting
-              generic storage on a set of available NNF Nodes. This object is related
-              to a #DW for NNF Storage, with the WLM making the determination for
-              which NNF Nodes it wants to utilize.'
+            description: |-
+              NnfStorageSpec defines the specification for requesting generic storage on a set
+              of available NNF Nodes. This object is related to a #DW for NNF Storage, with the WLM
+              making the determination for which NNF Nodes it wants to utilize.
             properties:
               allocationSets:
-                description: AllocationSets is a list of different types of storage
-                  allocations to make. Each AllocationSet describes an entire allocation
-                  spanning multiple Rabbits. For example, an AllocationSet could be
-                  all of the OSTs in a Lustre filesystem, or all of the raw block
-                  devices in a raw block configuration.
+                description: |-
+                  AllocationSets is a list of different types of storage allocations to make. Each
+                  AllocationSet describes an entire allocation spanning multiple Rabbits. For example,
+                  an AllocationSet could be all of the OSTs in a Lustre filesystem, or all of the raw
+                  block devices in a raw block configuration.
                 items:
                   description: NnfStorageAllocationSetSpec defines the details for
                     an allocation set
@@ -64,9 +69,9 @@ spec:
                       - zfs
                       type: string
                     capacity:
-                      description: Capacity defines the capacity, in bytes, of this
-                        storage specification. The NNF Node itself may split the storage
-                        among the available drives operating in the NNF Node.
+                      description: |-
+                        Capacity defines the capacity, in bytes, of this storage specification. The NNF Node itself
+                        may split the storage among the available drives operating in the NNF Node.
                       format: int64
                       type: integer
                     fileSystemName:
@@ -75,8 +80,9 @@ spec:
                       maxLength: 8
                       type: string
                     mgsAddress:
-                      description: MgsAddress is the NID of the MGS when a pre-existing
-                        MGS is provided in the NnfStorageProfile
+                      description: |-
+                        MgsAddress is the NID of the MGS when a pre-existing MGS is
+                        provided in the NnfStorageProfile
                       type: string
                     name:
                       description: Name is a human readable label for this set of
@@ -101,41 +107,48 @@ spec:
                         type: object
                       type: array
                     persistentMgsReference:
-                      description: PersistentMgsReference is a reference to a persistent
-                        storage that is providing the external MGS.
+                      description: |-
+                        PersistentMgsReference is a reference to a persistent storage that is providing
+                        the external MGS.
                       properties:
                         apiVersion:
                           description: API version of the referent.
                           type: string
                         fieldPath:
-                          description: 'If referring to a piece of an object instead
-                            of an entire object, this string should contain a valid
-                            JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                            For example, if the object reference is to a container
-                            within a pod, this would take on a value like: "spec.containers{name}"
-                            (where "name" refers to the name of the container that
-                            triggered the event) or if no container name is specified
-                            "spec.containers[2]" (container with index 2 in this pod).
-                            This syntax is chosen only to have some well-defined way
-                            of referencing a part of an object. TODO: this design
-                            is not final and this field is subject to change in the
-                            future.'
+                          description: |-
+                            If referring to a piece of an object instead of an entire object, this string
+                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container within a pod, this would take on a value like:
+                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                            the event) or if no container name is specified "spec.containers[2]" (container with
+                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                            referencing a part of an object.
+                            TODO: this design is not final and this field is subject to change in the future.
                           type: string
                         kind:
-                          description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                          description: |-
+                            Kind of the referent.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                           type: string
                         name:
-                          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          description: |-
+                            Name of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                           type: string
                         namespace:
-                          description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                          description: |-
+                            Namespace of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                           type: string
                         resourceVersion:
-                          description: 'Specific resourceVersion to which this reference
-                            is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                          description: |-
+                            Specific resourceVersion to which this reference is made, if any.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                           type: string
                         uid:
-                          description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                          description: |-
+                            UID of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
@@ -155,8 +168,9 @@ spec:
                 type: array
               fileSystemType:
                 default: raw
-                description: FileSystemType defines the type of the desired filesystem,
-                  or raw block device.
+                description: |-
+                  FileSystemType defines the type of the desired filesystem, or raw
+                  block device.
                 enum:
                 - raw
                 - lvm
@@ -183,15 +197,17 @@ spec:
             description: NnfStorageStatus defines the observed status of NNF Storage.
             properties:
               allocationSets:
-                description: AllocationsSets holds the status information for each
-                  of the AllocationSets from the spec.
+                description: |-
+                  AllocationsSets holds the status information for each of the AllocationSets
+                  from the spec.
                 items:
                   description: NnfStorageAllocationSetStatus contains the status information
                     for an allocation set
                   properties:
                     allocationCount:
-                      description: AllocationCount is the total number of allocations
-                        that currently exist
+                      description: |-
+                        AllocationCount is the total number of allocations that currently
+                        exist
                       type: integer
                     ready:
                       type: boolean
@@ -206,8 +222,9 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication of how severe the error is. Minor will
-                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major

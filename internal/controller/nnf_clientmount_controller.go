@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -54,8 +55,27 @@ const (
 // NnfClientMountReconciler contains the pieces used by the reconciler
 type NnfClientMountReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *kruntime.Scheme
+	Log               logr.Logger
+	Scheme            *kruntime.Scheme
+	SemaphoreForStart chan int
+
+	sync.Mutex
+	started         bool
+	reconcilerAwake bool
+}
+
+func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
+	log := r.Log.WithValues("State", "Start")
+
+	r.SemaphoreForStart <- 1
+
+	log.Info("Ready to start")
+
+	r.Lock()
+	r.started = true
+	r.Unlock()
+
+	return nil
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
@@ -67,6 +87,16 @@ type NnfClientMountReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("ClientMount", req.NamespacedName)
+	r.Lock()
+	if !r.started {
+		r.Unlock()
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+	if !r.reconcilerAwake {
+		log.Info("Reconciler is awake")
+		r.reconcilerAwake = true
+	}
+	r.Unlock()
 
 	metrics.NnfClientMountReconcilesTotal.Inc()
 
@@ -216,7 +246,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	return nil
 }
 
-// fakeNnfNodeStorage creates an NnfNodeStorage resource with filled in with only the fields
+// fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
 func (r *NnfClientMountReconciler) fakeNnfNodeStorage(clientMount *dwsv1alpha2.ClientMount, index int) *nnfv1alpha1.NnfNodeStorage {
@@ -267,7 +297,9 @@ func filterByRabbitNamespacePrefixForTest() predicate.Predicate {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
+	if err := mgr.Add(r); err != nil {
+		return err
+	}
 	maxReconciles := runtime.GOMAXPROCS(0)
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

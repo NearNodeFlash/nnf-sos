@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: nnfdatamovements.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
@@ -35,14 +35,19 @@ spec:
         description: NnfDataMovement is the Schema for the nnfdatamovements API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -63,57 +68,64 @@ spec:
                       to the storage instance
                     type: string
                   storageReference:
-                    description: Storage describes the storage backing this data movement
-                      specification; Storage can reference either NNF storage or global
-                      Lustre storage depending on the object references Kind field.
+                    description: |-
+                      Storage describes the storage backing this data movement specification; Storage can reference
+                      either NNF storage or global Lustre storage depending on the object references Kind field.
                     properties:
                       apiVersion:
                         description: API version of the referent.
                         type: string
                       fieldPath:
-                        description: 'If referring to a piece of an object instead
-                          of an entire object, this string should contain a valid
-                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within
-                          a pod, this would take on a value like: "spec.containers{name}"
-                          (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]"
-                          (container with index 2 in this pod). This syntax is chosen
-                          only to have some well-defined way of referencing a part
-                          of an object. TODO: this design is not final and this field
-                          is subject to change in the future.'
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
                         type: string
                       kind:
-                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
                       namespace:
-                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                         type: string
                       resourceVersion:
-                        description: 'Specific resourceVersion to which this reference
-                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                         type: string
                       uid:
-                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
                 type: object
               groupId:
-                description: Group Id specifies the group ID for the data movement
-                  operation. This value is used in conjunction with the user ID to
-                  ensure the user has valid permissions to perform the data movement
-                  operation.
+                description: |-
+                  Group Id specifies the group ID for the data movement operation. This value is used
+                  in conjunction with the user ID to ensure the user has valid permissions to perform
+                  the data movement operation.
                 format: int32
                 type: integer
               profile:
                 default: default
-                description: Profile specifies the name of profile in the nnf-dm-config
-                  ConfigMap to be used for configuring data movement. Defaults to
-                  the default profile.
+                description: |-
+                  Profile specifies the name of profile in the nnf-dm-config ConfigMap to be used for
+                  configuring data movement. Defaults to the default profile.
                 type: string
               source:
                 description: Source describes the source of the data movement operation
@@ -123,49 +135,57 @@ spec:
                       to the storage instance
                     type: string
                   storageReference:
-                    description: Storage describes the storage backing this data movement
-                      specification; Storage can reference either NNF storage or global
-                      Lustre storage depending on the object references Kind field.
+                    description: |-
+                      Storage describes the storage backing this data movement specification; Storage can reference
+                      either NNF storage or global Lustre storage depending on the object references Kind field.
                     properties:
                       apiVersion:
                         description: API version of the referent.
                         type: string
                       fieldPath:
-                        description: 'If referring to a piece of an object instead
-                          of an entire object, this string should contain a valid
-                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within
-                          a pod, this would take on a value like: "spec.containers{name}"
-                          (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]"
-                          (container with index 2 in this pod). This syntax is chosen
-                          only to have some well-defined way of referencing a part
-                          of an object. TODO: this design is not final and this field
-                          is subject to change in the future.'
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
                         type: string
                       kind:
-                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
                       namespace:
-                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                         type: string
                       resourceVersion:
-                        description: 'Specific resourceVersion to which this reference
-                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                         type: string
                       uid:
-                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
                 type: object
               userConfig:
-                description: User defined configuration on how data movement should
-                  be performed. This overrides the configuration defined in the nnf-dm-config
-                  ConfigMap. These values are typically set by the Copy Offload API.
+                description: |-
+                  User defined configuration on how data movement should be performed. This overrides the
+                  configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
+                  Copy Offload API.
                 properties:
                   dcpOptions:
                     description: Extra options to pass to the dcp command (used to
@@ -173,39 +193,40 @@ spec:
                     type: string
                   dryrun:
                     default: false
-                    description: Fake the Data Movement operation. The system "performs"
-                      Data Movement but the command to do so is trivial. This means
-                      a Data Movement request is still submitted but the IO is skipped.
+                    description: |-
+                      Fake the Data Movement operation. The system "performs" Data Movement but the command to do so
+                      is trivial. This means a Data Movement request is still submitted but the IO is skipped.
                     type: boolean
                   logStdout:
                     default: false
-                    description: 'If true, enable the command''s stdout to be saved
-                      in the log when the command completes successfully. On failure,
-                      the output is always logged. Note: Enabling this option may
-                      degrade performance.'
+                    description: |-
+                      If true, enable the command's stdout to be saved in the log when the command completes
+                      successfully. On failure, the output is always logged.
+                      Note: Enabling this option may degrade performance.
                     type: boolean
                   maxSlots:
-                    description: The number of max_slots specified in the MPI hostfile.
-                      A value of 0 disables the use of slots in the hostfile. Nil
-                      will defer to the value specified in the nnf-dm-config ConfigMap.
+                    description: |-
+                      The number of max_slots specified in the MPI hostfile. A value of 0 disables the use of slots
+                      in the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
                     type: integer
                   slots:
-                    description: The number of slots specified in the MPI hostfile.
-                      A value of 0 disables the use of slots in the hostfile. Nil
-                      will defer to the value specified in the nnf-dm-config ConfigMap.
+                    description: |-
+                      The number of slots specified in the MPI hostfile. A value of 0 disables the use of slots in
+                      the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
                     type: integer
                   storeStdout:
                     default: false
-                    description: 'Similar to LogStdout, store the command''s stdout
-                      in Status.Message when the command completes successfully. On
-                      failure, the output is always stored. Note: Enabling this option
-                      may degrade performance.'
+                    description: |-
+                      Similar to LogStdout, store the command's stdout in Status.Message when the command completes
+                      successfully. On failure, the output is always stored.
+                      Note: Enabling this option may degrade performance.
                     type: boolean
                 type: object
               userId:
-                description: User Id specifies the user ID for the data movement operation.
-                  This value is used in conjunction with the group ID to ensure the
-                  user has valid permissions to perform the data movement operation.
+                description: |-
+                  User Id specifies the user ID for the data movement operation. This value is used
+                  in conjunction with the group ID to ensure the user has valid permissions to perform
+                  the data movement operation.
                 format: int32
                 type: integer
             type: object
@@ -213,10 +234,10 @@ spec:
             description: NnfDataMovementStatus defines the observed state of NnfDataMovement
             properties:
               commandStatus:
-                description: CommandStatus reflects the current status of the underlying
-                  Data Movement command as it executes. The command status is polled
-                  at a certain frequency to avoid excessive updates to the Data Movement
-                  resource.
+                description: |-
+                  CommandStatus reflects the current status of the underlying Data Movement command
+                  as it executes. The command status is polled at a certain frequency to avoid excessive
+                  updates to the Data Movement resource.
                 properties:
                   command:
                     description: The command that was executed during data movement.
@@ -226,23 +247,22 @@ spec:
                       data movement command started.
                     type: string
                   lastMessage:
-                    description: LastMessage reflects the last message received over
-                      standard output or standard error as captured by the underlying
-                      data movement command.
+                    description: |-
+                      LastMessage reflects the last message received over standard output or standard error as
+                      captured by the underlying data movement command.
                     type: string
                   lastMessageTime:
-                    description: LastMessageTime reflects the time at which the last
-                      message was received over standard output or standard error
-                      by the underlying data movement command.
+                    description: |-
+                      LastMessageTime reflects the time at which the last message was received over standard output or
+                      standard error by the underlying data movement command.
                     format: date-time
                     type: string
                   progress:
-                    description: Progress refects the progress of the underlying data
-                      movement command as captured from standard output. A best effort
-                      is made to parse the command output as a percentage. If no progress
-                      has yet to be measured than this field is omitted. If the latest
-                      command output does not contain a valid percentage, then the
-                      value is unchanged from the previously parsed value.
+                    description: |-
+                      Progress refects the progress of the underlying data movement command as captured from standard output.
+                      A best effort is made to parse the command output as a percentage. If no progress has
+                      yet to be measured than this field is omitted. If the latest command output does not
+                      contain a valid percentage, then the value is unchanged from the previously parsed value.
                     format: int32
                     type: integer
                 type: object
@@ -258,8 +278,9 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication of how severe the error is. Minor will
-                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major
@@ -281,9 +302,9 @@ spec:
                 - type
                 type: object
               message:
-                description: Message contains any text that explains the Status. If
-                  Data Movement failed or storeStdout is enabled, this will contain
-                  the command's output.
+                description: |-
+                  Message contains any text that explains the Status. If Data Movement failed or storeStdout is
+                  enabled, this will contain the command's output.
                 type: string
               restarts:
                 description: Restarts contains the number of restarts of the Data

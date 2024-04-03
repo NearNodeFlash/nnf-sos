@@ -21,12 +21,12 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${relativeFileDirname}",
+            "program": "${workspaceFolder}/internal/controller",
             "args": [
                 "-ginkgo.v",
             ],
             "env": {
-                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.26.0-darwin-amd64",
+                "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.28.0-darwin-arm64",
                 "GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT": "10m",
                 "GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL": "100ms"
             },
@@ -37,7 +37,7 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceFolder}/controllers",
+            "program": "${workspaceFolder}/internal/controller",
             "args": [
                 "-v=4",
                 "-ginkgo.v",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -36,6 +36,7 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/go-logr/logr"
 )
 
@@ -49,12 +50,19 @@ type NnfNodeECDataReconciler struct {
 	Scheme  *runtime.Scheme
 	Options *nnfec.Options
 	types.NamespacedName
+	SemaphoreForStart chan int
+	SemaphoreForDone  chan int
 
 	RawLog logr.Logger // RawLog, as opposed to Log, is the un-edited controller logger
 }
 
 // Start implements manager.Runnable
 func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
+	log := r.RawLog.WithName("NnfNodeECData").WithValues("State", "Start")
+
+	r.SemaphoreForStart <- 1
+
+	log.Info("Ready to start")
 
 	_, testing := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 
@@ -110,6 +118,19 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 		go c.Run()
 	}
 
+	// import zpools
+	ran, err := blockdevice.ZpoolImportAll(log)
+	if err != nil {
+		log.Error(err, "failed to import zpools")
+		return err
+	}
+	if ran {
+		log.Info("Imported all available zpools")
+	}
+
+	log.Info("Allow others to start")
+	<-r.SemaphoreForDone
+
 	return nil
 }
 
@@ -128,6 +149,9 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.10.0/pkg/reconcile
 func (r *NnfNodeECDataReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
+
+	// This reconciler does nothing with EC. If it ever does, then it should
+	// have a lock to coordinate with the completion of Start() above.
 
 	metrics.NnfNodeECDataReconcilesTotal.Inc()
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -260,7 +260,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 }
 
 func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
-	// Create the ClientMount resources. One ClientMount resource is created per client
+	// Update client mounts to trigger unmount operation
 	err := r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("unable to update ClientMount resources").WithError(err)
@@ -738,7 +738,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 		}
 	}
 
-	// Loop through the NnfNodeStorages and add client access information for each of the
+	// Loop through the NnfNodeBlockStorages and add client access information for each of the
 	// computes that need access to an allocation.
 	for nodeBlockStorageReference, mountRefList := range nodeStorageMap {
 		namespacedName := types.NamespacedName{

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -322,12 +322,12 @@ done
 echo "failed to contact $HOSTS"
 exit 1
 `
-	// Build a slice of the workers' hostname.domain (e.g. nnf-container-example-worker-0.nnf-container-example-worker.default.svc)
+	// Build a slice of the workers' hostname.domain (e.g. nnf-container-example-worker-0.nnf-container-example.default.svc)
 	// This hostname comes from mpi-operator.
 	workers := []string{}
 	for i := 0; i < numWorkers; i++ {
 		host := strings.ToLower(fmt.Sprintf(
-			"%s-worker-%d.%s-worker.%s.svc", c.workflow.Name, i, c.workflow.Name, c.workflow.Namespace))
+			"%s-worker-%d.%s.%s.svc", c.workflow.Name, i, c.workflow.Name, c.workflow.Namespace))
 		workers = append(workers, host)
 	}
 	// mpirun takes a comma separated list of hosts (-H)

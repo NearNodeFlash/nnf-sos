@@ -4,7 +4,7 @@ metadata:
   name: placeholder
   namespace: nnf-system
 data:
-  default: true
+  default: false
   lustreStorage:
     combinedMgtMdt: true
     mgtCommandlines:

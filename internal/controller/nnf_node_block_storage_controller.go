@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -26,6 +26,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -61,10 +62,31 @@ const (
 // NnfNodeBlockStorageReconciler contains the elements needed during reconciliation for NnfNodeBlockStorage
 type NnfNodeBlockStorageReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *kruntime.Scheme
+	Log               logr.Logger
+	Scheme            *kruntime.Scheme
+	SemaphoreForStart chan int
+	SemaphoreForDone  chan int
 
 	types.NamespacedName
+
+	sync.Mutex
+	started         bool
+	reconcilerAwake bool
+}
+
+func (r *NnfNodeBlockStorageReconciler) Start(ctx context.Context) error {
+	log := r.Log.WithValues("State", "Start")
+
+	r.SemaphoreForStart <- 1
+
+	log.Info("Ready to start")
+
+	r.Lock()
+	r.started = true
+	r.Unlock()
+
+	<-r.SemaphoreForDone
+	return nil
 }
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodeblockstorages,verbs=get;list;watch;create;update;patch;delete;deletecollection
@@ -78,6 +100,17 @@ type NnfNodeBlockStorageReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", req.NamespacedName)
+	r.Lock()
+	if !r.started {
+		r.Unlock()
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+	}
+	if !r.reconcilerAwake {
+		log.Info("Reconciler is awake")
+		r.reconcilerAwake = true
+	}
+	r.Unlock()
+
 	metrics.NnfNodeBlockStorageReconcilesTotal.Inc()
 
 	nodeBlockStorage := &nnfv1alpha1.NnfNodeBlockStorage{}
@@ -262,7 +295,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 	// Get the Storage resource to map between compute node name and
 	// endpoint index.
 	namespacedName := types.NamespacedName{
-		Name:      nodeBlockStorage.Namespace,
+		Name:      nodeBlockStorage.Namespace, // The namespace tells us which Rabbit we are dealing with
 		Namespace: "default",
 	}
 
@@ -525,6 +558,9 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageService
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.Add(r); err != nil {
+		return err
+	}
 	// nnf-ec is not thread safe, so we are limited to a single reconcile thread.
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
