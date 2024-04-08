@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: directivebreakdowns.dataworkflowservices.github.io
 spec:
   group: dataworkflowservices.github.io
@@ -28,14 +28,19 @@ spec:
         description: DirectiveBreakdown is the Schema for the directivebreakdown API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -67,9 +72,9 @@ spec:
                       location:
                         description: Location is a list of location constraints
                         items:
-                          description: ComputeLocationConstraint describes a constraints
-                            on which compute nodes can be used with a directive based
-                            on their location
+                          description: |-
+                            ComputeLocationConstraint describes a constraints on which compute nodes can be used with
+                            a directive based on their location
                           properties:
                             access:
                               items:
@@ -101,37 +106,40 @@ spec:
                                   description: API version of the referent.
                                   type: string
                                 fieldPath:
-                                  description: 'If referring to a piece of an object
-                                    instead of an entire object, this string should
-                                    contain a valid JSON/Go field access statement,
-                                    such as desiredState.manifest.containers[2]. For
-                                    example, if the object reference is to a container
-                                    within a pod, this would take on a value like:
-                                    "spec.containers{name}" (where "name" refers to
-                                    the name of the container that triggered the event)
-                                    or if no container name is specified "spec.containers[2]"
-                                    (container with index 2 in this pod). This syntax
-                                    is chosen only to have some well-defined way of
-                                    referencing a part of an object. TODO: this design
-                                    is not final and this field is subject to change
-                                    in the future.'
+                                  description: |-
+                                    If referring to a piece of an object instead of an entire object, this string
+                                    should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                    For example, if the object reference is to a container within a pod, this would take on a value like:
+                                    "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                    the event) or if no container name is specified "spec.containers[2]" (container with
+                                    index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                    referencing a part of an object.
+                                    TODO: this design is not final and this field is subject to change in the future.
                                   type: string
                                 kind:
-                                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                  description: |-
+                                    Kind of the referent.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: |-
+                                    Name of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                   type: string
                                 namespace:
-                                  description: 'Namespace of the referent. More info:
-                                    https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                  description: |-
+                                    Namespace of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                                   type: string
                                 resourceVersion:
-                                  description: 'Specific resourceVersion to which
-                                    this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                  description: |-
+                                    Specific resourceVersion to which this reference is made, if any.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                                   type: string
                                 uid:
-                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                  description: |-
+                                    UID of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -184,27 +192,25 @@ spec:
                           - AllocateSingleServer
                           type: string
                         constraints:
-                          description: Constraint is an additional requirement pertaining
-                            to the suitability of Storage resources that may be used
+                          description: |-
+                            Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used
                             for this AllocationSet
                           properties:
                             colocation:
-                              description: Colocation is a list of constraints for
-                                which Storage resources to pick in relation to Storage
-                                resources for other allocation sets.
+                              description: |-
+                                Colocation is a list of constraints for which Storage resources
+                                to pick in relation to Storage resources for other allocation sets.
                               items:
-                                description: AllocationSetColocationConstraint specifies
-                                  how to colocate storage resources. A colocation
-                                  constraint specifies how the location(s) of an allocation
-                                  set should be selected with relation to other allocation
-                                  sets. Locations for allocation sets with the same
-                                  colocation key should be picked according to the
-                                  colocation type.
+                                description: |-
+                                  AllocationSetColocationConstraint specifies how to colocate storage resources.
+                                  A colocation constraint specifies how the location(s) of an allocation set should be
+                                  selected with relation to other allocation sets. Locations for allocation sets with the
+                                  same colocation key should be picked according to the colocation type.
                                 properties:
                                   key:
-                                    description: Key shared by all the allocation
-                                      sets that have their location constrained in
-                                      relation to each other.
+                                    description: |-
+                                      Key shared by all the allocation sets that have their location constrained
+                                      in relation to each other.
                                     type: string
                                   type:
                                     description: Type of colocation constraint
@@ -235,9 +241,9 @@ spec:
                               type: integer
                           type: object
                         label:
-                          description: Label is an identifier used to communicate
-                            from the DWS interface to internal interfaces the filesystem
-                            use of this AllocationSet.
+                          description: |-
+                            Label is an identifier used to communicate from the DWS interface to internal interfaces
+                            the filesystem use of this AllocationSet.
                           enum:
                           - raw
                           - xfs
@@ -248,9 +254,9 @@ spec:
                           - ost
                           type: string
                         minimumCapacity:
-                          description: MinimumCapacity is the minumum number of bytes
-                            required to meet the needs of the filesystem that will
-                            use the storage.
+                          description: |-
+                            MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
+                            will use the storage.
                           format: int64
                           minimum: 1
                           type: integer
@@ -273,33 +279,40 @@ spec:
                         description: API version of the referent.
                         type: string
                       fieldPath:
-                        description: 'If referring to a piece of an object instead
-                          of an entire object, this string should contain a valid
-                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within
-                          a pod, this would take on a value like: "spec.containers{name}"
-                          (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]"
-                          (container with index 2 in this pod). This syntax is chosen
-                          only to have some well-defined way of referencing a part
-                          of an object. TODO: this design is not final and this field
-                          is subject to change in the future.'
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
                         type: string
                       kind:
-                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
                       namespace:
-                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                         type: string
                       resourceVersion:
-                        description: 'Specific resourceVersion to which this reference
-                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                         type: string
                       uid:
-                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
@@ -331,14 +344,19 @@ spec:
         description: DirectiveBreakdown is the Schema for the directivebreakdown API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -370,9 +388,9 @@ spec:
                       location:
                         description: Location is a list of location constraints
                         items:
-                          description: ComputeLocationConstraint describes a constraints
-                            on which compute nodes can be used with a directive based
-                            on their location
+                          description: |-
+                            ComputeLocationConstraint describes a constraints on which compute nodes can be used with
+                            a directive based on their location
                           properties:
                             access:
                               items:
@@ -404,37 +422,40 @@ spec:
                                   description: API version of the referent.
                                   type: string
                                 fieldPath:
-                                  description: 'If referring to a piece of an object
-                                    instead of an entire object, this string should
-                                    contain a valid JSON/Go field access statement,
-                                    such as desiredState.manifest.containers[2]. For
-                                    example, if the object reference is to a container
-                                    within a pod, this would take on a value like:
-                                    "spec.containers{name}" (where "name" refers to
-                                    the name of the container that triggered the event)
-                                    or if no container name is specified "spec.containers[2]"
-                                    (container with index 2 in this pod). This syntax
-                                    is chosen only to have some well-defined way of
-                                    referencing a part of an object. TODO: this design
-                                    is not final and this field is subject to change
-                                    in the future.'
+                                  description: |-
+                                    If referring to a piece of an object instead of an entire object, this string
+                                    should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                    For example, if the object reference is to a container within a pod, this would take on a value like:
+                                    "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                    the event) or if no container name is specified "spec.containers[2]" (container with
+                                    index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                    referencing a part of an object.
+                                    TODO: this design is not final and this field is subject to change in the future.
                                   type: string
                                 kind:
-                                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                                  description: |-
+                                    Kind of the referent.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                                   type: string
                                 name:
-                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                                  description: |-
+                                    Name of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                                   type: string
                                 namespace:
-                                  description: 'Namespace of the referent. More info:
-                                    https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                                  description: |-
+                                    Namespace of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                                   type: string
                                 resourceVersion:
-                                  description: 'Specific resourceVersion to which
-                                    this reference is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                                  description: |-
+                                    Specific resourceVersion to which this reference is made, if any.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                                   type: string
                                 uid:
-                                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                                  description: |-
+                                    UID of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -452,8 +473,9 @@ spec:
                     description: Internal debug message for the error
                     type: string
                   severity:
-                    description: Indication of how severe the error is. Minor will
-                      likely succeed, Major may succeed, and Fatal will never succeed.
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
                     enum:
                     - Minor
                     - Major
@@ -498,27 +520,25 @@ spec:
                           - AllocateSingleServer
                           type: string
                         constraints:
-                          description: Constraint is an additional requirement pertaining
-                            to the suitability of Storage resources that may be used
+                          description: |-
+                            Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used
                             for this AllocationSet
                           properties:
                             colocation:
-                              description: Colocation is a list of constraints for
-                                which Storage resources to pick in relation to Storage
-                                resources for other allocation sets.
+                              description: |-
+                                Colocation is a list of constraints for which Storage resources
+                                to pick in relation to Storage resources for other allocation sets.
                               items:
-                                description: AllocationSetColocationConstraint specifies
-                                  how to colocate storage resources. A colocation
-                                  constraint specifies how the location(s) of an allocation
-                                  set should be selected with relation to other allocation
-                                  sets. Locations for allocation sets with the same
-                                  colocation key should be picked according to the
-                                  colocation type.
+                                description: |-
+                                  AllocationSetColocationConstraint specifies how to colocate storage resources.
+                                  A colocation constraint specifies how the location(s) of an allocation set should be
+                                  selected with relation to other allocation sets. Locations for allocation sets with the
+                                  same colocation key should be picked according to the colocation type.
                                 properties:
                                   key:
-                                    description: Key shared by all the allocation
-                                      sets that have their location constrained in
-                                      relation to each other.
+                                    description: |-
+                                      Key shared by all the allocation sets that have their location constrained
+                                      in relation to each other.
                                     type: string
                                   type:
                                     description: Type of colocation constraint
@@ -549,9 +569,9 @@ spec:
                               type: integer
                           type: object
                         label:
-                          description: Label is an identifier used to communicate
-                            from the DWS interface to internal interfaces the filesystem
-                            use of this AllocationSet.
+                          description: |-
+                            Label is an identifier used to communicate from the DWS interface to internal interfaces
+                            the filesystem use of this AllocationSet.
                           enum:
                           - raw
                           - xfs
@@ -562,9 +582,9 @@ spec:
                           - ost
                           type: string
                         minimumCapacity:
-                          description: MinimumCapacity is the minumum number of bytes
-                            required to meet the needs of the filesystem that will
-                            use the storage.
+                          description: |-
+                            MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
+                            will use the storage.
                           format: int64
                           minimum: 1
                           type: integer
@@ -587,33 +607,40 @@ spec:
                         description: API version of the referent.
                         type: string
                       fieldPath:
-                        description: 'If referring to a piece of an object instead
-                          of an entire object, this string should contain a valid
-                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within
-                          a pod, this would take on a value like: "spec.containers{name}"
-                          (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]"
-                          (container with index 2 in this pod). This syntax is chosen
-                          only to have some well-defined way of referencing a part
-                          of an object. TODO: this design is not final and this field
-                          is subject to change in the future.'
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                          TODO: this design is not final and this field is subject to change in the future.
                         type: string
                       kind:
-                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                         type: string
                       name:
-                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                         type: string
                       namespace:
-                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                         type: string
                       resourceVersion:
-                        description: 'Specific resourceVersion to which this reference
-                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                         type: string
                       uid:
-                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic

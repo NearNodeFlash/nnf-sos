@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: workflows.dataworkflowservices.github.io
 spec:
   group: dataworkflowservices.github.io
@@ -56,14 +56,19 @@ spec:
         description: Workflow is the Schema for the workflows API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -71,9 +76,9 @@ spec:
             description: WorkflowSpec defines the desired state of Workflow
             properties:
               desiredState:
-                description: Desired state for the workflow to be in. Unless progressing
-                  to the teardown state, this can only be set to the next state when
-                  the current desired state has been achieved.
+                description: |-
+                  Desired state for the workflow to be in. Unless progressing to the teardown state,
+                  this can only be set to the next state when the current desired state has been achieved.
                 enum:
                 - Proposal
                 - Setup
@@ -89,29 +94,26 @@ spec:
                   type: string
                 type: array
               groupID:
-                description: GroupID specifies the group ID for the workflow. The
-                  Group ID is used by the various states in the workflow to ensure
-                  the group has permissions to perform certain actions. Used in conjunction
-                  with User ID to run subtasks with UserID:GroupID credentials.
+                description: |-
+                  GroupID specifies the group ID for the workflow. The Group ID is used by the various states
+                  in the workflow to ensure the group has permissions to perform certain actions. Used in
+                  conjunction with User ID to run subtasks with UserID:GroupID credentials.
                 format: int32
                 type: integer
               hurry:
                 default: false
-                description: Hurry indicates that the workflow's driver should kill
-                  the job in a hurry when this workflow enters its teardown state.
-                  The driver must release all resources and unmount any filesystems
-                  that were mounted as part of the workflow, though some drivers would
-                  have done this anyway as part of their teardown state. The driver
-                  must also kill any in-progress data transfers, or skip any data
-                  transfers that have not yet begun.
+                description: |-
+                  Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
+                  The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
+                  The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
                 type: boolean
               jobID:
                 type: integer
               userID:
-                description: UserID specifies the user ID for the workflow. The User
-                  ID is used by the various states in the workflow to ensure the user
-                  has permissions to perform certain actions. Used in conjunction
-                  with Group ID to run subtasks with UserID:GroupID credentials
+                description: |-
+                  UserID specifies the user ID for the workflow. The User ID is used by the various states
+                  in the workflow to ensure the user has permissions to perform certain actions. Used in
+                  conjunction with Group ID to run subtasks with UserID:GroupID credentials
                 format: int32
                 type: integer
               wlmID:
@@ -134,33 +136,40 @@ spec:
                     description: API version of the referent.
                     type: string
                   fieldPath:
-                    description: 'If referring to a piece of an object instead of
-                      an entire object, this string should contain a valid JSON/Go
-                      field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within
-                      a pod, this would take on a value like: "spec.containers{name}"
-                      (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]"
-                      (container with index 2 in this pod). This syntax is chosen
-                      only to have some well-defined way of referencing a part of
-                      an object. TODO: this design is not final and this field is
-                      subject to change in the future.'
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
                     type: string
                   kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                     type: string
                   resourceVersion:
-                    description: 'Specific resourceVersion to which this reference
-                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                     type: string
                   uid:
-                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -169,67 +178,67 @@ spec:
                 format: date-time
                 type: string
               directiveBreakdowns:
-                description: 'List of #DW directive breakdowns indicating to WLM what
-                  to allocate on what Server 1 DirectiveBreakdown per #DW Directive
-                  that requires storage'
+                description: |-
+                  List of #DW directive breakdowns indicating to WLM what to allocate on what Server
+                  1 DirectiveBreakdown per #DW Directive that requires storage
                 items:
-                  description: "ObjectReference contains enough information to let
-                    you inspect or modify the referred object. --- New uses of this
-                    type are discouraged because of difficulty describing its usage
-                    when embedded in APIs. 1. Ignored fields.  It includes many fields
-                    which are not generally honored.  For instance, ResourceVersion
-                    and FieldPath are both very rarely valid in actual usage. 2. Invalid
-                    usage help.  It is impossible to add specific help for individual
-                    usage.  In most embedded usages, there are particular restrictions
-                    like, \"must refer only to types A and B\" or \"UID not honored\"
-                    or \"name must be restricted\". Those cannot be well described
-                    when embedded. 3. Inconsistent validation.  Because the usages
-                    are different, the validation rules are different by usage, which
-                    makes it hard for users to predict what will happen. 4. The fields
-                    are both imprecise and overly precise.  Kind is not a precise
-                    mapping to a URL. This can produce ambiguity during interpretation
-                    and require a REST mapping.  In most cases, the dependency is
-                    on the group,resource tuple and the version of the actual struct
-                    is irrelevant. 5. We cannot easily change it.  Because this type
-                    is embedded in many locations, updates to this type will affect
-                    numerous schemas.  Don't make new APIs embed an underspecified
-                    API type they do not control. \n Instead of using this type, create
-                    a locally provided and used type that is well-focused on your
-                    reference. For example, ServiceReferences for admission registration:
-                    https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533
-                    ."
+                  description: |-
+                    ObjectReference contains enough information to let you inspect or modify the referred object.
+                    ---
+                    New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+                     1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
+                     2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+                        restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+                        Those cannot be well described when embedded.
+                     3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+                     4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+                        during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+                        and the version of the actual struct is irrelevant.
+                     5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+                        will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+
+
+                    Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+                    For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
                   properties:
                     apiVersion:
                       description: API version of the referent.
                       type: string
                     fieldPath:
-                      description: 'If referring to a piece of an object instead of
-                        an entire object, this string should contain a valid JSON/Go
-                        field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within
-                        a pod, this would take on a value like: "spec.containers{name}"
-                        (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]"
-                        (container with index 2 in this pod). This syntax is chosen
-                        only to have some well-defined way of referencing a part of
-                        an object. TODO: this design is not final and this field is
-                        subject to change in the future.'
+                      description: |-
+                        If referring to a piece of an object instead of an entire object, this string
+                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]" (container with
+                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                        referencing a part of an object.
+                        TODO: this design is not final and this field is subject to change in the future.
                       type: string
                     kind:
-                      description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                      description: |-
+                        Kind of the referent.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                       type: string
                     name:
-                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       type: string
                     namespace:
-                      description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                      description: |-
+                        Namespace of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                       type: string
                     resourceVersion:
-                      description: 'Specific resourceVersion to which this reference
-                        is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                      description: |-
+                        Specific resourceVersion to which this reference is made, if any.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                       type: string
                     uid:
-                      description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                      description: |-
+                        UID of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
@@ -253,8 +262,9 @@ spec:
                     dwdIndex:
                       type: integer
                     error:
-                      description: Driver error string. This is not rolled up into
-                        the workflow's overall status section
+                      description: |-
+                        Driver error string. This is not rolled up into the workflow's
+                        overall status section
                       type: string
                     lastHB:
                       format: int64
@@ -264,9 +274,10 @@ spec:
                         status of the resource
                       type: string
                     status:
-                      description: 'User readable reason. For the CDS driver, this
-                        could be the state of the underlying data movement request:  Pending,
-                        Queued, Running, Completed or Error'
+                      description: |-
+                        User readable reason.
+                        For the CDS driver, this could be the state of the underlying
+                        data movement request:  Pending, Queued, Running, Completed or Error
                       enum:
                       - Pending
                       - Queued
@@ -304,17 +315,18 @@ spec:
               env:
                 additionalProperties:
                   type: string
-                description: Set of DW environment variable settings for WLM to apply
-                  to the job. - DW_JOB_STRIPED - DW_JOB_PRIVATE - DW_JOB_STRIPED_CACHE
-                  - DW_JOB_LDBAL_CACHE - DW_PERSISTENT_STRIPED_{resname}
+                description: "Set of DW environment variable settings for WLM to apply
+                  to the job.\n\t\t- DW_JOB_STRIPED\n\t\t- DW_JOB_PRIVATE\n\t\t- DW_JOB_STRIPED_CACHE\n\t\t-
+                  DW_JOB_LDBAL_CACHE\n\t\t- DW_PERSISTENT_STRIPED_{resname}"
                 type: object
               message:
                 description: Message provides additional details on the current status
                   of the resource
                 type: string
               ready:
-                description: Ready can be 'True', 'False' Indicates whether State
-                  has been reached.
+                description: |-
+                  Ready can be 'True', 'False'
+                  Indicates whether State has been reached.
                 type: boolean
               readyChange:
                 description: Time of the most recent desiredState's achieving Ready
@@ -322,7 +334,8 @@ spec:
                 format: date-time
                 type: string
               state:
-                description: The state the resource is currently transitioning to.
+                description: |-
+                  The state the resource is currently transitioning to.
                   Updated by the controller once started.
                 enum:
                 - Proposal
@@ -388,14 +401,19 @@ spec:
         description: Workflow is the Schema for the workflows API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -403,9 +421,9 @@ spec:
             description: WorkflowSpec defines the desired state of Workflow
             properties:
               desiredState:
-                description: Desired state for the workflow to be in. Unless progressing
-                  to the teardown state, this can only be set to the next state when
-                  the current desired state has been achieved.
+                description: |-
+                  Desired state for the workflow to be in. Unless progressing to the teardown state,
+                  this can only be set to the next state when the current desired state has been achieved.
                 enum:
                 - Proposal
                 - Setup
@@ -421,39 +439,38 @@ spec:
                   type: string
                 type: array
               groupID:
-                description: GroupID specifies the group ID for the workflow. The
-                  Group ID is used by the various states in the workflow to ensure
-                  the group has permissions to perform certain actions. Used in conjunction
-                  with User ID to run subtasks with UserID:GroupID credentials.
+                description: |-
+                  GroupID specifies the group ID for the workflow. The Group ID is used by the various states
+                  in the workflow to ensure the group has permissions to perform certain actions. Used in
+                  conjunction with User ID to run subtasks with UserID:GroupID credentials.
                 format: int32
                 type: integer
               hurry:
                 default: false
-                description: Hurry indicates that the workflow's driver should kill
-                  the job in a hurry when this workflow enters its teardown state.
-                  The driver must release all resources and unmount any filesystems
-                  that were mounted as part of the workflow, though some drivers would
-                  have done this anyway as part of their teardown state. The driver
-                  must also kill any in-progress data transfers, or skip any data
-                  transfers that have not yet begun.
+                description: |-
+                  Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
+                  The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
+                  The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
                 type: boolean
               jobID:
                 anyOf:
                 - type: integer
                 - type: string
-                description: JobID is the WLM job ID that corresponds to this workflow,
-                  and is set by the WLM when it creates the workflow resource.
+                description: |-
+                  JobID is the WLM job ID that corresponds to this workflow, and is
+                  set by the WLM when it creates the workflow resource.
                 x-kubernetes-int-or-string: true
               userID:
-                description: UserID specifies the user ID for the workflow. The User
-                  ID is used by the various states in the workflow to ensure the user
-                  has permissions to perform certain actions. Used in conjunction
-                  with Group ID to run subtasks with UserID:GroupID credentials
+                description: |-
+                  UserID specifies the user ID for the workflow. The User ID is used by the various states
+                  in the workflow to ensure the user has permissions to perform certain actions. Used in
+                  conjunction with Group ID to run subtasks with UserID:GroupID credentials
                 format: int32
                 type: integer
               wlmID:
-                description: WLMID identifies the Workflow Manager (WLM), and is set
-                  by the WLM when it creates the workflow resource.
+                description: |-
+                  WLMID identifies the Workflow Manager (WLM), and is set by the WLM
+                  when it creates the workflow resource.
                 type: string
             required:
             - desiredState
@@ -473,33 +490,40 @@ spec:
                     description: API version of the referent.
                     type: string
                   fieldPath:
-                    description: 'If referring to a piece of an object instead of
-                      an entire object, this string should contain a valid JSON/Go
-                      field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within
-                      a pod, this would take on a value like: "spec.containers{name}"
-                      (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]"
-                      (container with index 2 in this pod). This syntax is chosen
-                      only to have some well-defined way of referencing a part of
-                      an object. TODO: this design is not final and this field is
-                      subject to change in the future.'
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
                     type: string
                   kind:
-                    description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                     type: string
                   name:
-                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                     type: string
                   namespace:
-                    description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                     type: string
                   resourceVersion:
-                    description: 'Specific resourceVersion to which this reference
-                      is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                     type: string
                   uid:
-                    description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
@@ -508,67 +532,67 @@ spec:
                 format: date-time
                 type: string
               directiveBreakdowns:
-                description: 'List of #DW directive breakdowns indicating to WLM what
-                  to allocate on what Server 1 DirectiveBreakdown per #DW Directive
-                  that requires storage'
+                description: |-
+                  List of #DW directive breakdowns indicating to WLM what to allocate on what Server
+                  1 DirectiveBreakdown per #DW Directive that requires storage
                 items:
-                  description: "ObjectReference contains enough information to let
-                    you inspect or modify the referred object. --- New uses of this
-                    type are discouraged because of difficulty describing its usage
-                    when embedded in APIs. 1. Ignored fields.  It includes many fields
-                    which are not generally honored.  For instance, ResourceVersion
-                    and FieldPath are both very rarely valid in actual usage. 2. Invalid
-                    usage help.  It is impossible to add specific help for individual
-                    usage.  In most embedded usages, there are particular restrictions
-                    like, \"must refer only to types A and B\" or \"UID not honored\"
-                    or \"name must be restricted\". Those cannot be well described
-                    when embedded. 3. Inconsistent validation.  Because the usages
-                    are different, the validation rules are different by usage, which
-                    makes it hard for users to predict what will happen. 4. The fields
-                    are both imprecise and overly precise.  Kind is not a precise
-                    mapping to a URL. This can produce ambiguity during interpretation
-                    and require a REST mapping.  In most cases, the dependency is
-                    on the group,resource tuple and the version of the actual struct
-                    is irrelevant. 5. We cannot easily change it.  Because this type
-                    is embedded in many locations, updates to this type will affect
-                    numerous schemas.  Don't make new APIs embed an underspecified
-                    API type they do not control. \n Instead of using this type, create
-                    a locally provided and used type that is well-focused on your
-                    reference. For example, ServiceReferences for admission registration:
-                    https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533
-                    ."
+                  description: |-
+                    ObjectReference contains enough information to let you inspect or modify the referred object.
+                    ---
+                    New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+                     1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
+                     2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+                        restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+                        Those cannot be well described when embedded.
+                     3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+                     4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+                        during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+                        and the version of the actual struct is irrelevant.
+                     5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+                        will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+
+
+                    Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+                    For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
                   properties:
                     apiVersion:
                       description: API version of the referent.
                       type: string
                     fieldPath:
-                      description: 'If referring to a piece of an object instead of
-                        an entire object, this string should contain a valid JSON/Go
-                        field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within
-                        a pod, this would take on a value like: "spec.containers{name}"
-                        (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]"
-                        (container with index 2 in this pod). This syntax is chosen
-                        only to have some well-defined way of referencing a part of
-                        an object. TODO: this design is not final and this field is
-                        subject to change in the future.'
+                      description: |-
+                        If referring to a piece of an object instead of an entire object, this string
+                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]" (container with
+                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                        referencing a part of an object.
+                        TODO: this design is not final and this field is subject to change in the future.
                       type: string
                     kind:
-                      description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                      description: |-
+                        Kind of the referent.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
                       type: string
                     name:
-                      description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                       type: string
                     namespace:
-                      description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                      description: |-
+                        Namespace of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
                       type: string
                     resourceVersion:
-                      description: 'Specific resourceVersion to which this reference
-                        is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                      description: |-
+                        Specific resourceVersion to which this reference is made, if any.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
                       type: string
                     uid:
-                      description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                      description: |-
+                        UID of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                       type: string
                   type: object
                   x-kubernetes-map-type: atomic
@@ -592,8 +616,9 @@ spec:
                     dwdIndex:
                       type: integer
                     error:
-                      description: Driver error string. This is not rolled up into
-                        the workflow's overall status section
+                      description: |-
+                        Driver error string. This is not rolled up into the workflow's
+                        overall status section
                       type: string
                     lastHB:
                       format: int64
@@ -603,8 +628,10 @@ spec:
                         status of the resource
                       type: string
                     status:
-                      description: User readable reason. For the CDS driver, this
-                        could be the state of the underlying data movement request
+                      description: |-
+                        User readable reason.
+                        For the CDS driver, this could be the state of the underlying
+                        data movement request
                       enum:
                       - Pending
                       - Queued
@@ -643,17 +670,18 @@ spec:
               env:
                 additionalProperties:
                   type: string
-                description: Set of DW environment variable settings for WLM to apply
-                  to the job. - DW_JOB_STRIPED - DW_JOB_PRIVATE - DW_JOB_STRIPED_CACHE
-                  - DW_JOB_LDBAL_CACHE - DW_PERSISTENT_STRIPED_{resname}
+                description: "Set of DW environment variable settings for WLM to apply
+                  to the job.\n\t\t- DW_JOB_STRIPED\n\t\t- DW_JOB_PRIVATE\n\t\t- DW_JOB_STRIPED_CACHE\n\t\t-
+                  DW_JOB_LDBAL_CACHE\n\t\t- DW_PERSISTENT_STRIPED_{resname}"
                 type: object
               message:
                 description: Message provides additional details on the current status
                   of the resource
                 type: string
               ready:
-                description: Ready can be 'True', 'False' Indicates whether State
-                  has been reached.
+                description: |-
+                  Ready can be 'True', 'False'
+                  Indicates whether State has been reached.
                 type: boolean
               readyChange:
                 description: Time of the most recent desiredState's achieving Ready
@@ -661,7 +689,8 @@ spec:
                 format: date-time
                 type: string
               state:
-                description: The state the resource is currently transitioning to.
+                description: |-
+                  The state the resource is currently transitioning to.
                   Updated by the controller once started.
                 enum:
                 - Proposal
@@ -673,11 +702,12 @@ spec:
                 - Teardown
                 type: string
               status:
-                description: 'User readable reason and status message. - Completed:
-                  The workflow has reached the state in workflow.Status.State. - DriverWait:
-                  The underlying drivers are currently running. - TransientCondition:
-                  A driver has encountered an error that might be recoverable. - Error:
-                  A driver has encountered an error that will not recover.'
+                description: |-
+                  User readable reason and status message.
+                  - Completed: The workflow has reached the state in workflow.Status.State.
+                  - DriverWait: The underlying drivers are currently running.
+                  - TransientCondition: A driver has encountered an error that might be recoverable.
+                  - Error: A driver has encountered an error that will not recover.
                 enum:
                 - Completed
                 - DriverWait
