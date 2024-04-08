@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -35,6 +35,13 @@ type StorageSpec struct {
 	// State describes the desired state of the Storage resource.
 	// +kubebuilder:default:=Enabled
 	State ResourceState `json:"state,omitempty"`
+
+	// Mode indicates whether the resource is live and is being updated
+	// by the reconcilers or whether it is in testing mode and is being
+	// updated manually.
+	// +kubebuilder:validation:Enum:=Live;Testing
+	// +kubebuilder:default:=Live
+	Mode string `json:"mode,omitempty"`
 }
 
 // StorageDevice contains the details of the storage hardware
@@ -133,6 +140,7 @@ type StorageStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="State",type="string",JSONPath=".spec.state",description="State of the storage resource"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Status of the storage resource"
+//+kubebuilder:printcolumn:name="Mode",type="string",JSONPath=".spec.mode",description="State of live updates"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // Storage is the Schema for the storages API

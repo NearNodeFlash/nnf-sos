@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: dwdirectiverules.dataworkflowservices.github.io
 spec:
   group: dataworkflowservices.github.io
@@ -20,14 +20,19 @@ spec:
         description: DWDirectiveRule is the Schema for the DWDirective API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -39,8 +44,9 @@ spec:
                   description: 'Name of the #DW command. jobdw, stage_in, etc.'
                   type: string
                 driverLabel:
-                  description: Override for the Driver ID. If left empty this defaults
-                    to the name of the DWDirectiveRule
+                  description: |-
+                    Override for the Driver ID. If left empty this defaults to the
+                    name of the DWDirectiveRule
                   type: string
                 ruleDefs:
                   description: 'List of key/value pairs this #DW command is expected
@@ -71,9 +77,10 @@ spec:
                     type: object
                   type: array
                 watchStates:
-                  description: Comma separated list of states that this rule wants
-                    to register for. These watch states will result in an entry in
-                    the driver status array in the Workflow resource
+                  description: |-
+                    Comma separated list of states that this rule wants to register for.
+                    These watch states will result in an entry in the driver status array
+                    in the Workflow resource
                   type: string
               required:
               - command
@@ -89,14 +96,19 @@ spec:
         description: DWDirectiveRule is the Schema for the DWDirective API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -108,8 +120,9 @@ spec:
                   description: 'Name of the #DW command. jobdw, stage_in, etc.'
                   type: string
                 driverLabel:
-                  description: Override for the Driver ID. If left empty this defaults
-                    to the name of the DWDirectiveRule
+                  description: |-
+                    Override for the Driver ID. If left empty this defaults to the
+                    name of the DWDirectiveRule
                   type: string
                 ruleDefs:
                   description: 'List of key/value pairs this #DW command is expected
@@ -140,9 +153,10 @@ spec:
                     type: object
                   type: array
                 watchStates:
-                  description: Comma separated list of states that this rule wants
-                    to register for. These watch states will result in an entry in
-                    the driver status array in the Workflow resource
+                  description: |-
+                    Comma separated list of states that this rule wants to register for.
+                    These watch states will result in an entry in the driver status array
+                    in the Workflow resource
                   type: string
               required:
               - command

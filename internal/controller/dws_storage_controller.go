@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -95,6 +95,11 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if storage.Spec.Mode != "Live" {
+		log.Info("Reconciliation skipped, not in live mode")
+		return ctrl.Result{}, nil
 	}
 
 	// Create a new status
