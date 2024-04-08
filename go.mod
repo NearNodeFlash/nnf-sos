@@ -2,6 +2,8 @@ module github.com/NearNodeFlash/nnf-sos
 
 go 1.19
 
+replace github.com/DataWorkflowServices/dws => ../dws
+
 require (
 	github.com/DataWorkflowServices/dws v0.0.1-0.20240223212516-e29a8a3306e1
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240220213720-51597bca637d
