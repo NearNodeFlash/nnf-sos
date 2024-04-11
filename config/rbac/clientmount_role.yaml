@@ -28,3 +28,11 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfstorageprofiles
+  verbs:
+  - get
+  - list
+  - watch
