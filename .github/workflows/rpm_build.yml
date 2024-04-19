@@ -8,7 +8,10 @@ jobs:
   rpm_build:
     runs-on: ubuntu-latest
     steps:
-      - name: "Build context"
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: context
         run: |
           echo "ref is ${{ github.ref }}"
           echo "ref_type is ${{ github.ref_type }}"
@@ -16,8 +19,6 @@ jobs:
           echo "git-version-gen:"
           ./git-version-gen
 
-      - name: checkout
-        uses: actions/checkout@v4
       - name: build rpms
         run: |
            pwd
