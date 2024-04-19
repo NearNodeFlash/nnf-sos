@@ -8,19 +8,38 @@ jobs:
   rpm_build:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+    - name: checkout
+      if: ${{ !env.ACT }} # skip during local actions testing
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: context
-        run: |
-          echo "ref is ${{ github.ref }}"
-          echo "ref_type is ${{ github.ref_type }}"
-          echo "head.sha is ${{ github.event.pull_request.head.sha }}"
-          echo "git-version-gen:"
-          ./git-version-gen
+    - name: context
+      run: |
+        echo "ref is ${{ github.ref }}"
+        echo "ref_type is ${{ github.ref_type }}"
+        echo "head.sha is ${{ github.event.pull_request.head.sha }}"
+        echo "git-version-gen: $(./git-version-gen)"
+        echo "go.mod go version is $(awk -F" " '$1 == "go" {print $2}' go.mod)"
 
-      - name: build rpms
-        run: |
-           pwd
-           make build-daemon
-           /bin/ls -al rpms
+    - name: setup go
+      if: ${{ env.ACT }} # use during local actions testing
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - name: build rpms
+      run: |
+         pwd
+         make build-daemon
+         /bin/ls -al rpms
+
+    - name: upload rpms
+      if: ${{ !env.ACT }} # skip during local actions testing
+      uses: actions/upload-artifact@v4
+      with:
+         name: nnf-clientmount.rpm
+         path: /home/runner/work/nnf-sos/nnf-sos/rpms/*
+         if-no-files-found: error
+
