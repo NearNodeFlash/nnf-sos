@@ -1,3 +1,8 @@
+# Testing with nektos/act:
+#   $ act --rm -j rpm_build --container-architecture linux/amd64 --pull=false --bind push
+#
+
+
 name: RPM Build
 on:
   push:
@@ -21,9 +26,11 @@ jobs:
         echo "ref_type is ${{ github.ref_type }}"
         echo "head.sha is ${{ github.event.pull_request.head.sha }}"
         echo "git-version-gen: $(./git-version-gen)"
-        echo "go.mod go version is $(awk -F" " '$1 == "go" {print $2}' go.mod)"
+        echo "want go version: $(grep -E '^go ' go.mod)"
 
     - name: setup go
+      # This is needed only because the 'make build-daemon' target will run
+      # the 'go fmt' and 'go vet' commands before it starts the docker build.
       if: ${{ env.ACT }} # use during local actions testing
       uses: actions/setup-go@v5
       with:
@@ -31,6 +38,7 @@ jobs:
 
     - name: build rpms
       run: |
+         go version
          pwd
          make build-daemon
          /bin/ls -al rpms
