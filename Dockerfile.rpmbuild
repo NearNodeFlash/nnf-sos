@@ -51,8 +51,8 @@ ARG RPMVERSION
 ARG RPMTARGET
 
 # The mkdirs in /root/rpmbuild would normally be done by rpmdev-setuptree.
-# However, the install of rpmdev-setuptree adds at least a minute to the run
-# time so we do the mkdirs without it.
+# However, we're trying to cut the run time and that drags in a lot of
+# dependencies.
 RUN dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos && \
     dnf -y install rpm-build && \
     mkdir -p /root/rpmbuild/BUILD /root/rpmbuild/RPMS /root/rpmbuild/SOURCES
