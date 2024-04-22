@@ -50,9 +50,12 @@ FROM --platform=$BUILDPLATFORM centos:8 AS rpmbuilder
 ARG RPMVERSION
 ARG RPMTARGET
 
+# The mkdirs in /root/rpmbuild would normally be done by rpmdev-setuptree.
+# However, the install of rpmdev-setuptree adds at least a minute to the run
+# time so we do the mkdirs without it.
 RUN dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos && \
-    dnf -y install rpm-build rpmdevtools && \
-    rpmdev-setuptree
+    dnf -y install rpm-build && \
+    mkdir -p /root/rpmbuild/BUILD /root/rpmbuild/RPMS /root/rpmbuild/SOURCES
 
 WORKDIR /workspace
 
@@ -61,7 +64,7 @@ COPY --from=gobuilder /artifacts/* /workspace/
 
 RUN sed -i.bak -e 's/^Version: .*/Version: '$RPMVERSION'/' clientmount.spec && \
     cp nnf-clientmount-$RPMVERSION.tar.gz /root/rpmbuild/SOURCES/ && \
-    rpmbuild --target=$RPMTARGET -ba clientmount.spec && \
+    rpmbuild --target=$RPMTARGET -bb clientmount.spec && \
     mkdir /artifacts && \
     find /root/rpmbuild/RPMS -name '*.rpm' -exec cp {} /artifacts \;
 
