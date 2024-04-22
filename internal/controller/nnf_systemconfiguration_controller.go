@@ -124,12 +124,6 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 		validNamespaces[*name] = struct{}{}
 	}
 
-	// Delete any namespaces owned by this systemConfiguration resource that aren't included
-	// in the validNamespaces map
-	if err := r.deleteNamespaces(ctx, systemConfiguration, validNamespaces); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Create the namespaces in the validNamespaces map if they don't exist yet.
 	if err := r.createNamespaces(ctx, systemConfiguration, validNamespaces); err != nil {
 		return ctrl.Result{}, err
@@ -149,37 +143,6 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 	systemConfiguration.Status.Ready = true
 
 	return ctrl.Result{}, nil
-}
-
-// deleteNamespaces looks for namespaces owned by the SystemConfiguration resource (by looking
-// at the namespace's labels) and deletes them if it isn't a namespace listed in the validNamespaces
-// map. Only the first error encountered is returned.
-func (r *NnfSystemConfigurationReconciler) deleteNamespaces(ctx context.Context, config *dwsv1alpha2.SystemConfiguration, validNamespaces map[string]struct{}) error {
-	listOptions := []client.ListOption{
-		dwsv1alpha2.MatchingOwner(config),
-	}
-
-	namespaces := &corev1.NamespaceList{}
-	if err := r.List(ctx, namespaces, listOptions...); err != nil {
-		return err
-	}
-
-	var firstError error
-	for _, namespace := range namespaces.Items {
-		if _, ok := validNamespaces[namespace.Name]; ok {
-			continue
-		}
-
-		if err := r.Delete(ctx, &namespace); err != nil {
-			if !apierrors.IsNotFound(err) {
-				if firstError == nil {
-					firstError = err
-				}
-			}
-		}
-	}
-
-	return firstError
 }
 
 // createNamespaces creates a namespace for each entry in the validNamespaces map. The
