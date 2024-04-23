@@ -769,7 +769,9 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	// TODO: Detailed Fail Message?
 	for _, dm := range dataMovementList.Items {
 		if dm.Status.Status != nnfv1alpha1.DataMovementConditionReasonSuccess {
-			handleWorkflowErrorByIndex(dwsv1alpha2.NewResourceError("").WithUserMessage("data movement operation failed").WithFatal(), workflow, index)
+			handleWorkflowErrorByIndex(dwsv1alpha2.NewResourceError("").WithUserMessage(
+				fmt.Sprintf("data movement operation failed during '%s', message: %s", workflow.Status.State, dm.Status.Message)).
+				WithFatal(), workflow, index)
 			return Requeue("error").withObject(&dm), nil
 		}
 	}
