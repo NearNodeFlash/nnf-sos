@@ -148,6 +148,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
 			clientMount.Status.Mounts[i].Ready = false
 		}
+		clientMount.Status.AllReady = false
 
 		return ctrl.Result{}, nil
 	}
@@ -167,6 +168,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	clientMount.Status.Error = nil
+	clientMount.Status.AllReady = false
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
 		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
@@ -175,6 +177,8 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		clientMount.Status.Error = resourceError
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
 	}
+
+	clientMount.Status.AllReady = true
 
 	return ctrl.Result{}, nil
 }

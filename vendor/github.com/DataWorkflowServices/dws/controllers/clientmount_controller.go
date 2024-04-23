@@ -110,6 +110,7 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	for i := range clientMount.Spec.Mounts {
 		clientMount.Status.Mounts[i].Ready = true
 	}
+	clientMount.Status.AllReady = true
 
 	clientMount.Status.Error = nil
 
