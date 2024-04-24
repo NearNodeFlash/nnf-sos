@@ -180,6 +180,7 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 }
 
 func blockForever() {
+	setupLog.Info("block forever")
 	<-time.After(time.Duration(math.MaxInt64))
 }
 
