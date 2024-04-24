@@ -21,9 +21,15 @@ NODENAME=compute-01
 NS=nnf-system
 SECRET=nnf-clientmount
 
-kubectl get secret -n $NS $SECRET -o json | jq -Mr '.data."ca.crt"' | base64 --decode > mounter1-ca.crt
+if [[ ! -f mounter1-ca.crt ]]
+then
+    kubectl get secret -n $NS $SECRET -o json | jq -Mr '.data."ca.crt"' | base64 --decode > mounter1-ca.crt
+fi
 
-kubectl get secret -n $NS $SECRET -o json | jq -Mr .data.token | base64 --decode > mounter1-token
+if [[ ! -f mounter1-token ]]
+then
+    kubectl get secret -n $NS $SECRET -o json | jq -Mr .data.token | base64 --decode > mounter1-token
+fi
 
 exec bin/mounter1 --kubeconfig $KUBECONFIG --node-name $NODENAME --kubernetes-service-host=$SRVR --kubernetes-service-port=$PORT --service-cert-file mounter1-ca.crt --service-token-file mounter1-token $EXTRA
 
