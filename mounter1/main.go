@@ -23,6 +23,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -33,22 +34,24 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	//_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"k8s.io/client-go/util/homedir"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	certutil "k8s.io/client-go/util/cert"
 
 	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
+
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 )
 
 var (
@@ -58,12 +61,12 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
 }
 
 type managerConfig struct {
 	config    *rest.Config
 	namespace string
-	mock      bool
 	timeout   time.Duration
 }
 
@@ -109,7 +112,7 @@ func getOptions() (*options, *rest.Config, error) {
 	cflags.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
 	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
 	cflags.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
-	cflags.BoolVar(&opts.step1, "step1", opts.step1, "Run pod-list-loop")
+	cflags.BoolVar(&opts.step1, "step1", opts.step1, "Run query")
 
 	zapOptions := zap.Options{
 		Development: true,
@@ -176,6 +179,10 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 	return &managerConfig{config: restConfig, namespace: opts.name, timeout: opts.timeout}, nil
 }
 
+func blockForever() {
+	<-time.After(time.Duration(math.MaxInt64))
+}
+
 func main() {
 
 	if len(os.Args) > 1 && os.Args[1] == "version" {
@@ -195,21 +202,29 @@ func main() {
 		os.Exit(1)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config.config)
+	clnt, err := client.New(config.config, client.Options{Scheme: scheme})
 	if err != nil {
-		setupLog.Error(err, "failed NewForConfig")
+		setupLog.Error(err, "failed client.New")
 		os.Exit(1)
 	}
 
 	if opts.step1 {
+		namespacedName := types.NamespacedName{Name: "dean", Namespace: opts.name}
+		clientLog := ctrl.Log.WithValues("ClientMount", namespacedName)
+
+		clientMount := &dwsv1alpha2.ClientMount{}
+
 		for {
-			pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-			if err != nil {
-				setupLog.Error(err, "failed pods.list")
+			if err = clnt.Get(context.TODO(), namespacedName, clientMount); err != nil {
+				clientLog.Error(err, "failed client.Get")
 			} else {
-				setupLog.Info("found pods", "count", len(pods.Items))
+				clientLog.Info("Found ClientMount", "resourceVersion", clientMount.ResourceVersion)
 			}
 			time.Sleep(10 * time.Second)
 		}
+	} else {
+		blockForever()
 	}
+
+	os.Exit(0)
 }
