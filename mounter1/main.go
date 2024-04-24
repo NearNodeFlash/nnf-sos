@@ -40,9 +40,6 @@ import (
 
 	"k8s.io/client-go/util/homedir"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -59,14 +56,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-const (
-	finalizerClientMount = "nnf.cray.hpe.com/compute_clientmount"
-)
-
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 }
 
 type managerConfig struct {
@@ -83,7 +74,7 @@ type options struct {
 	name       string
 	tokenFile  string
 	certFile   string
-	mock       bool
+	step1      bool
 	timeout    time.Duration
 }
 
@@ -98,7 +89,7 @@ func getOptions() (*options, *rest.Config, error) {
 		name:      os.Getenv("NODE_NAME"),
 		tokenFile: os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
 		certFile:  os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
-		mock:      false,
+		step1:     false,
 		timeout:   time.Minute,
 	}
 
@@ -117,8 +108,8 @@ func getOptions() (*options, *rest.Config, error) {
 	cflags.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
 	cflags.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
 	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
-	cflags.BoolVar(&opts.mock, "mock", opts.mock, "Run in mock mode where no client mount operations take place")
 	cflags.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
+	cflags.BoolVar(&opts.step1, "step1", opts.step1, "Run pod-list-loop")
 
 	zapOptions := zap.Options{
 		Development: true,
@@ -182,7 +173,7 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	return &managerConfig{config: restConfig, namespace: opts.name, mock: opts.mock, timeout: opts.timeout}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name, timeout: opts.timeout}, nil
 }
 
 func main() {
@@ -210,13 +201,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	for {
-		pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			setupLog.Error(err, "failed pods.list")
-		} else {
-			setupLog.Info("found pods", "count", len(pods.Items))
+	if opts.step1 {
+		for {
+			pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				setupLog.Error(err, "failed pods.list")
+			} else {
+				setupLog.Info("found pods", "count", len(pods.Items))
+			}
+			time.Sleep(10 * time.Second)
 		}
-		time.Sleep(10 * time.Second)
 	}
 }
