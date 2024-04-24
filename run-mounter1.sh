@@ -5,7 +5,7 @@
 EXTRA="$1"
 
 CLUSTER=$(kubectl config get-contexts | grep \* | awk '{print $3}')
-SERVER_URL=$(kubectl config view | yq -Mr '.clusters[] | select(.name == "'"$CLUSTER"'") | .cluster.server')
+SERVER_URL=$(kubectl config view -o json | jq -Mr '.clusters[] | select(.name == "'"$CLUSTER"'") | .cluster.server')
 SERVER_PORT=$(echo "$SERVER_URL" | sed -e 's/^http.*:\/\///')
 
 SRVR=$(echo "$SERVER_PORT" | awk -F: '{print $1}')
