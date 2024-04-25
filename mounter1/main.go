@@ -85,6 +85,7 @@ func getOptions() (*options, *rest.Config, error) {
 	// Define our own flag set so we don't inherit one that is polluted by the
 	// libraries that we've imported.
 	cflags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	var empty string = ""
 
 	opts := options{
 		host:      os.Getenv("KUBERNETES_SERVICE_HOST"),
@@ -104,6 +105,9 @@ func getOptions() (*options, *rest.Config, error) {
 		} else {
 			opts.kubeconfig = cflags.String("kubeconfig", "", "absolute path to the kubeconfig file")
 		}
+	}
+	if *opts.kubeconfig == "empty" {
+		opts.kubeconfig = &empty
 	}
 
 	cflags.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
