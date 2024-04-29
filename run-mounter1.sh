@@ -34,6 +34,8 @@ if [[ ! -f mounter1-token || ! -s mounter1-token ]]; then
 fi
 
 export KUBECONFIG=empty
-exec bin/mounter1 --node-name $NODENAME --kubernetes-service-host=$SRVR --kubernetes-service-port=$PORT --service-cert-file mounter1-ca.crt --service-token-file mounter1-token $EXTRA
+#BIN=bin/mounter1
+BIN=bin/clientmountd
+exec $BIN --node-name $NODENAME --kubernetes-service-host=$SRVR --kubernetes-service-port=$PORT --service-cert-file mounter1-ca.crt --service-token-file mounter1-token --step1
 
 

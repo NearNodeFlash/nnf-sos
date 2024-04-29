@@ -239,6 +239,13 @@ build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
 build-daemon: manifests generate fmt vet ## Build standalone clientMount daemon
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
 
+.PHONY: build-daemon-local
+build-daemon-local: RPM_VERSION ?= $(shell ./git-version-gen)
+build-daemon-local: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
+build-daemon-local: $(LOCALBIN)
+build-daemon-local: fmt vet ## Build standalone clientmount binary
+	CGO_ENABLED=0 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
+
 .PHONY: build-daemon1-local
 build-daemon1-local: RPM_VERSION ?= $(shell ./git-version-gen)
 build-daemon1-local: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version

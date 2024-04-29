@@ -20,8 +20,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"os/signal"
@@ -33,21 +35,21 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	"github.com/takama/daemon"
-	corev1 "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	certutil "k8s.io/client-go/util/cert"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
-	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
 	//+kubebuilder:scaffold:imports
 )
@@ -91,14 +93,19 @@ func (service *Service) Manage() (string, error) {
 		}
 	}
 
-	opts := getOptions()
+	opts, restConfig, err := getOptions()
+	if err != nil {
+		setupLog.Error(err, "failed getOptions")
+		os.Exit(1)
+	}
+
+	config, err := populateRestConfig(opts, restConfig)
+	if err != nil {
+		setupLog.Error(err, "Unable to create manager")
+		os.Exit(1)
+	}
 
 	setupLog.Info("Client Mount Daemon", "Version", version.BuildVersion())
-
-	config, err := createManager(opts)
-	if err != nil {
-		return "Create", err
-	}
 
 	// Set up channel on which to send signal notifications; must use a buffered
 	// channel or risk missing the signal if we're not setup to receive the signal
@@ -106,7 +113,7 @@ func (service *Service) Manage() (string, error) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	go startManager(config)
+	go startManager(opts, config)
 
 	killSignal := <-interrupt
 	setupLog.Info("Daemon was killed", "signal", killSignal)
@@ -116,8 +123,6 @@ func (service *Service) Manage() (string, error) {
 type managerConfig struct {
 	config    *rest.Config
 	namespace string
-	mock      bool
-	timeout   time.Duration
 }
 
 type options struct {
@@ -126,66 +131,50 @@ type options struct {
 	name      string
 	tokenFile string
 	certFile  string
-	mock      bool
-	timeout   time.Duration
+	step1     bool
+	step2     bool
 }
 
-func getOptions() *options {
+func getOptions() (*options, *rest.Config, error) {
+	cflags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	opts := options{
 		host:      os.Getenv("KUBERNETES_SERVICE_HOST"),
 		port:      os.Getenv("KUBERNETES_SERVICE_PORT"),
 		name:      os.Getenv("NODE_NAME"),
-		tokenFile: os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
-		certFile:  os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
-		mock:      false,
-		timeout:   time.Minute,
+		tokenFile: os.Getenv("NNF_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
+		certFile:  os.Getenv("NNF_CLIENT_MOUNT_SERVICE_CERT_FILE"),
+		step1:     false,
+		step2:     false,
 	}
 
-	flag.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
-	flag.StringVar(&opts.port, "kubernetes-service-port", opts.port, "Kubernetes service port number")
-	flag.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
-	flag.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
-	flag.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
-	flag.BoolVar(&opts.mock, "mock", opts.mock, "Run in mock mode where no client mount operations take place")
-	flag.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
+	cflags.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
+	cflags.StringVar(&opts.port, "kubernetes-service-port", opts.port, "Kubernetes service port number")
+	cflags.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
+	cflags.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
+	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
+	cflags.BoolVar(&opts.step1, "step1", opts.step1, "Run query")
+	cflags.BoolVar(&opts.step2, "step2", opts.step2, "Run query")
 
 	zapOptions := zap.Options{
 		Development: true,
 	}
-	zapOptions.BindFlags(flag.CommandLine)
+	zapOptions.BindFlags(cflags)
 
-	flag.Parse()
+	cflags.Parse(os.Args[1:])
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOptions)))
 
-	return &opts
-}
-
-func createManager(opts *options) (*managerConfig, error) {
-
-	var config *rest.Config
-	var err error
-
-	if len(opts.name) == 0 {
-		longName, err := os.Hostname()
-		if err != nil {
-			return nil, err
-		}
-		parts := strings.Split(longName, ".")
-		opts.name = parts[0]
-		setupLog.Info("Using system hostname", "name", opts.name)
+	config, err := clientcmd.BuildConfigFromFlags(opts.host, "")
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: failed BuildConfigFromFlags", err)
 	}
 
-	if len(opts.host) == 0 && len(opts.port) == 0 {
-		setupLog.Info("Using kubeconfig rest configuration")
+	return &opts, config, nil
+}
 
-		config, err = ctrl.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		setupLog.Info("Using default rest configuration")
+func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig, error) {
+	if opts.host != "" {
+		setupLog.Info("Creating rest configuration")
 
 		if len(opts.host) == 0 || len(opts.port) == 0 {
 			return nil, fmt.Errorf("kubernetes service host/port not defined")
@@ -197,7 +186,7 @@ func createManager(opts *options) (*managerConfig, error) {
 
 		token, err := os.ReadFile(opts.tokenFile)
 		if err != nil {
-			return nil, fmt.Errorf("DWS client mount service token failed to read")
+			return nil, fmt.Errorf("%w: DWS client mount service token failed to read", err)
 		}
 
 		if len(opts.certFile) == 0 {
@@ -205,66 +194,69 @@ func createManager(opts *options) (*managerConfig, error) {
 		}
 
 		if _, err := certutil.NewPool(opts.certFile); err != nil {
-			return nil, fmt.Errorf("DWS client mount service certificate invalid")
+			return nil, fmt.Errorf("%w: DWS client mount service certificate invalid", err)
 		}
 
 		tlsClientConfig := rest.TLSClientConfig{}
 		tlsClientConfig.CAFile = opts.certFile
 
-		config = &rest.Config{
-			Host:            "https://" + net.JoinHostPort(opts.host, opts.port),
-			TLSClientConfig: tlsClientConfig,
-			BearerToken:     string(token),
-			BearerTokenFile: opts.tokenFile,
+		restConfig.Host = "https://" + net.JoinHostPort(opts.host, opts.port)
+		restConfig.TLSClientConfig = tlsClientConfig
+		restConfig.BearerToken = string(token)
+		restConfig.BearerTokenFile = opts.tokenFile
+
+	}
+	if len(opts.name) == 0 {
+		longName, err := os.Hostname()
+		if err != nil {
+			return nil, err
 		}
+		parts := strings.Split(longName, ".")
+		opts.name = parts[0]
+		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	return &managerConfig{config: config, namespace: opts.name, mock: opts.mock, timeout: opts.timeout}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name}, nil
 }
 
-func startManager(config *managerConfig) {
-	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
+func blockForever() {
+	setupLog.Info("block forever")
+	<-time.After(time.Duration(math.MaxInt64))
+}
 
-	namespaceCache := make(map[string]cache.Config)
-	namespaceCache[config.namespace] = cache.Config{}
-	namespaceCache[corev1.NamespaceDefault] = cache.Config{}
-
-	mgr, err := ctrl.NewManager(config.config, ctrl.Options{
-		Scheme:         scheme,
-		LeaderElection: false,
-		Cache:          cache.Options{DefaultNamespaces: namespaceCache},
-	})
+func startManager(opts *options, config *managerConfig) {
+	clnt, err := client.New(config.config, client.Options{Scheme: scheme})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "failed client.New")
 		os.Exit(1)
 	}
 
-	semReady := make(chan int, 1)
-	if err = (&controllers.NnfClientMountReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
-		//	Mock:    config.mock,
-		//	Timeout: config.timeout,
-		Scheme:            mgr.GetScheme(),
-		SemaphoreForStart: semReady,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClientMount")
-		os.Exit(1)
-	}
+	if opts.step1 {
+		namespacedName := types.NamespacedName{Name: "dean", Namespace: opts.name}
+		clientLog := ctrl.Log.WithValues("ClientMount", namespacedName)
+		clientMount := &dwsv1alpha2.ClientMount{}
 
-	//+kubebuilder:scaffold:builder
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		for {
+			if err = clnt.Get(context.TODO(), namespacedName, clientMount); err != nil {
+				clientLog.Error(err, "failed client.Get")
+			} else {
+				clientLog.Info("Found ClientMount", "resourceVersion", clientMount.ResourceVersion)
+			}
+			if opts.step2 {
+				time.Sleep(10 * time.Second)
+			} else {
+				blockForever()
+			}
+		}
+	} else {
+		blockForever()
 	}
 }
 
 func main() {
 
 	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Println("Version", version.BuildVersion())
+		fmt.Println("DeanVersion", version.BuildVersion())
 		os.Exit(0)
 	}
 
