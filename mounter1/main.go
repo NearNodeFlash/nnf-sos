@@ -78,6 +78,7 @@ type options struct {
 	tokenFile  string
 	certFile   string
 	step1      bool
+	step2      bool
 	timeout    time.Duration
 }
 
@@ -94,6 +95,7 @@ func getOptions() (*options, *rest.Config, error) {
 		tokenFile: os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
 		certFile:  os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
 		step1:     false,
+		step2:     false,
 		timeout:   time.Minute,
 	}
 
@@ -117,6 +119,7 @@ func getOptions() (*options, *rest.Config, error) {
 	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
 	cflags.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
 	cflags.BoolVar(&opts.step1, "step1", opts.step1, "Run query")
+	cflags.BoolVar(&opts.step2, "step2", opts.step2, "Run query")
 
 	zapOptions := zap.Options{
 		Development: true,
@@ -216,7 +219,6 @@ func main() {
 	if opts.step1 {
 		namespacedName := types.NamespacedName{Name: "dean", Namespace: opts.name}
 		clientLog := ctrl.Log.WithValues("ClientMount", namespacedName)
-
 		clientMount := &dwsv1alpha2.ClientMount{}
 
 		for {
@@ -225,7 +227,11 @@ func main() {
 			} else {
 				clientLog.Info("Found ClientMount", "resourceVersion", clientMount.ResourceVersion)
 			}
-			time.Sleep(10 * time.Second)
+			if opts.step2 {
+				time.Sleep(10 * time.Second)
+			} else {
+				blockForever()
+			}
 		}
 	} else {
 		blockForever()
