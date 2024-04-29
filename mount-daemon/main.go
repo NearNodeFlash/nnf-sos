@@ -55,7 +55,7 @@ import (
 )
 
 const (
-	name        = "clientmountd"
+	name        = "roehrich-clientmountd"
 	description = "Data Workflow Service (DWS) Client Mount Service"
 )
 
