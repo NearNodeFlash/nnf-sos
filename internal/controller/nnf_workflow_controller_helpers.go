@@ -1905,7 +1905,10 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 				},
 			}
 			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-				return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the NnfAccess '%s'", nnfAccess.Name).WithMajor()
+				if !apierrors.IsNotFound(err) {
+					return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the NnfAccess '%s'", nnfAccess.Name).WithMajor()
+				}
+				return nil, Requeue(fmt.Sprintf("wait for NnfAccess '%s'", nnfAccess.Name)).after(2 * time.Second), nil
 			}
 
 			if !nnfAccess.Status.Ready {
