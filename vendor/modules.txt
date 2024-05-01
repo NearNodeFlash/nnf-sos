@@ -11,11 +11,11 @@ github.com/DataWorkflowServices/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240220213720-51597bca637d
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240326175906-15cfe803227d
 ## explicit; go 1.19
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
-# github.com/NearNodeFlash/nnf-ec v0.0.0-20231010162453-a8168bb6a52f
+# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240318141758-e8ded5e13eb8
 ## explicit; go 1.19
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec

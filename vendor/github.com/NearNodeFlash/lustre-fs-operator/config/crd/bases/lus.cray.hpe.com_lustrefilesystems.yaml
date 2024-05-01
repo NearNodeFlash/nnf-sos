@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: lustrefilesystems.lus.cray.hpe.com
 spec:
   group: lus.cray.hpe.com
@@ -42,14 +42,19 @@ spec:
         description: LustreFileSystem is the Schema for the lustrefilesystems API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -57,13 +62,14 @@ spec:
             description: LustreFileSystemSpec defines the desired state of LustreFileSystem
             properties:
               mgsNids:
-                description: MgsNids is the list of comma- and colon- separated NIDs
-                  of the MGS nodes to use for accessing the Lustre file system.
+                description: |-
+                  MgsNids is the list of comma- and colon- separated NIDs of the MGS
+                  nodes to use for accessing the Lustre file system.
                 type: string
               mountRoot:
-                description: MountRoot is the mount path used to access the Lustre
-                  file system from a host. Data Movement directives and Container
-                  Profiles can reference this field.
+                description: |-
+                  MountRoot is the mount path used to access the Lustre file system from a host. Data Movement
+                  directives and Container Profiles can reference this field.
                 type: string
               name:
                 description: Name is the name of the Lustre file system.
@@ -113,9 +119,10 @@ spec:
                               to the persistent volume claim, if present
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -124,9 +131,10 @@ spec:
                               the persistent volume, if present
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -178,14 +186,19 @@ spec:
         description: LustreFileSystem is the Schema for the lustrefilesystems API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -193,13 +206,14 @@ spec:
             description: LustreFileSystemSpec defines the desired state of LustreFileSystem
             properties:
               mgsNids:
-                description: MgsNids is the list of comma- and colon- separated NIDs
-                  of the MGS nodes to use for accessing the Lustre file system.
+                description: |-
+                  MgsNids is the list of comma- and colon- separated NIDs of the MGS
+                  nodes to use for accessing the Lustre file system.
                 type: string
               mountRoot:
-                description: MountRoot is the mount path used to access the Lustre
-                  file system from a host. Data Movement directives and Container
-                  Profiles can reference this field.
+                description: |-
+                  MountRoot is the mount path used to access the Lustre file system from a host. Data Movement
+                  directives and Container Profiles can reference this field.
                 type: string
               name:
                 description: Name is the name of the Lustre file system.
@@ -249,9 +263,10 @@ spec:
                               to the persistent volume claim, if present
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
@@ -260,9 +275,10 @@ spec:
                               the persistent volume, if present
                             properties:
                               name:
-                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  TODO: Add other useful fields. apiVersion, kind,
-                                  uid?'
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  TODO: Add other useful fields. apiVersion, kind, uid?
                                 type: string
                             type: object
                             x-kubernetes-map-type: atomic
