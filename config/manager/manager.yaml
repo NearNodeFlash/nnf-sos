@@ -83,7 +83,7 @@ spec:
           periodSeconds: 10
         securityContext:
           privileged: true
-      serviceAccountName: controller-manager
+      serviceAccountName: node-controller
       terminationGracePeriodSeconds: 10
 
 ---
