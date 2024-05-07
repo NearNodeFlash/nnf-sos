@@ -196,7 +196,9 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 		}
 
-		devices = nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
+		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[index].Accesses) > 0 {
+			devices = nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
+		}
 	}
 
 	for _, device := range devices {
