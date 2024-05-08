@@ -196,7 +196,20 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 		}
 
-		devices = nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
+		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[index].Accesses) > 0 {
+			devices = nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths
+		} else {
+			// FIXME: This scenario has been encountered after rapid transitions from Setup to
+			// Teardown. The reason is not yet known, but we need a way to log and capture this
+			// information when it happens. For now, log the error and continue. In the future, we
+			// may need to handle this situation differently as we gain a better understanding.
+			log.Error(fmt.Errorf("newLvmBlockDevice(): no status allocations or no status allocations accesses"),
+				"status.allocations or status.allocations[].access have a length of 0",
+				"allocations", nnfNodeBlockStorage.Status.Allocations,
+				"spec", nnfNodeBlockStorage.Spec,
+				"status", nnfNodeBlockStorage.Status,
+			)
+		}
 	}
 
 	for _, device := range devices {
