@@ -1,0 +1,50 @@
+apiVersion: dataworkflowservices.github.io/v1alpha2
+kind: ClientMount
+metadata:
+  name: dean
+  namespace: dean-ns
+spec:
+  desiredState: unmounted
+  node: dean-ns
+  mounts:
+  - device:
+      deviceReference:
+        data: 1
+        objectReference:
+          kind: NnfNodeStorage
+          name: default-gfs2-0-gfs2-0
+          namespace: kind-worker2
+      lvm:
+        deviceType: nvme
+      type: lvm
+    mountPath: /mnt/nnf/792f2a18-d1c3-459c-bb4e-596084afe7a8-0
+    options: ""
+    setPermissions: false
+    targetType: directory
+    type: gfs2
+---
+apiVersion: dataworkflowservices.github.io/v1alpha2
+kind: ClientMount
+metadata:
+  name: dean-part2
+  namespace: dean-ns
+spec:
+  desiredState: unmounted
+  node: dean-ns
+  mounts:
+  - device:
+      deviceReference:
+        data: 1
+        objectReference:
+          kind: NnfNodeStorage
+          name: default-gfs2-0-gfs2-1
+          namespace: kind-worker2
+      lvm:
+        deviceType: nvme
+      type: lvm
+    mountPath: /mnt/nnf/792f2a18-d1c3-459c-bb4e-596084afe7a8-1
+    options: ""
+    setPermissions: false
+    targetType: directory
+    type: gfs2
+
