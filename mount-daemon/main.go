@@ -73,6 +73,7 @@ type managerConfig struct {
 	namespace    string
 	mock         bool
 	requeueDelay time.Duration
+	iterDelay    time.Duration
 }
 
 type options struct {
@@ -83,6 +84,7 @@ type options struct {
 	certFile     string
 	mock         bool
 	requeueDelay time.Duration
+	iterDelay    time.Duration
 }
 
 func getOptions() (*options, *rest.Config, error) {
@@ -98,6 +100,7 @@ func getOptions() (*options, *rest.Config, error) {
 		certFile:     os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
 		mock:         false,
 		requeueDelay: time.Second,
+		iterDelay:    10 * time.Second,
 	}
 
 	cflags.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
@@ -107,6 +110,7 @@ func getOptions() (*options, *rest.Config, error) {
 	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
 	cflags.BoolVar(&opts.mock, "mock", opts.mock, "Run in mock mode where no client mount operations take place")
 	cflags.DurationVar(&opts.requeueDelay, "requeue-delay", opts.requeueDelay, "Delay between reconciler passes")
+	cflags.DurationVar(&opts.iterDelay, "iter-delay", opts.iterDelay, "Delay between outer iterations")
 
 	zapOptions := zap.Options{
 		Development: true,
@@ -166,7 +170,7 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	return &managerConfig{config: restConfig, namespace: opts.name, mock: opts.mock, requeueDelay: opts.requeueDelay}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name, mock: opts.mock, requeueDelay: opts.requeueDelay, iterDelay: opts.iterDelay}, nil
 }
 
 func statusUpdate(clnt client.Client, clientMount *dwsv1alpha2.ClientMount, log logr.Logger) error {
@@ -320,15 +324,19 @@ func main() {
 	var result ctrl.Result
 	namespace := opts.name // The node's namespace is the same as the node's name.
 	for {
-		result, err = reconcileAll(clnt, namespace)
-		if err != nil || !result.Requeue {
-			break
+		for {
+			result, err = reconcileAll(clnt, namespace)
+			if err != nil || !result.Requeue {
+				break
+			}
+			time.Sleep(config.requeueDelay)
 		}
-		time.Sleep(config.requeueDelay)
+		if err != nil {
+			os.Exit(1)
+		}
+		setupLog.Info("ClientMount actions completed")
+		time.Sleep(config.iterDelay)
 	}
-	if err != nil {
-		os.Exit(1)
-	}
-	setupLog.Info("ClientMount actions completed")
-	os.Exit(0)
+	//setupLog.Info("ClientMount actions completed")
+	//os.Exit(0)
 }

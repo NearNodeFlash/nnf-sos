@@ -32,5 +32,5 @@ fi
 # Tell library funcs we are in KIND.
 export ENVIRONMENT=kind
 
-exec bin/clientmounter --node-name $NODENAME --kubernetes-service-host=$SRVR --kubernetes-service-port=$PORT --service-cert-file ca.crt --service-token-file token --requeue-delay 1s
+exec bin/clientmounter --node-name $NODENAME --kubernetes-service-host=$SRVR --kubernetes-service-port=$PORT --service-cert-file ca.crt --service-token-file token --requeue-delay 1s --iter-delay 10s
 
