@@ -4,12 +4,10 @@ If you have podman configured and running in your environment, then you may
 use it to build your containers with the following:
 
 ```bash
-export DOCKER=podman
+export CONTAINER_TOOL=podman
 
 # Then...
 make docker-build
-# or
-./playground.sh docker-build
 ```
 
 Use your usual docker commands with podman.  The podman commandline is
