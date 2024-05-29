@@ -1272,15 +1272,15 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil || len(nnfNodes) <= 0 {
-		return nil, dwsv1alpha2.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err).WithMajor()
+		return nil, dwsv1alpha2.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err)
 	}
 
 	// Get the NNF volumes to mount into the containers
 	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs, profile)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err)
 	}
-	if result != nil {
+	if result != nil { // a requeue can be returned, so make sure that happens
 		return result, nil
 	}
 
@@ -1373,7 +1373,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 
 	systemConfig := &dwsv1alpha2.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
-		return ret, dwsv1alpha2.NewResourceError("could not get system configuration")
+		return ret, dwsv1alpha2.NewResourceError("could not get system configuration").WithFatal()
 	}
 
 	// The SystemConfiguration is organized by rabbit. Make a map of computes:rabbit for easy lookup.

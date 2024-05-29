@@ -81,6 +81,7 @@ func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -147,6 +148,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
 			clientMount.Status.Mounts[i].Ready = false
 		}
+		clientMount.Status.AllReady = false
 
 		return ctrl.Result{}, nil
 	}
@@ -166,6 +168,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	clientMount.Status.Error = nil
+	clientMount.Status.AllReady = false
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
 		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
@@ -174,6 +177,8 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		clientMount.Status.Error = resourceError
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
 	}
+
+	clientMount.Status.AllReady = true
 
 	return ctrl.Result{}, nil
 }

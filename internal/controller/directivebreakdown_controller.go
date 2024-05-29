@@ -456,7 +456,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	// The pinned profile will be named for the NnfStorage.
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, dbd.GetNamespace(), commonResourceName)
 	if err != nil {
-		return dwsv1alpha2.NewResourceError("unable to find pinned NnfStorageProfile: %s/%s", commonResourceName, dbd.GetNamespace()).WithError(err).WithUserMessage("Unable to find pinned NnfStorageProfile").WithFatal()
+		return dwsv1alpha2.NewResourceError("unable to find pinned NnfStorageProfile: %s/%s", commonResourceName, dbd.GetNamespace()).WithError(err).WithUserMessage("Unable to find pinned NnfStorageProfile").WithMajor()
 	}
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
