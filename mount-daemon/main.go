@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfcontroller "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
 	kruntime "k8s.io/apimachinery/pkg/runtime"
@@ -59,19 +58,17 @@ var (
 )
 
 const (
-	finalizerClientMount = "nnf.cray.hpe.com/compute_clientmount"
+	finalizerClientMount = "nnf.cray.hpe.com/clientmount"
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 }
 
 type managerConfig struct {
 	config       *rest.Config
 	namespace    string
-	mock         bool
 	requeueDelay time.Duration
 	iterDelay    time.Duration
 }
@@ -82,7 +79,6 @@ type options struct {
 	name         string
 	tokenFile    string
 	certFile     string
-	mock         bool
 	requeueDelay time.Duration
 	iterDelay    time.Duration
 }
@@ -90,7 +86,7 @@ type options struct {
 func getOptions() (*options, *rest.Config, error) {
 	// Define our own flag set so we don't inherit one that is polluted by the
 	// libraries that we've imported.
-	cflags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	//cflags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 
 	opts := options{
 		host:         os.Getenv("KUBERNETES_SERVICE_HOST"),
@@ -98,27 +94,25 @@ func getOptions() (*options, *rest.Config, error) {
 		name:         os.Getenv("NODE_NAME"),
 		tokenFile:    os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
 		certFile:     os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
-		mock:         false,
 		requeueDelay: time.Second,
 		iterDelay:    10 * time.Second,
 	}
 
-	cflags.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
-	cflags.StringVar(&opts.port, "kubernetes-service-port", opts.port, "Kubernetes service port number")
-	cflags.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
-	cflags.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
-	cflags.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
-	cflags.BoolVar(&opts.mock, "mock", opts.mock, "Run in mock mode where no client mount operations take place")
-	cflags.DurationVar(&opts.requeueDelay, "requeue-delay", opts.requeueDelay, "Delay between reconciler passes")
-	cflags.DurationVar(&opts.iterDelay, "iter-delay", opts.iterDelay, "Delay between outer iterations")
+	flag.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
+	flag.StringVar(&opts.port, "kubernetes-service-port", opts.port, "Kubernetes service port number")
+	flag.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
+	flag.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
+	flag.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
+	flag.DurationVar(&opts.requeueDelay, "requeue-delay", opts.requeueDelay, "Delay between reconciler passes")
+	flag.DurationVar(&opts.iterDelay, "iter-delay", opts.iterDelay, "Delay between outer iterations")
 
 	zapOptions := zap.Options{
 		Development: true,
 	}
 
-	zapOptions.BindFlags(cflags)
+	zapOptions.BindFlags(flag.CommandLine) //cflags)
 
-	cflags.Parse(os.Args[1:])
+	flag.Parse() // os.Args[1:])
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOptions)))
 
@@ -170,7 +164,7 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	return &managerConfig{config: restConfig, namespace: opts.name, mock: opts.mock, requeueDelay: opts.requeueDelay, iterDelay: opts.iterDelay}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name, requeueDelay: opts.requeueDelay, iterDelay: opts.iterDelay}, nil
 }
 
 func statusUpdate(clnt client.Client, clientMount *dwsv1alpha2.ClientMount, log logr.Logger) error {
