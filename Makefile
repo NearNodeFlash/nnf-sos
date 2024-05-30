@@ -237,17 +237,17 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 RPM_PLATFORM ?= linux/amd64
 RPM_TARGET ?= x86_64
-.PHONY: build-daemon
-build-daemon: RPM_VERSION ?= $(shell ./git-version-gen | sed -e 's/\-.*//')
-build-daemon: $(RPMBIN)
-build-daemon: fmt vet ## Build standalone clientmount binary and its rpm
+.PHONY: build-rpm
+build-rpm: RPM_VERSION ?= $(shell ./git-version-gen | sed -e 's/\-.*//')
+build-rpm: $(RPMBIN)
+build-rpm: fmt vet ## Build standalone clientmount binary and its rpm
 	${CONTAINER_TOOL} build --platform=$(RPM_PLATFORM) --build-arg="RPMTARGET=$(RPM_TARGET)" --build-arg="RPMVERSION=$(RPM_VERSION)" --output=type=local,dest=$(RPMBIN) -f Dockerfile.rpmbuild .
 
-.PHONY: build-daemon-local
-build-daemon-local: RPM_VERSION ?= $(shell ./git-version-gen)
-build-daemon-local: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
-build-daemon-local: $(LOCALBIN)
-build-daemon-local: fmt vet ## Build standalone clientmount binary
+.PHONY: build-daemon
+build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
+build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
+build-daemon: $(LOCALBIN)
+build-daemon: fmt vet ## Build standalone clientmount binary
 	CGO_ENABLED=0 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmounter mount-daemon/main.go
 
 build: generate fmt vet ## Build manager binary.
