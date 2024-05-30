@@ -15,10 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.22.2 AS builder
-
-ARG TARGETARCH
-ARG TARGETOS
+FROM golang:1.19 AS builder
 
 ARG TARGETARCH
 ARG TARGETOS
