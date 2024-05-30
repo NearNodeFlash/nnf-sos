@@ -1,0 +1,77 @@
+# Copyright 2024 Hewlett Packard Enterprise Development LP
+# Other additional copyright holders may be indicated within.
+#
+# The entirety of this work is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+#
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM --platform=$BUILDPLATFORM golang:1.19 AS gobuilder
+
+ARG TARGETARCH
+ARG TARGETOS
+ARG RPMVERSION
+
+ARG PACKAGE_VERSION="github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
+
+WORKDIR /workspace
+
+# Copy the Go Modules manifests
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+# Copy the go source
+COPY clientmount.spec clientmount.spec
+COPY mount-daemon/ mount-daemon/
+COPY api/ api/
+COPY internal/ internal/
+COPY pkg/ pkg/
+COPY vendor/ vendor/
+
+# Build
+# the GOARCH has a default value to allow the binary be built according to the host where the command
+# was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
+# the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
+# by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
+
+RUN mkdir /artifacts && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-X '$PACKAGE_VERSION.version=$RPMVERSION'" -a -o /artifacts/clientmountd mount-daemon/main.go && \
+    tar -czf /artifacts/nnf-clientmount-$RPMVERSION.tar.gz --transform 's,^,nnf-clientmount-'$RPMVERSION'/,' .
+
+FROM --platform=$BUILDPLATFORM centos:8 AS rpmbuilder
+
+ARG RPMVERSION
+ARG RPMTARGET
+
+# The mkdirs in /root/rpmbuild would normally be done by rpmdev-setuptree.
+# However, we're trying to cut the run time and that drags in a lot of
+# dependencies.
+RUN dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos && \
+    dnf -y install rpm-build && \
+    mkdir -p /root/rpmbuild/BUILD /root/rpmbuild/RPMS /root/rpmbuild/SOURCES
+
+WORKDIR /workspace
+
+COPY --from=gobuilder /workspace/clientmount.spec clientmount.spec
+COPY --from=gobuilder /artifacts/* /workspace/
+
+RUN sed -i.bak -e 's/^Version: .*/Version: '$RPMVERSION'/' clientmount.spec && \
+    cp nnf-clientmount-$RPMVERSION.tar.gz /root/rpmbuild/SOURCES/ && \
+    rpmbuild --target=$RPMTARGET -bb clientmount.spec && \
+    mkdir /artifacts && \
+    find /root/rpmbuild/RPMS -name '*.rpm' -exec cp {} /artifacts \;
+
+CMD ["/bin/ls", "-al", "/artifacts"]
+
+FROM scratch AS artifacts
+COPY --from=rpmbuilder /artifacts/* /
+

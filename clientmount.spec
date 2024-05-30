@@ -11,8 +11,6 @@ License: Apache-2.0
 URL: https://github.com/NearNodeFlash/nnf-sos
 Source0: %{name}-%{version}.tar.gz
 
-BuildRequires:	golang
-BuildRequires:	make
 
 %description
 This package provides clientmountd for performing mount operations for the
@@ -22,7 +20,8 @@ near node flash software
 %setup -q
 
 %build
-RPM_VERSION=$(cat .rpmversion) make build-daemon
+# The executable was already created by the Dockerfile.
+mkdir bin && cp /workspace/clientmountd bin
 
 %install
 mkdir -p %{buildroot}/usr/bin/
