@@ -239,7 +239,8 @@ func startManager(config *managerConfig) {
 		os.Exit(1)
 	}
 
-	semReady := make(chan int, 1)
+	semReady := make(chan struct{})
+	close(semReady)
 	if err = (&controllers.NnfClientMountReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),

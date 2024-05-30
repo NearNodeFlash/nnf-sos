@@ -182,8 +182,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 
 	// Coordinate the startup of the NLC controllers that use EC.
 
-	semNnfNodeDone := make(chan int, 1)
-	semNnfNodeDone <- 1
+	semNnfNodeDone := make(chan struct{})
 	if err := (&controllers.NnfNodeReconciler{
 		Client:           mgr.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
@@ -194,8 +193,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeECDone := make(chan int, 1)
-	semNnfNodeECDone <- 1
+	semNnfNodeECDone := make(chan struct{})
 	if err := (&controllers.NnfNodeECDataReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
@@ -208,8 +206,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeBlockStorageDone := make(chan int, 1)
-	semNnfNodeBlockStorageDone <- 1
+	semNnfNodeBlockStorageDone := make(chan struct{})
 	if err := (&controllers.NnfNodeBlockStorageReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
@@ -220,8 +217,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeStorageDone := make(chan int, 1)
-	semNnfNodeStorageDone <- 1
+	semNnfNodeStorageDone := make(chan struct{})
 	if err := (&controllers.NnfNodeStorageReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
