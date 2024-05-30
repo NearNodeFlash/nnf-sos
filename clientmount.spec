@@ -4,7 +4,7 @@
 Name: nnf-clientmount
 Version: 1.0
 Release: 1%{?dist}
-Summary: Client mount tool for near node flash
+Summary: Client mount daemon for near node flash
 
 Group: 1
 License: Apache-2.0
@@ -13,7 +13,7 @@ Source0: %{name}-%{version}.tar.gz
 
 
 %description
-This package provides clientmounter for performing mount operations for the
+This package provides clientmountd for performing mount operations for the
 near node flash software
 
 %prep
@@ -21,11 +21,11 @@ near node flash software
 
 %build
 # The executable was already created by the Dockerfile.
-mkdir bin && cp /workspace/clientmounter bin
+mkdir bin && cp /workspace/clientmountd bin
 
 %install
 mkdir -p %{buildroot}/usr/bin/
-install -m 755 bin/clientmounter %{buildroot}/usr/bin/clientmounter
+install -m 755 bin/clientmountd %{buildroot}/usr/bin/clientmountd
 
 %files
-/usr/bin/clientmounter
+/usr/bin/clientmountd

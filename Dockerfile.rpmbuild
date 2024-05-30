@@ -33,6 +33,8 @@ COPY go.sum go.sum
 COPY clientmount.spec clientmount.spec
 COPY mount-daemon/ mount-daemon/
 COPY api/ api/
+COPY internal/ internal/
+COPY pkg/ pkg/
 COPY vendor/ vendor/
 
 # Build
@@ -42,7 +44,7 @@ COPY vendor/ vendor/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 
 RUN mkdir /artifacts && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-X '$PACKAGE_VERSION.version=$RPMVERSION'" -a -o /artifacts/clientmounter mount-daemon/main.go && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-X '$PACKAGE_VERSION.version=$RPMVERSION'" -a -o /artifacts/clientmountd mount-daemon/main.go && \
     tar -czf /artifacts/nnf-clientmount-$RPMVERSION.tar.gz --transform 's,^,nnf-clientmount-'$RPMVERSION'/,' .
 
 FROM --platform=$BUILDPLATFORM centos:8 AS rpmbuilder

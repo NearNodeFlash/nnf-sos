@@ -248,7 +248,7 @@ build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
 build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
 build-daemon: $(LOCALBIN)
 build-daemon: fmt vet ## Build standalone clientmount binary
-	CGO_ENABLED=0 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmounter mount-daemon/main.go
+	CGO_ENABLED=0 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
 
 build: generate fmt vet ## Build manager binary.
 	CGO_ENABLED=0 go build -o bin/manager cmd/main.go

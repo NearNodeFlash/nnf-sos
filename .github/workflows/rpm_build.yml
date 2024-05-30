@@ -40,7 +40,7 @@ jobs:
       run: |
          go version
          pwd
-         make build-daemon
+         make build-daemon-rpm
          /bin/ls -al rpms
 
     - name: upload rpms
