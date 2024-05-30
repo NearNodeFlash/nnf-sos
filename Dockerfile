@@ -20,6 +20,9 @@ FROM golang:1.22.2 AS builder
 ARG TARGETARCH
 ARG TARGETOS
 
+ARG TARGETARCH
+ARG TARGETOS
+
 WORKDIR /workspace
 
 # Copy the Go Modules manifests
