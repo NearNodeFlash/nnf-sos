@@ -57,7 +57,7 @@ type NnfClientMountReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
-	SemaphoreForStart chan int
+	SemaphoreForStart chan struct{}
 
 	sync.Mutex
 	started         bool
@@ -67,7 +67,7 @@ type NnfClientMountReconciler struct {
 func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("State", "Start")
 
-	r.SemaphoreForStart <- 1
+	<-r.SemaphoreForStart
 
 	log.Info("Ready to start")
 

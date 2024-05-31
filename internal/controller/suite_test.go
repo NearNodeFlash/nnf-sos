@@ -275,8 +275,7 @@ var _ = BeforeSuite(func() {
 
 	// Coordinate the startup of the NLC controllers that use EC.
 
-	semNnfNodeDone := make(chan int, 1)
-	semNnfNodeDone <- 1
+	semNnfNodeDone := make(chan struct{})
 	err = (&NnfNodeReconciler{
 		Client:           k8sManager.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
@@ -285,8 +284,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	semNnfNodeECDone := make(chan int, 1)
-	semNnfNodeECDone <- 1
+	semNnfNodeECDone := make(chan struct{})
 	err = (&NnfNodeECDataReconciler{
 		Client:            k8sManager.GetClient(),
 		Scheme:            testEnv.Scheme,
@@ -297,8 +295,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	semNnfNodeBlockStorageDone := make(chan int, 1)
-	semNnfNodeBlockStorageDone <- 1
+	semNnfNodeBlockStorageDone := make(chan struct{})
 	err = (&NnfNodeBlockStorageReconciler{
 		Client:            k8sManager.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
@@ -308,8 +305,7 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	semNnfNodeStorageDone := make(chan int, 1)
-	semNnfNodeStorageDone <- 1
+	semNnfNodeStorageDone := make(chan struct{})
 	err = (&NnfNodeStorageReconciler{
 		Client:            k8sManager.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
