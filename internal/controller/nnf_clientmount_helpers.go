@@ -64,18 +64,20 @@ func ChangeMountAllPost(clientMount *dwsv1alpha2.ClientMount) {
 }
 
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
-func ChangeMountAll(ctx context.Context, clnt client.Client, clientMount *dwsv1alpha2.ClientMount, state dwsv1alpha2.ClientMountState, log logr.Logger) error {
+func ChangeMountAll(ctx context.Context, clnt client.Client, clientMount *dwsv1alpha2.ClientMount, state dwsv1alpha2.ClientMountState, log logr.Logger) (bool, error) {
 	var firstError error
+	didWork := false
 	for i := range clientMount.Spec.Mounts {
+		mountChanged := false
 		var err error
 
 		switch state {
 		case dwsv1alpha2.ClientMountStateMounted:
-			err = changeMount(ctx, clnt, clientMount, i, true, log)
+			mountChanged, err = changeMount(ctx, clnt, clientMount, i, true, log)
 		case dwsv1alpha2.ClientMountStateUnmounted:
-			err = changeMount(ctx, clnt, clientMount, i, false, log)
+			mountChanged, err = changeMount(ctx, clnt, clientMount, i, false, log)
 		default:
-			return dwsv1alpha2.NewResourceError("invalid desired state %s", state).WithFatal()
+			return didWork, dwsv1alpha2.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
 
 		if err != nil {
@@ -86,48 +88,54 @@ func ChangeMountAll(ctx context.Context, clnt client.Client, clientMount *dwsv1a
 		} else {
 			clientMount.Status.Mounts[i].Ready = true
 		}
+		if mountChanged {
+			didWork = true
+		}
 	}
 
-	return firstError
+	return didWork, firstError
 }
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
-func changeMount(ctx context.Context, clnt client.Client, clientMount *dwsv1alpha2.ClientMount, index int, shouldMount bool, ilog logr.Logger) error {
+func changeMount(ctx context.Context, clnt client.Client, clientMount *dwsv1alpha2.ClientMount, index int, shouldMount bool, ilog logr.Logger) (bool, error) {
 	log := ilog.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
 
 	clientMountInfo := clientMount.Spec.Mounts[index]
 	nnfNodeStorage := fakeNnfNodeStorage(clientMount, index)
+	mountChanged := false
 
 	_, fileSystem, err := getBlockDeviceAndFileSystem(ctx, clnt, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
 	if err != nil {
-		return dwsv1alpha2.NewResourceError("unable to get file system information").WithError(err).WithMajor()
+		return false, dwsv1alpha2.NewResourceError("unable to get file system information").WithError(err).WithMajor()
 	}
 
 	if shouldMount {
 		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
-			return dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
+			return false, dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
 		}
 		if mounted {
 			log.Info("Mounted file system", "Mount path", clientMountInfo.MountPath)
+			mountChanged = true
 		}
 
 		if clientMount.Spec.Mounts[index].SetPermissions {
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
-				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
+				return mountChanged, dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
 		}
 	} else {
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
-			return dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
+			return false, dwsv1alpha2.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
 		}
 		if unmounted {
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
+			mountChanged = true
 		}
 	}
 
-	return nil
+	return mountChanged, nil
 }
 
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields

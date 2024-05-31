@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -21,6 +21,7 @@ package filesystem
 
 import (
 	"context"
+	"math/rand/v2"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/go-logr/logr"
@@ -37,7 +38,7 @@ type MockFileSystem struct {
 var _ FileSystem = &MockFileSystem{}
 
 func (m *MockFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -52,7 +53,7 @@ func (m *MockFileSystem) Destroy(ctx context.Context) (bool, error) {
 }
 
 func (m *MockFileSystem) Activate(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -67,7 +68,7 @@ func (m *MockFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -76,9 +77,12 @@ func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) 
 }
 
 func (m *MockFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
-	m.Log.Info("Unmounted mock file system")
-
-	return true, nil
+	if rand.Int32N(100)%2 == 0 {
+		m.Log.Info("Unmounted mock file system")
+		return true, nil
+	}
+	m.Log.Info("Mock file system already unmounted")
+	return false, nil
 }
 
 func (m *MockFileSystem) SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error) {

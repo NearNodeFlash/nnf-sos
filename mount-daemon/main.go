@@ -70,7 +70,6 @@ type managerConfig struct {
 	config       *rest.Config
 	namespace    string
 	requeueDelay time.Duration
-	iterDelay    time.Duration
 }
 
 type options struct {
@@ -80,7 +79,6 @@ type options struct {
 	tokenFile    string
 	certFile     string
 	requeueDelay time.Duration
-	iterDelay    time.Duration
 }
 
 func getOptions() (*options, *rest.Config, error) {
@@ -94,8 +92,7 @@ func getOptions() (*options, *rest.Config, error) {
 		name:         os.Getenv("NODE_NAME"),
 		tokenFile:    os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
 		certFile:     os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
-		requeueDelay: time.Second,
-		iterDelay:    10 * time.Second,
+		requeueDelay: 10 * time.Second,
 	}
 
 	flag.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
@@ -104,7 +101,6 @@ func getOptions() (*options, *rest.Config, error) {
 	flag.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
 	flag.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
 	flag.DurationVar(&opts.requeueDelay, "requeue-delay", opts.requeueDelay, "Delay between reconciler passes")
-	flag.DurationVar(&opts.iterDelay, "iter-delay", opts.iterDelay, "Delay between outer iterations")
 
 	zapOptions := zap.Options{
 		Development: true,
@@ -164,7 +160,7 @@ func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig,
 		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	return &managerConfig{config: restConfig, namespace: opts.name, requeueDelay: opts.requeueDelay, iterDelay: opts.iterDelay}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name, requeueDelay: opts.requeueDelay}, nil
 }
 
 func statusUpdate(clnt client.Client, clientMount *dwsv1alpha2.ClientMount, log logr.Logger) error {
@@ -175,12 +171,13 @@ func statusUpdate(clnt client.Client, clientMount *dwsv1alpha2.ClientMount, log 
 	return nil
 }
 
-func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Result, error) {
+func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Result, bool, error) {
 	var err error
+
 	clientMount := &dwsv1alpha2.ClientMount{}
 	if err = clnt.Get(context.TODO(), namespacedName, clientMount); err != nil {
 		clientLog.Error(err, "failed client.Get")
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, false, nil
 	}
 
 	// XXX DEAN
@@ -189,17 +186,17 @@ func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Re
 	if !clientMount.GetDeletionTimestamp().IsZero() {
 		clientLog.Info("resource is being deleted")
 		if !controllerutil.ContainsFinalizer(clientMount, finalizerClientMount) {
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, false, nil
 		}
 
 		clientLog.Info("unmounting all file systems due to resource deletion")
-		if err = nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, dwsv1alpha2.ClientMountStateUnmounted, clientLog); err != nil {
+		if _, err = nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, dwsv1alpha2.ClientMountStateUnmounted, clientLog); err != nil {
 			resourceError := dwsv1alpha2.NewResourceError("unmount failed during deletion").WithError(err)
 			clientMount.Status.SetResourceErrorAndLog(resourceError, clientLog)
 			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
 				clientLog.Error(suErr, "unable to update status after unmount attempt during deletion")
 			}
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, false, nil
 		}
 
 		clientLog.Info("removing finalizer")
@@ -214,17 +211,17 @@ func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Re
 			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
 				clientLog.Error(suErr, "unable to update status after removing finalizer during deletion")
 			}
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, false, nil
 		}
 
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, false, nil
 	}
 
 	if updated := nnfcontroller.InitializeClientMountStatus(clientMount); updated {
 		if err = statusUpdate(clnt, clientMount, clientLog); err != nil {
 			clientLog.Error(err, "unable to update status after initializing the clientmount status")
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, false, nil
 	}
 
 	// Add finalizer if it doesn't exist
@@ -240,14 +237,15 @@ func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Re
 			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
 				clientLog.Error(suErr, "unable to update finalizer error status")
 			}
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: true}, false, nil
 		}
 		clientLog.Info("updated finalizer")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, false, nil
 	}
 
+	mountChanged := false
 	nnfcontroller.ChangeMountAllPre(clientMount)
-	if err := nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, clientMount.Spec.DesiredState, setupLog); err != nil {
+	if mountChanged, err = nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, clientMount.Spec.DesiredState, setupLog); err != nil {
 		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
 		clientMount.Status.SetResourceErrorAndLog(resourceError, setupLog)
 	} else {
@@ -255,10 +253,10 @@ func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Re
 	}
 	if err = statusUpdate(clnt, clientMount, clientLog); err != nil {
 		clientLog.Error(err, "unable to update status after ChangeMountAll")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, mountChanged, nil
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, mountChanged, nil
 }
 
 func reconcileAll(clnt client.Client, namespace string) (ctrl.Result, error) {
@@ -276,13 +274,13 @@ func reconcileAll(clnt client.Client, namespace string) (ctrl.Result, error) {
 	for _, clientMount := range clientMountList.Items {
 		namespacedName := types.NamespacedName{Name: clientMount.Name, Namespace: namespace}
 		clientLog = ctrl.Log.WithValues("ClientMount", namespacedName)
-		result, err := reconcile(clnt, namespacedName)
+		result, mountChanged, err := reconcile(clnt, namespacedName)
 		// Save the first error.
 		if err != nil && savedErr == nil {
 			savedErr = err
 		}
 		// Remember whether anyone is asking for a requeue.
-		if result.Requeue && !wantRequeue {
+		if result.Requeue || mountChanged {
 			wantRequeue = true
 		}
 	}
@@ -316,21 +314,26 @@ func main() {
 	}
 
 	var result ctrl.Result
+	lastChance := false
 	namespace := opts.name // The node's namespace is the same as the node's name.
 	for {
-		for {
-			result, err = reconcileAll(clnt, namespace)
-			if err != nil || !result.Requeue {
+		result, err = reconcileAll(clnt, namespace)
+		if !result.Requeue {
+			if lastChance {
+				// We've done an extra round and found no more work.
 				break
 			}
-			time.Sleep(config.requeueDelay)
+			// Try one more time for any late-comers.
+			lastChance = true
+		} else {
+			// Keep going as long as we're doing work.
+			lastChance = false
 		}
-		if err != nil {
-			os.Exit(1)
-		}
-		setupLog.Info("ClientMount actions completed")
-		time.Sleep(config.iterDelay)
+		time.Sleep(config.requeueDelay)
 	}
-	//setupLog.Info("ClientMount actions completed")
-	//os.Exit(0)
+	if err != nil {
+		os.Exit(1)
+	}
+	setupLog.Info("ClientMount actions completed")
+	os.Exit(0)
 }

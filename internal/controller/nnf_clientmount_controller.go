@@ -117,7 +117,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Unmount everything before removing the finalizer
 		log.Info("Unmounting all file systems due to resource deletion")
-		if err := ChangeMountAll(ctx, r.Client, clientMount, dwsv1alpha2.ClientMountStateUnmounted, r.Log); err != nil {
+		if _, err := ChangeMountAll(ctx, r.Client, clientMount, dwsv1alpha2.ClientMountStateUnmounted, r.Log); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -152,7 +152,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	ChangeMountAllPre(clientMount)
-	if err = ChangeMountAll(ctx, r.Client, clientMount, clientMount.Spec.DesiredState, r.Log); err != nil {
+	if _, err = ChangeMountAll(ctx, r.Client, clientMount, clientMount.Spec.DesiredState, r.Log); err != nil {
 		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
 		err = resourceError
 		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
