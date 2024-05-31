@@ -55,8 +55,8 @@ type NnfNodeStorageReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
-	SemaphoreForStart chan int
-	SemaphoreForDone  chan int
+	SemaphoreForStart chan struct{}
+	SemaphoreForDone  chan struct{}
 
 	types.NamespacedName
 	ChildObjects []dwsv1alpha2.ObjectList
@@ -69,7 +69,7 @@ type NnfNodeStorageReconciler struct {
 func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("State", "Start")
 
-	r.SemaphoreForStart <- 1
+	<-r.SemaphoreForStart
 
 	log.Info("Ready to start")
 
@@ -77,7 +77,7 @@ func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	r.started = true
 	r.Unlock()
 
-	<-r.SemaphoreForDone
+	close(r.SemaphoreForDone)
 	return nil
 }
 
