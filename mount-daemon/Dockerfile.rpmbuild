@@ -30,7 +30,6 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 
 # Copy the go source
-COPY clientmount.spec clientmount.spec
 COPY mount-daemon/ mount-daemon/
 COPY api/ api/
 COPY internal/ internal/
@@ -47,7 +46,7 @@ RUN mkdir /artifacts && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags="-X '$PACKAGE_VERSION.version=$RPMVERSION'" -a -o /artifacts/clientmountd mount-daemon/main.go && \
     tar -czf /artifacts/nnf-clientmount-$RPMVERSION.tar.gz --transform 's,^,nnf-clientmount-'$RPMVERSION'/,' .
 
-FROM --platform=$BUILDPLATFORM centos:8 AS rpmbuilder
+FROM --platform=$BUILDPLATFORM redhat/ubi8-minimal AS rpmbuilder
 
 ARG RPMVERSION
 ARG RPMTARGET
@@ -55,13 +54,12 @@ ARG RPMTARGET
 # The mkdirs in /root/rpmbuild would normally be done by rpmdev-setuptree.
 # However, we're trying to cut the run time and that drags in a lot of
 # dependencies.
-RUN dnf -y --disablerepo '*' --enablerepo=extras swap centos-linux-repos centos-stream-repos && \
-    dnf -y install rpm-build && \
+RUN microdnf -y --enablerepo=ubi-8-appstream-rpms install rpm-build && \
     mkdir -p /root/rpmbuild/BUILD /root/rpmbuild/RPMS /root/rpmbuild/SOURCES
 
 WORKDIR /workspace
 
-COPY --from=gobuilder /workspace/clientmount.spec clientmount.spec
+COPY --from=gobuilder /workspace/mount-daemon/clientmount.spec clientmount.spec
 COPY --from=gobuilder /artifacts/* /workspace/
 
 RUN sed -i.bak -e 's/^Version: .*/Version: '$RPMVERSION'/' clientmount.spec && \

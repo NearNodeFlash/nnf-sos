@@ -241,7 +241,7 @@ RPM_TARGET ?= x86_64
 build-daemon-rpm: RPM_VERSION ?= $(shell ./git-version-gen | sed -e 's/\-.*//')
 build-daemon-rpm: $(RPMBIN)
 build-daemon-rpm: fmt vet ## Build standalone clientmount binary and its rpm
-	${CONTAINER_TOOL} build --platform=$(RPM_PLATFORM) --build-arg="RPMTARGET=$(RPM_TARGET)" --build-arg="RPMVERSION=$(RPM_VERSION)" --output=type=local,dest=$(RPMBIN) -f Dockerfile.rpmbuild .
+	${CONTAINER_TOOL} build --platform=$(RPM_PLATFORM) --build-arg="RPMTARGET=$(RPM_TARGET)" --build-arg="RPMVERSION=$(RPM_VERSION)" --output=type=local,dest=$(RPMBIN) -f mount-daemon/Dockerfile.rpmbuild .
 
 .PHONY: build-daemon
 build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
