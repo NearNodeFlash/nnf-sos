@@ -608,6 +608,14 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		}
 	}
 
+	// FIXME: Temporary pause for debugging dcp mknod() issue
+	_, testing := os.LookupEnv("NNF_TEST_ENVIRONMENT")
+	if !testing && dwArgs["command"] == "copy_in" {
+		log.Info("TEST: pausing for 30s after mount for the copy_in")
+		time.Sleep(30 * time.Second)
+		log.Info("TEST: done pausing for the copy_in")
+	}
+
 	// Verify data movement is ready
 	dmm := &nnfv1alpha1.NnfDataMovementManager{ObjectMeta: metav1.ObjectMeta{
 		Name:      nnfv1alpha1.DataMovementManagerName,
