@@ -1137,7 +1137,12 @@ func (mgr *Manager) StorageIdStoragePoolsStoragePoolIdGet(storageId, storagePool
 		},
 	}
 
-	model.RemainingCapacityPercent = int64(float64(s.unallocatedBytes/s.capacityBytes) * 100.0)
+	if s.capacityBytes == 0 {
+		// If a drive could not be found, don't divide by zero.
+		model.RemainingCapacityPercent = 0
+	} else {
+		model.RemainingCapacityPercent = int64(float64(s.unallocatedBytes/s.capacityBytes) * 100.0)
+	}
 
 	return nil
 }
