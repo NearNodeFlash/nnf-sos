@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,125 +20,79 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
 	"os"
-	"os/signal"
-	"runtime"
 	"strings"
-	"syscall"
 	"time"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	"github.com/takama/daemon"
-	corev1 "k8s.io/api/core/v1"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
+	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	kruntime "k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	certutil "k8s.io/client-go/util/cert"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
-	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
-	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
-	//+kubebuilder:scaffold:imports
-)
+	nnfcontroller "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
-const (
-	name        = "clientmountd"
-	description = "Data Workflow Service (DWS) Client Mount Service"
+	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	certutil "k8s.io/client-go/util/cert"
+
+	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
 )
 
 var (
-	scheme   = kruntime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
+	scheme    = kruntime.NewScheme()
+	setupLog  = ctrl.Log.WithName("setup")
+	clientLog = setupLog
 )
 
-type Service struct {
-	daemon.Daemon
-}
+const (
+	finalizerClientMount = "nnf.cray.hpe.com/clientmount"
+)
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-}
-
-func (service *Service) Manage() (string, error) {
-
-	if len(os.Args) > 1 {
-		command := os.Args[1]
-		switch command {
-		case "install":
-			return service.Install(os.Args[2:]...)
-		case "remove":
-			return service.Remove()
-		case "start":
-			return service.Start()
-		case "stop":
-			return service.Stop()
-		case "status":
-			return service.Status()
-		}
-	}
-
-	opts := getOptions()
-
-	setupLog.Info("Client Mount Daemon", "Version", version.BuildVersion())
-
-	config, err := createManager(opts)
-	if err != nil {
-		return "Create", err
-	}
-
-	// Set up channel on which to send signal notifications; must use a buffered
-	// channel or risk missing the signal if we're not setup to receive the signal
-	// when it is sent.
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	go startManager(config)
-
-	killSignal := <-interrupt
-	setupLog.Info("Daemon was killed", "signal", killSignal)
-	return "Exited", nil
 }
 
 type managerConfig struct {
-	config    *rest.Config
-	namespace string
-	mock      bool
-	timeout   time.Duration
+	config       *rest.Config
+	namespace    string
+	requeueDelay time.Duration
 }
 
 type options struct {
-	host      string
-	port      string
-	name      string
-	tokenFile string
-	certFile  string
-	mock      bool
-	timeout   time.Duration
+	host         string
+	port         string
+	name         string
+	tokenFile    string
+	certFile     string
+	requeueDelay time.Duration
 }
 
-func getOptions() *options {
+func getOptions() (*options, *rest.Config, error) {
+	// Define our own flag set so we don't inherit one that is polluted by the
+	// libraries that we've imported.
+	//cflags := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
 	opts := options{
-		host:      os.Getenv("KUBERNETES_SERVICE_HOST"),
-		port:      os.Getenv("KUBERNETES_SERVICE_PORT"),
-		name:      os.Getenv("NODE_NAME"),
-		tokenFile: os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
-		certFile:  os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
-		mock:      false,
-		timeout:   time.Minute,
+		host:         os.Getenv("KUBERNETES_SERVICE_HOST"),
+		port:         os.Getenv("KUBERNETES_SERVICE_PORT"),
+		name:         os.Getenv("NODE_NAME"),
+		tokenFile:    os.Getenv("DWS_CLIENT_MOUNT_SERVICE_TOKEN_FILE"),
+		certFile:     os.Getenv("DWS_CLIENT_MOUNT_SERVICE_CERT_FILE"),
+		requeueDelay: 10 * time.Second,
 	}
 
 	flag.StringVar(&opts.host, "kubernetes-service-host", opts.host, "Kubernetes service host address")
@@ -146,25 +100,55 @@ func getOptions() *options {
 	flag.StringVar(&opts.name, "node-name", opts.name, "Name of this compute resource")
 	flag.StringVar(&opts.tokenFile, "service-token-file", opts.tokenFile, "Path to the DWS client mount service token")
 	flag.StringVar(&opts.certFile, "service-cert-file", opts.certFile, "Path to the DWS client mount service certificate")
-	flag.BoolVar(&opts.mock, "mock", opts.mock, "Run in mock mode where no client mount operations take place")
-	flag.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
+	flag.DurationVar(&opts.requeueDelay, "requeue-delay", opts.requeueDelay, "Delay between reconciler passes")
 
 	zapOptions := zap.Options{
 		Development: true,
 	}
-	zapOptions.BindFlags(flag.CommandLine)
 
-	flag.Parse()
+	zapOptions.BindFlags(flag.CommandLine) //cflags)
+
+	flag.Parse() // os.Args[1:])
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOptions)))
 
-	return &opts
+	config, err := clientcmd.BuildConfigFromFlags(opts.host, "")
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: failed BuildConfigFromFlags", err)
+	}
+
+	return &opts, config, nil
 }
 
-func createManager(opts *options) (*managerConfig, error) {
+func populateRestConfig(opts *options, restConfig *rest.Config) (*managerConfig, error) {
+	if len(opts.host) == 0 || len(opts.port) == 0 {
+		return nil, fmt.Errorf("kubernetes service host/port not defined")
+	}
 
-	var config *rest.Config
-	var err error
+	if len(opts.tokenFile) == 0 {
+		return nil, fmt.Errorf("DWS client mount service token not defined")
+	}
+
+	token, err := os.ReadFile(opts.tokenFile)
+	if err != nil {
+		return nil, fmt.Errorf("%w: DWS client mount service token failed to read", err)
+	}
+
+	if len(opts.certFile) == 0 {
+		return nil, fmt.Errorf("DWS client mount service certificate file not defined")
+	}
+
+	if _, err := certutil.NewPool(opts.certFile); err != nil {
+		return nil, fmt.Errorf("%w: DWS client mount service certificate invalid", err)
+	}
+
+	tlsClientConfig := rest.TLSClientConfig{}
+	tlsClientConfig.CAFile = opts.certFile
+
+	restConfig.Host = "https://" + net.JoinHostPort(opts.host, opts.port)
+	restConfig.TLSClientConfig = tlsClientConfig
+	restConfig.BearerToken = string(token)
+	restConfig.BearerTokenFile = opts.tokenFile
 
 	if len(opts.name) == 0 {
 		longName, err := os.Hostname()
@@ -176,90 +160,129 @@ func createManager(opts *options) (*managerConfig, error) {
 		setupLog.Info("Using system hostname", "name", opts.name)
 	}
 
-	if len(opts.host) == 0 && len(opts.port) == 0 {
-		setupLog.Info("Using kubeconfig rest configuration")
-
-		config, err = ctrl.GetConfig()
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		setupLog.Info("Using default rest configuration")
-
-		if len(opts.host) == 0 || len(opts.port) == 0 {
-			return nil, fmt.Errorf("kubernetes service host/port not defined")
-		}
-
-		if len(opts.tokenFile) == 0 {
-			return nil, fmt.Errorf("DWS client mount service token not defined")
-		}
-
-		token, err := os.ReadFile(opts.tokenFile)
-		if err != nil {
-			return nil, fmt.Errorf("DWS client mount service token failed to read")
-		}
-
-		if len(opts.certFile) == 0 {
-			return nil, fmt.Errorf("DWS client mount service certificate file not defined")
-		}
-
-		if _, err := certutil.NewPool(opts.certFile); err != nil {
-			return nil, fmt.Errorf("DWS client mount service certificate invalid")
-		}
-
-		tlsClientConfig := rest.TLSClientConfig{}
-		tlsClientConfig.CAFile = opts.certFile
-
-		config = &rest.Config{
-			Host:            "https://" + net.JoinHostPort(opts.host, opts.port),
-			TLSClientConfig: tlsClientConfig,
-			BearerToken:     string(token),
-			BearerTokenFile: opts.tokenFile,
-		}
-	}
-
-	return &managerConfig{config: config, namespace: opts.name, mock: opts.mock, timeout: opts.timeout}, nil
+	return &managerConfig{config: restConfig, namespace: opts.name, requeueDelay: opts.requeueDelay}, nil
 }
 
-func startManager(config *managerConfig) {
-	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
+func statusUpdate(clnt client.Client, clientMount *dwsv1alpha2.ClientMount, log logr.Logger) error {
+	if err := clnt.Status().Update(context.TODO(), clientMount); err != nil {
+		return err
+	}
+	log.Info("updated status")
+	return nil
+}
 
-	namespaceCache := make(map[string]cache.Config)
-	namespaceCache[config.namespace] = cache.Config{}
-	namespaceCache[corev1.NamespaceDefault] = cache.Config{}
+func reconcile(clnt client.Client, namespacedName types.NamespacedName) (ctrl.Result, bool, error) {
+	var err error
 
-	mgr, err := ctrl.NewManager(config.config, ctrl.Options{
-		Scheme:         scheme,
-		LeaderElection: false,
-		Cache:          cache.Options{DefaultNamespaces: namespaceCache},
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+	clientMount := &dwsv1alpha2.ClientMount{}
+	if err = clnt.Get(context.TODO(), namespacedName, clientMount); err != nil {
+		clientLog.Error(err, "failed client.Get")
+		return ctrl.Result{}, false, nil
 	}
 
-	semReady := make(chan struct{})
-	close(semReady)
-	if err = (&controllers.NnfClientMountReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
-		//	Mock:    config.mock,
-		//	Timeout: config.timeout,
-		Scheme:            mgr.GetScheme(),
-		SemaphoreForStart: semReady,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClientMount")
-		os.Exit(1)
+	if !clientMount.GetDeletionTimestamp().IsZero() {
+		clientLog.Info("resource is being deleted")
+		if !controllerutil.ContainsFinalizer(clientMount, finalizerClientMount) {
+			return ctrl.Result{}, false, nil
+		}
+
+		clientLog.Info("unmounting all file systems due to resource deletion")
+		if _, err = nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, dwsv1alpha2.ClientMountStateUnmounted, clientLog); err != nil {
+			resourceError := dwsv1alpha2.NewResourceError("unmount failed during deletion").WithError(err)
+			clientMount.Status.SetResourceErrorAndLog(resourceError, clientLog)
+			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
+				clientLog.Error(suErr, "unable to update status after unmount attempt during deletion")
+			}
+			return ctrl.Result{Requeue: true}, false, nil
+		}
+
+		clientLog.Info("removing finalizer")
+		controllerutil.RemoveFinalizer(clientMount, finalizerClientMount)
+		if err = clnt.Update(context.TODO(), clientMount); err != nil {
+			if !apierrors.IsConflict(err) {
+				clientLog.Error(err, "unable to remove finalizer")
+			} else {
+				clientLog.Error(err, "conflict while removing finalizer")
+			}
+			clientMount.Status.SetResourceErrorAndLog(err, clientLog)
+			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
+				clientLog.Error(suErr, "unable to update status after removing finalizer during deletion")
+			}
+			return ctrl.Result{Requeue: true}, false, nil
+		}
+
+		return ctrl.Result{}, false, nil
 	}
 
-	//+kubebuilder:scaffold:builder
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+	if updated := nnfcontroller.InitializeClientMountStatus(clientMount); updated {
+		if err = statusUpdate(clnt, clientMount, clientLog); err != nil {
+			clientLog.Error(err, "unable to update status after initializing the clientmount status")
+		}
+		return ctrl.Result{Requeue: true}, false, nil
 	}
+
+	// Add finalizer if it doesn't exist
+	if !controllerutil.ContainsFinalizer(clientMount, finalizerClientMount) {
+		controllerutil.AddFinalizer(clientMount, finalizerClientMount)
+		if err := clnt.Update(context.TODO(), clientMount); err != nil {
+			if apierrors.IsConflict(err) {
+				clientLog.Error(err, "conflict while setting finalizer")
+			} else {
+				clientLog.Error(err, "unable to set finalizer")
+			}
+			clientMount.Status.SetResourceErrorAndLog(err, clientLog)
+			if suErr := statusUpdate(clnt, clientMount, clientLog); suErr != nil {
+				clientLog.Error(suErr, "unable to update finalizer error status")
+			}
+			return ctrl.Result{Requeue: true}, false, nil
+		}
+		clientLog.Info("updated finalizer")
+		return ctrl.Result{Requeue: true}, false, nil
+	}
+
+	mountChanged := false
+	nnfcontroller.ChangeMountAllPre(clientMount)
+	if mountChanged, err = nnfcontroller.ChangeMountAll(context.TODO(), clnt, clientMount, clientMount.Spec.DesiredState, setupLog); err != nil {
+		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
+		clientMount.Status.SetResourceErrorAndLog(resourceError, setupLog)
+	} else {
+		nnfcontroller.ChangeMountAllPost(clientMount)
+	}
+	if err = statusUpdate(clnt, clientMount, clientLog); err != nil {
+		clientLog.Error(err, "unable to update status after ChangeMountAll")
+		return ctrl.Result{Requeue: true}, mountChanged, nil
+	}
+
+	return ctrl.Result{}, mountChanged, nil
+}
+
+func reconcileAll(clnt client.Client, namespace string) (ctrl.Result, error) {
+	clientMountList := &dwsv1alpha2.ClientMountList{}
+	listOptions := []client.ListOption{
+		client.InNamespace(namespace),
+	}
+	if err := clnt.List(context.TODO(), clientMountList, listOptions...); err != nil {
+		setupLog.Error(err, "unable to list ClientMount resources")
+		return ctrl.Result{}, err
+	}
+
+	var savedErr error
+	wantRequeue := false
+	for _, clientMount := range clientMountList.Items {
+		namespacedName := types.NamespacedName{Name: clientMount.Name, Namespace: namespace}
+		clientLog = ctrl.Log.WithValues("ClientMount", namespacedName)
+		result, mountChanged, err := reconcile(clnt, namespacedName)
+		// Save the first error.
+		if err != nil && savedErr == nil {
+			savedErr = err
+		}
+		// Remember whether anyone is asking for a requeue.
+		if result.Requeue || mountChanged {
+			wantRequeue = true
+		}
+	}
+
+	return ctrl.Result{Requeue: wantRequeue}, savedErr
 }
 
 func main() {
@@ -269,26 +292,45 @@ func main() {
 		os.Exit(0)
 	}
 
-	kindFn := func() daemon.Kind {
-		if runtime.GOOS == "darwin" {
-			return daemon.UserAgent
+	opts, restConfig, err := getOptions()
+	if err != nil {
+		setupLog.Error(err, "failed getOptions")
+		os.Exit(1)
+	}
+
+	config, err := populateRestConfig(opts, restConfig)
+	if err != nil {
+		setupLog.Error(err, "Unable to create manager")
+		os.Exit(1)
+	}
+
+	clnt, err := client.New(config.config, client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "failed client.New")
+		os.Exit(1)
+	}
+
+	var result ctrl.Result
+	lastChance := false
+	namespace := opts.name // The node's namespace is the same as the node's name.
+	for {
+		result, err = reconcileAll(clnt, namespace)
+		if !result.Requeue {
+			if lastChance {
+				// We've done an extra round and found no more work.
+				break
+			}
+			// Try one more time for any late-comers.
+			lastChance = true
+		} else {
+			// Keep going as long as we're doing work.
+			lastChance = false
 		}
-		return daemon.SystemDaemon
+		time.Sleep(config.requeueDelay)
 	}
-
-	d, err := daemon.New(name, description, kindFn(), "network-online.target")
 	if err != nil {
-		setupLog.Error(err, "Could not create daemon")
 		os.Exit(1)
 	}
-
-	service := &Service{d}
-
-	status, err := service.Manage()
-	if err != nil {
-		setupLog.Error(err, status)
-		os.Exit(1)
-	}
-
-	fmt.Println(status)
+	setupLog.Info("ClientMount actions completed")
+	os.Exit(0)
 }
