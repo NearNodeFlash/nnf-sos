@@ -169,9 +169,14 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
+	zpoolName, err := zpoolName(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not create zpool name").WithError(err).WithMajor()
+	}
+
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
-	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	zpool.Name = zpoolName
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
@@ -325,10 +330,16 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, mountCommand string, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
+	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
+	}
+
 	fs.Log = log
 	fs.BlockDevice = blockDevice
 	fs.Name = nnfNodeStorage.Spec.LustreStorage.FileSystemName
 	fs.TargetType = nnfNodeStorage.Spec.LustreStorage.TargetType
+	fs.TargetPath = targetPath
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
@@ -352,6 +363,32 @@ func newMockFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	return &fs, nil
+}
+
+func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, targetType string, index int) (string, error) {
+	labels := nnfNodeStorage.GetLabels()
+
+	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
+	// This is important for persistent instances
+	nnfStorageUid, ok := labels[dwsv1alpha2.OwnerUidLabel]
+	if !ok {
+		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
+	}
+
+	return fmt.Sprintf("/mnt/nnf/%s-%s-%d", nnfStorageUid, targetType, index), nil
+}
+
+func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, targetType string, index int) (string, error) {
+	labels := nnfNodeStorage.GetLabels()
+
+	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
+	// This is important for persistent instances
+	nnfStorageUid, ok := labels[dwsv1alpha2.OwnerUidLabel]
+	if !ok {
+		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
+	}
+
+	return fmt.Sprintf("pool-%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
 func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, error) {

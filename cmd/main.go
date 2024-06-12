@@ -226,17 +226,28 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	// The NLC controllers relying on the readiness of EC.
+	semNnfLustreMgtDone := make(chan struct{})
+	if err := (&controllers.NnfLustreMGTReconciler{
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:            mgr.GetScheme(),
+		SemaphoreForStart: semNnfNodeStorageDone,
+		SemaphoreForDone:  semNnfLustreMgtDone,
+		ControllerType:    controllers.ControllerRabbit,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
 
 	if err := (&controllers.NnfClientMountReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
 		Scheme:            mgr.GetScheme(),
-		SemaphoreForStart: semNnfNodeStorageDone,
+		SemaphoreForStart: semNnfLustreMgtDone,
 		ClientType:        controllers.ClientRabbit,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
+	// The NLC controllers relying on the readiness of EC.
 
 	return nil
 }
@@ -316,6 +327,15 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
 		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.NnfLustreMGTReconciler{
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:         mgr.GetScheme(),
+		ControllerType: controllers.ControllerWorker,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
