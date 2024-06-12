@@ -71,8 +71,9 @@ func findProfileToUse(ctx context.Context, clnt client.Client, args map[string]s
 	}
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, nnfStorageProfile)
 	if err != nil {
-		return nil, err
+		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find NnfStorageProfile: %s", profileName).WithUser().WithFatal()
 	}
+
 	return nnfStorageProfile, nil
 }
 

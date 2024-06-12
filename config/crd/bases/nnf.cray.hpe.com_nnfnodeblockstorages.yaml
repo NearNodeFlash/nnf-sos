@@ -143,6 +143,7 @@ spec:
                     enum:
                     - Internal
                     - User
+                    - WLM
                     type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant

@@ -174,8 +174,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		resourceError := dwsv1alpha2.NewResourceError("mount/unmount failed").WithError(err)
 		log.Info(resourceError.Error())
 
-		clientMount.Status.Error = resourceError
-		return ctrl.Result{RequeueAfter: time.Second * time.Duration(10)}, nil
+		return ctrl.Result{}, resourceError
 	}
 
 	clientMount.Status.AllReady = true
