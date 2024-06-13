@@ -268,8 +268,6 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	if len(allocationStatus.StoragePoolId) == 0 {
 		log.Info("Created storage pool", "Id", sp.Id)
 		allocationStatus.StoragePoolId = sp.Id
-
-		return nil, nil
 	}
 
 	return nil, nil
@@ -343,7 +341,11 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				return nil, dwsv1alpha2.NewResourceError("could not delete storage group").WithError(err).WithMajor()
 			}
 
-			delete(allocationStatus.Accesses, nodeName)
+			for oldNodeName, accessStatus := range allocationStatus.Accesses {
+				if accessStatus.StorageGroupId == storageGroupId {
+					delete(allocationStatus.Accesses, oldNodeName)
+				}
+			}
 
 			log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 		} else {
@@ -379,13 +381,13 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
 			if nodeName != clients[0] {
-				return nil, nil
+				continue
 			}
 
 			// Bail out if this is kind
 			_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 			if found || os.Getenv("ENVIRONMENT") == "kind" {
-				return nil, nil
+				continue
 			}
 
 			// Initialize the path array if it doesn't exist yet

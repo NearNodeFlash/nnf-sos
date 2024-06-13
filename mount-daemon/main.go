@@ -248,6 +248,7 @@ func startManager(config *managerConfig) {
 		//	Timeout: config.timeout,
 		Scheme:            mgr.GetScheme(),
 		SemaphoreForStart: semReady,
+		ClientType:        controllers.ClientCompute,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClientMount")
 		os.Exit(1)

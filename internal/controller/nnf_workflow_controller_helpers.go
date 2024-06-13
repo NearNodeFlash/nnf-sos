@@ -623,6 +623,18 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					mgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
 				}
 			}
+
+			sharedAllocation := false
+			if dwArgs["type"] == "gfs2" && nnfStorageProfile.Data.GFS2Storage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+			if dwArgs["type"] == "xfs" && nnfStorageProfile.Data.XFSStorage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+			if dwArgs["type"] == "raw" && nnfStorageProfile.Data.RawStorage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
@@ -632,6 +644,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
 				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
+				nnfAllocSet.SharedAllocation = sharedAllocation
 				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = s.Spec.AllocationSets[i].Label
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"

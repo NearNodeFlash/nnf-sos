@@ -233,6 +233,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
 		Scheme:            mgr.GetScheme(),
 		SemaphoreForStart: semNnfNodeStorageDone,
+		ClientType:        controllers.ClientRabbit,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}

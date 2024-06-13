@@ -66,6 +66,12 @@ spec:
                       type: integer
                   type: object
                 type: array
+              sharedAllocation:
+                description: SharedAllocation is used when a single NnfNodeBlockStorage
+                  allocation is used by multiple NnfNodeStorage allocations
+                type: boolean
+            required:
+            - sharedAllocation
             type: object
           status:
             properties:

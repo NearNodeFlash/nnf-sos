@@ -38,6 +38,12 @@ type NnfNodeStorageSpec struct {
 	// +kubebuilder:validation:Minimum:=0
 	Count int `json:"count"`
 
+	// SharedAllocation is used when a single NnfNodeBlockStorage allocation is used by multiple NnfNodeStorage allocations
+	SharedAllocation bool `json:"sharedAllocation"`
+
+	// Capacity of an individual allocation
+	Capacity int64 `json:"capacity,omitempty"`
+
 	// User ID for file system
 	UserID uint32 `json:"userID"`
 

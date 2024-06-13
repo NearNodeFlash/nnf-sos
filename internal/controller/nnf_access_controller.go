@@ -761,9 +761,13 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 		// index found from the "storage" resource to account for the 0 index being the rabbit
 		// in swordfish.
 		for _, mountRef := range mountRefList {
+			allocationIndex := mountRef.allocationIndex
+			if nnfNodeBlockStorage.Spec.SharedAllocation {
+				allocationIndex = 0
+			}
 			// Add the client name to the access list if it's not already there
-			if slices.IndexFunc(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, func(n string) bool { return n == mountRef.client }) < 0 {
-				nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access = append(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, mountRef.client)
+			if slices.IndexFunc(nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access, func(n string) bool { return n == mountRef.client }) < 0 {
+				nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access = append(nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access, mountRef.client)
 			}
 		}
 
@@ -847,7 +851,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
 				continue
 			}
 

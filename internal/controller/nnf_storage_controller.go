@@ -340,12 +340,18 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 				labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
 				nnfNodeBlockStorage.SetLabels(labels)
 
+				expectedAllocations := node.Count
+				if allocationSet.SharedAllocation {
+					expectedAllocations = 1
+				}
+				nnfNodeBlockStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
+
 				if len(nnfNodeBlockStorage.Spec.Allocations) == 0 {
-					nnfNodeBlockStorage.Spec.Allocations = make([]nnfv1alpha1.NnfNodeBlockStorageAllocationSpec, node.Count)
+					nnfNodeBlockStorage.Spec.Allocations = make([]nnfv1alpha1.NnfNodeBlockStorageAllocationSpec, expectedAllocations)
 				}
 
-				if len(nnfNodeBlockStorage.Spec.Allocations) != node.Count {
-					return dwsv1alpha2.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), node.Count).WithFatal()
+				if len(nnfNodeBlockStorage.Spec.Allocations) != expectedAllocations {
+					return dwsv1alpha2.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), expectedAllocations).WithFatal()
 				}
 
 				for i := range nnfNodeBlockStorage.Spec.Allocations {
@@ -356,7 +362,12 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 					if fsType == "lustre" && capacity < minimumLustreAllocationSizeInBytes {
 						capacity = minimumLustreAllocationSizeInBytes
 					}
-					nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
+					if allocationSet.SharedAllocation {
+						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity * int64(node.Count)
+					} else {
+						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
+					}
+
 					if len(nnfNodeBlockStorage.Spec.Allocations[i].Access) == 0 {
 						nnfNodeBlockStorage.Spec.Allocations[i].Access = append(nnfNodeBlockStorage.Spec.Allocations[i].Access, node.Name)
 					}
@@ -492,9 +503,11 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 					Namespace: node.Name,
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name(),
 				}
+				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.UserID = storage.Spec.UserID
 				nnfNodeStorage.Spec.GroupID = storage.Spec.GroupID
 				nnfNodeStorage.Spec.Count = node.Count
+				nnfNodeStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
 				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
 				if storage.Spec.FileSystemType == "lustre" {
 					nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
