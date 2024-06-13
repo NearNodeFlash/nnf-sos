@@ -109,11 +109,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() {
-		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
-			storage.Status.SetResourceErrorAndLog(err, log)
-		}
-	}()
+	defer func() { storage.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -419,7 +415,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		}
 
 		if nnfNodeBlockStorage.Status.Error != nil {
-			nnfStorage.Status.SetResourceError(nnfNodeBlockStorage.Status.Error)
+			return &ctrl.Result{}, nnfNodeBlockStorage.Status.Error
 		}
 
 		if nnfNodeBlockStorage.Status.Ready == false {
@@ -556,7 +552,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Status.Error != nil {
-			storage.Status.SetResourceError(nnfNodeStorage.Status.Error)
+			return &ctrl.Result{}, nnfNodeStorage.Status.Error
 		}
 
 		if nnfNodeStorage.Status.Ready == false {
