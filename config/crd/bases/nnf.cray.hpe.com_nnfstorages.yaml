@@ -152,6 +152,11 @@ spec:
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
+                    sharedAllocation:
+                      description: |-
+                        SharedAllocation shares a single block storage allocation between multiple file system allocations
+                        (within the same workflow) on a Rabbit
+                      type: boolean
                     targetType:
                       description: TargetType is the type of Lustre target to be created.
                       enum:
@@ -164,6 +169,7 @@ spec:
                   - capacity
                   - name
                   - nodes
+                  - sharedAllocation
                   type: object
                 type: array
               fileSystemType:
@@ -235,6 +241,7 @@ spec:
                     enum:
                     - Internal
                     - User
+                    - WLM
                     type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant

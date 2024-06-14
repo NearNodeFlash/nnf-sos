@@ -37,15 +37,16 @@ type vgsReport struct {
 }
 
 type vgsVolumeGroup struct {
-	Name    string `json:"vg_name"`
-	PVCount string `json:"pv_count"`
-	LVCount string `json:"lv_count"`
-	Attrs   string `json:"vg_attr"`
-	Size    string `json:"vg_size"`
+	Name       string `json:"vg_name"`
+	PVCount    string `json:"pv_count"`
+	LVCount    string `json:"lv_count"`
+	Attrs      string `json:"vg_attr"`
+	Size       string `json:"vg_size"`
+	ExtentSize string `json:"vg_extent_size"`
 }
 
 func vgsListVolumes(ctx context.Context, log logr.Logger) ([]vgsVolumeGroup, error) {
-	output, err := command.Run("vgs --nolock --reportformat json", log)
+	output, err := command.Run("vgs --nolock -v --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list volume groups: %w", err)
 	}

@@ -142,7 +142,7 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 
 	// Run the mount command
 	if _, err := command.Run(mountCmd, l.Log); err != nil {
-		if _, err := l.BlockDevice.Deactivate(ctx); err != nil {
+		if _, err := l.BlockDevice.Deactivate(ctx, false); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after failed mount %s: %w", path, err)
 		}
 
@@ -177,7 +177,7 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 		// Remove the directory. If it fails don't worry about it.
 		_ = os.Remove(path)
 
-		if _, err := l.BlockDevice.Deactivate(ctx); err != nil {
+		if _, err := l.BlockDevice.Deactivate(ctx, false); err != nil {
 			return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
 		}
 
@@ -185,7 +185,7 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 	}
 
 	// Try to deactivate the block device in case the deactivate failed after the unmount above
-	if _, err := l.BlockDevice.Deactivate(ctx); err != nil {
+	if _, err := l.BlockDevice.Deactivate(ctx, false); err != nil {
 		return false, fmt.Errorf("could not deactivate block device after unmount %s: %w", path, err)
 	}
 

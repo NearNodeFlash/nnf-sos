@@ -27,6 +27,7 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -38,7 +39,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -91,15 +92,12 @@ func main() {
 
 	nnfopts := nnf.BindFlags(flag.CommandLine)
 
-	opts := zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}
-	opts.BindFlags(flag.CommandLine)
-
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	zaplogger := zapcr.New(zapcr.Encoder(encoder), zapcr.UseDevMode(true))
+
+	ctrl.SetLogger(zaplogger)
 
 	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
 
@@ -182,8 +180,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 
 	// Coordinate the startup of the NLC controllers that use EC.
 
-	semNnfNodeDone := make(chan int, 1)
-	semNnfNodeDone <- 1
+	semNnfNodeDone := make(chan struct{})
 	if err := (&controllers.NnfNodeReconciler{
 		Client:           mgr.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
@@ -194,8 +191,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeECDone := make(chan int, 1)
-	semNnfNodeECDone <- 1
+	semNnfNodeECDone := make(chan struct{})
 	if err := (&controllers.NnfNodeECDataReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
@@ -208,8 +204,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeBlockStorageDone := make(chan int, 1)
-	semNnfNodeBlockStorageDone <- 1
+	semNnfNodeBlockStorageDone := make(chan struct{})
 	if err := (&controllers.NnfNodeBlockStorageReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
@@ -220,8 +215,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		return err
 	}
 
-	semNnfNodeStorageDone := make(chan int, 1)
-	semNnfNodeStorageDone <- 1
+	semNnfNodeStorageDone := make(chan struct{})
 	if err := (&controllers.NnfNodeStorageReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeStorage"),
@@ -239,6 +233,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
 		Scheme:            mgr.GetScheme(),
 		SemaphoreForStart: semNnfNodeStorageDone,
+		ClientType:        controllers.ClientRabbit,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}

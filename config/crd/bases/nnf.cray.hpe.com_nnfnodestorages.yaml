@@ -95,6 +95,10 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              capacity:
+                description: Capacity of an individual allocation
+                format: int64
+                type: integer
               count:
                 description: |-
                   Count is the number of allocations to make on this node. All of the allocations will
@@ -156,6 +160,10 @@ spec:
                     - ost
                     type: string
                 type: object
+              sharedAllocation:
+                description: SharedAllocation is used when a single NnfNodeBlockStorage
+                  allocation is used by multiple NnfNodeStorage allocations
+                type: boolean
               userID:
                 description: User ID for file system
                 format: int32
@@ -164,6 +172,7 @@ spec:
             - count
             - fileSystemType
             - groupID
+            - sharedAllocation
             - userID
             type: object
           status:
@@ -206,6 +215,7 @@ spec:
                     enum:
                     - Internal
                     - User
+                    - WLM
                     type: string
                   userMessage:
                     description: Optional user facing message if the error is relevant

@@ -36,6 +36,7 @@ data:
     mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
   gfs2Storage:
     commandlines:
+      sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
       vgCreate: --shared $VG_NAME $DEVICE_LIST
@@ -43,7 +44,7 @@ data:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
       lvChange:
         activate: --activate ys $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME
@@ -53,6 +54,7 @@ data:
       mountCompute: $DEVICE $MOUNT_PATH
   xfsStorage:
     commandlines:
+      sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
       vgCreate: --shared $VG_NAME $DEVICE_LIST
@@ -60,7 +62,7 @@ data:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
       lvChange:
         activate: --activate y $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME
@@ -70,6 +72,7 @@ data:
       mountCompute: $DEVICE $MOUNT_PATH
   rawStorage:
     commandlines:
+      sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
       vgCreate: --shared $VG_NAME $DEVICE_LIST
@@ -77,7 +80,7 @@ data:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME
       vgRemove: $VG_NAME
-      lvCreate: --zero n --activate n --extents 100%VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
+      lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM --stripesize=32KiB --name $LV_NAME $VG_NAME
       lvChange:
         activate: --activate y $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME

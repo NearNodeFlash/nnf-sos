@@ -6,3 +6,5 @@
 Dockerfile
 .git
 .vscode
+internal/controller/nnf.db
+

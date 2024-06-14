@@ -239,7 +239,8 @@ func startManager(config *managerConfig) {
 		os.Exit(1)
 	}
 
-	semReady := make(chan int, 1)
+	semReady := make(chan struct{})
+	close(semReady)
 	if err = (&controllers.NnfClientMountReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
@@ -247,6 +248,7 @@ func startManager(config *managerConfig) {
 		//	Timeout: config.timeout,
 		Scheme:            mgr.GetScheme(),
 		SemaphoreForStart: semReady,
+		ClientType:        controllers.ClientCompute,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClientMount")
 		os.Exit(1)

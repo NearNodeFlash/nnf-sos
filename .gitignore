@@ -35,6 +35,7 @@ nnf-sos
 .version
 config/begin/*
 config/begin-examples/*
+rpms/
 
 # .vscode log files
 .vscode/*.log

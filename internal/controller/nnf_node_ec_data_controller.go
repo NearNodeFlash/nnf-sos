@@ -50,8 +50,8 @@ type NnfNodeECDataReconciler struct {
 	Scheme  *runtime.Scheme
 	Options *nnfec.Options
 	types.NamespacedName
-	SemaphoreForStart chan int
-	SemaphoreForDone  chan int
+	SemaphoreForStart chan struct{}
+	SemaphoreForDone  chan struct{}
 
 	RawLog logr.Logger // RawLog, as opposed to Log, is the un-edited controller logger
 }
@@ -60,7 +60,7 @@ type NnfNodeECDataReconciler struct {
 func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 	log := r.RawLog.WithName("NnfNodeECData").WithValues("State", "Start")
 
-	r.SemaphoreForStart <- 1
+	<-r.SemaphoreForStart
 
 	log.Info("Ready to start")
 
@@ -129,7 +129,7 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 	}
 
 	log.Info("Allow others to start")
-	<-r.SemaphoreForDone
+	close(r.SemaphoreForDone)
 
 	return nil
 }
