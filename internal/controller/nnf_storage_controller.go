@@ -109,11 +109,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// occuring on the on function exit.
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfStorageStatus](storage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() {
-		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
-			storage.Status.SetResourceErrorAndLog(err, log)
-		}
-	}()
+	defer func() { storage.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
@@ -344,12 +340,18 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 				labels[nnfv1alpha1.AllocationSetLabel] = allocationSet.Name
 				nnfNodeBlockStorage.SetLabels(labels)
 
+				expectedAllocations := node.Count
+				if allocationSet.SharedAllocation {
+					expectedAllocations = 1
+				}
+				nnfNodeBlockStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
+
 				if len(nnfNodeBlockStorage.Spec.Allocations) == 0 {
-					nnfNodeBlockStorage.Spec.Allocations = make([]nnfv1alpha1.NnfNodeBlockStorageAllocationSpec, node.Count)
+					nnfNodeBlockStorage.Spec.Allocations = make([]nnfv1alpha1.NnfNodeBlockStorageAllocationSpec, expectedAllocations)
 				}
 
-				if len(nnfNodeBlockStorage.Spec.Allocations) != node.Count {
-					return dwsv1alpha2.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), node.Count).WithFatal()
+				if len(nnfNodeBlockStorage.Spec.Allocations) != expectedAllocations {
+					return dwsv1alpha2.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), expectedAllocations).WithFatal()
 				}
 
 				for i := range nnfNodeBlockStorage.Spec.Allocations {
@@ -360,7 +362,12 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 					if fsType == "lustre" && capacity < minimumLustreAllocationSizeInBytes {
 						capacity = minimumLustreAllocationSizeInBytes
 					}
-					nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
+					if allocationSet.SharedAllocation {
+						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity * int64(node.Count)
+					} else {
+						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
+					}
+
 					if len(nnfNodeBlockStorage.Spec.Allocations[i].Access) == 0 {
 						nnfNodeBlockStorage.Spec.Allocations[i].Access = append(nnfNodeBlockStorage.Spec.Allocations[i].Access, node.Name)
 					}
@@ -419,7 +426,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		}
 
 		if nnfNodeBlockStorage.Status.Error != nil {
-			nnfStorage.Status.SetResourceError(nnfNodeBlockStorage.Status.Error)
+			return &ctrl.Result{}, nnfNodeBlockStorage.Status.Error
 		}
 
 		if nnfNodeBlockStorage.Status.Ready == false {
@@ -496,9 +503,11 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 					Namespace: node.Name,
 					Kind:      reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name(),
 				}
+				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
 				nnfNodeStorage.Spec.UserID = storage.Spec.UserID
 				nnfNodeStorage.Spec.GroupID = storage.Spec.GroupID
 				nnfNodeStorage.Spec.Count = node.Count
+				nnfNodeStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
 				nnfNodeStorage.Spec.FileSystemType = storage.Spec.FileSystemType
 				if storage.Spec.FileSystemType == "lustre" {
 					nnfNodeStorage.Spec.LustreStorage.StartIndex = startIndex
@@ -556,7 +565,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Status.Error != nil {
-			storage.Status.SetResourceError(nnfNodeStorage.Status.Error)
+			return &ctrl.Result{}, nnfNodeStorage.Status.Error
 		}
 
 		if nnfNodeStorage.Status.Ready == false {

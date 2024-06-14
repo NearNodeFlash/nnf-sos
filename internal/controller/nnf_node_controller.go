@@ -67,7 +67,7 @@ type NnfNodeReconciler struct {
 	Scheme *kruntime.Scheme
 
 	Options          *nnfec.Options
-	SemaphoreForDone chan int
+	SemaphoreForDone chan struct{}
 	types.NamespacedName
 
 	sync.Mutex
@@ -201,7 +201,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	r.Unlock()
 
 	log.Info("Allow others to start")
-	<-r.SemaphoreForDone
+	close(r.SemaphoreForDone)
 	return nil
 }
 

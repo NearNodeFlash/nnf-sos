@@ -34,6 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
+	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
+
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
@@ -55,8 +58,8 @@ type NnfNodeStorageReconciler struct {
 	client.Client
 	Log               logr.Logger
 	Scheme            *kruntime.Scheme
-	SemaphoreForStart chan int
-	SemaphoreForDone  chan int
+	SemaphoreForStart chan struct{}
+	SemaphoreForDone  chan struct{}
 
 	types.NamespacedName
 	ChildObjects []dwsv1alpha2.ObjectList
@@ -69,7 +72,7 @@ type NnfNodeStorageReconciler struct {
 func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	log := r.Log.WithValues("State", "Start")
 
-	r.SemaphoreForStart <- 1
+	<-r.SemaphoreForStart
 
 	log.Info("Ready to start")
 
@@ -77,7 +80,7 @@ func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	r.started = true
 	r.Unlock()
 
-	<-r.SemaphoreForDone
+	close(r.SemaphoreForDone)
 	return nil
 }
 
@@ -189,15 +192,26 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Loop through each allocation and create the storage
+	blockDevices := []blockdevice.BlockDevice{}
+	fileSystems := []filesystem.FileSystem{}
+
+	// Create a list of all the block devices and file systems that need to be created
 	for i := 0; i < nnfNodeStorage.Spec.Count; i++ {
-		result, err := r.createAllocation(ctx, nnfNodeStorage, i)
+		blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, i, log)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to format file system for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, err
 		}
-		if result != nil {
-			return *result, nil
-		}
+
+		blockDevices = append(blockDevices, blockDevice)
+		fileSystems = append(fileSystems, fileSystem)
+	}
+
+	result, err := r.createAllocations(ctx, nnfNodeStorage, blockDevices, fileSystems)
+	if err != nil {
+		return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to create storage allocation").WithError(err).WithMajor()
+	}
+	if result != nil {
+		return *result, nil
 	}
 
 	for _, allocation := range nnfNodeStorage.Status.Allocations {
@@ -237,7 +251,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		log.Info("Destroyed file system", "allocation", index)
 	}
 
-	ran, err = blockDevice.Deactivate(ctx)
+	ran, err = blockDevice.Deactivate(ctx, false)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
 	}
@@ -256,50 +270,73 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) createAllocation(ctx context.Context, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (*ctrl.Result, error) {
-	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage), "index", index)
+func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
+	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
-	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, index, log)
-	if err != nil {
-		return nil, err
-	}
+	for index, blockDevice := range blockDevices {
+		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-	allocationStatus := &nnfNodeStorage.Status.Allocations[index]
-	ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not create block devices").WithError(err).WithMajor()
-	}
-	if ran {
-		log.Info("Created block device", "allocation", index)
-	}
+		// Skip allocations that are already created
+		if allocationStatus.Ready {
+			continue
+		}
 
-	// We don't need to activate the block device here. It will be activated either when there is a mkfs, or when it's used
-	// by a ClientMount
-	ran, err = fileSystem.Create(ctx, allocationStatus.Ready)
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
-	}
-	if ran {
-		log.Info("Created file system", "allocation", index)
-	}
+		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not create block devices").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Created block device", "allocation", index)
+		}
 
-	ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
-	}
-	if ran {
-		log.Info("Activated file system", "allocation", index)
+		_, err = blockDevice.Activate(ctx)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+		}
+
+		deferIndex := index
+		defer func() {
+			_, err = blockDevices[deferIndex].Deactivate(ctx, false)
+			if err != nil {
+				allocationStatus.Ready = false
+			}
+		}()
 	}
 
-	ran, err = fileSystem.SetPermissions(ctx, nnfNodeStorage.Spec.UserID, nnfNodeStorage.Spec.GroupID, allocationStatus.Ready)
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not set file system permissions").WithError(err).WithMajor()
-	}
-	if ran {
-		log.Info("Set file system permission", "allocation", index)
-	}
+	for index, fileSystem := range fileSystems {
+		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-	allocationStatus.Ready = true
+		// Skip allocations that are already created
+		if allocationStatus.Ready {
+			continue
+		}
+
+		ran, err := fileSystem.Create(ctx, allocationStatus.Ready)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Created file system", "allocation", index)
+		}
+
+		ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Activated file system", "allocation", index)
+		}
+
+		ran, err = fileSystem.SetPermissions(ctx, nnfNodeStorage.Spec.UserID, nnfNodeStorage.Spec.GroupID, allocationStatus.Ready)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not set file system permissions").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Set file system permission", "allocation", index)
+		}
+
+		allocationStatus.Ready = true
+	}
 
 	return nil, nil
 }

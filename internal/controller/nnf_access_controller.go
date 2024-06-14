@@ -92,11 +92,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() {
-		if err != nil || (!res.Requeue && res.RequeueAfter == 0) {
-			access.Status.SetResourceErrorAndLog(err, log)
-		}
-	}()
+	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
@@ -242,7 +238,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 	}
 
 	if ready == false {
-		return &ctrl.Result{RequeueAfter: time.Second}, nil
+		return &ctrl.Result{}, nil
 	}
 
 	// Aggregate the status from all the ClientMount resources
@@ -253,7 +249,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha1.Nnf
 
 	// Wait for all of the ClientMounts to be ready
 	if ready == false {
-		return &ctrl.Result{RequeueAfter: time.Second}, nil
+		return &ctrl.Result{}, nil
 	}
 
 	return nil, nil
@@ -765,9 +761,13 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 		// index found from the "storage" resource to account for the 0 index being the rabbit
 		// in swordfish.
 		for _, mountRef := range mountRefList {
+			allocationIndex := mountRef.allocationIndex
+			if nnfNodeBlockStorage.Spec.SharedAllocation {
+				allocationIndex = 0
+			}
 			// Add the client name to the access list if it's not already there
-			if slices.IndexFunc(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, func(n string) bool { return n == mountRef.client }) < 0 {
-				nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access = append(nnfNodeBlockStorage.Spec.Allocations[mountRef.allocationIndex].Access, mountRef.client)
+			if slices.IndexFunc(nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access, func(n string) bool { return n == mountRef.client }) < 0 {
+				nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access = append(nnfNodeBlockStorage.Spec.Allocations[allocationIndex].Access, mountRef.client)
 			}
 		}
 
@@ -824,8 +824,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		}
 
 		if nnfNodeStorage.Status.Error != nil {
-			access.Status.SetResourceError(nnfNodeStorage.Status.Error)
-			return false, nil
+			return false, nnfNodeStorage.Status.Error
 		}
 	}
 
@@ -852,7 +851,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeBlockStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -996,8 +995,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 
 		if clientMount.Status.Error != nil {
-			access.Status.SetResourceError(clientMount.Status.Error)
-			return false, nil
+			return false, clientMount.Status.Error
 		}
 
 		for _, mount := range clientMount.Status.Mounts {

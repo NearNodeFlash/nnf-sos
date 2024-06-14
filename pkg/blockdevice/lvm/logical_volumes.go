@@ -32,16 +32,20 @@ import (
 
 type LogicalVolume struct {
 	Name        string
+	Size        int64
+	PercentVG   int
 	VolumeGroup *VolumeGroup
 
 	Log logr.Logger
 }
 
-func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup, log logr.Logger) *LogicalVolume {
+func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup, size int64, percentVG int, log logr.Logger) *LogicalVolume {
 	return &LogicalVolume{
 		Name:        name,
 		VolumeGroup: vg,
+		Size:        size,
 		Log:         log,
+		PercentVG:   percentVG,
 	}
 }
 
@@ -57,6 +61,8 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 		"$DEVICE_LIST": strings.Join(deviceNames, " "),
 		"$VG_NAME":     lv.VolumeGroup.Name,
 		"$LV_NAME":     lv.Name,
+		"$LV_SIZE":     fmt.Sprintf("%vK", (lv.Size / 1000)),
+		"$PERCENT_VG":  fmt.Sprintf("%v", lv.PercentVG) + "%VG",
 	})
 
 	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {

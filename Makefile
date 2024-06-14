@@ -15,11 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Default container tool to use.
-#   To use podman:
-#   $ DOCKER=podman make docker-build
-DOCKER ?= docker
-
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -109,6 +104,12 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+
+# CONTAINER_TOOL defines the container tool to be used for building images.
+# Be aware that the target commands are only tested with Docker which is
+# scaffolded by default. However, you might want to replace it to use other
+# tools. (i.e. podman)
+CONTAINER_TOOL ?= docker
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
@@ -209,8 +210,8 @@ vet: ## Run go vet against code.
 
 container-unit-test: VERSION ?= $(shell cat .version)
 container-unit-test: .version ## Build docker image with the manager and execute unit tests.
-	${DOCKER} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
-	${DOCKER} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
+	${CONTAINER_TOOL} build -f Dockerfile --label $(IMAGE_TAG_BASE)-$@:$(VERSION)-$@ -t $(IMAGE_TAG_BASE)-$@:$(VERSION) --target testing .
+	${CONTAINER_TOOL} run --rm -t --name $@-nnf-sos  $(IMAGE_TAG_BASE)-$@:$(VERSION)
 
 ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # Lengthen the default Eventually timeout to try to account for CI/CD issues
@@ -234,10 +235,30 @@ test: manifests generate fmt vet envtest ## Run tests.
 	done
 
 ##@ Build
-build-daemon: RPM_VERSION ?= $(shell ./git-version-gen)
-build-daemon: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
-build-daemon: manifests generate fmt vet ## Build standalone clientMount daemon
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
+RPM_PLATFORM ?= linux/amd64
+RPM_TARGET ?= x86_64
+.PHONY: build-daemon-rpm
+build-daemon-rpm: RPM_VERSION ?= $(shell ./git-version-gen | sed -e 's/\-.*//')
+build-daemon-rpm: $(RPMBIN)
+build-daemon-rpm: fmt vet ## Build standalone clientmount binary and its rpm
+	${CONTAINER_TOOL} build --platform=$(RPM_PLATFORM) --build-arg="RPMTARGET=$(RPM_TARGET)" --build-arg="RPMVERSION=$(RPM_VERSION)" --output=type=local,dest=$(RPMBIN) -f mount-daemon/Dockerfile.rpmbuild .
+
+.PHONY: build-daemon-local
+build-daemon-local: GOOS = $(shell go env GOOS)
+build-daemon-local: GOARCH = $(shell go env GOARCH)
+build-daemon-local: build-daemon-with
+
+.PHONY: build-daemon
+build-daemon: GOOS ?= linux
+build-daemon: GOARCH ?= amd64
+build-daemon: build-daemon-with
+
+.PHONY: build-daemon-with
+build-daemon-with: RPM_VERSION ?= $(shell ./git-version-gen)
+build-daemon-with: PACKAGE = github.com/NearNodeFlash/nnf-sos/mount-daemon/version
+build-daemon-with: $(LOCALBIN)
+build-daemon-with: fmt vet ## Build standalone clientmount binary
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags="-X '$(PACKAGE).version=$(RPM_VERSION)'" -o bin/clientmountd mount-daemon/main.go
 
 build: generate fmt vet ## Build manager binary.
 	CGO_ENABLED=0 go build -o bin/manager cmd/main.go
@@ -245,18 +266,41 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	CGO_ENABLED=0 go run cmd/main.go
 
+# If you wish to build the manager image targeting other platforms you can use the --platform flag.
+# (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
+# More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+.PHONY: docker-build
 docker-build: VERSION ?= $(shell cat .version)
 docker-build: .version ## Build docker image with the manager.
-	time ${DOCKER} build --build-arg FAILFAST -t $(IMAGE_TAG_BASE):$(VERSION) .
+	time ${CONTAINER_TOOL} build --build-arg FAILFAST -t $(IMAGE_TAG_BASE):$(VERSION) .
 
+.PHONY: docker-push
 docker-push: VERSION ?= $(shell cat .version)
 docker-push: .version ## Push docker image with the manager.
-	${DOCKER} push $(IMAGE_TAG_BASE):$(VERSION)
+	${CONTAINER_TOOL} push $(IMAGE_TAG_BASE):$(VERSION)
+
+# PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
+# architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
+# - be able to use docker buildx. More info: https://docs.docker.com/build/buildx/
+# - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
+# - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
+# To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
+PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+.PHONY: docker-buildx
+docker-buildx: VERSION ?= $(shell cat .version)
+docker-buildx: ## Build and push docker image for the manager for cross-platform support
+	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
+	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
+	$(CONTAINER_TOOL) buildx use project-v3-builder
+	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag $(IMAGE_TAG_BASE):$(VERSION) -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx rm project-v3-builder
+	rm Dockerfile.cross
 
 kind-push: VERSION ?= $(shell cat .version)
 kind-push: .version ## Push docker image to kind
 	kind load docker-image $(IMAGE_TAG_BASE):$(VERSION)
-	${DOCKER} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
+	${CONTAINER_TOOL} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 	kind load docker-image gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
@@ -299,6 +343,17 @@ clean-bin:
 	  chmod -R u+w $(LOCALBIN) && rm -rf $(LOCALBIN); \
 	fi
 
+## Location to place rpms
+RPMBIN ?= $(shell pwd)/rpms
+$(RPMBIN):
+	mkdir $(RPMBIN)
+
+.PHONY: clean-rpmbin
+clean-rpmbin:
+	if [[ -d $(RPMBIN) ]]; then \
+	  rm -rf $(RPMBIN); \
+	fi
+
 ## Tool Binaries
 KUSTOMIZE_IMAGE_TAG ?= ./hack/make-kustomization.sh
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
@@ -339,7 +394,7 @@ bundle: manifests kustomize ## Generate bundle manifests and metadata, then vali
 bundle-build: VERSION ?= $(shell cat .version)
 bundle-build: BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 bundle-build: .version ## Build the bundle image.
-	${DOCKER} build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	${CONTAINER_TOOL} build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
 bundle-push: VERSION ?= $(shell cat .version)
@@ -381,7 +436,7 @@ endif
 # https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
 catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool ${DOCKER} --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	$(OPM) index add --container-tool ${CONTAINER_TOOL} --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
 # Push the catalog image.
 .PHONY: catalog-push

@@ -63,7 +63,7 @@ type ResourceErrorInfo struct {
 	DebugMessage string `json:"debugMessage"`
 
 	// Internal or user error
-	// +kubebuilder:validation:Enum=Internal;User
+	// +kubebuilder:validation:Enum=Internal;User;WLM
 	Type ResourceErrorType `json:"type"`
 
 	// Indication of how severe the error is. Minor will likely succeed, Major may

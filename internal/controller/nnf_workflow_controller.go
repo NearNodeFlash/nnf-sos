@@ -800,9 +800,9 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		result, err := r.userContainerHandler(ctx, workflow, dwArgs, index, log)
 
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithFatal().WithUserMessage("unable to create/update Container Jobs: " + err.Error())
+			return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("unable to create/update Container Jobs: " + err.Error())
 		}
-		if result != nil {
+		if result != nil { // a requeue can be returned, so make sure that happens
 			return result, nil
 		}
 

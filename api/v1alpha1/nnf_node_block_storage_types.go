@@ -37,6 +37,9 @@ type NnfNodeBlockStorageAllocationSpec struct {
 // NnfNodeBlockStorageSpec defines the desired storage attributes on a NNF Node.
 // Storage spec are created on request of the user and fullfilled by the NNF Node Controller.
 type NnfNodeBlockStorageSpec struct {
+	// SharedAllocation is used when a single NnfNodeBlockStorage allocation is used by multiple NnfNodeStorage allocations
+	SharedAllocation bool `json:"sharedAllocation"`
+
 	// Allocations is the list of storage allocations to make
 	Allocations []NnfNodeBlockStorageAllocationSpec `json:"allocations,omitempty"`
 }

@@ -623,6 +623,18 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					mgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
 				}
 			}
+
+			sharedAllocation := false
+			if dwArgs["type"] == "gfs2" && nnfStorageProfile.Data.GFS2Storage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+			if dwArgs["type"] == "xfs" && nnfStorageProfile.Data.XFSStorage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+			if dwArgs["type"] == "raw" && nnfStorageProfile.Data.RawStorage.CmdLines.SharedVg {
+				sharedAllocation = true
+			}
+
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
 			nnfStorage.Spec.AllocationSets = []nnfv1alpha1.NnfStorageAllocationSetSpec{}
 
@@ -632,6 +644,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
 				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
+				nnfAllocSet.SharedAllocation = sharedAllocation
 				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = s.Spec.AllocationSets[i].Label
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
@@ -1272,15 +1285,15 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
 	if err != nil || len(nnfNodes) <= 0 {
-		return nil, dwsv1alpha2.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err).WithMajor()
+		return nil, dwsv1alpha2.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err)
 	}
 
 	// Get the NNF volumes to mount into the containers
 	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs, profile)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err).WithFatal()
+		return nil, dwsv1alpha2.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err)
 	}
-	if result != nil {
+	if result != nil { // a requeue can be returned, so make sure that happens
 		return result, nil
 	}
 
@@ -1373,7 +1386,7 @@ func (r *NnfWorkflowReconciler) getNnfNodesFromComputes(ctx context.Context, wor
 
 	systemConfig := &dwsv1alpha2.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
-		return ret, dwsv1alpha2.NewResourceError("could not get system configuration")
+		return ret, dwsv1alpha2.NewResourceError("could not get system configuration").WithFatal()
 	}
 
 	// The SystemConfiguration is organized by rabbit. Make a map of computes:rabbit for easy lookup.
@@ -1905,10 +1918,7 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 				},
 			}
 			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the NnfAccess '%s'", nnfAccess.Name).WithMajor()
-				}
-				return nil, Requeue(fmt.Sprintf("wait for NnfAccess '%s'", nnfAccess.Name)).after(2 * time.Second), nil
+				return nil, nil, dwsv1alpha2.NewResourceError("could not retrieve the NnfAccess '%s'", nnfAccess.Name).WithMajor()
 			}
 
 			if !nnfAccess.Status.Ready {
