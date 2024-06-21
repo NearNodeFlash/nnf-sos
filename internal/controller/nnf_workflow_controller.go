@@ -360,13 +360,12 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 		}
 		directiveBreakdownList := &dwsv1alpha2.DirectiveBreakdownList{}
 		if err := r.List(ctx, directiveBreakdownList, listOptions...); err != nil {
-			// TODO: better error handling
-			return nil, err
+			return Requeue("check for persistent directive breakdowns").after(2 * time.Second), nil
 		}
 		name := dwArgs["name"]
 		for _, db := range directiveBreakdownList.Items {
 			if strings.Contains(db.Spec.Directive, name) {
-				return Requeue(fmt.Sprintf("persistent filesystem '%s' is still in use", name)).withObject(&db), nil
+				return Requeue(fmt.Sprintf("persistent filesystem '%s' is still in use", name)).after(2 * time.Second), nil
 			}
 		}
 
