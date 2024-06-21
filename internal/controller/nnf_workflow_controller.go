@@ -340,12 +340,36 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 
 func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+	destroy := false
 
 	// only jobdw, persistentdw, and create_persistent have a directive breakdown
 	switch dwArgs["command"] {
 	case "jobdw", "persistentdw", "create_persistent":
 		break
+	case "destroy_persistent":
+		destroy = true
 	default:
+		return nil, nil
+	}
+
+	// TODO: clean this up
+	// TODO: is this the best spot?
+	if destroy {
+		listOptions := []client.ListOption{
+			client.InNamespace(workflow.Namespace),
+		}
+		directiveBreakdownList := &dwsv1alpha2.DirectiveBreakdownList{}
+		if err := r.List(ctx, directiveBreakdownList, listOptions...); err != nil {
+			// TODO: better error handling
+			return nil, err
+		}
+		name := dwArgs["name"]
+		for _, db := range directiveBreakdownList.Items {
+			if strings.Contains(db.Spec.Directive, name) {
+				return Requeue(fmt.Sprintf("persistent filesystem '%s' is still in use", name)).withObject(&db), nil
+			}
+		}
+
 		return nil, nil
 	}
 

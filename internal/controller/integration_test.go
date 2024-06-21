@@ -481,365 +481,357 @@ var _ = Describe("Integration Test", func() {
 		}).ShouldNot(Succeed())
 	})
 
-	It("Testing DWS directives", func() {
-		type wfTestConfiguration struct {
-			directive                   string
-			expectedDirectiveBreakdowns int
-			hasComputeBreakdown         bool
-			hasStorageBreakdown         bool
-			expectedAllocationSets      int
+	type wfTestConfiguration struct {
+		directive                   string
+		expectedDirectiveBreakdowns int
+		hasComputeBreakdown         bool
+		hasStorageBreakdown         bool
+		expectedAllocationSets      int
+	}
+
+	test_dw_directive := func(idx int, wfTest wfTestConfiguration) {
+
+		directive := wfTest.directive
+
+		By("Parsing the #DW")
+		By(fmt.Sprintf("Directive %d: %s", idx, directive))
+		dwArgs, err := dwparse.BuildArgsMap(directive)
+		Expect(err).Should(BeNil())
+		storageDirective, ok := dwArgs["command"]
+		Expect(ok).To(BeTrue())
+
+		// For persistentdw, we don't care what the fsType is, there are no allocations required
+		fsType, ok := dwArgs["type"]
+		if !ok {
+			fsType = "unknown"
 		}
 
-		var wfTests = []wfTestConfiguration{
-			{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, true, true, 1},
+		storageDirectiveName := strings.Replace(storageDirective, "_", "", 1) // Workflow names cannot include '_'
+		storageName := fmt.Sprintf("%s-%s", storageDirectiveName, fsType)
+		expectedAllocationSets := wfTest.expectedAllocationSets
+		wfid := uuid.NewString()[0:8]
 
-			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, true, true, 1},
-			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, true, true, 1},
-			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, true, true, 3},
-
-			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, false, true, 1},
-			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, false, true, 1},
-			{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, false, true, 3},
-
-			{"#DW persistentdw name=createpersistent-xfs", 1, true, false, 0},
-			{"#DW persistentdw name=createpersistent-gfs2", 1, true, false, 0},
-			{"#DW persistentdw name=createpersistent-lustre", 1, true, false, 0},
-
-			{"#DW destroy_persistent name=doesnotexist", 0, false, false, 0},
-			{"#DW destroy_persistent name=createpersistent-xfs   ", 0, false, false, 0},
-			{"#DW destroy_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
-			{"#DW destroy_persistent name=createpersistent-lustre", 0, false, false, 0},
+		By(fmt.Sprintf("Testing directive '%s' filesystem '%s'", storageDirective, fsType))
+		workflow = &dwsv1alpha2.Workflow{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-%s-%s", storageDirectiveName, fsType, wfid),
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.WorkflowSpec{
+				DesiredState: dwsv1alpha2.StateProposal,
+				JobID:        intstr.FromInt(idx),
+				WLMID:        "Test WLMID",
+				DWDirectives: []string{
+					directive,
+				},
+			},
 		}
 
-		err := os.Unsetenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK")
-		Expect(err).NotTo(HaveOccurred())
+		By(fmt.Sprintf("Creating workflow '%s'", workflow.Name))
+		Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
 
-		for idx := range wfTests {
-			directive := wfTests[idx].directive
+		By("Retrieving created workflow")
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
+		}).Should(Succeed())
 
-			By("Parsing the #DW")
-			By(fmt.Sprintf("Directive %d: %s", idx, directive))
-			dwArgs, err := dwparse.BuildArgsMap(directive)
-			Expect(err).Should(BeNil())
-			storageDirective, ok := dwArgs["command"]
-			Expect(ok).To(BeTrue())
+		// Store ownership reference to workflow - this is checked for many of the created objects
+		ownerRef := metav1.OwnerReference{
+			Kind:               reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
+			APIVersion:         dwsv1alpha2.GroupVersion.String(),
+			UID:                workflow.GetUID(),
+			Name:               workflow.GetName(),
+			Controller:         &controller,
+			BlockOwnerDeletion: &blockOwnerDeletion,
+		}
 
-			// For persistentdw, we don't care what the fsType is, there are no allocations required
-			fsType, ok := dwArgs["type"]
-			if !ok {
-				fsType = "unknown"
-			}
+		/*************************** Proposal ****************************/
 
-			storageDirectiveName := strings.Replace(storageDirective, "_", "", 1) // Workflow names cannot include '_'
-			storageName := fmt.Sprintf("%s-%s", storageDirectiveName, fsType)
-			expectedAllocationSets := wfTests[idx].expectedAllocationSets
-			wfid := uuid.NewString()[0:8]
+		By("Checking proposal state and ready")
+		Eventually(func() bool {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+			return workflow.Status.State == dwsv1alpha2.StateProposal && workflow.Status.Ready
+		}).Should(BeTrue())
 
-			By(fmt.Sprintf("Testing directive '%s' filesystem '%s'", storageDirective, fsType))
-			workflow = &dwsv1alpha2.Workflow{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s-%s", storageDirectiveName, fsType, wfid),
-					Namespace: corev1.NamespaceDefault,
-				},
-				Spec: dwsv1alpha2.WorkflowSpec{
-					DesiredState: dwsv1alpha2.StateProposal,
-					JobID:        intstr.FromInt(idx),
-					WLMID:        "Test WLMID",
-					DWDirectives: []string{
-						directive,
-					},
-				},
-			}
+		By("Checking for Computes resource")
+		computes := &dwsv1alpha2.Computes{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      workflow.Status.Computes.Name,
+				Namespace: workflow.Status.Computes.Namespace,
+			},
+		}
+		Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Computes{}).Name()))
+		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+		Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
-			By(fmt.Sprintf("Creating workflow '%s'", workflow.Name))
-			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+		By("Checking various DW Directive Breakdowns")
+		Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(wfTest.expectedDirectiveBreakdowns))
+		for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+			dbd := &dwsv1alpha2.DirectiveBreakdown{}
+			Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.DirectiveBreakdown{}).Name()))
 
-			By("Retrieving created workflow")
-			Eventually(func() error {
-				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)
-			}).Should(Succeed())
-
-			// Store ownership reference to workflow - this is checked for many of the created objects
-			ownerRef := metav1.OwnerReference{
-				Kind:               reflect.TypeOf(dwsv1alpha2.Workflow{}).Name(),
-				APIVersion:         dwsv1alpha2.GroupVersion.String(),
-				UID:                workflow.GetUID(),
-				Name:               workflow.GetName(),
-				Controller:         &controller,
-				BlockOwnerDeletion: &blockOwnerDeletion,
-			}
-
-			/*************************** Proposal ****************************/
-
-			By("Checking proposal state and ready")
+			By("DW Directive Breakdown should go ready")
 			Eventually(func() bool {
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-				return workflow.Status.State == dwsv1alpha2.StateProposal && workflow.Status.Ready
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+				return dbd.Status.Ready
 			}).Should(BeTrue())
 
-			By("Checking for Computes resource")
-			computes := &dwsv1alpha2.Computes{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workflow.Status.Computes.Name,
-					Namespace: workflow.Status.Computes.Namespace,
-				},
-			}
-			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Computes{}).Name()))
-			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
-			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
-
-			By("Checking various DW Directive Breakdowns")
-			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(wfTests[idx].expectedDirectiveBreakdowns))
-			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-				dbd := &dwsv1alpha2.DirectiveBreakdown{}
-				Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.DirectiveBreakdown{}).Name()))
-
-				By("DW Directive Breakdown should go ready")
-				Eventually(func() bool {
-					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
-					return dbd.Status.Ready
-				}).Should(BeTrue())
-
-				By("Checking DW Directive Breakdown")
-				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
-				Expect(dbd.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
-				if storageDirective == "jobdw" || storageDirective == "create_persistent" {
-					By("Verify that pinned profiles have been created")
-					pName, pNamespace := getStorageReferenceNameFromDBD(dbd)
-					Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName)).To(Succeed())
-				}
-
-				if wfTests[idx].hasComputeBreakdown {
-					Expect(dbd.Status.Compute).NotTo(BeNil())
-					Expect(dbd.Status.Compute.Constraints.Location).ToNot(BeEmpty())
-
-					for _, location := range dbd.Status.Compute.Constraints.Location {
-						servers := &dwsv1alpha2.Servers{}
-						Expect(location.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
-						Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: location.Reference.Name, Namespace: location.Reference.Namespace}, servers)).To(Succeed())
-					}
-				} else {
-					Expect(dbd.Status.Compute).To(BeNil())
-				}
-
-				if !wfTests[idx].hasStorageBreakdown {
-					Expect(dbd.Status.Storage).To(BeNil())
-					continue
-				}
-
-				Expect(dbd.Status.Storage).NotTo(BeNil())
-				Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(expectedAllocationSets))
-
-				By("DW Directive has Servers resource accessible from the DirectiveBreakdown")
-				servers := &dwsv1alpha2.Servers{}
-				Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
-				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
-
-				By("DW Directive verifying servers resource")
-				switch storageDirective {
-				case "jobdw":
-					Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(metav1.OwnerReference{
-						Kind:               reflect.TypeOf(dwsv1alpha2.DirectiveBreakdown{}).Name(),
-						APIVersion:         dwsv1alpha2.GroupVersion.String(),
-						UID:                dbd.GetUID(),
-						Name:               dbd.GetName(),
-						Controller:         &controller,
-						BlockOwnerDeletion: &blockOwnerDeletion,
-					}))
-
-				case "create_persistent":
-					checkPSIToServerMapping(psiNotownedByWorkflow, storageName, workflow)
-				}
-
-				By("Assigning storage")
-				if fsType != "lustre" {
-					// If non-lustre, allocate storage on all the Rabbit nodes in test.
-					storage := make([]dwsv1alpha2.ServersSpecStorage, 0, len(nodeNames))
-					for _, nodeName := range nodeNames {
-						storage = append(storage, dwsv1alpha2.ServersSpecStorage{
-							AllocationCount: 1,
-							Name:            nodeName,
-						})
-					}
-
-					Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(1))
-					allocSet := &dbd.Status.Storage.AllocationSets[0]
-
-					servers.Spec.AllocationSets = make([]dwsv1alpha2.ServersSpecAllocationSet, 1)
-					servers.Spec.AllocationSets[0] = dwsv1alpha2.ServersSpecAllocationSet{
-						AllocationSize: allocSet.MinimumCapacity,
-						Label:          allocSet.Label,
-						Storage:        storage,
-					}
-
-				} else {
-					// If lustre, allocate one node per allocation set
-					Expect(len(nodeNames) >= len(dbd.Status.Storage.AllocationSets)).To(BeTrue())
-					servers.Spec.AllocationSets = make([]dwsv1alpha2.ServersSpecAllocationSet, len(dbd.Status.Storage.AllocationSets))
-					for idx, allocset := range dbd.Status.Storage.AllocationSets {
-						servers.Spec.AllocationSets[idx] = dwsv1alpha2.ServersSpecAllocationSet{
-							AllocationSize: allocset.MinimumCapacity,
-							Label:          allocset.Label,
-							Storage: []dwsv1alpha2.ServersSpecStorage{
-								{
-									AllocationCount: 1,
-									Name:            nodeNames[idx],
-								},
-							},
-						}
-					}
-				}
-
-				Expect(k8sClient.Update(context.TODO(), servers)).To(Succeed())
+			By("Checking DW Directive Breakdown")
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+			Expect(dbd.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+			if storageDirective == "jobdw" || storageDirective == "create_persistent" {
+				By("Verify that pinned profiles have been created")
+				pName, pNamespace := getStorageReferenceNameFromDBD(dbd)
+				Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName)).To(Succeed())
 			}
 
-			By("Assigning computes")
-			Expect(computes.Data).To(HaveLen(0))
-			computes.Data = make([]dwsv1alpha2.ComputesData, 0, len(nodeNames))
-			for idx := range nodeNames {
-				computes.Data = append(computes.Data, dwsv1alpha2.ComputesData{Name: fmt.Sprintf("compute%d", idx*16)})
+			if wfTest.hasComputeBreakdown {
+				Expect(dbd.Status.Compute).NotTo(BeNil())
+				Expect(dbd.Status.Compute.Constraints.Location).ToNot(BeEmpty())
+
+				for _, location := range dbd.Status.Compute.Constraints.Location {
+					servers := &dwsv1alpha2.Servers{}
+					Expect(location.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
+					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: location.Reference.Name, Namespace: location.Reference.Namespace}, servers)).To(Succeed())
+				}
+			} else {
+				Expect(dbd.Status.Compute).To(BeNil())
 			}
-			Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
 
-			/***************************** Setup *****************************/
+			if !wfTest.hasStorageBreakdown {
+				Expect(dbd.Status.Storage).To(BeNil())
+				continue
+			}
 
-			advanceStateAndCheckReady(dwsv1alpha2.StateSetup, workflow)
+			Expect(dbd.Status.Storage).NotTo(BeNil())
+			Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(expectedAllocationSets))
 
-			By("Checking Setup state")
+			By("DW Directive has Servers resource accessible from the DirectiveBreakdown")
+			servers := &dwsv1alpha2.Servers{}
+			Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
+
+			By("DW Directive verifying servers resource")
 			switch storageDirective {
 			case "jobdw":
-			case "persistendw":
-				checkPSIConsumerReference(storageName, workflow)
-				checkServersToNnfStorageMapping(nnfStoragePresent)
-			default:
-				checkServersToNnfStorageMapping(nnfStoragePresent)
+				Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(metav1.OwnerReference{
+					Kind:               reflect.TypeOf(dwsv1alpha2.DirectiveBreakdown{}).Name(),
+					APIVersion:         dwsv1alpha2.GroupVersion.String(),
+					UID:                dbd.GetUID(),
+					Name:               dbd.GetName(),
+					Controller:         &controller,
+					BlockOwnerDeletion: &blockOwnerDeletion,
+				}))
+
+			case "create_persistent":
+				checkPSIToServerMapping(psiNotownedByWorkflow, storageName, workflow)
 			}
 
-			// TODO
+			By("Assigning storage")
+			if fsType != "lustre" {
+				// If non-lustre, allocate storage on all the Rabbit nodes in test.
+				storage := make([]dwsv1alpha2.ServersSpecStorage, 0, len(nodeNames))
+				for _, nodeName := range nodeNames {
+					storage = append(storage, dwsv1alpha2.ServersSpecStorage{
+						AllocationCount: 1,
+						Name:            nodeName,
+					})
+				}
 
-			/**************************** Data In ****************************/
+				Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(1))
+				allocSet := &dbd.Status.Storage.AllocationSets[0]
 
-			advanceStateAndCheckReady(dwsv1alpha2.StateDataIn, workflow)
+				servers.Spec.AllocationSets = make([]dwsv1alpha2.ServersSpecAllocationSet, 1)
+				servers.Spec.AllocationSets[0] = dwsv1alpha2.ServersSpecAllocationSet{
+					AllocationSize: allocSet.MinimumCapacity,
+					Label:          allocSet.Label,
+					Storage:        storage,
+				}
 
-			By("Checking Data In state")
-			// TODO
+			} else {
+				// If lustre, allocate one node per allocation set
+				Expect(len(nodeNames) >= len(dbd.Status.Storage.AllocationSets)).To(BeTrue())
+				servers.Spec.AllocationSets = make([]dwsv1alpha2.ServersSpecAllocationSet, len(dbd.Status.Storage.AllocationSets))
+				for idx, allocset := range dbd.Status.Storage.AllocationSets {
+					servers.Spec.AllocationSets[idx] = dwsv1alpha2.ServersSpecAllocationSet{
+						AllocationSize: allocset.MinimumCapacity,
+						Label:          allocset.Label,
+						Storage: []dwsv1alpha2.ServersSpecStorage{
+							{
+								AllocationCount: 1,
+								Name:            nodeNames[idx],
+							},
+						},
+					}
+				}
+			}
 
-			/**************************** Pre Run ****************************/
+			Expect(k8sClient.Update(context.TODO(), servers)).To(Succeed())
+		}
 
-			advanceStateAndCheckReady(dwsv1alpha2.StatePreRun, workflow)
+		By("Assigning computes")
+		Expect(computes.Data).To(HaveLen(0))
+		computes.Data = make([]dwsv1alpha2.ComputesData, 0, len(nodeNames))
+		for idx := range nodeNames {
+			computes.Data = append(computes.Data, dwsv1alpha2.ComputesData{Name: fmt.Sprintf("compute%d", idx*16)})
+		}
+		Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
 
-			By("Checking Pre Run state")
+		/***************************** Setup *****************************/
 
-			switch storageDirective {
-			default:
-				for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-					dbd := &dwsv1alpha2.DirectiveBreakdown{}
-					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+		advanceStateAndCheckReady(dwsv1alpha2.StateSetup, workflow)
 
-					By("Check for an NNF Access describing the computes")
+		By("Checking Setup state")
+		switch storageDirective {
+		case "jobdw":
+		case "persistendw":
+			checkPSIConsumerReference(storageName, workflow)
+			checkServersToNnfStorageMapping(nnfStoragePresent)
+		default:
+			checkServersToNnfStorageMapping(nnfStoragePresent)
+		}
+
+		// TODO
+
+		/**************************** Data In ****************************/
+
+		advanceStateAndCheckReady(dwsv1alpha2.StateDataIn, workflow)
+
+		By("Checking Data In state")
+		// TODO
+
+		/**************************** Pre Run ****************************/
+
+		advanceStateAndCheckReady(dwsv1alpha2.StatePreRun, workflow)
+
+		By("Checking Pre Run state")
+
+		switch storageDirective {
+		default:
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha2.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+				By("Check for an NNF Access describing the computes")
+				access := &nnfv1alpha1.NnfAccess{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
+						Namespace: workflow.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
+				Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
+					"TeardownState": Equal(dwsv1alpha2.StatePostRun),
+					"DesiredState":  Equal("mounted"),
+					"Target":        Equal("single"),
+				}))
+				Expect(access.Status.State).To(Equal("mounted"))
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+					g.Expect(access.Status.Ready).To(BeTrue())
+				}).Should(Succeed())
+
+				By("Checking NNF Access computes reference exists")
+				Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
+					"Name":      Equal(workflow.Name),
+					"Namespace": Equal(workflow.Namespace),
+					"Kind":      Equal(reflect.TypeOf(dwsv1alpha2.Computes{}).Name()),
+				}))
+				computes := &dwsv1alpha2.Computes{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      access.Spec.ClientReference.Name,
+						Namespace: access.Spec.ClientReference.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+
+				// NnfStorage name is different for jobdw vs. persistentdw
+				storageName := dbd.Name
+				if storageDirective == "persistentdw" {
+					storageName = dwArgs["name"]
+				}
+				By("Checking NNF Access storage reference exists")
+				Expect(access.Spec.StorageReference).To(MatchFields(IgnoreExtras, Fields{
+					"Name":      Equal(storageName),
+					"Namespace": Equal(workflow.Namespace), // Namespace is the same as the workflow
+					"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
+				}))
+				storage := &nnfv1alpha1.NnfStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      access.Spec.StorageReference.Name,
+						Namespace: access.Spec.StorageReference.Namespace,
+					},
+				}
+				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+
+				By("Checking for a Client Mount on each compute")
+				for _, compute := range computes.Data {
+					clientMount := &dwsv1alpha2.ClientMount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      clientMountName(access),
+							Namespace: compute.Name,
+						},
+					}
+					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
+					Expect(clientMount.Status.Mounts).To(HaveLen(1))
+					Expect(clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]).To(Equal(workflow.Name))
+					Expect(clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]).To(Equal(workflow.Namespace))
+					Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
+				}
+
+				// For shared file systems, there should also be a NNF Access for the Rabbit as well as corresponding Client Mounts per Rabbit
+				if fsType == "gfs2" {
+					By("Checking for an NNF Access describing the servers")
 					access := &nnfv1alpha1.NnfAccess{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
+							Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
 							Namespace: workflow.Namespace,
 						},
 					}
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
 					Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
-					Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"TeardownState": Equal(dwsv1alpha2.StatePostRun),
-						"DesiredState":  Equal("mounted"),
-						"Target":        Equal("single"),
-					}))
-					Expect(access.Status.State).To(Equal("mounted"))
-					Eventually(func(g Gomega) {
-						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
-						g.Expect(access.Status.Ready).To(BeTrue())
-					}).Should(Succeed())
 
-					By("Checking NNF Access computes reference exists")
-					Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
-						"Name":      Equal(workflow.Name),
-						"Namespace": Equal(workflow.Namespace),
-						"Kind":      Equal(reflect.TypeOf(dwsv1alpha2.Computes{}).Name()),
-					}))
-					computes := &dwsv1alpha2.Computes{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      access.Spec.ClientReference.Name,
-							Namespace: access.Spec.ClientReference.Namespace,
-						},
-					}
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+					// CONTINUE HERE WITH CHECKS FOR storage, status
 
-					// NnfStorage name is different for jobdw vs. persistentdw
-					storageName := dbd.Name
-					if storageDirective == "persistentdw" {
-						storageName = dwArgs["name"]
-					}
-					By("Checking NNF Access storage reference exists")
-					Expect(access.Spec.StorageReference).To(MatchFields(IgnoreExtras, Fields{
-						"Name":      Equal(storageName),
-						"Namespace": Equal(workflow.Namespace), // Namespace is the same as the workflow
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name()),
-					}))
-					storage := &nnfv1alpha1.NnfStorage{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      access.Spec.StorageReference.Name,
-							Namespace: access.Spec.StorageReference.Namespace,
-						},
-					}
-					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-
-					By("Checking for a Client Mount on each compute")
-					for _, compute := range computes.Data {
-						clientMount := &dwsv1alpha2.ClientMount{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      clientMountName(access),
-								Namespace: compute.Name,
-							},
-						}
-						Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
-						Expect(clientMount.Status.Mounts).To(HaveLen(1))
-						Expect(clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]).To(Equal(workflow.Name))
-						Expect(clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]).To(Equal(workflow.Namespace))
-						Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
-					}
-
-					// For shared file systems, there should also be a NNF Access for the Rabbit as well as corresponding Client Mounts per Rabbit
-					if fsType == "gfs2" {
-						By("Checking for an NNF Access describing the servers")
-						access := &nnfv1alpha1.NnfAccess{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
-								Namespace: workflow.Namespace,
-							},
-						}
-						Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
-						Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
-
-						// CONTINUE HERE WITH CHECKS FOR storage, status
-
-						// CONTINUE HERE WITH CHECKS FOR Client Mounts on all the Rabbits
-					}
+					// CONTINUE HERE WITH CHECKS FOR Client Mounts on all the Rabbits
 				}
-			case "create_persistent":
 			}
+		case "create_persistent":
+		}
 
-			/*************************** Post Run ****************************/
+		/*************************** Post Run ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha2.StatePostRun, workflow)
+		advanceStateAndCheckReady(dwsv1alpha2.StatePostRun, workflow)
 
-			By("Checking Post Run state")
+		By("Checking Post Run state")
 
-			switch storageDirective {
-			default:
-				for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-					dbd := &dwsv1alpha2.DirectiveBreakdown{}
-					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+		switch storageDirective {
+		default:
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha2.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
+				By("Check that NNF Access describing computes is not present")
+				access := &nnfv1alpha1.NnfAccess{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
+						Namespace: workflow.Namespace,
+					},
+				}
+				Eventually(func() error {
+					err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+					return client.IgnoreNotFound(err)
+				}).Should(Succeed())
+
+				By("Check that all Client Mounts for computes are removed")
+				// TODO
+
+				if fsType == "gfs2" {
 					By("Check that NNF Access describing computes is not present")
 					access := &nnfv1alpha1.NnfAccess{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
+							Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
 							Namespace: workflow.Namespace,
 						},
 					}
@@ -848,79 +840,89 @@ var _ = Describe("Integration Test", func() {
 						return client.IgnoreNotFound(err)
 					}).Should(Succeed())
 
-					By("Check that all Client Mounts for computes are removed")
+					By("Check that all Client Mounts for servers are removed")
 					// TODO
-
-					if fsType == "gfs2" {
-						By("Check that NNF Access describing computes is not present")
-						access := &nnfv1alpha1.NnfAccess{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
-								Namespace: workflow.Namespace,
-							},
-						}
-						Eventually(func() error {
-							err := k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
-							return client.IgnoreNotFound(err)
-						}).Should(Succeed())
-
-						By("Check that all Client Mounts for servers are removed")
-						// TODO
-					}
 				}
+			}
+		case "create_persistent":
+		}
+
+		/**************************** Data Out ****************************/
+
+		advanceStateAndCheckReady(dwsv1alpha2.StateDataOut, workflow)
+
+		By("Checking Data Out state")
+		// TODO
+
+		/**************************** Teardown ****************************/
+
+		advanceStateAndCheckReady(dwsv1alpha2.StateTeardown, workflow)
+
+		By("Checking Teardown state")
+
+		for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+			dbd := &dwsv1alpha2.DirectiveBreakdown{}
+			Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+
+			switch storageDirective {
 			case "create_persistent":
+
+				By("Check that the servers resource still exists")
+				servers := &dwsv1alpha2.Servers{}
+				Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
+
+				By("NNFStorages for persistentStorageInstance should NOT be deleted")
+				nnfStorage := &nnfv1alpha1.NnfStorage{}
+				Consistently(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
+				}).Should(Succeed(), "NnfStorage should continue to exist")
+
+				By("PSI Not owned by workflow so it won't be deleted")
+				checkPSIToServerMapping(psiNotownedByWorkflow, storageName, workflow)
+
+			case "jobdw":
+				By("Check that the servers resource still exists")
+				servers := &dwsv1alpha2.Servers{}
+				Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
+
+				By("NNFStorages associated with jobdw should be deleted")
+				nnfStorage := &nnfv1alpha1.NnfStorage{}
+				Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
+				}).ShouldNot(Succeed(), "NnfStorage should be deleted")
+			default:
 			}
+		}
+	}
 
-			/**************************** Data Out ****************************/
+	DescribeTable("Testing DWS directives",
+		func(idx int, t wfTestConfiguration) {
+			err := os.Unsetenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK")
+			Expect(err).NotTo(HaveOccurred())
 
-			advanceStateAndCheckReady(dwsv1alpha2.StateDataOut, workflow)
+			test_dw_directive(idx, t)
+		},
 
-			By("Checking Data Out state")
-			// TODO
+		Entry("jobdw - raw", 0, wfTestConfiguration{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, true, true, 1}),
+		Entry("jobdw - xfs", 1, wfTestConfiguration{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, true, true, 1}),
+		Entry("jobdw - gfs2", 2, wfTestConfiguration{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, true, true, 1}),
+		Entry("jobdw - lustre", 3, wfTestConfiguration{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, true, true, 3}),
 
-			/**************************** Teardown ****************************/
+		Entry("create_prersistent - xfs", 4, wfTestConfiguration{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, false, true, 1}),
+		Entry("create_persistent - gfs2", 5, wfTestConfiguration{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, false, true, 1}),
+		Entry("create_persistent - lustre", 6, wfTestConfiguration{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, false, true, 3}),
 
-			advanceStateAndCheckReady(dwsv1alpha2.StateTeardown, workflow)
+		Entry("persistentdw - xfs", 7, wfTestConfiguration{"#DW persistentdw name=createpersistent-xfs", 1, true, false, 0}),
+		Entry("persistentdw - gfs2", 8, wfTestConfiguration{"#DW persistentdw name=createpersistent-gfs2", 1, true, false, 0}),
+		Entry("persistentdw - lustre", 9, wfTestConfiguration{"#DW persistentdw name=createpersistent-lustre", 1, true, false, 0}),
 
-			By("Checking Teardown state")
-
-			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-				dbd := &dwsv1alpha2.DirectiveBreakdown{}
-				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
-
-				switch storageDirective {
-				case "create_persistent":
-
-					By("Check that the servers resource still exists")
-					servers := &dwsv1alpha2.Servers{}
-					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
-					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
-
-					By("NNFStorages for persistentStorageInstance should NOT be deleted")
-					nnfStorage := &nnfv1alpha1.NnfStorage{}
-					Consistently(func() error {
-						return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
-					}).Should(Succeed(), "NnfStorage should continue to exist")
-
-					By("PSI Not owned by workflow so it won't be deleted")
-					checkPSIToServerMapping(psiNotownedByWorkflow, storageName, workflow)
-
-				case "jobdw":
-					By("Check that the servers resource still exists")
-					servers := &dwsv1alpha2.Servers{}
-					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha2.Servers{}).Name()))
-					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
-
-					By("NNFStorages associated with jobdw should be deleted")
-					nnfStorage := &nnfv1alpha1.NnfStorage{}
-					Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
-						return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
-					}).ShouldNot(Succeed(), "NnfStorage should be deleted")
-				default:
-				}
-			}
-		} // for idx := range wfTests
-	}) // It(Testing DWS directives)
+		Entry("destroy_persistent - dne", 10, wfTestConfiguration{"#DW destroy_persistent name=doesnotexist", 0, false, false, 0}),
+		Entry("destroy_persistent - xfs", 11, wfTestConfiguration{"#DW destroy_persistent name=createpersistent-xfs   ", 0, false, false, 0}),
+		Entry("destroy_persistent - gfs2", 12, wfTestConfiguration{"#DW destroy_persistent name=createpersistent-gfs2  ", 0, false, false, 0}),
+		Entry("destroy_persistent - lustre", 13, wfTestConfiguration{"#DW destroy_persistent name=createpersistent-lustre", 0, false, false, 0}),
+	)
 
 	Describe("Test workflow with no #DW directives", func() {
 		It("Testing Lifecycle of workflow with no #DW directives", func() {
