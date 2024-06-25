@@ -29,6 +29,12 @@ spec:
         pattern: "^[a-z][a-z0-9-]+$"
         isRequired: false
         isValueRequired: true
+      - key: "^requires$"
+        type: "list-of-string"
+        patterns:
+        - "^copy-offload$"
+        isRequired: false
+        isValueRequired: true
   - command: "create_persistent"
     watchStates: Proposal,Setup,Teardown
     ruleDefs:

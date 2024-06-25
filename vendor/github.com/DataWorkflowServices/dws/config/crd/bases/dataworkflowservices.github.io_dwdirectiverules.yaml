@@ -67,6 +67,10 @@ spec:
                         type: integer
                       pattern:
                         type: string
+                      patterns:
+                        items:
+                          type: string
+                        type: array
                       type:
                         type: string
                       uniqueWithin:
@@ -143,6 +147,10 @@ spec:
                         type: integer
                       pattern:
                         type: string
+                      patterns:
+                        items:
+                          type: string
+                        type: array
                       type:
                         type: string
                       uniqueWithin:
