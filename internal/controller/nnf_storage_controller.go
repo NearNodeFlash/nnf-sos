@@ -746,6 +746,11 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 // that aren't in the cache and we may not have been able to add the object reference
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha1.NnfStorage) (nodeStoragesState, error) {
+	deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
+	if err != nil {
+		return nodeStoragesExist, err
+	}
+
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Status.AllocationSets {
@@ -753,11 +758,6 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		if err != nil {
 			return nodeStoragesExist, err
 		}
-	}
-
-	deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
-	if err != nil {
-		return nodeStoragesExist, err
 	}
 
 	if !deleteStatus.Complete() {

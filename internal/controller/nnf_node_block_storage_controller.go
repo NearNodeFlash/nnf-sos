@@ -439,10 +439,6 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 	ss := nnf.NewDefaultStorageService()
 
 	allocationStatus := &nodeBlockStorage.Status.Allocations[index]
-	if allocationStatus.StoragePoolId == "" {
-		return nil, nil
-	}
-
 	log.Info("Deleting storage pool", "Id", allocationStatus.StoragePoolId)
 
 	err := r.deleteStoragePool(ss, allocationStatus.StoragePoolId)
