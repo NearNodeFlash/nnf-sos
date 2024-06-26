@@ -208,6 +208,8 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
+		populateRequiredDaemons(dbd, argsMap)
+
 		// Create a location constraint for the compute nodes based on what type of file system
 		// the persistent storage is using.
 		dbd.Status.Compute = &dwsv1alpha2.ComputeBreakdown{
@@ -285,6 +287,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		populateRequiredDaemons(dbd, argsMap)
 
 		// Create a location constraint for the compute nodes based on what type of file system
 		// will be created.
@@ -525,11 +528,13 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	}
 
 	dbd.Status.Storage.AllocationSets = allocationSets
+	return nil
+}
 
+func populateRequiredDaemons(dbd *dwsv1alpha2.DirectiveBreakdown, argsMap map[string]string) {
 	if wordList, present := argsMap["requires"]; present {
 		dbd.Status.RequiredDaemons = strings.Split(wordList, ",")
 	}
-	return nil
 }
 
 func getCapacityInBytes(capacity string) (int64, error) {

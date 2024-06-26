@@ -494,19 +494,23 @@ var _ = Describe("Integration Test", func() {
 			{"#DW jobdw name=jobdw-raw    type=raw    capacity=1GiB", 1, true, true, 1},
 
 			{"#DW jobdw name=jobdw-xfs    type=xfs    capacity=1GiB", 1, true, true, 1},
+			{"#DW jobdw name=jobdw-xfs2   type=xfs    capacity=1GiB requires=copy-offload", 1, true, true, 1},
 			{"#DW jobdw name=jobdw-gfs2   type=gfs2   capacity=1GiB", 1, true, true, 1},
 			{"#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB", 1, true, true, 3},
 
 			{"#DW create_persistent name=createpersistent-xfs    type=xfs    capacity=1GiB", 1, false, true, 1},
+			{"#DW create_persistent name=createpersistent-xfs2   type=xfs    capacity=1GiB", 1, false, true, 1},
 			{"#DW create_persistent name=createpersistent-gfs2   type=gfs2   capacity=1GiB", 1, false, true, 1},
 			{"#DW create_persistent name=createpersistent-lustre type=lustre capacity=1GiB", 1, false, true, 3},
 
 			{"#DW persistentdw name=createpersistent-xfs", 1, true, false, 0},
+			{"#DW persistentdw name=createpersistent-xfs2 requires=copy-offload", 1, true, false, 0},
 			{"#DW persistentdw name=createpersistent-gfs2", 1, true, false, 0},
 			{"#DW persistentdw name=createpersistent-lustre", 1, true, false, 0},
 
 			{"#DW destroy_persistent name=doesnotexist", 0, false, false, 0},
 			{"#DW destroy_persistent name=createpersistent-xfs   ", 0, false, false, 0},
+			{"#DW destroy_persistent name=createpersistent-xfs2  ", 0, false, false, 0},
 			{"#DW destroy_persistent name=createpersistent-gfs2  ", 0, false, false, 0},
 			{"#DW destroy_persistent name=createpersistent-lustre", 0, false, false, 0},
 		}
@@ -607,6 +611,13 @@ var _ = Describe("Integration Test", func() {
 					By("Verify that pinned profiles have been created")
 					pName, pNamespace := getStorageReferenceNameFromDBD(dbd)
 					Expect(verifyPinnedProfile(context.TODO(), k8sClient, pNamespace, pName)).To(Succeed())
+				}
+
+				if requiresList, requiresDaemons := dwArgs["requires"]; requiresDaemons {
+					requires := strings.Split(requiresList, ",")
+					Expect(dbd.Status.RequiredDaemons).Should(ConsistOf(requires), directive)
+				} else {
+					Expect(dbd.Status.RequiredDaemons).Should(BeEmpty(), directive)
 				}
 
 				if wfTests[idx].hasComputeBreakdown {
