@@ -1,5 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240626173134-0eac099802d8 h1:D1aTox19O1ZWDsaPg9WbDRh2hQVkSJDjb8uku5mMt94=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240626173134-0eac099802d8/go.mod h1:vSTBLWbsFjMYxx+sjMDyZpMXLY9m5Bp73cjnmAL30WU=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240326175906-15cfe803227d h1:gqAZOwvFrsgsAQYLqSnMBU4aALOH7+QpqYruhhI6MZU=
