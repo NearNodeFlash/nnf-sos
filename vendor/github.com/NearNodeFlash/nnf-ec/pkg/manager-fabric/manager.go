@@ -787,6 +787,10 @@ func (p *Port) bind() error {
 							break
 						}
 
+						if s.dev == nil {
+							panic(fmt.Sprintf("Port has no switch interface: Initiator Port %d, Logical Port %d, PDFID: %#04x", initiatorPort.config.Port, logicalPortId, endpoint.pdfid))
+						}
+
 						log.Info("Binding Port")
 						if err := s.dev.Bind(uint8(initiatorPort.config.Port), uint8(logicalPortId), endpoint.pdfid); err != nil {
 							log.Error(err, "Bind Failed")
