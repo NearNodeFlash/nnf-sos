@@ -15,7 +15,6 @@
 package v2beta1
 
 import (
-	common "github.com/kubeflow/common/pkg/apis/common/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -53,11 +52,12 @@ const (
 
 // SchedulingPolicy encapsulates various scheduling policies of the distributed training
 // job, for example `minAvailable` for gang-scheduling.
+// Now, it supports only for volcano and scheduler-plugins.
 type SchedulingPolicy struct {
 	// MinAvailable defines the minimal number of member to run the PodGroup.
-	// If the gang-scheduling is set to the volcano,
-	// input is passed to `.spec.mimMember` in PodGroup for the volcano.
-	// When using this field, you need to make sure the application supports resizing (e.g., Elastic Horovod).
+	// If the gang-scheduling isn't empty, input is passed to `.spec.minMember` in PodGroup.
+	// Note that, when using this field,
+	// you need to make sure the application supports resizing (e.g., Elastic Horovod).
 	//
 	// If not set, it defaults to the number of workers.
 	// +optional
@@ -65,25 +65,30 @@ type SchedulingPolicy struct {
 
 	// Queue defines the queue name to allocate resource for PodGroup.
 	// If the gang-scheduling is set to the volcano,
-	// input is passed to `.spec.queue` in PodGroup for the volcano.
+	// input is passed to `.spec.queue` in PodGroup for the volcano,
+	// and if it is set to the scheduler-plugins,
+	// input isn't passed to PodGroup.
 	// +optional
 	Queue string `json:"queue,omitempty"`
 
 	// MinResources defines the minimal resources of members to run the PodGroup.
-	// If the gang-scheduling is set to the volcano,
-	// input is passed to `.spec.mimResources` in PodGroup for volcano.
+	// If the gang-scheduling isn't empty,
+	// input is passed to `.spec.minResources` in PodGroup for scheduler-plugins.
 	// +optional
 	MinResources *v1.ResourceList `json:"minResources,omitempty"`
 
 	// PriorityClass defines the PodGroup's PriorityClass.
 	// If the gang-scheduling is set to the volcano,
-	// input is passed to `.spec.priorityClassName` in PodGroup for volcano.
+	// input is passed to `.spec.priorityClassName` in PodGroup for volcano,
+	// and if it is set to the scheduler-plugins,
+	// input isn't passed to PodGroup for scheduler-plugins.
 	// +optional
 	PriorityClass string `json:"priorityClass,omitempty"`
 
 	// SchedulerTimeoutSeconds defines the maximal time of members to wait before run the PodGroup.
-	// Currently, this parameter isn't respected in any case.
-	// TODO (tenzen-y): Modify comments when supporting scheduler-plugins.
+	// If the gang-scheduling is set to the scheduler-plugins,
+	// input is passed to `.spec.scheduleTimeoutSeconds` in PodGroup for the scheduler-plugins,
+	// and if it is set to the volcano, input isn't passed to PodGroup.
 	// +optional
 	ScheduleTimeoutSeconds *int32 `json:"scheduleTimeoutSeconds,omitempty"`
 }
@@ -128,6 +133,19 @@ type RunPolicy struct {
 	Suspend *bool `json:"suspend,omitempty"`
 }
 
+type LauncherCreationPolicy string
+
+const (
+	// LauncherCreationPolicyAtStartup is default behavior
+	// when Launcher is started in parallel with workers
+	LauncherCreationPolicyAtStartup LauncherCreationPolicy = "AtStartup"
+
+	// LauncherCreationPolicyWaitForWorkersReady makes Launcher reation
+	// postponed until all workers are in ready state so that the Launcher
+	// does not fail trying to connect to worker.
+	LauncherCreationPolicyWaitForWorkersReady LauncherCreationPolicy = "WaitForWorkersReady"
+)
+
 type MPIJobSpec struct {
 
 	// Specifies the number of slots per worker used in hostfile.
@@ -136,21 +154,32 @@ type MPIJobSpec struct {
 	// +kubebuilder:default:=1
 	SlotsPerWorker *int32 `json:"slotsPerWorker,omitempty"`
 
+	// RunLauncherAsWorker indicates whether to run worker process in launcher
+	// Defaults to false.
+	// +optional
+	// +kubebuilder:default:=false
+	RunLauncherAsWorker *bool `json:"runLauncherAsWorker,omitempty"`
+
 	// RunPolicy encapsulates various runtime policies of the job.
 	RunPolicy RunPolicy `json:"runPolicy,omitempty"`
 
 	// MPIReplicaSpecs contains maps from `MPIReplicaType` to `ReplicaSpec` that
 	// specify the MPI replicas to run.
-	MPIReplicaSpecs map[MPIReplicaType]*common.ReplicaSpec `json:"mpiReplicaSpecs"`
+	MPIReplicaSpecs map[MPIReplicaType]*ReplicaSpec `json:"mpiReplicaSpecs"`
 
 	// SSHAuthMountPath is the directory where SSH keys are mounted.
 	// Defaults to "/root/.ssh".
 	// +kubebuilder:default:="/root/.ssh"
 	SSHAuthMountPath string `json:"sshAuthMountPath,omitempty"`
 
+	// launcherCreationPolicy if WaitForWorkersReady, the launcher is created only after all workers are in Ready state. Defaults to AtStartup.
+	// +kubebuilder:validation:Enum:AtStartup;WaitForWorkersReady
+	// +kubebuilder:default:=AtStartup
+	LauncherCreationPolicy LauncherCreationPolicy `json:"launcherCreationPolicy,omitempty"`
+
 	// MPIImplementation is the MPI implementation.
-	// Options are "OpenMPI" (default) and "Intel".
-	// +kubebuilder:validation:Enum:=OpenMPI;Intel
+	// Options are "OpenMPI" (default), "Intel" and "MPICH".
+	// +kubebuilder:validation:Enum:=OpenMPI;Intel;MPICH
 	// +kubebuilder:default:=OpenMPI
 	MPIImplementation MPIImplementation `json:"mpiImplementation,omitempty"`
 }
@@ -171,6 +200,7 @@ type MPIImplementation string
 const (
 	MPIImplementationOpenMPI MPIImplementation = "OpenMPI"
 	MPIImplementationIntel   MPIImplementation = "Intel"
+	MPIImplementationMPICH   MPIImplementation = "MPICH"
 )
 
 // JobStatus represents the current observed state of the training Job.
@@ -288,4 +318,46 @@ const (
 	// reached phase failed with no restarting.
 	// The training has failed its execution.
 	JobFailed JobConditionType = "Failed"
+)
+
+// Following is merge from common.v1
+// reference https://github.com/kubeflow/training-operator/blob/master/pkg/apis/kubeflow.org/v1/common_types.go
+
+// +k8s:openapi-gen=true
+// +k8s:deepcopy-gen=true
+// ReplicaSpec is a description of the replica
+type ReplicaSpec struct {
+	// Replicas is the desired number of replicas of the given template.
+	// If unspecified, defaults to 1.
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Template is the object that describes the pod that
+	// will be created for this replica. RestartPolicy in PodTemplateSpec
+	// will be overide by RestartPolicy in ReplicaSpec
+	Template v1.PodTemplateSpec `json:"template,omitempty"`
+
+	// Restart policy for all replicas within the job.
+	// One of Always, OnFailure, Never and ExitCode.
+	// Default to Never.
+	RestartPolicy RestartPolicy `json:"restartPolicy,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+// RestartPolicy describes how the replicas should be restarted.
+// Only one of the following restart policies may be specified.
+// If none of the following policies is specified, the default one
+// is RestartPolicyAlways.
+type RestartPolicy string
+
+const (
+	RestartPolicyAlways    RestartPolicy = "Always"
+	RestartPolicyOnFailure RestartPolicy = "OnFailure"
+	RestartPolicyNever     RestartPolicy = "Never"
+
+	// RestartPolicyExitCode policy means that user should add exit code by themselves,
+	// The job operator will check these exit codes to
+	// determine the behavior when an error occurs:
+	// - 1-127: permanent error, do not restart.
+	// - 128-255: retryable error, will restart the pod.
+	RestartPolicyExitCode RestartPolicy = "ExitCode"
 )

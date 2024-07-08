@@ -15,8 +15,8 @@
 package v2beta1
 
 import (
-	common "github.com/kubeflow/common/pkg/apis/common/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -24,7 +24,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 }
 
 // setDefaultsTypeLauncher sets the default value to launcher.
-func setDefaultsTypeLauncher(spec *common.ReplicaSpec) {
+func setDefaultsTypeLauncher(spec *ReplicaSpec) {
 	if spec == nil {
 		return
 	}
@@ -32,12 +32,12 @@ func setDefaultsTypeLauncher(spec *common.ReplicaSpec) {
 		spec.RestartPolicy = DefaultLauncherRestartPolicy
 	}
 	if spec.Replicas == nil {
-		spec.Replicas = newInt32(1)
+		spec.Replicas = ptr.To[int32](1)
 	}
 }
 
 // setDefaultsTypeWorker sets the default value to worker.
-func setDefaultsTypeWorker(spec *common.ReplicaSpec) {
+func setDefaultsTypeWorker(spec *ReplicaSpec) {
 	if spec == nil {
 		return
 	}
@@ -45,13 +45,13 @@ func setDefaultsTypeWorker(spec *common.ReplicaSpec) {
 		spec.RestartPolicy = DefaultRestartPolicy
 	}
 	if spec.Replicas == nil {
-		spec.Replicas = newInt32(0)
+		spec.Replicas = ptr.To[int32](0)
 	}
 }
 
 func setDefaultsRunPolicy(policy *RunPolicy) {
 	if policy.CleanPodPolicy == nil {
-		policy.CleanPodPolicy = newCleanPodPolicy(CleanPodPolicyNone)
+		policy.CleanPodPolicy = ptr.To(CleanPodPolicyNone)
 	}
 	// The remaining fields are passed as-is to the k8s Job API, which does its
 	// own defaulting.
@@ -60,7 +60,7 @@ func setDefaultsRunPolicy(policy *RunPolicy) {
 func SetDefaults_MPIJob(mpiJob *MPIJob) {
 	setDefaultsRunPolicy(&mpiJob.Spec.RunPolicy)
 	if mpiJob.Spec.SlotsPerWorker == nil {
-		mpiJob.Spec.SlotsPerWorker = newInt32(1)
+		mpiJob.Spec.SlotsPerWorker = ptr.To[int32](1)
 	}
 	if mpiJob.Spec.SSHAuthMountPath == "" {
 		mpiJob.Spec.SSHAuthMountPath = "/root/.ssh"
@@ -68,18 +68,13 @@ func SetDefaults_MPIJob(mpiJob *MPIJob) {
 	if mpiJob.Spec.MPIImplementation == "" {
 		mpiJob.Spec.MPIImplementation = MPIImplementationOpenMPI
 	}
+	if mpiJob.Spec.LauncherCreationPolicy == "" {
+		mpiJob.Spec.LauncherCreationPolicy = LauncherCreationPolicyAtStartup
+	}
 
 	// set default to Launcher
 	setDefaultsTypeLauncher(mpiJob.Spec.MPIReplicaSpecs[MPIReplicaTypeLauncher])
 
 	// set default to Worker
 	setDefaultsTypeWorker(mpiJob.Spec.MPIReplicaSpecs[MPIReplicaTypeWorker])
-}
-
-func newInt32(v int32) *int32 {
-	return &v
-}
-
-func newCleanPodPolicy(policy CleanPodPolicy) *CleanPodPolicy {
-	return &policy
 }

@@ -24,7 +24,6 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -142,7 +141,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow an empty MPIReplicaSpecs", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{},
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpiv2beta1.ReplicaSpec{},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
@@ -150,7 +149,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow both an empty Launcher and Worker ReplicaSpecs", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpiv2beta1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: nil,
 				mpiv2beta1.MPIReplicaTypeWorker:   nil,
 			},
@@ -161,7 +160,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow an empty Launcher ReplicaSpec", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpiv2beta1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: nil,
 				mpiv2beta1.MPIReplicaTypeWorker: {
 					Template: corev1.PodTemplateSpec{
@@ -176,7 +175,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow an empty Worker ReplicaSpec", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpiv2beta1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{},
@@ -191,7 +190,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	It("Should not allow an empty Launcher and Worker PodSpecs", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpiv2beta1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: {
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{},

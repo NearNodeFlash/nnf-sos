@@ -29,7 +29,6 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	"github.com/go-logr/logr"
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	"go.openly.dev/pointy"
 	batchv1 "k8s.io/api/batch/v1"
@@ -97,8 +96,8 @@ func (c *nnfUserContainer) createMPIJob() error {
 	workerSpec := &worker.Template.Spec
 
 	// Keep failed pods around for log inspection
-	launcher.RestartPolicy = mpicommonv1.RestartPolicyNever
-	worker.RestartPolicy = mpicommonv1.RestartPolicyNever
+	launcher.RestartPolicy = mpiv2beta1.RestartPolicyNever
+	worker.RestartPolicy = mpiv2beta1.RestartPolicyNever
 
 	// Add NNF node tolerations
 	c.applyTolerations(launcherSpec)
