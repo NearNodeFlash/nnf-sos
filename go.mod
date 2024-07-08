@@ -3,9 +3,9 @@ module github.com/NearNodeFlash/nnf-sos
 go 1.21
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20240626173134-0eac099802d8
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240326175906-15cfe803227d
-	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240607170045-9d0ccb5f133a
+	github.com/DataWorkflowServices/dws v0.0.1-0.20240708161847-9078b37a8c3e
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240708161914-7fe5e6ce87a2
+	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240708183336-34d1295977f5
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.1
