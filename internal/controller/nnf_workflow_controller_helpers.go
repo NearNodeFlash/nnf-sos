@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -620,7 +621,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					}
 
 				} else {
-					mgsNid = nnfStorageProfile.Data.LustreStorage.ExternalMGS
+					mgsNid = r.trimMgsAddress(nnfStorageProfile.Data.LustreStorage.ExternalMGS)
 				}
 			}
 
@@ -692,6 +693,55 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 	}
 
 	return nnfStorage, nil
+}
+
+func (r *NnfWorkflowReconciler) trimMgsAddress(mgsAddress string) string {
+	// split the mgs address by hosts (:) and multi-home (,)
+	splitMgsAddress := func(s string) [][]string {
+		components := [][]string{}
+
+		hosts := strings.Split(s, ":")
+
+		for _, host := range hosts {
+			// split by multi-home (comma separated)
+			components = append(components, strings.Split(host, ","))
+		}
+
+		return components
+	}
+
+	hosts := splitMgsAddress(mgsAddress)
+
+	m := regexp.MustCompile("^([A-Za-z0-9.]+)@[A-Za-z]+")
+	removeTrailingZero := func(s string) string {
+		indexString := m.ReplaceAllString(s, "")
+
+		index, err := strconv.Atoi(indexString)
+		if err != nil {
+			return s
+		}
+
+		if index == 0 {
+			return m.FindString(s)
+		}
+
+		return s
+	}
+
+	// look through each host and strip off any "0" for index 0
+	for i := range hosts {
+		for j := range hosts[i] {
+			hosts[i][j] = removeTrailingZero(hosts[i][j])
+		}
+	}
+
+	// Put the host names back together with "," and ":"
+	trimmedHosts := []string{}
+	for _, host := range hosts {
+		trimmedHosts = append(trimmedHosts, strings.Join(host, ","))
+	}
+
+	return strings.Join(trimmedHosts, ":")
 }
 
 func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool string) (corev1.ObjectReference, string, error) {
