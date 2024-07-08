@@ -787,12 +787,15 @@ func (p *Port) bind() error {
 							break
 						}
 
-						if s.dev == nil {
+						if s == nil {
 							panic(fmt.Sprintf("Port has no switch interface: Initiator Port %d, Logical Port %d, PDFID: %#04x", initiatorPort.config.Port, logicalPortId, endpoint.pdfid))
 						}
 
 						log.Info("Binding Port")
-						if err := s.dev.Bind(uint8(initiatorPort.config.Port), uint8(logicalPortId), endpoint.pdfid); err != nil {
+						configPort := uint8(initiatorPort.config.Port)
+						endpPfid := endpoint.pdfid
+						bindfunc := s.dev.Bind
+						if err := bindfunc(configPort, uint8(logicalPortId), endpPfid); err != nil {
 							log.Error(err, "Bind Failed")
 						}
 
