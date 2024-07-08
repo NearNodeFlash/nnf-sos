@@ -381,6 +381,7 @@ func (s *Switch) identify() error {
 		if os.IsNotExist(err) {
 			continue
 		} else if err != nil {
+			s.path = "" // Test this; it's easier than testing s.dev.
 			log.Error(err, "Error opening path")
 			return err
 		}
@@ -787,15 +788,13 @@ func (p *Port) bind() error {
 							break
 						}
 
-						if s == nil {
-							panic(fmt.Sprintf("Port has no switch interface: Initiator Port %d, Logical Port %d, PDFID: %#04x", initiatorPort.config.Port, logicalPortId, endpoint.pdfid))
+						if s.path == "" {
+							// See s.identify()
+							panic(fmt.Sprintf("Unable to identify switch for port: Initiator Port %d, Logical Port %d, PDFID: %#04x", initiatorPort.config.Port, logicalPortId, endpoint.pdfid))
 						}
 
 						log.Info("Binding Port")
-						configPort := uint8(initiatorPort.config.Port)
-						endpPfid := endpoint.pdfid
-						bindfunc := s.dev.Bind
-						if err := bindfunc(configPort, uint8(logicalPortId), endpPfid); err != nil {
+						if err := s.dev.Bind(uint8(initiatorPort.config.Port), uint8(logicalPortId), endpoint.pdfid); err != nil {
 							log.Error(err, "Bind Failed")
 						}
 
