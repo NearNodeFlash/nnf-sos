@@ -171,7 +171,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
-	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, index)
+	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
