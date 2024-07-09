@@ -621,7 +621,17 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					}
 
 				} else {
-					mgsNid = trimMgsAddress(nnfStorageProfile.Data.LustreStorage.ExternalMGS)
+					// Take an MGS address as given in the NnfStorageProfile ExternalMgs field and remove the "0" for any
+					// addresses using LNet 0. This is needed because Lustre trims the "0" off internally, so the MGS address
+					// given in the "mount" command output is trimmed. We need the "mount" command output to match our view of
+					// the MGS address so we can verify if the file system is mounted correctly.
+					// Examples:
+					// 25@kfi0:26@kfi0 -> 25@kfi:26@kfi
+					// 25@o2ib10 -> 25@o2ib10
+					// 10.1.1.113@tcp0 -> 10.1.1.113@tcp
+					// 25@kfi0,25@kfi1:26@kfi0,26@kfi1 -> 25@kfi,25@kfi1:26@kfi,26@kfi1
+					re := regexp.MustCompile("(@[A-Za-z0-9]+[A-Za-z])0")
+					mgsNid = re.ReplaceAllString(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "$1")
 				}
 			}
 
@@ -705,54 +715,6 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 // 25@kfi10 -> 25@kfi10
 // 10.1.1.113@tcp0 -> 10.1.1.113@tcp
 // 25@kfi0,25@kfi1:26@kfi0,26@kfi1 -> 25@kfi,25@kfi1:26@kfi,26@kfi1
-func trimMgsAddress(mgsAddress string) string {
-	// split the mgs address by hosts (:) and multi-home (,)
-	splitMgsAddress := func(s string) [][]string {
-		components := [][]string{}
-
-		hosts := strings.Split(s, ":")
-
-		for _, host := range hosts {
-			// split by multi-home (comma separated)
-			components = append(components, strings.Split(host, ","))
-		}
-
-		return components
-	}
-
-	hosts := splitMgsAddress(mgsAddress)
-
-	m := regexp.MustCompile("^([A-Za-z0-9.]+)@[A-Za-z]+")
-	removeTrailingZero := func(s string) string {
-		indexString := m.ReplaceAllString(s, "")
-
-		index, err := strconv.Atoi(indexString)
-		if err != nil {
-			return s
-		}
-
-		if index == 0 {
-			return m.FindString(s)
-		}
-
-		return s
-	}
-
-	// look through each host and strip off any "0" for index 0
-	for i := range hosts {
-		for j := range hosts[i] {
-			hosts[i][j] = removeTrailingZero(hosts[i][j])
-		}
-	}
-
-	// Put the host names back together with "," and ":"
-	trimmedHosts := []string{}
-	for _, host := range hosts {
-		trimmedHosts = append(trimmedHosts, strings.Join(host, ","))
-	}
-
-	return strings.Join(trimmedHosts, ":")
-}
 
 func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool string) (corev1.ObjectReference, string, error) {
 	persistentStorageList := &dwsv1alpha2.PersistentStorageInstanceList{}
