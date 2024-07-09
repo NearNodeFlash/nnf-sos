@@ -3,22 +3,22 @@ module github.com/NearNodeFlash/nnf-sos
 go 1.21
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20240708161847-9078b37a8c3e
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240708161914-7fe5e6ce87a2
+	github.com/DataWorkflowServices/dws v0.0.1-0.20240709160056-4a27e5a8dc76
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240709160956-40dcbac0aadf
 	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240708183336-34d1295977f5
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.3.1
 	github.com/kubeflow/common v0.4.6
 	github.com/kubeflow/mpi-operator v0.3.1-0.20230228224311-5946ef415759
-	github.com/onsi/ginkgo/v2 v2.11.0
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/ginkgo/v2 v2.17.1
+	github.com/onsi/gomega v1.32.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/takama/daemon v1.0.0
 	go.openly.dev/pointy v1.3.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.6.0
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
@@ -51,7 +51,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v23.1.21+incompatible // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20221103000818-d260c55eee4c // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -79,16 +79,16 @@ require (
 	go.chromium.org/luci v0.0.0-20230227223707-c4460eb434d8 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
+	golang.org/x/term v0.16.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.10.0 // indirect
+	golang.org/x/tools v0.17.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8-0.20221117013220-504804fb50de // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
