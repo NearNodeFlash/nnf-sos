@@ -621,7 +621,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					}
 
 				} else {
-					// Take an MGS address as given in the NnfStorageProfile ExternalMgs field and remove the "0" for any
+					// Take the MGS address as given in the NnfStorageProfile ExternalMgs field and remove the "0" for any
 					// addresses using LNet 0. This is needed because Lustre trims the "0" off internally, so the MGS address
 					// given in the "mount" command output is trimmed. We need the "mount" command output to match our view of
 					// the MGS address so we can verify if the file system is mounted correctly.
@@ -704,17 +704,6 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 	return nnfStorage, nil
 }
-
-// trimMgsAddress takes an MGS address as given in the NnfStorageProfile ExternalMgs field
-// and removes the "0" for any addresses using LNet 0. This is needed because Lustre trims the
-// "0" off internally, so the MGS address given in the "mount" command output is trimmed. We need
-// the "mount" command output to match our view of the MGS address so we can verify if the file system
-// is mounted correctly.
-// Examples:
-// 25@kfi0:26@kfi0 -> 25@kfi:26@kfi
-// 25@kfi10 -> 25@kfi10
-// 10.1.1.113@tcp0 -> 10.1.1.113@tcp
-// 25@kfi0,25@kfi1:26@kfi0,26@kfi1 -> 25@kfi,25@kfi1:26@kfi,26@kfi1
 
 func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool string) (corev1.ObjectReference, string, error) {
 	persistentStorageList := &dwsv1alpha2.PersistentStorageInstanceList{}
