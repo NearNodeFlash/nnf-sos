@@ -1,7 +1,11 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240709160056-4a27e5a8dc76 h1:zmkxPaKpObtIudHxDGnvQbSof7wbYYDf8CA7YXsjCv0=
+github.com/DataWorkflowServices/dws v0.0.1-0.20240709160056-4a27e5a8dc76/go.mod h1:6MrEEHISskyooSKcKU6R3mFqH6Yh6KzWgajhcw2s+nM=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240709160956-40dcbac0aadf h1:ArBI1LR+BBZ9lF+Aohv49RhTpmRqIXLz4L/h45qQT4k=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240709160956-40dcbac0aadf/go.mod h1:N5X1obpl0mBI0VoCJdQhv7cFXOC6g3VlXj712qWj0JE=
 github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240607170045-9d0ccb5f133a h1:kPZLD7j4X0Cs+dNlhNRiY/1CrWugbEdWgY+orX2vYMw=
 github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240607170045-9d0ccb5f133a/go.mod h1:oxdwMqfttOF9dabJhqrWlirCnMk8/8eyLMwl+hducjk=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
