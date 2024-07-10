@@ -141,7 +141,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, nil
 		}
 
-		for i := range nodeBlockStorage.Status.Allocations {
+		for i := range nodeBlockStorage.Spec.Allocations {
 			// Release physical storage
 			result, err := r.deleteStorage(nodeBlockStorage, i)
 			if err != nil {
@@ -222,11 +222,10 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 
 	allocationStatus := &nodeBlockStorage.Status.Allocations[index]
 
-	storagePoolID := fmt.Sprintf("%s-%d", nodeBlockStorage.Name, index)
+	storagePoolID := getStoragePoolID(nodeBlockStorage, index)
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeBlockStorage.Spec.Allocations[index].Capacity)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("could not create storage pool").WithError(err).WithMajor()
-
 	}
 
 	vc := &sf.VolumeCollectionVolumeCollection{}
@@ -438,10 +437,10 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 
 	ss := nnf.NewDefaultStorageService()
 
-	allocationStatus := &nodeBlockStorage.Status.Allocations[index]
-	log.Info("Deleting storage pool", "Id", allocationStatus.StoragePoolId)
+	storagePoolID := getStoragePoolID(nodeBlockStorage, index)
+	log.Info("Deleting storage pool", "Id", storagePoolID)
 
-	err := r.deleteStoragePool(ss, allocationStatus.StoragePoolId)
+	err := r.deleteStoragePool(ss, storagePoolID)
 	if err != nil {
 		ecErr, ok := err.(*ec.ControllerError)
 
@@ -456,6 +455,10 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 	}
 
 	return nil, nil
+}
+
+func getStoragePoolID(nodeBlockStorage *nnfv1alpha1.NnfNodeBlockStorage, index int) string {
+	return fmt.Sprintf("%s-%d", nodeBlockStorage.Name, index)
 }
 
 func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceApi, id string, capacity int64) (*sf.StoragePoolV150StoragePool, error) {
