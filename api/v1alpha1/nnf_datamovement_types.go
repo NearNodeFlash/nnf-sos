@@ -194,7 +194,7 @@ const (
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-//+kubebuilder:printcolumn:name="ELAPSED",type="date",JSONPath=".status.commandStatus.elapsedTime"
+//+kubebuilder:printcolumn:name="ELAPSED",type="string",JSONPath=".status.commandStatus.elapsedTime"
 //+kubebuilder:printcolumn:name="PROGRESS %",type="integer",JSONPath=".status.commandStatus.elapsedTime"
 
 // NnfDataMovement is the Schema for the nnfdatamovements API
