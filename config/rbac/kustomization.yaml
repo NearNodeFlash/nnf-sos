@@ -15,6 +15,7 @@ resources:
 - fencing_agent_role_binding.yaml
 - leader_election_role.yaml
 - leader_election_role_binding.yaml
+- workload_manager_nnf_role.yaml
 # Comment the following 4 lines if you want to disable
 # the auth proxy (https://github.com/brancz/kube-rbac-proxy)
 # which protects your /metrics endpoint.

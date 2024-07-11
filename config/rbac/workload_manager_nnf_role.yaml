@@ -1,0 +1,131 @@
+# Permissions for a WLM (workload manager) to interact with DWS and NNF resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: workload-manager
+rules:
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - clientmounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - clientmounts/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - computes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - directivebreakdowns
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - directivebreakdowns/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - persistentstorageinstances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - persistentstorageinstances/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - servers
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - servers/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - storages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - storages/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - systemconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - systemconfigurations/status
+  verbs:
+  - get
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - workflows
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+
+# Add some NNF pieces:
+
+- apiGroups:
+    - nnf.cray.hpe.com
+  resources:
+    - nnfdatamovements
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - nnf.cray.hpe.com
+  resources:
+    - nnfdatamovements/status
+  verbs:
+    - get
