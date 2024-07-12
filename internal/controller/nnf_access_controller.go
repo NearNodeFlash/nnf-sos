@@ -824,7 +824,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		}
 
 		if nnfNodeStorage.Status.Error != nil {
-			return false, nnfNodeStorage.Status.Error
+			return false, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
 		}
 	}
 
@@ -973,15 +973,16 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
 func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string) (bool, error) {
-	clientMount := &dwsv1alpha2.ClientMount{}
+	clientMounts := []dwsv1alpha2.ClientMount{}
 
 	for _, clientName := range clientList {
-		namespacedName := types.NamespacedName{
-			Name:      clientMountName(access),
-			Namespace: clientName,
+		clientMount := &dwsv1alpha2.ClientMount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clientMountName(access),
+				Namespace: clientName,
+			},
 		}
-
-		err := r.Get(ctx, namespacedName, clientMount)
+		err := r.Get(ctx, client.ObjectKeyFromObject(clientMount), clientMount)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return false, nil
@@ -990,12 +991,20 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			return false, err
 		}
 
+		clientMounts = append(clientMounts, *clientMount)
+	}
+
+	// Check the clientmounts for any errors first
+	for _, clientMount := range clientMounts {
+		if clientMount.Status.Error != nil {
+			return false, dwsv1alpha2.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
+		}
+	}
+
+	// Check whether the clientmounts have finished mounting/unmounting
+	for _, clientMount := range clientMounts {
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
-		}
-
-		if clientMount.Status.Error != nil {
-			return false, clientMount.Status.Error
 		}
 
 		for _, mount := range clientMount.Status.Mounts {
