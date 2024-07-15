@@ -170,7 +170,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Name:   name,
 				FsType: fsType,
 				// DWDirective: workflow.Spec.DWDirectives[0],
-				DWDirective: "#DW persistentdw name=" + name,
+				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
 				State:       dwsv1alpha2.PSIStateActive,
 			},
 		}

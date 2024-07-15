@@ -46,7 +46,7 @@ spec:
       - key: "^capacity$"
         type: "string"
         pattern: "^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
-        isRequired: true
+        isRequired: false
         isValueRequired: true
       - key: "^name$"
         type: "string"
