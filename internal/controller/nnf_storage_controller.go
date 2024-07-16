@@ -398,6 +398,8 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 // Get the status from all the child NnfNodeBlockStorage resources and use them to build the status
 // for the NnfStorage.
 func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Context, nnfStorage *nnfv1alpha1.NnfStorage, allocationSetIndex int) (*ctrl.Result, error) {
+	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: nnfStorage.Name, Namespace: nnfStorage.Namespace})
+
 	allocationSet := &nnfStorage.Status.AllocationSets[allocationSetIndex]
 	allocationSet.AllocationCount = 0
 
@@ -410,12 +412,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	}
 
 	if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
-		return &ctrl.Result{Requeue: true}, nil
-	}
-
-	// Ensure that we found all the NnfNodeStorage resources we were expecting
-	if len(nnfNodeBlockStorageList.Items) != len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes) {
-		return &ctrl.Result{}, nil
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not list NnfNodeBlockStorages").WithError(err)
 	}
 
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
@@ -424,14 +421,28 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 				allocationSet.AllocationCount++
 			}
 		}
+	}
 
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
 		if nnfNodeBlockStorage.Status.Error != nil {
-			return &ctrl.Result{}, nnfNodeBlockStorage.Status.Error
+			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeBlockStorage.GetNamespace()).WithError(nnfNodeBlockStorage.Status.Error)
 		}
+	}
 
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
 		if nnfNodeBlockStorage.Status.Ready == false {
 			return &ctrl.Result{}, nil
 		}
+	}
+
+	// Ensure that we found all the NnfNodeBlockStorage resources we were expecting. This can be expected
+	// transiently as it takes time for the client cache to be updated. Log a message in case the count
+	// never reaches the expected value.
+	if len(nnfNodeBlockStorageList.Items) != len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes) {
+		if nnfStorage.GetDeletionTimestamp().IsZero() {
+			log.Info("unexpected number of NnfNodeBlockStorages", "found", len(nnfNodeBlockStorageList.Items), "expected", len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes))
+		}
+		return &ctrl.Result{}, nil
 	}
 
 	return nil, nil
@@ -560,22 +571,28 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	}
 
 	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
-		return &ctrl.Result{Requeue: true}, nil
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not list NnfNodeStorages").WithError(err)
 	}
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Status.Error != nil {
-			return &ctrl.Result{}, nnfNodeStorage.Status.Error
+			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
 		}
+	}
 
+	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if nnfNodeStorage.Status.Ready == false {
 			return &ctrl.Result{}, nil
 		}
 	}
 
-	// Ensure that we found all the NnfNodeStorage resources we were expecting
+	// Ensure that we found all the NnfNodeStorage resources we were expecting. This can be expected
+	// transiently as it takes time for the client cache to be updated. Log a message in case the count
+	// never reaches the expected value.
 	if len(nnfNodeStorageList.Items) != len(storage.Spec.AllocationSets[allocationSetIndex].Nodes) {
-		log.Info("Bad count", "found", len(nnfNodeStorageList.Items), "expected", len(storage.Spec.AllocationSets[allocationSetIndex].Nodes))
+		if storage.GetDeletionTimestamp().IsZero() {
+			log.Info("unexpected number of NnfNodeStorages", "found", len(nnfNodeStorageList.Items), "expected", len(storage.Spec.AllocationSets[allocationSetIndex].Nodes))
+		}
 		return &ctrl.Result{}, nil
 	}
 
@@ -704,7 +721,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	if clientMount.Status.Error != nil {
-		nnfStorage.Status.SetResourceError(clientMount.Status.Error)
+		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 	}
 
 	if len(clientMount.Status.Mounts) == 0 {

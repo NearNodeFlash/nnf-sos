@@ -313,8 +313,8 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 edit-image: VERSION ?= $(shell cat .version)
 edit-image: .version
-	$(KUSTOMIZE_IMAGE_TAG) config/begin $(OVERLAY) $(IMAGE_TAG_BASE) $(VERSION)
-	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples $(OVERLAY_EXAMPLES) $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin $(OVERLAY) $(IMAGE_TAG_BASE) $(VERSION) $(VERSION)
+	$(KUSTOMIZE_IMAGE_TAG) config/begin-examples $(OVERLAY_EXAMPLES) $(NNFMFU_TAG_BASE) $(NNFMFU_VERSION) $(VERSION)
 
 deploy: kustomize edit-image ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	./deploy.sh deploy $(KUSTOMIZE) config/begin config/begin-examples

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -381,6 +381,7 @@ func (s *Switch) identify() error {
 		if os.IsNotExist(err) {
 			continue
 		} else if err != nil {
+			s.path = "" // Test this; it's easier than testing s.dev.
 			log.Error(err, "Error opening path")
 			return err
 		}
@@ -785,6 +786,11 @@ func (p *Port) bind() error {
 							}
 
 							break
+						}
+
+						if s.path == "" {
+							// See s.identify()
+							panic(fmt.Sprintf("Unable to identify switch for port: Initiator Port %d, Logical Port %d, PDFID: %#04x", initiatorPort.config.Port, logicalPortId, endpoint.pdfid))
 						}
 
 						log.Info("Binding Port")

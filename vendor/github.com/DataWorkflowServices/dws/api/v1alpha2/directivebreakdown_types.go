@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -181,6 +181,9 @@ type DirectiveBreakdownStatus struct {
 
 	// Ready indicates whether AllocationSets have been generated (true) or not (false)
 	Ready bool `json:"ready"`
+
+	// RequiredDeamons tells the WLM about any driver-specific daemons it must enable for the job; it is assumed that the WLM knows about the driver-specific daemons and that if the users are specifying these then the WLM knows how to start them
+	RequiredDaemons []string `json:"requiredDaemons,omitempty"`
 
 	// Error information
 	ResourceError `json:",inline"`

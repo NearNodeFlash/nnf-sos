@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -29,14 +29,15 @@ import (
 // DWDirectiveRuleDef defines the DWDirective parser rules
 // +kubebuilder:object:generate=true
 type DWDirectiveRuleDef struct {
-	Key             string `json:"key"`
-	Type            string `json:"type"`
-	Pattern         string `json:"pattern,omitempty"`
-	Min             int    `json:"min,omitempty"`
-	Max             int    `json:"max,omitempty"`
-	IsRequired      bool   `json:"isRequired,omitempty"`
-	IsValueRequired bool   `json:"isValueRequired,omitempty"`
-	UniqueWithin    string `json:"uniqueWithin,omitempty"`
+	Key             string   `json:"key"`
+	Type            string   `json:"type"`
+	Pattern         string   `json:"pattern,omitempty"`
+	Patterns        []string `json:"patterns,omitempty"`
+	Min             int      `json:"min,omitempty"`
+	Max             int      `json:"max,omitempty"`
+	IsRequired      bool     `json:"isRequired,omitempty"`
+	IsValueRequired bool     `json:"isValueRequired,omitempty"`
+	UniqueWithin    string   `json:"uniqueWithin,omitempty"`
 }
 
 // DWDirectiveRuleSpec defines the desired state of DWDirective
@@ -169,6 +170,35 @@ func ValidateArgs(spec DWDirectiveRuleSpec, args map[string]string, uniqueMap ma
 				if !re.MatchString(v) {
 					return fmt.Errorf("argument '%s' invalid string '%s'", k, v)
 				}
+			}
+		case "list-of-string":
+			words := strings.Split(v, ",")
+			if len(rule.Patterns) > 0 {
+				wordsMatched := make(map[string]bool)
+				for _, word := range words {
+					for idx := range rule.Patterns {
+						re, err := regexp.Compile(rule.Patterns[idx])
+						if err != nil {
+							return fmt.Errorf("invalid regular expression '%s'", rule.Patterns[idx])
+						}
+
+						if re.MatchString(word) {
+							wordsMatched[word] = true
+							break
+						}
+					}
+					if !wordsMatched[word] {
+						return fmt.Errorf("argument '%s' invalid string '%s' in list '%s'", k, word, v)
+					}
+				}
+			}
+			// All of the words in the list are valid, but were any words repeated?
+			wordMap := make(map[string]bool)
+			for _, word := range words {
+				if _, present := wordMap[word]; present {
+					return fmt.Errorf("argument '%s' word '%s' repeated in list '%s'", k, word, v)
+				}
+				wordMap[word] = true
 			}
 		default:
 			return fmt.Errorf("unsupported rule type '%s'", rule.Type)

@@ -501,6 +501,14 @@ spec:
                 description: Ready indicates whether AllocationSets have been generated
                   (true) or not (false)
                 type: boolean
+              requiredDaemons:
+                description: RequiredDeamons tells the WLM about any driver-specific
+                  daemons it must enable for the job; it is assumed that the WLM knows
+                  about the driver-specific daemons and that if the users are specifying
+                  these then the WLM knows how to start them
+                items:
+                  type: string
+                type: array
               storage:
                 description: Storage is the storage breakdown for the directive
                 properties:
