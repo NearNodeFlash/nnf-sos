@@ -166,7 +166,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	} else {
 		if _, exists := argsMap["capacity"]; !exists {
-			return ctrl.Result{}, dwsv1alpha2.NewResourceError("").WithUserMessage("creating persistent Lustre requires 'capacity' argument").WithFatal().WithUser()
+			return ctrl.Result{}, dwsv1alpha2.NewResourceError("").WithUserMessage("creating persistent storage requires 'capacity' argument").WithFatal().WithUser()
 		}
 	}
 

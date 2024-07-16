@@ -457,9 +457,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
 	filesystem := argsMap["type"]
-	capacity := argsMap["capacity"]
+	capacity, capacityExists := argsMap["capacity"]
 
 	breakdownCapacity, _ := getCapacityInBytes(capacity)
+	if breakdownCapacity == 0 && capacityExists {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("'capacity' must be a non-zero value").WithFatal()
+	}
 
 	// allocationSets represents the result we need to produce.
 	// We build it then check to see if the directiveBreakdown's
