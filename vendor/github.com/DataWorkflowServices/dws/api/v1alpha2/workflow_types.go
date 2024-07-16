@@ -259,6 +259,8 @@ type WorkflowStatus struct {
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="Desired state",priority=1
 //+kubebuilder:printcolumn:name="DESIREDSTATECHANGE",type="date",JSONPath=".status.desiredStateChange",description="Time of most recent desiredState change",priority=1
 //+kubebuilder:printcolumn:name="ELAPSEDTIMELASTSTATE",type="string",JSONPath=".status.elapsedTimeLastState",description="Duration of last state change",priority=1
+//+kubebuilder:printcolumn:name="UID",type="string",JSONPath=".spec.userID",description="UID",priority=1
+//+kubebuilder:printcolumn:name="GID",type="string",JSONPath=".spec.groupID",description="GID",priority=1
 
 // Workflow is the Schema for the workflows API
 type Workflow struct {
