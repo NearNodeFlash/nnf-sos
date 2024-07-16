@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -58,14 +59,6 @@ const (
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished in using the resource.
 	finalizerDirectiveBreakdown = "nnf.cray.hpe.com/directiveBreakdown"
-)
-
-type breakdownPopulateResult string
-
-const ( // They should complete the sentence "populateDirectiveBreakdown ____ the directiveBreakdown  "
-	updated  breakdownPopulateResult = "updated"
-	verified breakdownPopulateResult = "verified"
-	skipped  breakdownPopulateResult = "skipped"
 )
 
 // DirectiveBreakdownReconciler reconciles a DirectiveBreakdown object
@@ -215,6 +208,8 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 			return ctrl.Result{}, err
 		}
 
+		populateRequiredDaemons(dbd, argsMap)
+
 		// Create a location constraint for the compute nodes based on what type of file system
 		// the persistent storage is using.
 		dbd.Status.Compute = &dwsv1alpha2.ComputeBreakdown{
@@ -292,6 +287,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		populateRequiredDaemons(dbd, argsMap)
 
 		// Create a location constraint for the compute nodes based on what type of file system
 		// will be created.
@@ -509,7 +505,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 				return dwsv1alpha2.NewResourceError("").WithUserMessage("standaloneMgtPoolName option can only be used with 'create_persistent' directive").WithFatal().WithUser()
 			}
 
-			lustreComponents = []lustreComponentType{lustreComponentType{dwsv1alpha2.AllocateSingleServer, mgtCapacity, "mgt", mgtKey}}
+			lustreComponents = []lustreComponentType{{dwsv1alpha2.AllocateSingleServer, mgtCapacity, "mgt", mgtKey}}
 		} else {
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha2.AllocateSingleServer, mgtCapacity, "mgt", mgtKey})
@@ -533,6 +529,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 	dbd.Status.Storage.AllocationSets = allocationSets
 	return nil
+}
+
+func populateRequiredDaemons(dbd *dwsv1alpha2.DirectiveBreakdown, argsMap map[string]string) {
+	if wordList, present := argsMap["requires"]; present {
+		dbd.Status.RequiredDaemons = strings.Split(wordList, ",")
+	}
 }
 
 func getCapacityInBytes(capacity string) (int64, error) {

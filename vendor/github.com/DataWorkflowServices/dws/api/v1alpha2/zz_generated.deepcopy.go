@@ -601,6 +601,11 @@ func (in *DirectiveBreakdownStatus) DeepCopyInto(out *DirectiveBreakdownStatus) 
 		*out = new(ComputeBreakdown)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RequiredDaemons != nil {
+		in, out := &in.RequiredDaemons, &out.RequiredDaemons
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.ResourceError.DeepCopyInto(&out.ResourceError)
 }
 

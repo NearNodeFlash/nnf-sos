@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -69,6 +69,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
 			return directiveBreakdown.Status.Ready
 		}).Should(BeTrue())
+		Expect(directiveBreakdown.Status.RequiredDaemons).Should(BeEmpty())
 
 		servers := &dwsv1alpha2.Servers{
 			ObjectMeta: metav1.ObjectMeta{
@@ -99,6 +100,33 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		Eventually(func() error {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
 		}).ShouldNot(Succeed())
+	})
+
+	It("Creates a DirectiveBreakdown with a jobdw having required daemons", func() {
+		By("Creating a DirectiveBreakdown")
+		directiveBreakdown := &dwsv1alpha2.DirectiveBreakdown{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "jobdw-test",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.DirectiveBreakdownSpec{
+				Directive: "#DW jobdw name=jobdw-xfs type=xfs requires=copy-offload capacity=1GiB",
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), directiveBreakdown)).To(Succeed())
+
+		// All other steps in DirectiveBreakdown creation are covered in an
+		// earlier spec, so this one can focus on Status.RequiredDaemons.
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
+			return directiveBreakdown.Status.Ready
+		}).Should(BeTrue())
+		Expect(directiveBreakdown.Status.RequiredDaemons).Should(ConsistOf([]string{"copy-offload"}))
+
+		By("Deleting the DirectiveBreakdown")
+		Expect(k8sClient.Delete(context.TODO(), directiveBreakdown)).To(Succeed())
 	})
 
 	It("Verifies DirectiveBreakdowns with persistent storage", func() {

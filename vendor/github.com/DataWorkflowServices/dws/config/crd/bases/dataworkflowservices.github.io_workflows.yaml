@@ -395,6 +395,16 @@ spec:
       name: ELAPSEDTIMELASTSTATE
       priority: 1
       type: string
+    - description: UID
+      jsonPath: .spec.userID
+      name: UID
+      priority: 1
+      type: string
+    - description: GID
+      jsonPath: .spec.groupID
+      name: GID
+      priority: 1
+      type: string
     name: v1alpha2
     schema:
       openAPIV3Schema:

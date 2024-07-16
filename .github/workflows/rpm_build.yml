@@ -4,10 +4,7 @@
 
 
 name: RPM Build
-on:
-  push:
-    branches:
-      - '*'
+on: push
 
 jobs:
   rpm_build:
