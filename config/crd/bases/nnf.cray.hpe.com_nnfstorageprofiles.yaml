@@ -45,6 +45,11 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
                   commandlines:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
@@ -118,6 +123,13 @@ spec:
                           minus the "vgremove".
                         type: string
                     type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
                 type: object
               lustreStorage:
                 description: LustreStorage defines the Lustre-specific configuration
@@ -133,6 +145,11 @@ spec:
                     default: 5GiB
                     description: CapacityMGT specifies the size of the MGT device.
                     pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
+                    type: string
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      OST capacity requested in the DirectiveBreakdown
                     type: string
                   combinedMgtMdt:
                     default: false
@@ -194,6 +211,13 @@ spec:
                         maximum: 10
                         minimum: 1
                         type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
                     required:
                     - colocateComputes
                     type: object
@@ -262,6 +286,13 @@ spec:
                         maximum: 10
                         minimum: 1
                         type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
                     required:
                     - colocateComputes
                     type: object
@@ -285,6 +316,13 @@ spec:
                         maximum: 10
                         minimum: 1
                         type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
                     required:
                     - colocateComputes
                     type: object
@@ -338,6 +376,13 @@ spec:
                         maximum: 10
                         minimum: 1
                         type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
                     required:
                     - colocateComputes
                     type: object
@@ -355,6 +400,11 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
                   commandlines:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
@@ -428,10 +478,22 @@ spec:
                           minus the "vgremove".
                         type: string
                     type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
                 type: object
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
                   commandlines:
                     description: CmdLines contains commands to create volumes and
                       filesystems.
@@ -505,6 +567,13 @@ spec:
                           minus the "vgremove".
                         type: string
                     type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
                 type: object
             required:
             - gfs2Storage

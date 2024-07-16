@@ -255,7 +255,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 				Namespace: corev1.NamespaceDefault,
 			},
 			Spec: dwsv1alpha2.DirectiveBreakdownSpec{
-				Directive: "#DW create_persistent name=persistent-lustre type=lustre capacity=1GiB",
+				Directive: "#DW create_persistent name=persistent-lustre type=lustre",
 			},
 		}
 

@@ -58,6 +58,10 @@ type NnfStorageProfileLustreMiscOptions struct {
 	// +kubebuilder:validation:Minimum:=1
 	// +kubebuilder:validation:Maximum:=10
 	Scale int `json:"scale,omitempty"`
+
+	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+	// labels constraint. This restricts allocations to Storage resources with these labels
+	StorageLabels []string `json:"storageLabels,omitempty"`
 }
 
 // NnfStorageProfileLustreData defines the Lustre-specific configuration
@@ -87,6 +91,10 @@ type NnfStorageProfileLustreData struct {
 	// ExclusiveMDT indicates that the MDT should not be colocated with any other target on the chosen server.
 	// +kubebuilder:default:=false
 	ExclusiveMDT bool `json:"exclusiveMdt,omitempty"`
+
+	// CapacityScalingFactor is a scaling factor for the OST capacity requested in the DirectiveBreakdown
+	// +kubebuilder:default:="1.0"
+	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 
 	// StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
 	// a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
@@ -188,18 +196,42 @@ type NnfStorageProfileLVMLvChangeCmdLines struct {
 type NnfStorageProfileGFS2Data struct {
 	// CmdLines contains commands to create volumes and filesystems.
 	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+
+	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+	// labels constraint. This restricts allocations to Storage resources with these labels
+	StorageLabels []string `json:"storageLabels,omitempty"`
+
+	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
+	// +kubebuilder:default:="1.0"
+	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
 	// CmdLines contains commands to create volumes and filesystems.
 	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+
+	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+	// labels constraint. This restricts allocations to Storage resources with these labels
+	StorageLabels []string `json:"storageLabels,omitempty"`
+
+	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
+	// +kubebuilder:default:="1.0"
+	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
 	// CmdLines contains commands to create volumes and filesystems.
 	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+
+	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+	// labels constraint. This restricts allocations to Storage resources with these labels
+	StorageLabels []string `json:"storageLabels,omitempty"`
+
+	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
+	// +kubebuilder:default:="1.0"
+	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile
