@@ -129,13 +129,15 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if containerRes != nil {
-			return containerRes.Result, nil
+			// Requeue=true doesn't always work in the delete path. Use RequeueAfter instead
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 		containerRes, err = r.releaseContainerPorts(ctx, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if containerRes != nil {
-			return containerRes.Result, nil
+			// Requeue=true doesn't always work in the delete path. Use RequeueAfter instead
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 
 		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
