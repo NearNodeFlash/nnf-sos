@@ -112,7 +112,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage.Status.Access.Protocol = dwsv1alpha2.PCIe
 
 	if len(node.Status.Servers) == 0 {
-		return ctrl.Result{}, nil // Wait until severs array has been filed in with Rabbit info
+		return ctrl.Result{}, nil // Wait until severs array has been filled in with Rabbit info
 	}
 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.
@@ -195,7 +195,6 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
 		} else {
-
 			ready, err := r.isKubernetesNodeReady(ctx, storage)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -252,7 +251,8 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Setup to watch the Kubernetes Node resource
 	nodeMapFunc := func(ctx context.Context, o client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{
-			Name: o.GetName(),
+			Name:      o.GetName(),
+			Namespace: corev1.NamespaceDefault,
 		}}}
 	}
 

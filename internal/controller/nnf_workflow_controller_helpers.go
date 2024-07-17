@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -60,7 +60,7 @@ type result struct {
 
 // When workflow stages cannot advance they return a Requeue result with a particular reason.
 func Requeue(reason string) *result {
-	return &result{Result: ctrl.Result{}, reason: reason}
+	return &result{Result: ctrl.Result{Requeue: true}, reason: reason}
 }
 
 func (r *result) complete() bool {
@@ -68,6 +68,7 @@ func (r *result) complete() bool {
 }
 
 func (r *result) after(duration time.Duration) *result {
+	r.Result.Requeue = false
 	r.Result.RequeueAfter = duration
 	return r
 }
@@ -106,9 +107,6 @@ func (r *result) info() []interface{} {
 
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha2.Workflow) error {
-
-	log := r.Log.WithValues("Workflow", types.NamespacedName{Name: wf.Name, Namespace: wf.Namespace})
-
 	var createPersistentCount, deletePersistentCount, directiveCount, containerCount int
 	for index, directive := range wf.Spec.DWDirectives {
 
@@ -145,7 +143,6 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 		}
 	}
 
-	log.Info("counts", "directive", directiveCount, "create", createPersistentCount, "delete", deletePersistentCount)
 	if directiveCount > 1 {
 		// Ensure create_persistent or destroy_persistent are singletons in the workflow
 		if createPersistentCount+deletePersistentCount > 0 {
