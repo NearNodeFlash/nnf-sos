@@ -709,6 +709,10 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 	}
 
 	// Choose an MGS at random from the list of persistent storages
+	if len(persistentStorageList.Items) == 0 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("").WithUserMessage("no MGSs found for pool: %s", pool).WithFatal().WithUser()
+	}
+
 	persistentStorage := persistentStorageList.Items[rand.Intn(len(persistentStorageList.Items))]
 
 	// Find the NnfStorage for the PersistentStorage so we can get the LNid
