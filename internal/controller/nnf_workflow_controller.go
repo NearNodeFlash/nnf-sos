@@ -691,6 +691,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				dwsv1alpha2.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha2.AddOwnerLabels(dm, workflow)
 				nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+				nnfv1alpha1.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 				addDirectiveIndexLabel(dm, index)
 
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
@@ -728,6 +729,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		dwsv1alpha2.AddWorkflowLabels(dm, workflow)
 		dwsv1alpha2.AddOwnerLabels(dm, workflow)
 		nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+		nnfv1alpha1.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 		addDirectiveIndexLabel(dm, index)
 
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
