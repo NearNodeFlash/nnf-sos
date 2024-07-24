@@ -227,6 +227,11 @@ const (
 	// DataMovementTeardownStateLabel is the label applied to Data Movement and related resources that describes
 	// the workflow state when the resource is no longer need and can be safely deleted.
 	DataMovementTeardownStateLabel = "nnf.cray.hpe.com/teardown_state"
+
+	// DataMovementInitiatorLabel is the label applied to Data Movement resources that describes the origin of
+	// data movement request. This would be from a copy_in/copy_out directive or from a compute node via the
+	// Copy Offload API (i.e. nnf-dm daemon).
+	DataMovementInitiatorLabel = "dm.cray.hpe.com/initiator"
 )
 
 func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha2.WorkflowState) {
@@ -236,6 +241,16 @@ func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha2.W
 	}
 
 	labels[DataMovementTeardownStateLabel] = string(state)
+	object.SetLabels(labels)
+}
+
+func AddDataMovementInitiatorLabel(object metav1.Object, initiator string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[DataMovementInitiatorLabel] = initiator
 	object.SetLabels(labels)
 }
 

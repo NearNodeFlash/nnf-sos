@@ -593,6 +593,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					}))
 
 				Expect(dm.Spec.Profile).To(Equal(nnfv1alpha1.DataMovementProfileDefault))
+				Expect(dm.GetLabels()[nnfv1alpha1.DataMovementInitiatorLabel]).To(Equal("copy_in"))
 			})
 		})
 
@@ -661,6 +662,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(workflow.Namespace),
 					}))
 				Expect(dm.Spec.Profile).To(Equal("test"))
+				Expect(dm.GetLabels()[nnfv1alpha1.DataMovementInitiatorLabel]).To(Equal("copy_in"))
+
 			})
 		})
 	}) // When("Using copy_in directives", func()
