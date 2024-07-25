@@ -242,10 +242,21 @@ spec:
                   command:
                     description: The command that was executed during data movement.
                     type: string
+                  data:
+                    type: string
+                  directories:
+                    format: int32
+                    type: integer
                   elapsedTime:
                     description: ElapsedTime reflects the elapsed time since the underlying
                       data movement command started.
                     type: string
+                  files:
+                    format: int32
+                    type: integer
+                  items:
+                    format: int32
+                    type: integer
                   lastMessage:
                     description: |-
                       LastMessage reflects the last message received over standard output or standard error as
@@ -257,6 +268,9 @@ spec:
                       standard error by the underlying data movement command.
                     format: date-time
                     type: string
+                  links:
+                    format: int32
+                    type: integer
                   progress:
                     description: |-
                       Progress refects the progress of the underlying data movement command as captured from standard output.
@@ -265,6 +279,11 @@ spec:
                       contain a valid percentage, then the value is unchanged from the previously parsed value.
                     format: int32
                     type: integer
+                  rate:
+                    type: string
+                  seconds:
+                    description: 'TODO: document these'
+                    type: string
                 type: object
               endTime:
                 description: EndTime reflects the time at which the Data Movement

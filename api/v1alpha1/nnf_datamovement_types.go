@@ -126,19 +126,47 @@ type NnfDataMovementCommandStatus struct {
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
 	ElapsedTime metav1.Duration `json:"elapsedTime,omitempty"`
 
-	// Progress refects the progress of the underlying data movement command as captured from standard output.
-	// A best effort is made to parse the command output as a percentage. If no progress has
-	// yet to be measured than this field is omitted. If the latest command output does not
-	// contain a valid percentage, then the value is unchanged from the previously parsed value.
+	// Progress refects the progress of the underlying data movement command as captured from
+	// standard output.  A best effort is made to parse the command output as a percentage. If no
+	// progress has yet to be measured than this field is omitted. If the latest command output does
+	// not contain a valid percentage, then the value is unchanged from the previously parsed value.
 	ProgressPercentage *int32 `json:"progress,omitempty"`
 
 	// LastMessage reflects the last message received over standard output or standard error as
 	// captured by the underlying data movement command.
 	LastMessage string `json:"lastMessage,omitempty"`
 
-	// LastMessageTime reflects the time at which the last message was received over standard output or
-	// standard error by the underlying data movement command.
+	// LastMessageTime reflects the time at which the last message was received over standard output
+	// or standard error by the underlying data movement command.
 	LastMessageTime metav1.MicroTime `json:"lastMessageTime,omitempty"`
+
+	// Seconds is parsed from the dcp output when the command is finished.
+	Seconds string `json:"seconds,omitempty"`
+
+	// Items is parsed from the dcp output when the command is finished. This is a total of
+	// the number of directories, files, and links that dcp copied.
+	Items *int32 `json:"items,omitempty"`
+
+	// Directories is parsed from the dcp output when the command is finished. This is the number of
+	// directories that dcp copied. Note: This value may be inflated due to NNF index mount
+	// directories when copying from XFS or GFS2 filesystems.
+	Directories *int32 `json:"directories,omitempty"`
+
+	// Files is parsed from the dcp output when the command is finished. This is the number of files
+	// that dcp copied.
+	Files *int32 `json:"files,omitempty"`
+
+	// Links is parsed from the dcp output when the command is finished. This is the number of links
+	// that dcp copied.
+	Links *int32 `json:"links,omitempty"`
+
+	// Data is parsed from the dcp output when the command is finished. This is the total amount of
+	// data copied by dcp.
+	Data string `json:"data,omitempty"`
+
+	// Rate is parsed from the dcp output when the command is finished. This is transfer rate of the
+	// data copied by dcp.
+	Rate string `json:"rate,omitempty"`
 }
 
 // NnfDataMovementStatus defines the observed state of NnfDataMovement
