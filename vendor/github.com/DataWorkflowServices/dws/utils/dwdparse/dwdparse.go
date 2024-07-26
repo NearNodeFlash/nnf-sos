@@ -40,6 +40,8 @@ type DWDirectiveRuleDef struct {
 	UniqueWithin    string   `json:"uniqueWithin,omitempty"`
 }
 
+const emptyValue = "$$empty_value_123456$$"
+
 // DWDirectiveRuleSpec defines the desired state of DWDirective
 // +kubebuilder:object:generate=true
 type DWDirectiveRuleSpec struct {
@@ -80,7 +82,9 @@ func BuildArgsMap(dwd string) (map[string]string, error) {
 		}
 
 		if len(keyValue) == 1 {
-			argsMap[keyValue[0]] = "true"
+			// We won't know how to interpret an empty value--whether it's allowed,
+			// or what its type should be--until ValidateArgs().
+			argsMap[keyValue[0]] = emptyValue
 		} else if len(keyValue) == 2 {
 			argsMap[keyValue[0]] = keyValue[1]
 		} else {
@@ -138,8 +142,13 @@ func ValidateArgs(spec DWDirectiveRuleSpec, args map[string]string, uniqueMap ma
 			return err
 		}
 
-		if rule.IsValueRequired && len(v) == 0 {
-			return fmt.Errorf("argument '%s' requires value", k)
+		if v == emptyValue {
+			if rule.Type == "bool" && !rule.IsValueRequired {
+				// Booleans default to true.
+				v = "true"
+			} else if rule.IsValueRequired {
+				return fmt.Errorf("argument '%s' requires value", k)
+			}
 		}
 
 		switch rule.Type {
