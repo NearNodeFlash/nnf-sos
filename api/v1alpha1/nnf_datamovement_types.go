@@ -126,7 +126,7 @@ type NnfDataMovementCommandStatus struct {
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
 	ElapsedTime metav1.Duration `json:"elapsedTime,omitempty"`
 
-	// Progress refects the progress of the underlying data movement command as captured from
+	// ProgressPercentage refects the progress of the underlying data movement command as captured from
 	// standard output.  A best effort is made to parse the command output as a percentage. If no
 	// progress has yet to be measured than this field is omitted. If the latest command output does
 	// not contain a valid percentage, then the value is unchanged from the previously parsed value.
