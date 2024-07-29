@@ -242,10 +242,34 @@ spec:
                   command:
                     description: The command that was executed during data movement.
                     type: string
+                  data:
+                    description: |-
+                      Data is parsed from the dcp output when the command is finished. This is the total amount of
+                      data copied by dcp.
+                    type: string
+                  directories:
+                    description: |-
+                      Directories is parsed from the dcp output when the command is finished. This is the number of
+                      directories that dcp copied. Note: This value may be inflated due to NNF index mount
+                      directories when copying from XFS or GFS2 filesystems.
+                    format: int32
+                    type: integer
                   elapsedTime:
                     description: ElapsedTime reflects the elapsed time since the underlying
                       data movement command started.
                     type: string
+                  files:
+                    description: |-
+                      Files is parsed from the dcp output when the command is finished. This is the number of files
+                      that dcp copied.
+                    format: int32
+                    type: integer
+                  items:
+                    description: |-
+                      Items is parsed from the dcp output when the command is finished. This is a total of
+                      the number of directories, files, and links that dcp copied.
+                    format: int32
+                    type: integer
                   lastMessage:
                     description: |-
                       LastMessage reflects the last message received over standard output or standard error as
@@ -253,18 +277,33 @@ spec:
                     type: string
                   lastMessageTime:
                     description: |-
-                      LastMessageTime reflects the time at which the last message was received over standard output or
-                      standard error by the underlying data movement command.
+                      LastMessageTime reflects the time at which the last message was received over standard output
+                      or standard error by the underlying data movement command.
                     format: date-time
                     type: string
-                  progress:
+                  links:
                     description: |-
-                      Progress refects the progress of the underlying data movement command as captured from standard output.
-                      A best effort is made to parse the command output as a percentage. If no progress has
-                      yet to be measured than this field is omitted. If the latest command output does not
-                      contain a valid percentage, then the value is unchanged from the previously parsed value.
+                      Links is parsed from the dcp output when the command is finished. This is the number of links
+                      that dcp copied.
                     format: int32
                     type: integer
+                  progress:
+                    description: |-
+                      Progress refects the progress of the underlying data movement command as captured from
+                      standard output.  A best effort is made to parse the command output as a percentage. If no
+                      progress has yet to be measured than this field is omitted. If the latest command output does
+                      not contain a valid percentage, then the value is unchanged from the previously parsed value.
+                    format: int32
+                    type: integer
+                  rate:
+                    description: |-
+                      Rate is parsed from the dcp output when the command is finished. This is transfer rate of the
+                      data copied by dcp.
+                    type: string
+                  seconds:
+                    description: Seconds is parsed from the dcp output when the command
+                      is finished.
+                    type: string
                 type: object
               endTime:
                 description: EndTime reflects the time at which the Data Movement
