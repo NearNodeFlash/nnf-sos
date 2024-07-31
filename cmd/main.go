@@ -23,6 +23,7 @@ import (
 	"flag"
 	"os"
 	"runtime"
+	"strconv"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -117,7 +118,28 @@ func main() {
 
 	nnfCtrl.SetNamespaces(&options)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+	config := ctrl.GetConfigOrDie()
+	qpsString, found := os.LookupEnv("NNF_REST_CONFIG_QPS")
+	if found {
+		qps, err := strconv.ParseFloat(qpsString, 32)
+		if err != nil {
+			setupLog.Error(err, "invalid value for NNF_REST_CONFIG_QPS")
+			os.Exit(1)
+		}
+		config.QPS = float32(qps)
+	}
+
+	burstString, found := os.LookupEnv("NNF_REST_CONFIG_BURST")
+	if found {
+		burst, err := strconv.Atoi(burstString)
+		if err != nil {
+			setupLog.Error(err, "invalid value for NNF_REST_CONFIG_BURST")
+			os.Exit(1)
+		}
+		config.Burst = burst
+	}
+
+	mgr, err := ctrl.NewManager(config, options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
