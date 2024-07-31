@@ -67,14 +67,14 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
-	node := &nnfv1alpha1.NnfNode{
+	nnfNode := &nnfv1alpha1.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-nlc",
 			Namespace: storage.GetName(),
 		},
 	}
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -108,23 +108,23 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	storage.Status.Type = dwsv1alpha2.NVMe
-	storage.Status.Capacity = node.Status.Capacity
+	storage.Status.Capacity = nnfNode.Status.Capacity
 	storage.Status.Access.Protocol = dwsv1alpha2.PCIe
 
-	if len(node.Status.Servers) == 0 {
+	if len(nnfNode.Status.Servers) == 0 {
 		return ctrl.Result{}, nil // Wait until severs array has been filled in with Rabbit info
 	}
 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.
 	storage.Status.Access.Servers = []dwsv1alpha2.Node{{
 		Name:   storage.Name,
-		Status: node.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
+		Status: nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
 	}}
 
 	// Populate compute status'
-	if len(node.Status.Servers) > 1 {
+	if len(nnfNode.Status.Servers) > 1 {
 		storage.Status.Access.Computes = make([]dwsv1alpha2.Node, 0)
-		for _, server := range node.Status.Servers[1:] /*Skip Rabbit*/ {
+		for _, server := range nnfNode.Status.Servers[1:] /*Skip Rabbit*/ {
 
 			// Servers that are unassigned in the system configuration will
 			// not have a hostname and should be skipped.
@@ -141,8 +141,8 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Populate storage status'
-	storage.Status.Devices = make([]dwsv1alpha2.StorageDevice, len(node.Status.Drives))
-	for idx, drive := range node.Status.Drives {
+	storage.Status.Devices = make([]dwsv1alpha2.StorageDevice, len(nnfNode.Status.Drives))
+	for idx, drive := range nnfNode.Status.Drives {
 		device := &storage.Status.Devices[idx]
 
 		device.Slot = drive.Slot
@@ -171,11 +171,11 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Clear the fence status if the storage resource is enabled from a disabled state
 		if storage.Status.Status == dwsv1alpha2.DisabledStatus {
 
-			log.WithValues("fenced", node.Status.Fenced).Info("resource disabled")
-			if node.Status.Fenced {
-				node.Status.Fenced = false
+			if nnfNode.Status.Fenced {
+				log.WithValues("fenced", nnfNode.Status.Fenced).Info("resource disabled")
+				nnfNode.Status.Fenced = false
 
-				if err := r.Status().Update(ctx, node); err != nil {
+				if err := r.Status().Update(ctx, nnfNode); err != nil {
 					return ctrl.Result{}, err
 				}
 
@@ -190,7 +190,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Message = ""
 		}
 
-		if node.Status.Fenced {
+		if nnfNode.Status.Fenced {
 			storage.Status.Status = dwsv1alpha2.DegradedStatus
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
@@ -205,7 +205,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				storage.Status.Status = dwsv1alpha2.OfflineStatus
 				storage.Status.Message = "Kubernetes node is offline"
 			} else {
-				storage.Status.Status = node.Status.Status.ConvertToDWSResourceStatus()
+				storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
 			}
 		}
 
