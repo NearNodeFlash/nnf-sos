@@ -32,9 +32,8 @@ const (
 	// NNF Node Name as the namespace.
 	DataMovementNamespace = "nnf-dm-system"
 
-	// The name of the default profile stored in the nnf-dm-config ConfigMap that is used to
-	// configure Data Movement.
-	DataMovementProfileDefault = "default"
+	// The namespace for NnfDataMovementProfiles that are not pinned.
+	DataMovementProfileNamespace = "nnf-system"
 )
 
 // NnfDataMovementSpec defines the desired state of NnfDataMovement
@@ -62,14 +61,13 @@ type NnfDataMovementSpec struct {
 	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
 
-	// Profile specifies the name of profile in the nnf-dm-config ConfigMap to be used for
-	// configuring data movement. Defaults to the default profile.
-	// +kubebuilder:default:=default
-	Profile string `json:"profile,omitempty"`
+	// ProfileReference is an object reference to an NnfDataMovementProfile that is used to
+	// configure data movement. If empty, the default profile is used.
+	ProfileReference corev1.ObjectReference `json:"profileReference,omitempty"`
 
 	// User defined configuration on how data movement should be performed. This overrides the
-	// configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
-	// Copy Offload API.
+	// configuration defined in the supplied ProfileReference/NnfDataMovementProfile. These values
+	// are typically set by the Copy Offload API.
 	UserConfig *NnfDataMovementConfig `json:"userConfig,omitempty"`
 }
 
@@ -109,11 +107,11 @@ type NnfDataMovementConfig struct {
 	StoreStdout bool `json:"storeStdout,omitempty"`
 
 	// The number of slots specified in the MPI hostfile. A value of 0 disables the use of slots in
-	// the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	// the hostfile. Nil will defer to the value specified in the NnfDataMovementProfile.
 	Slots *int `json:"slots,omitempty"`
 
 	// The number of max_slots specified in the MPI hostfile. A value of 0 disables the use of slots
-	// in the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	// in the hostfile. Nil will defer to the value specified in the NnfDataMovementProfile.
 	MaxSlots *int `json:"maxSlots,omitempty"`
 }
 

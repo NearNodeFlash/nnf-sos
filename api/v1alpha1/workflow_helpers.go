@@ -50,6 +50,14 @@ const (
 	// which pinned container profile is being used.
 	PinnedContainerProfileLabelNameSpace = "nnf.cray.hpe.com/pinned_container_profile_namespace"
 
+	// PinnedDataMovementProfileLabelName is a label applied to NnfStorage objects to show
+	// which pinned container profile is being used.
+	PinnedDataMovementProfileLabelName = "nnf.cray.hpe.com/pinned_datamovement_profile_name"
+
+	// PinnedDataMovementProfileLabelNameSpace is a label applied to NnfStorage objects to show
+	// which pinned container profile is being used.
+	PinnedDataMovementProfileLabelNameSpace = "nnf.cray.hpe.com/pinned_datamovement_profile_namespace"
+
 	// StandaloneMGTLabel is a label applied to the PersistentStorageInstance to show that
 	// it is for a Lustre MGT only. The value for the label is the pool name.
 	StandaloneMGTLabel = "nnf.cray.hpe.com/standalone_mgt"
