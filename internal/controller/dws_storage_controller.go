@@ -21,6 +21,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -43,6 +45,16 @@ type DWSStorageReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
+}
+
+const taintCrayNnfNodeDrainPrefix string = "cray.nnf.node.drain"
+
+type K8sNodeState struct {
+	// nnfTaint is the name of any "cray.nnf.node.drain*" taint found in Node.Spec.Taints.
+	nnfTaint string
+
+	// nodeReady indicates whether Node.Status.Conditions shows Ready or NotReady.
+	nodeReady bool
 }
 
 // +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=storages,verbs=get;create;list;watch;update;patch;delete
@@ -195,15 +207,19 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
 		} else {
-			ready, err := r.isKubernetesNodeReady(ctx, storage)
+			nodeState, err := r.coreNodeState(ctx, storage)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 
-			if !ready {
+			if !nodeState.nodeReady {
 				log.Info("storage node is offline")
 				storage.Status.Status = dwsv1alpha2.OfflineStatus
 				storage.Status.Message = "Kubernetes node is offline"
+			} else if len(nodeState.nnfTaint) > 0 {
+				log.Info(fmt.Sprintf("storage node is tainted with %s", nodeState.nnfTaint))
+				storage.Status.Status = dwsv1alpha2.DisabledStatus
+				storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
 			} else {
 				storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
 			}
@@ -220,22 +236,33 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-func (r *DWSStorageReconciler) isKubernetesNodeReady(ctx context.Context, storage *dwsv1alpha2.Storage) (bool, error) {
+func (r *DWSStorageReconciler) coreNodeState(ctx context.Context, storage *dwsv1alpha2.Storage) (K8sNodeState, error) {
+	nodeState := K8sNodeState{}
+
 	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
 	// The kubelet has a heartbeat mechanism, so we can determine node failures from this resource.
 	node := &corev1.Node{}
 	if err := r.Get(ctx, types.NamespacedName{Name: storage.Name}, node); err != nil {
-		return false, err
+		return nodeState, err
 	}
 
 	// Look through the node conditions to determine if the node is up.
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-			return true, nil
+			nodeState.nodeReady = true
+			break
 		}
 	}
 
-	return false, nil
+	// Look for any "cray.nnf.node.drain*" taint.
+	for _, taint := range node.Spec.Taints {
+		if strings.HasPrefix(taint.Key, taintCrayNnfNodeDrainPrefix) {
+			nodeState.nnfTaint = taint.Key
+			break
+		}
+	}
+
+	return nodeState, nil
 }
 
 func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
