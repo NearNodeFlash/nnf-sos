@@ -34,7 +34,7 @@ const (
 )
 
 // ResourceStatus is the enumeration of the status of a DWS resource
-// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed;Degraded;Unknown
+// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed;Degraded;Drained;Unknown
 type ResourceStatus string
 
 const (
@@ -56,7 +56,7 @@ const (
 	NotPresentStatus ResourceStatus = "NotPresent"
 
 	// Offline means the resource is offline and cannot be communicated with. This differs
-	// fro the NotPresent state in that the resource is known to exist.
+	// from the NotPresent state in that the resource is known to exist.
 	OfflineStatus ResourceStatus = "Offline"
 
 	// Failed means the resource has failed during startup or execution.
@@ -65,6 +65,9 @@ const (
 	// Degraded means the resource is ready but operating in a degraded state. Certain
 	// recovery actions may alleviate a degraded status.
 	DegradedStatus ResourceStatus = "Degraded"
+
+	// Drained means the resource has had its pods drained from the node.
+	DrainedStatus ResourceStatus = "Drained"
 
 	// Unknown means the resource status is unknown.
 	UnknownStatus ResourceStatus = "Unknown"
