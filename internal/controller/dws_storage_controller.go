@@ -218,7 +218,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				storage.Status.Message = "Kubernetes node is offline"
 			} else if len(nodeState.nnfTaint) > 0 {
 				log.Info(fmt.Sprintf("storage node is tainted with %s", nodeState.nnfTaint))
-				storage.Status.Status = dwsv1alpha2.DisabledStatus
+				storage.Status.Status = dwsv1alpha2.DrainedStatus
 				storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
 			} else {
 				storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
