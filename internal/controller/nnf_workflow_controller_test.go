@@ -834,9 +834,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			AfterEach(func() {
 				deletePersistentStorageInstance(persistentStorageName)
 
-				Expect(k8sClient.Delete(context.TODO(), ns)).Should(Succeed())
-
 				Expect(k8sClient.Delete(context.TODO(), dmProfile)).Should(Succeed())
+				Expect(k8sClient.Delete(context.TODO(), ns)).Should(Succeed())
 			})
 
 			It("transitions to data movement", func() {
