@@ -14,11 +14,7 @@ spec:
     singular: nnflustremgt
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NnfLustreMGT is the Schema for the nnfstorageprofiles API

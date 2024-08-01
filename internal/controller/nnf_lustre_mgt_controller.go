@@ -25,15 +25,12 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -61,46 +58,16 @@ const (
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished using the resource.
 	finalizerNnfLustreMGT = "nnf.cray.hpe.com/nnf_lustre_mgt"
-
-	nnfLustreMgtResourceName = "nnf-lustre-mgt"
 )
 
 // NnfLustreMGTReconciler contains the elements needed during reconciliation for NnfLustreMGT
 type NnfLustreMGTReconciler struct {
 	client.Client
-	Log               logr.Logger
-	Scheme            *kruntime.Scheme
-	SemaphoreForStart chan struct{}
-	SemaphoreForDone  chan struct{}
-
-	types.NamespacedName
+	Log          logr.Logger
+	Scheme       *kruntime.Scheme
 	ChildObjects []dwsv1alpha2.ObjectList
 
-	sync.Mutex
-	started         bool
-	reconcilerAwake bool
-
 	ControllerType ControllerType
-}
-
-func (r *NnfLustreMGTReconciler) Start(ctx context.Context) error {
-	log := r.Log.WithValues("State", "Start")
-
-	if r.ControllerType == ControllerWorker {
-		log.Info("Starting without lock")
-		return nil
-	}
-
-	<-r.SemaphoreForStart
-
-	log.Info("Ready to start")
-
-	r.Lock()
-	r.started = true
-	r.Unlock()
-
-	close(r.SemaphoreForDone)
-	return nil
 }
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnflustremgts,verbs=get;list;watch;create;update;patch;delete
@@ -115,19 +82,6 @@ func (r *NnfLustreMGTReconciler) Start(ctx context.Context) error {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
 func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	log := r.Log.WithValues("NnfLustreMGT", req.NamespacedName)
-
-	if r.ControllerType == ControllerRabbit {
-		r.Lock()
-		if !r.started {
-			r.Unlock()
-			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
-		}
-		if !r.reconcilerAwake {
-			log.Info("Reconciler is awake")
-			r.reconcilerAwake = true
-		}
-		r.Unlock()
-	}
 
 	metrics.NnfLustreMGTReconcilesTotal.Inc()
 
@@ -206,7 +160,7 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		// If the fsname isn't blacklisted, set it as the next fsname
-		if blackListed := isFsNameBlackListed(ctx, nnfLustreMgt, nnfLustreMgt.Spec.FsNameStart); !blackListed {
+		if blackListed := isFsNameBlackListed(nnfLustreMgt, nnfLustreMgt.Spec.FsNameStart); !blackListed {
 			nnfLustreMgt.Status.FsNameNext = fsnameNext
 			return ctrl.Result{}, nil
 		}
@@ -257,7 +211,7 @@ func incrementRuneList(digits []rune, start rune, end rune) []rune {
 	return digits
 }
 
-func incrementFsName(nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) string {
+func incrementFsName(fsname string) string {
 	var runeList []rune
 	for _, runeDigit := range fsname {
 		runeList = append(runeList, runeDigit)
@@ -266,7 +220,7 @@ func incrementFsName(nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) stri
 	return string(incrementRuneList(runeList, 'a', 'z'))
 }
 
-func isFsNameBlackListed(ctx context.Context, nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) bool {
+func isFsNameBlackListed(nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) bool {
 	// Check the blacklist
 	for _, blackListedFsName := range nnfLustreMgt.Spec.FsNameBlackList {
 		if fsname == blackListedFsName {
@@ -282,8 +236,8 @@ func isFsNameBlackListed(ctx context.Context, nnfLustreMgt *nnfv1alpha1.NnfLustr
 func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) (*ctrl.Result, error) {
 	// Find the next available fsname that isn't blacklisted
 	for {
-		fsname = incrementFsName(nnfLustreMgt, fsname)
-		if blackListed := isFsNameBlackListed(ctx, nnfLustreMgt, fsname); !blackListed {
+		fsname = incrementFsName(fsname)
+		if blackListed := isFsNameBlackListed(nnfLustreMgt, fsname); !blackListed {
 			break
 		}
 	}
@@ -423,9 +377,6 @@ func filterByNnfSystemNamespace() predicate.Predicate {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfLustreMGTReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := mgr.Add(r); err != nil {
-		return err
-	}
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&nnfv1alpha1.NnfLustreMGT{})

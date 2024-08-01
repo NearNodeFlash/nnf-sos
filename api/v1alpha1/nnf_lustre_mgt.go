@@ -64,10 +64,8 @@ type NnfLustreMGTStatusClaim struct {
 	FsName    string                 `json:"fsname,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // NnfLustreMGT is the Schema for the nnfstorageprofiles API
 type NnfLustreMGT struct {
 	metav1.TypeMeta   `json:",inline"`

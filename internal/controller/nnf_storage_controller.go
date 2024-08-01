@@ -622,7 +622,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	}
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
-		// If we're in the delete path, only propogate errors for storages that are deleting. Errors
+		// If we're in the delete path, only propagate errors for storages that are deleting. Errors
 		// from creation aren't interesting anymore
 		if deleting && nnfNodeStorage.GetDeletionTimestamp().IsZero() {
 			continue
@@ -928,7 +928,7 @@ func (r *NnfStorageReconciler) aggregateClientMountStatus(ctx context.Context, s
 	}
 
 	for _, clientMount := range clientMountList.Items {
-		// If we're in the delete path, only propogate errors for storages that are deleting. Errors
+		// If we're in the delete path, only propagate errors for storages that are deleting. Errors
 		// from creation aren't interesting anymore
 		if deleting && clientMount.GetDeletionTimestamp().IsZero() {
 			continue

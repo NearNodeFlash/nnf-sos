@@ -273,6 +273,14 @@ var _ = BeforeSuite(func() {
 		Start NNF-SOS NLC pieces
 	*/
 
+	err = (&NnfLustreMGTReconciler{
+		Client:         k8sManager.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:         testEnv.Scheme,
+		ControllerType: ControllerTest,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	// Coordinate the startup of the NLC controllers that use EC.
 
 	semNnfNodeDone := make(chan struct{})
@@ -315,26 +323,15 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	semNnfLustreMgtDone := make(chan struct{})
-	err = (&NnfLustreMGTReconciler{
-		Client:            k8sManager.GetClient(),
-		Log:               ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
-		Scheme:            testEnv.Scheme,
-		SemaphoreForStart: semNnfNodeStorageDone,
-		SemaphoreForDone:  semNnfLustreMgtDone,
-		ControllerType:    ControllerTest,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
+	// The NLC controllers relying on the readiness of EC.
 
 	err = (&NnfClientMountReconciler{
 		Client:            k8sManager.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
 		Scheme:            testEnv.Scheme,
-		SemaphoreForStart: semNnfLustreMgtDone,
+		SemaphoreForStart: semNnfNodeStorageDone,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
-
-	// The NLC controllers relying on the readiness of EC.
 
 	go func() {
 		defer GinkgoRecover()
