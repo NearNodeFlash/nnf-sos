@@ -656,7 +656,6 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = s.Spec.AllocationSets[i].Label
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"
-					nnfAllocSet.NnfStorageLustreSpec.FileSystemName = "z" + string(s.GetUID())[:7]
 					if len(mgsNid) > 0 {
 						nnfAllocSet.NnfStorageLustreSpec.MgsAddress = mgsNid
 						nnfAllocSet.NnfStorageLustreSpec.PersistentMgsReference = persistentMgsReference

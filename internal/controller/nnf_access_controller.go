@@ -503,7 +503,6 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 // mapClientNetworkStorage provides the Lustre MGS address information for the clients. All clients get the same
 // mount information
 func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha1.NnfAccess, clients []string, nnfStorage *nnfv1alpha1.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
-	allocationSet := nnfStorage.Spec.AllocationSets[setIndex]
 	storageMapping := make(map[string][]dwsv1alpha2.ClientMountInfo)
 
 	for _, client := range clients {
@@ -513,7 +512,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 		mountInfo.MountPath = access.Spec.MountPath
 		mountInfo.Device.Type = dwsv1alpha2.ClientMountDeviceTypeLustre
 		mountInfo.Device.Lustre = &dwsv1alpha2.ClientMountDeviceLustre{}
-		mountInfo.Device.Lustre.FileSystemName = allocationSet.FileSystemName
+		mountInfo.Device.Lustre.FileSystemName = nnfStorage.Status.FileSystemName
 		mountInfo.Device.Lustre.MgsAddresses = nnfStorage.Status.MgsAddress
 
 		// Make it easy for the nnf-dm daemon to find the NnfStorage.

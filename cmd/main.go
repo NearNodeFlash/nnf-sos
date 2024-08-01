@@ -177,6 +177,14 @@ func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
 }
 
 func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Options) error {
+	if err := (&controllers.NnfLustreMGTReconciler{
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:         mgr.GetScheme(),
+		ControllerType: controllers.ControllerRabbit,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
 
 	// Coordinate the startup of the NLC controllers that use EC.
 
@@ -227,7 +235,6 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 	}
 
 	// The NLC controllers relying on the readiness of EC.
-
 	if err := (&controllers.NnfClientMountReconciler{
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfClientMount"),
@@ -316,6 +323,15 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NnfStorage"),
 		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
+	if err := (&controllers.NnfLustreMGTReconciler{
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:         mgr.GetScheme(),
+		ControllerType: controllers.ControllerWorker,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}

@@ -60,27 +60,6 @@ var _ = Describe("Access Controller Test", func() {
 			}
 		})
 
-		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
-			TypeMeta: metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "default",
-				Namespace: corev1.NamespaceDefault,
-			},
-			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
-					{
-						Type: "Rabbit",
-						Name: "rabbit-nnf-access-test-node-1",
-					},
-					{
-						Type: "Rabbit",
-						Name: "rabbit-nnf-access-test-node-2",
-					},
-				},
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), systemConfiguration)).To(Succeed())
-
 		for i, nodeName := range nodeNames {
 			// Create the node - set it to up as ready
 			nodes[i] = &corev1.Node{
@@ -129,6 +108,28 @@ var _ = Describe("Access Controller Test", func() {
 
 			Expect(k8sClient.Create(context.TODO(), storages[i])).To(Succeed())
 		}
+
+		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+					{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-1",
+					},
+					{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-2",
+					},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(context.TODO(), systemConfiguration)).To(Succeed())
 
 		// Create a pinned NnfStorageProfile for the unit tests.
 		storageProfile = createBasicPinnedNnfStorageProfile()
@@ -191,8 +192,7 @@ var _ = Describe("Access Controller Test", func() {
 							Name:     "mgtmdt",
 							Capacity: 50000000000,
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
-								FileSystemName: "mgtmdt",
-								TargetType:     "mgtmdt",
+								TargetType: "mgtmdt",
 							},
 							Nodes: []nnfv1alpha1.NnfStorageAllocationNodes{
 								{
@@ -205,8 +205,7 @@ var _ = Describe("Access Controller Test", func() {
 							Name:     "ost",
 							Capacity: 50000000000,
 							NnfStorageLustreSpec: nnfv1alpha1.NnfStorageLustreSpec{
-								FileSystemName: "ost",
-								TargetType:     "ost",
+								TargetType: "ost",
 							},
 							Nodes: allocationNodes,
 						},
@@ -414,5 +413,12 @@ func verifyClientMount(storage *nnfv1alpha1.NnfStorage, storageProfile *nnfv1alp
 
 	Eventually(func() error {
 		return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)
+	}).ShouldNot(Succeed())
+
+	By("Deleting the NNF Storage")
+	Expect(k8sClient.Delete(context.TODO(), storage)).To(Succeed())
+
+	Eventually(func() error {
+		return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
 	}).ShouldNot(Succeed())
 }

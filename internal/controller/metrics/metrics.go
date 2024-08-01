@@ -83,6 +83,13 @@ var (
 		},
 	)
 
+	NnfLustreMGTReconcilesTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "nnf_lustre_mgt_reconciles_total",
+			Help: "Number of total reconciles in nnf_lustre_mgt controller",
+		},
+	)
+
 	NnfSystemConfigurationReconcilesTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "nnf_system_configuration_reconciles_total",
@@ -103,5 +110,6 @@ func init() {
 	metrics.Registry.MustRegister(NnfPersistentStorageReconcilesTotal)
 	metrics.Registry.MustRegister(NnfServersReconcilesTotal)
 	metrics.Registry.MustRegister(NnfStorageReconcilesTotal)
+	metrics.Registry.MustRegister(NnfLustreMGTReconcilesTotal)
 	metrics.Registry.MustRegister(NnfSystemConfigurationReconcilesTotal)
 }

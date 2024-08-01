@@ -52,6 +52,8 @@ spec:
             value: "90"
           - name: NNF_COMMAND_TIMEOUT_SECONDS
             value: "90"
+          - name: NNF_LUSTRE_FSNAME_ERASE_COMMAND
+            value: "lctl erase_lcfg"
           - name: NNF_NODE_NAME
             valueFrom:
               fieldRef:
