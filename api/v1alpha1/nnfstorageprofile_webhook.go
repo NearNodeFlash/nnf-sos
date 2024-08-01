@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -72,7 +72,7 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnin
 	obj := old.(*NnfStorageProfile)
 	if obj.Data.Pinned != r.Data.Pinned {
 		err := fmt.Errorf("the pinned flag is immutable")
-		nnfcontainerprofilelog.Error(err, "invalid")
+		nnfstorageprofilelog.Error(err, "invalid")
 		return nil, err
 	}
 	if obj.Data.Pinned {

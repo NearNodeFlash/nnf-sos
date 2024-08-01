@@ -131,6 +131,9 @@ var _ = BeforeSuite(func() {
 	err = (&NnfContainerProfile{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&NnfDataMovementProfile{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {

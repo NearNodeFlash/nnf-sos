@@ -270,6 +270,9 @@ var _ = BeforeSuite(func() {
 	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	/*
 		Start NNF-SOS NLC pieces
 	*/

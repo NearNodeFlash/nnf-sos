@@ -29,6 +29,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_nnfnodeecdata.yaml
 #- patches/webhook_in_nnfcontainerprofiles.yaml
 #- patches/webhook_in_nnfportmanagers.yaml
+#- patches/webhook_in_nnfdatamovementprofiles.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
