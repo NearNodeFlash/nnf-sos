@@ -297,6 +297,7 @@ spec:
                           - Offline
                           - Failed
                           - Degraded
+                          - Drained
                           - Unknown
                           type: string
                       type: object
@@ -326,6 +327,7 @@ spec:
                           - Offline
                           - Failed
                           - Degraded
+                          - Drained
                           - Unknown
                           type: string
                       type: object
@@ -374,6 +376,7 @@ spec:
                       - Offline
                       - Failed
                       - Degraded
+                      - Drained
                       - Unknown
                       type: string
                     wearLevel:
@@ -403,6 +406,7 @@ spec:
                 - Offline
                 - Failed
                 - Degraded
+                - Drained
                 - Unknown
                 type: string
               type:
