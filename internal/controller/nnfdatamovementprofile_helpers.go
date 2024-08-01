@@ -131,36 +131,3 @@ func createPinnedDMProfile(ctx context.Context, clnt client.Client, clntScheme *
 
 	return newProfile, nil
 }
-
-// addPinnedDMProfileProfileLabel adds name/namespace labels to a resource to indicate
-// which pinned data movement profile is being used with that resource.
-func addPinnedDMProfileLabel(object metav1.Object, NnfDataMovementProfile *nnfv1alpha1.NnfDataMovementProfile) {
-	labels := object.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	labels[nnfv1alpha1.PinnedDataMovementProfileLabelName] = NnfDataMovementProfile.GetName()
-	labels[nnfv1alpha1.PinnedDataMovementProfileLabelNameSpace] = NnfDataMovementProfile.GetNamespace()
-	object.SetLabels(labels)
-}
-
-// getPinnedDMProfileProfileFromLabel finds the pinned data movement profile via the labels on the
-// specified resource.
-func getPinnedDMProfileFromLabel(ctx context.Context, clnt client.Client, object metav1.Object) (*nnfv1alpha1.NnfDataMovementProfile, error) {
-	labels := object.GetLabels()
-	if labels == nil {
-		return nil, dwsv1alpha2.NewResourceError("unable to find labels").WithFatal()
-	}
-
-	pinnedName, okName := labels[nnfv1alpha1.PinnedDataMovementProfileLabelName]
-	if !okName {
-		return nil, dwsv1alpha2.NewResourceError("unable to find %s label", nnfv1alpha1.PinnedDataMovementProfileLabelName).WithFatal()
-	}
-	pinnedNamespace, okNamespace := labels[nnfv1alpha1.PinnedDataMovementProfileLabelNameSpace]
-	if !okNamespace {
-		return nil, dwsv1alpha2.NewResourceError("unable to find %s label", nnfv1alpha1.PinnedDataMovementProfileLabelNameSpace).WithFatal()
-	}
-
-	return findPinnedDMProfile(ctx, clnt, pinnedNamespace, pinnedName)
-}

@@ -4,7 +4,7 @@ metadata:
   name: template
   namespace: nnf-system
 data:
-  default: true
+  default: false
   slots: 8
   maxSlots: 0
   command: ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --uid $UID --gid $GID $SRC $DEST
