@@ -11,11 +11,3 @@ data:
   logStdout: false
   storeStdout: false
   progressIntervalSeconds: 5
----
-apiVersion: nnf.cray.hpe.com/v1alpha1
-kind: NnfDataMovementProfile
-metadata:
-  name: no-xattr
-  namespace: nnf-system
-data:
-  command: ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --xattrs none --uid $UID --gid $GID $SRC $DEST
