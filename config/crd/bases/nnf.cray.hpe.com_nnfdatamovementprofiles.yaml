@@ -66,8 +66,9 @@ spec:
               maxSlots:
                 default: 0
                 description: |-
-                  MaxSlots is the number of max_slots specified in the MPI hostfile. A value less than 1
-                  disables the use of max_slots in the hostfile.
+                  MaxSlots is the number of max_slots specified in the MPI hostfile. A value of 0 disables the
+                  use of max_slots in the hostfile.
+                minimum: 0
                 type: integer
               pinned:
                 default: false
@@ -79,13 +80,15 @@ spec:
                   NnfDataMovement resources have the ability to collect and store the progress percentage and the
                   last few lines of output in the CommandStatus field. This number is used for the interval to collect
                   the progress data. `dcp --progress N` must be included in the data movement command in order for
-                  progress to be collected. A value less than 1 disables this functionality.
+                  progress to be collected. A value of 0 disables this functionality.
+                minimum: 0
                 type: integer
               slots:
                 default: 8
                 description: |-
-                  Slots is the number of slots specified in the MPI hostfile. A value less than 1 disables the
-                  use of slots in the hostfile.
+                  Slots is the number of slots specified in the MPI hostfile. A value of 0 disables the use of
+                  slots in the hostfile.
+                minimum: 0
                 type: integer
               storeStdout:
                 default: false
