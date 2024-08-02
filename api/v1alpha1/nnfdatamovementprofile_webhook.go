@@ -32,7 +32,7 @@ import (
 )
 
 // log is for logging in this package.
-var nnfdatamovementprofilelog = logf.Log.WithName("nnfdatamovementprofile-resource")
+var nnfdatamovementprofilelog = logf.Log.WithName("nnfdatamovementprofile")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *NnfDataMovementProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -41,7 +41,6 @@ func (r *NnfDataMovementProfile) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 // +kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha1-nnfdatamovementprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfdatamovementprofiles,verbs=create;update,versions=v1alpha1,name=vnnfdatamovementprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfDataMovementProfile{}
@@ -98,9 +97,6 @@ func (r *NnfDataMovementProfile) ValidateUpdate(old runtime.Object) (admission.W
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfDataMovementProfile) ValidateDelete() (admission.Warnings, error) {
-	nnfdatamovementprofilelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
 
