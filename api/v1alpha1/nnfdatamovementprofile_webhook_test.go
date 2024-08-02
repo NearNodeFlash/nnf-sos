@@ -39,7 +39,6 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 
 		pinnedResourceName string
 		nnfProfile         *NnfDataMovementProfile
-		newProfile         *NnfDataMovementProfile
 	)
 
 	BeforeEach(func() {
@@ -51,8 +50,6 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 				Namespace: namespaceName,
 			},
 		}
-
-		newProfile = &NnfDataMovementProfile{}
 	})
 
 	BeforeEach(func() {
@@ -94,14 +91,18 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 	It("should accept default=true", func() {
 		nnfProfile.Data.Default = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
-		Expect(newProfile.Data.Default).To(BeTrue())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
+		}).Should(Succeed())
+		Expect(nnfProfile.Data.Default).To(BeTrue())
 	})
 	It("should accept default=false", func() {
 		nnfProfile.Data.Default = false
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
-		Expect(newProfile.Data.Default).ToNot(BeTrue())
+		Eventually(func() error {
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
+		}).Should(Succeed())
+		Expect(nnfProfile.Data.Default).ToNot(BeTrue())
 	})
 
 	It("Should not allow a default resource to be pinned", func() {
@@ -122,10 +123,9 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
-		Expect(newProfile.Data.Pinned).To(BeTrue())
-		newProfile.Data.Pinned = false
-		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+		Expect(nnfProfile.Data.Pinned).To(BeTrue())
+		nnfProfile.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), nnfProfile)).ToNot(Succeed())
 	})
 
 	It("Should allow modification of Meta in a pinned resource", func() {
@@ -138,27 +138,26 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
-		Expect(newProfile.Data.Pinned).To(BeTrue())
+		Expect(nnfProfile.Data.Pinned).To(BeTrue())
 		// A finalizer or ownerRef will interfere with deletion,
 		// so set a label, instead.
-		labels := newProfile.GetLabels()
+		labels := nnfProfile.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
 		labels["profile-label"] = "profile-label"
-		newProfile.SetLabels(labels)
-		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
+		nnfProfile.SetLabels(labels)
+		Expect(k8sClient.Update(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("Should not allow an unpinned profile to become pinned", func() {
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
-			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		newProfile.Data.Pinned = true
-		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+		nnfProfile.Data.Pinned = true
+		Expect(k8sClient.Update(context.TODO(), nnfProfile)).ToNot(Succeed())
 	})
 
 	It("Should not allow a pinned profile to become unpinned", func() {
@@ -168,11 +167,11 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
-			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), nnfProfile)
 		}).Should(Succeed())
 
-		newProfile.Data.Pinned = false
-		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+		nnfProfile.Data.Pinned = false
+		Expect(k8sClient.Update(context.TODO(), nnfProfile)).ToNot(Succeed())
 	})
 
 	It("Should allow slots/maxSlots set to 0", func() {
