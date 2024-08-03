@@ -149,6 +149,9 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 	return nil, nil, dwsv1alpha2.NewResourceError("unsupported file system type %s", nnfNodeStorage.Spec.FileSystemType).WithMajor()
 }
+func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha1.NnfNodeBlockStorage) (bool, error) {
+
+}
 
 func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
@@ -169,6 +172,13 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
+	current, err := nodeBlockStorageCurrent(ctx, c, nnfNodeBlockStorage)
+	if err != nil {
+		return nil, err
+	}
+	if !current {
+		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
+	}
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
 	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
