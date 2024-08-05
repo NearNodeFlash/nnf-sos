@@ -37,6 +37,8 @@ type NnfLustreMGTSpec struct {
 	FsNameBlackList []string `json:"fsNameBlackList,omitempty"`
 
 	// FsNameStart is the starting fsname to be used
+	// +kubebuilder:validation:MaxLength:=8
+	// +kubebuilder:validation:MinLength:=8
 	FsNameStart string `json:"fsNameStart,omitempty"`
 
 	// FsNameStartReference can be used to add a configmap where the starting fsname is
@@ -51,6 +53,8 @@ type NnfLustreMGTSpec struct {
 // NnfLustreMGTStatus defines the current state of NnfLustreMGT
 type NnfLustreMGTStatus struct {
 	// FsNameNext is the next available fsname that hasn't been used
+	// +kubebuilder:validation:MaxLength:=8
+	// +kubebuilder:validation:MinLength:=8
 	FsNameNext string `json:"fsNameNext,omitempty"`
 
 	// ClaimList is the list of currently in use fsnames

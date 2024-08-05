@@ -154,6 +154,10 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 			if configMap.Data != nil {
 				if _, exists := configMap.Data["NextFsName"]; exists {
+					if len(configMap.Data["NextFsName"]) != 8 {
+						return ctrl.Result{}, dwsv1alpha2.NewResourceError("starting fsname from config map: %v was not 8 characters", client.ObjectKeyFromObject(configMap)).WithError(err).WithFatal()
+					}
+
 					fsnameNext = configMap.Data["NextFsName"]
 				}
 			}
