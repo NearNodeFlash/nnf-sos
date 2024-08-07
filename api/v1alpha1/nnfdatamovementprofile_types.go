@@ -75,6 +75,13 @@ type NnfDataMovementProfileData struct {
 	// +kubebuilder:default:=5
 	// +kubebuilder:validation:Minimum:=0
 	ProgressIntervalSeconds int `json:"progressIntervalSeconds,omitempty"`
+
+	// CreateDestDir will ensure that the destination directory exists before performing data
+	// movement.  This will cause a number of stat commends to determine the source and destination
+	// file types, so that the correct pathing for the destination can be determined. Then, a mkdir
+	// is issued.
+	// +kubebuilder:default:=true
+	CreateDestDir bool `json:"createDestDir"`
 }
 
 // +kubebuilder:object:root=true
