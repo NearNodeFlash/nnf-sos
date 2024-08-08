@@ -169,6 +169,10 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
+	if nnfNodeBlockStorage.Status.Ready == false {
+		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+	}
+
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
 	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
@@ -199,6 +203,10 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		err := c.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)
 		if err != nil {
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
+		}
+
+		if nnfNodeBlockStorage.Status.Ready == false {
+			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 		}
 
 		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses) > 0 {
