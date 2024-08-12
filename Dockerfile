@@ -43,7 +43,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 
 ENTRYPOINT ["/bin/sh"]
 
-FROM builder as testing
+FROM builder AS testing
 WORKDIR /workspace
 
 ARG FAILFAST
