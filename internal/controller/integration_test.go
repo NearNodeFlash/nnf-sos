@@ -1438,6 +1438,7 @@ var _ = Describe("Integration Test", func() {
 			intendedDirective     string
 			profileExternalMGS    *nnfv1alpha1.NnfStorageProfile
 			profileCombinedMGTMDT *nnfv1alpha1.NnfStorageProfile
+			nnfLustreMgt          *nnfv1alpha1.NnfLustreMGT
 
 			profileMgsNid string
 
@@ -1467,6 +1468,19 @@ var _ = Describe("Integration Test", func() {
 			profileCombinedMGTMDT.Data.LustreStorage.CombinedMGTMDT = true
 			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
 			Expect(createNnfStorageProfile(profileCombinedMGTMDT, true)).ToNot(BeNil())
+
+			nnfLustreMgt = &nnfv1alpha1.NnfLustreMGT{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "profile-mgs",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha1.NnfLustreMGTSpec{
+					Addresses:   []string{profileMgsNid},
+					FsNameStart: "dddddddd",
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), nnfLustreMgt)).To(Succeed())
 		})
 
 		// Destroy the custom storage profiles.
@@ -1474,6 +1488,7 @@ var _ = Describe("Integration Test", func() {
 			By("AfterEach destroy the custom storage profiles")
 			Expect(k8sClient.Delete(context.TODO(), profileExternalMGS)).To(Succeed())
 			Expect(k8sClient.Delete(context.TODO(), profileCombinedMGTMDT)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), nnfLustreMgt)).To(Succeed())
 
 		})
 
