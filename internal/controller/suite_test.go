@@ -76,6 +76,7 @@ var envVars = []envSetting{
 	{"POD_NAMESPACE", "default"},
 	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
 	{"NNF_CONTAINER_PROFILE_NAMESPACE", "default"},
+	{"NNF_DM_PROFILE_NAMESPACE", "default"},
 	{"NNF_PORT_MANAGER_NAME", "nnf-port-manager"},
 	{"NNF_PORT_MANAGER_NAMESPACE", "default"},
 	{"NNF_POD_IP", "172.0.0.1"},
@@ -267,6 +268,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	/*

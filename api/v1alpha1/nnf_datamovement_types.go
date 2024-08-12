@@ -32,9 +32,8 @@ const (
 	// NNF Node Name as the namespace.
 	DataMovementNamespace = "nnf-dm-system"
 
-	// The name of the default profile stored in the nnf-dm-config ConfigMap that is used to
-	// configure Data Movement.
-	DataMovementProfileDefault = "default"
+	// The namespace for NnfDataMovementProfiles that are not pinned.
+	DataMovementProfileNamespace = "nnf-system"
 )
 
 // NnfDataMovementSpec defines the desired state of NnfDataMovement
@@ -62,14 +61,13 @@ type NnfDataMovementSpec struct {
 	// +kubebuilder:default:=false
 	Cancel bool `json:"cancel,omitempty"`
 
-	// Profile specifies the name of profile in the nnf-dm-config ConfigMap to be used for
-	// configuring data movement. Defaults to the default profile.
-	// +kubebuilder:default:=default
-	Profile string `json:"profile,omitempty"`
+	// ProfileReference is an object reference to an NnfDataMovementProfile that is used to
+	// configure data movement. If empty, the default profile is used.
+	ProfileReference corev1.ObjectReference `json:"profileReference,omitempty"`
 
 	// User defined configuration on how data movement should be performed. This overrides the
-	// configuration defined in the nnf-dm-config ConfigMap. These values are typically set by the
-	// Copy Offload API.
+	// configuration defined in the supplied ProfileReference/NnfDataMovementProfile. These values
+	// are typically set by the Copy Offload API.
 	UserConfig *NnfDataMovementConfig `json:"userConfig,omitempty"`
 }
 
@@ -109,11 +107,11 @@ type NnfDataMovementConfig struct {
 	StoreStdout bool `json:"storeStdout,omitempty"`
 
 	// The number of slots specified in the MPI hostfile. A value of 0 disables the use of slots in
-	// the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	// the hostfile. Nil will defer to the value specified in the NnfDataMovementProfile.
 	Slots *int `json:"slots,omitempty"`
 
 	// The number of max_slots specified in the MPI hostfile. A value of 0 disables the use of slots
-	// in the hostfile. Nil will defer to the value specified in the nnf-dm-config ConfigMap.
+	// in the hostfile. Nil will defer to the value specified in the NnfDataMovementProfile.
 	MaxSlots *int `json:"maxSlots,omitempty"`
 }
 
@@ -126,19 +124,47 @@ type NnfDataMovementCommandStatus struct {
 	// ElapsedTime reflects the elapsed time since the underlying data movement command started.
 	ElapsedTime metav1.Duration `json:"elapsedTime,omitempty"`
 
-	// Progress refects the progress of the underlying data movement command as captured from standard output.
-	// A best effort is made to parse the command output as a percentage. If no progress has
-	// yet to be measured than this field is omitted. If the latest command output does not
-	// contain a valid percentage, then the value is unchanged from the previously parsed value.
+	// ProgressPercentage refects the progress of the underlying data movement command as captured from
+	// standard output.  A best effort is made to parse the command output as a percentage. If no
+	// progress has yet to be measured than this field is omitted. If the latest command output does
+	// not contain a valid percentage, then the value is unchanged from the previously parsed value.
 	ProgressPercentage *int32 `json:"progress,omitempty"`
 
 	// LastMessage reflects the last message received over standard output or standard error as
 	// captured by the underlying data movement command.
 	LastMessage string `json:"lastMessage,omitempty"`
 
-	// LastMessageTime reflects the time at which the last message was received over standard output or
-	// standard error by the underlying data movement command.
+	// LastMessageTime reflects the time at which the last message was received over standard output
+	// or standard error by the underlying data movement command.
 	LastMessageTime metav1.MicroTime `json:"lastMessageTime,omitempty"`
+
+	// Seconds is parsed from the dcp output when the command is finished.
+	Seconds string `json:"seconds,omitempty"`
+
+	// Items is parsed from the dcp output when the command is finished. This is a total of
+	// the number of directories, files, and links that dcp copied.
+	Items *int32 `json:"items,omitempty"`
+
+	// Directories is parsed from the dcp output when the command is finished. This is the number of
+	// directories that dcp copied. Note: This value may be inflated due to NNF index mount
+	// directories when copying from XFS or GFS2 filesystems.
+	Directories *int32 `json:"directories,omitempty"`
+
+	// Files is parsed from the dcp output when the command is finished. This is the number of files
+	// that dcp copied.
+	Files *int32 `json:"files,omitempty"`
+
+	// Links is parsed from the dcp output when the command is finished. This is the number of links
+	// that dcp copied.
+	Links *int32 `json:"links,omitempty"`
+
+	// Data is parsed from the dcp output when the command is finished. This is the total amount of
+	// data copied by dcp.
+	Data string `json:"data,omitempty"`
+
+	// Rate is parsed from the dcp output when the command is finished. This is transfer rate of the
+	// data copied by dcp.
+	Rate string `json:"rate,omitempty"`
 }
 
 // NnfDataMovementStatus defines the observed state of NnfDataMovement
@@ -227,6 +253,11 @@ const (
 	// DataMovementTeardownStateLabel is the label applied to Data Movement and related resources that describes
 	// the workflow state when the resource is no longer need and can be safely deleted.
 	DataMovementTeardownStateLabel = "nnf.cray.hpe.com/teardown_state"
+
+	// DataMovementInitiatorLabel is the label applied to Data Movement resources that describes the origin of
+	// data movement request. This would be from a copy_in/copy_out directive or from a compute node via the
+	// Copy Offload API (i.e. nnf-dm daemon).
+	DataMovementInitiatorLabel = "dm.cray.hpe.com/initiator"
 )
 
 func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha2.WorkflowState) {
@@ -236,6 +267,16 @@ func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha2.W
 	}
 
 	labels[DataMovementTeardownStateLabel] = string(state)
+	object.SetLabels(labels)
+}
+
+func AddDataMovementInitiatorLabel(object metav1.Object, initiator string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[DataMovementInitiatorLabel] = initiator
 	object.SetLabels(labels)
 }
 

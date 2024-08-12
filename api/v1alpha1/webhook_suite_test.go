@@ -63,6 +63,7 @@ type envSetting struct {
 var envVars = []envSetting{
 	{"NNF_STORAGE_PROFILE_NAMESPACE", "default"},
 	{"NNF_CONTAINER_PROFILE_NAMESPACE", "default"},
+	{"NNF_DM_PROFILE_NAMESPACE", "default"},
 }
 
 func TestAPIs(t *testing.T) {
@@ -128,6 +129,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&NnfContainerProfile{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&NnfDataMovementProfile{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook

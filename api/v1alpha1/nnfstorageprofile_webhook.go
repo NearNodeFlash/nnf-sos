@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -33,7 +33,7 @@ import (
 )
 
 // log is for logging in this package.
-var nnfstorageprofilelog = logf.Log.WithName("nnfstorageprofile-resource")
+var nnfstorageprofilelog = logf.Log.WithName("nnfstorageprofile")
 
 func (r *NnfStorageProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -41,7 +41,6 @@ func (r *NnfStorageProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha1-nnfstorageprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=create;update,versions=v1alpha1,name=vnnfstorageprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfStorageProfile{}
@@ -72,7 +71,7 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnin
 	obj := old.(*NnfStorageProfile)
 	if obj.Data.Pinned != r.Data.Pinned {
 		err := fmt.Errorf("the pinned flag is immutable")
-		nnfcontainerprofilelog.Error(err, "invalid")
+		nnfstorageprofilelog.Error(err, "invalid")
 		return nil, err
 	}
 	if obj.Data.Pinned {
@@ -96,9 +95,6 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnin
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfStorageProfile) ValidateDelete() (admission.Warnings, error) {
-	//nnfstorageprofilelog.V(1).Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
 

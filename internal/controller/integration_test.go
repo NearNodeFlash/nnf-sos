@@ -64,6 +64,7 @@ var _ = Describe("Integration Test", func() {
 		nodeNames          []string
 		setup              sync.Once
 		storageProfile     *nnfv1alpha1.NnfStorageProfile
+		dmProfile          *nnfv1alpha1.NnfDataMovementProfile
 		dmm                *nnfv1alpha1.NnfDataMovementManager
 	)
 
@@ -408,6 +409,9 @@ var _ = Describe("Integration Test", func() {
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
 
+		// Create a default NnfDataMovementProfile for the unit tests.
+		dmProfile = createBasicDefaultNnfDataMovementProfile()
+
 		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
@@ -426,6 +430,12 @@ var _ = Describe("Integration Test", func() {
 		profExpected := &nnfv1alpha1.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
+		}).ShouldNot(Succeed())
+
+		Expect(k8sClient.Delete(context.TODO(), dmProfile)).To(Succeed())
+		dmProfExpected := &nnfv1alpha1.NnfDataMovementProfile{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
 		}).ShouldNot(Succeed())
 
 		for _, nodeName := range nodeNames {

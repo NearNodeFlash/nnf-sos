@@ -354,6 +354,19 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfdatamovementprofiles
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
   - nnfdatamovements
   verbs:
   - create

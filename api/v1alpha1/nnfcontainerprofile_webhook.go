@@ -34,7 +34,7 @@ import (
 )
 
 // log is for logging in this package.
-var nnfcontainerprofilelog = logf.Log.WithName("nnfcontainerprofile-resource")
+var nnfcontainerprofilelog = logf.Log.WithName("nnfcontainerprofile")
 
 func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -42,7 +42,6 @@ func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha1-nnfcontainerprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=create;update,versions=v1alpha1,name=vnnfcontainerprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfContainerProfile{}
@@ -162,6 +161,5 @@ func (r *NnfContainerProfile) validateContent() error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateDelete() (admission.Warnings, error) {
-	nnfcontainerprofilelog.Info("validate delete", "name", r.Name)
 	return nil, nil
 }

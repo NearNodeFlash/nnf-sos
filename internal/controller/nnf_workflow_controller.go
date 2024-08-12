@@ -76,6 +76,7 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovements,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementmanagers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementmanagers/status,verbs=get;list;watch;
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfdatamovementprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;create;list;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;create;list;watch;update;patch
@@ -307,6 +308,16 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 		return nil, createPinnedContainerProfileIfNecessary(ctx, r.Client, r.Scheme, workflow, index, r.Log)
 	case "jobdw", "persistentdw", "create_persistent":
 		break
+	case "copy_in", "copy_out":
+		pinnedDMProfile, err := createPinnedDMProfile(ctx, r.Client, r.Scheme, dwArgs, workflow, indexedResourceName(workflow, index))
+		if err != nil {
+			return nil, err
+		}
+
+		if pinnedDMProfile == nil {
+			return Requeue("could not find pinned DM profile"), nil
+		}
+		fallthrough
 	default:
 		return nil, nil
 	}
@@ -648,10 +659,15 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	fsType := targetStorage.Spec.FileSystemType
 
-	// Use a non-default profile for data movement, if supplied
-	dmProfile, found := dwArgs["profile"]
-	if !found {
-		dmProfile = nnfv1alpha1.DataMovementProfileDefault
+	// Get the pinned nnf-dm profile
+	dmProfile, err := findPinnedDMProfile(ctx, r.Client, workflow.GetNamespace(), indexedResourceName(workflow, index))
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not get NnfDataMovementProfile %s", indexedResourceName(workflow, index)).WithError(err).WithUserMessage("could not find data movement profile")
+	}
+	dmProfileRef := corev1.ObjectReference{
+		Kind:      reflect.TypeOf(nnfv1alpha1.NnfDataMovementProfile{}).Name(),
+		Name:      dmProfile.Name,
+		Namespace: dmProfile.Namespace,
 	}
 
 	switch fsType {
@@ -682,15 +698,16 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 							Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, node.Name, i),
 							StorageReference: *destStorage,
 						},
-						UserId:  workflow.Spec.UserID,
-						GroupId: workflow.Spec.GroupID,
-						Profile: dmProfile,
+						UserId:           workflow.Spec.UserID,
+						GroupId:          workflow.Spec.GroupID,
+						ProfileReference: dmProfileRef,
 					},
 				}
 
 				dwsv1alpha2.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha2.AddOwnerLabels(dm, workflow)
 				nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+				nnfv1alpha1.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 				addDirectiveIndexLabel(dm, index)
 
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
@@ -719,15 +736,16 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 					Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, "", 0),
 					StorageReference: *destStorage,
 				},
-				UserId:  workflow.Spec.UserID,
-				GroupId: workflow.Spec.GroupID,
-				Profile: dmProfile,
+				UserId:           workflow.Spec.UserID,
+				GroupId:          workflow.Spec.GroupID,
+				ProfileReference: dmProfileRef,
 			},
 		}
 
 		dwsv1alpha2.AddWorkflowLabels(dm, workflow)
 		dwsv1alpha2.AddOwnerLabels(dm, workflow)
 		nnfv1alpha1.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+		nnfv1alpha1.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 		addDirectiveIndexLabel(dm, index)
 
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())

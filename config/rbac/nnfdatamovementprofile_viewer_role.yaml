@@ -1,0 +1,20 @@
+# permissions for end users to view nnfdatamovementprofiles.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nnfdatamovementprofile-viewer-role
+rules:
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfdatamovementprofiles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfdatamovementprofiles/status
+  verbs:
+  - get
