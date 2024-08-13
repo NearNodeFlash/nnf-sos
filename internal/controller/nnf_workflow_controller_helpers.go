@@ -712,37 +712,86 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("").WithUserMessage("no MGSs found for pool: %s", pool).WithFatal().WithUser()
 	}
 
-	persistentStorage := persistentStorageList.Items[rand.Intn(len(persistentStorageList.Items))]
+	healthyMgts := make(map[string]corev1.ObjectReference)
+	for _, persistentStorage := range persistentStorageList.Items {
+		// Find the NnfStorage for the PersistentStorage so we can check its status and get the MGT LNid
+		nnfStorage := &nnfv1alpha1.NnfStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      persistentStorage.Name,
+				Namespace: persistentStorage.Namespace,
+			},
+		}
 
-	// Find the NnfStorage for the PersistentStorage so we can get the LNid
-	nnfStorage := &nnfv1alpha1.NnfStorage{
-		ObjectMeta: metav1.ObjectMeta{
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("could not get persistent NnfStorage %v for MGS", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+		}
+
+		// Do some sanity checks on the NnfStorage to make sure it's really a standalone MGT
+		if nnfStorage.Spec.FileSystemType != "lustre" {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("invalid file systems type '%s' for persistent MGS", nnfStorage.Spec.FileSystemType).WithFatal()
+		}
+
+		if len(nnfStorage.Spec.AllocationSets) != 1 {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of allocation sets '%d' for persistent MGS", len(nnfStorage.Spec.AllocationSets)).WithFatal()
+		}
+
+		if len(nnfStorage.Spec.AllocationSets[0].Nodes) != 1 {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of nodes '%d' in allocation set for persistent MGS", len(nnfStorage.Spec.AllocationSets[0].Nodes)).WithFatal()
+		}
+
+		if nnfStorage.Spec.AllocationSets[0].Nodes[0].Count != 1 {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of count '%d' in node list for persistent MGS", nnfStorage.Spec.AllocationSets[0].Nodes[0].Count).WithFatal()
+		}
+
+		if len(nnfStorage.Status.MgsAddress) == 0 {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no LNid listed for persistent MGS").WithFatal()
+		}
+
+		// If the MGT isn't ready, then don't use it
+		if !nnfStorage.Status.Ready {
+			continue
+		}
+
+		// Find the DWS Storage resource for the Rabbit that the MGT is on
+		storage := &dwsv1alpha2.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfStorage.Spec.AllocationSets[0].Nodes[0].Name,
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("could not get storage resource %v", client.ObjectKeyFromObject(storage)).WithError(err)
+		}
+
+		// If the Storage resource says the Rabbit isn't ready, then don't use it
+		if storage.Status.Status != dwsv1alpha2.ReadyStatus {
+			continue
+		}
+
+		// The MGT is healthy from what we can tell, so add it to the map of healthy MGTs
+		healthyMgts[nnfStorage.Status.MgsAddress] = corev1.ObjectReference{
+			Kind:      reflect.TypeOf(dwsv1alpha2.PersistentStorageInstance{}).Name(),
 			Name:      persistentStorage.Name,
 			Namespace: persistentStorage.Namespace,
-		},
+		}
 	}
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("could not get persistent NnfStorage %v for MGS", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+	// Check to make sure there's at least one MGT we can use
+	if len(healthyMgts) == 0 {
+		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("").WithUserMessage("no healthy MGSs found for pool: %s", pool).WithMajor()
 	}
 
-	if nnfStorage.Spec.FileSystemType != "lustre" {
-		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("invalid file systems type '%s' for persistent MGS", nnfStorage.Spec.FileSystemType).WithFatal()
+	// Choose an MGT at random from the map
+	i := rand.Intn(len(healthyMgts))
+	for mgsAddress, persistentStorageReference := range healthyMgts {
+		if i == 0 {
+			return persistentStorageReference, mgsAddress, nil
+		}
+		i--
 	}
 
-	if len(nnfStorage.Spec.AllocationSets) != 1 {
-		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("unexpected number of allocation sets '%d' for persistent MGS", len(nnfStorage.Spec.AllocationSets)).WithFatal()
-	}
-
-	if len(nnfStorage.Status.MgsAddress) == 0 {
-		return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no LNid listed for persistent MGS").WithFatal()
-	}
-
-	return corev1.ObjectReference{
-		Kind:      reflect.TypeOf(dwsv1alpha2.PersistentStorageInstance{}).Name(),
-		Name:      persistentStorage.Name,
-		Namespace: persistentStorage.Namespace,
-	}, nnfStorage.Status.MgsAddress, nil
+	return corev1.ObjectReference{}, "", dwsv1alpha2.NewResourceError("no MGS successfully picked. Map length %d", len(healthyMgts)).WithFatal()
 }
 
 func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {
