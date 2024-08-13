@@ -13,6 +13,7 @@ resources:
   - bases/nnf.cray.hpe.com_nnfnodeecdata.yaml
   - bases/nnf.cray.hpe.com_nnfcontainerprofiles.yaml
   - bases/nnf.cray.hpe.com_nnfportmanagers.yaml
+  - bases/nnf.cray.hpe.com_nnflustremgts.yaml
   - bases/nnf.cray.hpe.com_nnfdatamovementprofiles.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
@@ -29,6 +30,7 @@ patchesStrategicMerge:
 #- patches/webhook_in_nnfnodeecdata.yaml
 #- patches/webhook_in_nnfcontainerprofiles.yaml
 #- patches/webhook_in_nnfportmanagers.yaml
+#- patches/webhook_in_nnflustremgts.yaml
 #- patches/webhook_in_nnfdatamovementprofiles.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
@@ -44,6 +46,7 @@ patchesStrategicMerge:
 #- patches/cainjection_in_nnfnodeecdata.yaml
 #- patches/cainjection_in_nnfcontainerprofiles.yaml
 #- patches/cainjection_in_nnfportmanagers.yaml
+#- patches/cainjection_in_nnflustremgts.yaml
 #- patches/cainjection_in_nnfdatamovementprofiles.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
