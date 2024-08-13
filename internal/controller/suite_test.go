@@ -277,6 +277,14 @@ var _ = BeforeSuite(func() {
 		Start NNF-SOS NLC pieces
 	*/
 
+	err = (&NnfLustreMGTReconciler{
+		Client:         k8sManager.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("NnfLustreMgt"),
+		Scheme:         testEnv.Scheme,
+		ControllerType: ControllerTest,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	// Coordinate the startup of the NLC controllers that use EC.
 
 	semNnfNodeDone := make(chan struct{})

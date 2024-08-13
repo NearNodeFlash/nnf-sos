@@ -20,6 +20,16 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - namespaces
   verbs:
   - create
@@ -367,6 +377,33 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnflustremgts
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnflustremgts/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnflustremgts/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - nnf.cray.hpe.com
   resources:

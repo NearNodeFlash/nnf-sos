@@ -47,6 +47,7 @@ type LustreFileSystem struct {
 
 	Name       string
 	TargetType string
+	TargetPath string
 	MgsAddress string
 	Index      int
 	BackFs     string
@@ -109,7 +110,7 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 		return false, err
 	}
 
-	path := filepath.Clean(fmt.Sprintf("/mnt/nnf/lustre/%s.%s.%d", l.Name, l.TargetType, l.Index))
+	path := filepath.Clean(l.TargetPath)
 	for _, m := range mounts {
 		if m.Path != path {
 			continue
@@ -159,7 +160,7 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	path := filepath.Clean(fmt.Sprintf("/mnt/nnf/lustre/%s.%s.%d", l.Name, l.TargetType, l.Index))
+	path := filepath.Clean(l.TargetPath)
 	for _, m := range mounts {
 		if m.Path != path {
 			continue
