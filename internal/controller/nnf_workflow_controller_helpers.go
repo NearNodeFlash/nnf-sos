@@ -715,7 +715,7 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 
 	healthyMgts := make(map[string]corev1.ObjectReference)
 	for _, persistentStorage := range persistentStorageList.Items {
-		// Find the NnfStorage for the PersistentStorage so we can check it's status and get the MGT LNid
+		// Find the NnfStorage for the PersistentStorage so we can check its status and get the MGT LNid
 		nnfStorage := &nnfv1alpha1.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      persistentStorage.Name,
