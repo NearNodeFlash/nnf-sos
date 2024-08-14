@@ -88,7 +88,7 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfAccess
-  version: ""
+  version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
