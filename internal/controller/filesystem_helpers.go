@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -151,7 +152,40 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 }
 
 func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha1.NnfNodeBlockStorage) (bool, error) {
-	return true, nil
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		return true, nil
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      os.Getenv("NNF_POD_NAME"),
+			Namespace: os.Getenv("NNF_POD_NAMESPACE"),
+		},
+	}
+
+	if err := c.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+		return false, dwsv1alpha2.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+	}
+
+	// The controllers for the NnfNodeStorage and NnfNodeBlockStorage both run in the same pod. Make sure that the NnfNodeBlockStorage
+	// has been reconciled by the same instance of the pod that's currently running the NnfNodeStorage controller.
+	for _, container := range pod.Status.ContainerStatuses {
+		if container.Name != "manager" {
+			continue
+		}
+
+		if container.State.Running == nil {
+			return false, nil
+		}
+
+		if container.State.Running.StartedAt != nnfNodeBlockStorage.Status.PodStartTime {
+			return false, nil
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
@@ -177,10 +211,13 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 	}
 
+	// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
+	// rebooted.
 	current, err := isNodeBlockStorageCurrent(ctx, c, nnfNodeBlockStorage)
 	if err != nil {
 		return nil, err
 	}
+
 	if !current {
 		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
 	}
@@ -224,6 +261,17 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 		if nnfNodeBlockStorage.Status.Ready == false {
 			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+		}
+
+		// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
+		// rebooted.
+		current, err := isNodeBlockStorageCurrent(ctx, c, nnfNodeBlockStorage)
+		if err != nil {
+			return nil, err
+		}
+
+		if !current {
+			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
 		}
 
 		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses) > 0 {

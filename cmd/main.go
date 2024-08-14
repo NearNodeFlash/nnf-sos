@@ -195,6 +195,7 @@ func (*nodeLocalController) SetNamespaces(options *ctrl.Options) {
 	namespaceCache := make(map[string]cache.Config)
 	namespaceCache[corev1.NamespaceDefault] = cache.Config{}
 	namespaceCache[os.Getenv("NNF_NODE_NAME")] = cache.Config{}
+	namespaceCache["nnf-system"] = cache.Config{}
 	options.Cache = cache.Options{DefaultNamespaces: namespaceCache}
 }
 
