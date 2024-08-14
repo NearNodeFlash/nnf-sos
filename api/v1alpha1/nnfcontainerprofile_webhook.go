@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -36,12 +36,18 @@ import (
 // log is for logging in this package.
 var nnfcontainerprofilelog = logf.Log.WithName("nnfcontainerprofile")
 
+// SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
+// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+
+// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+// NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
+// Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha1-nnfcontainerprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=create;update,versions=v1alpha1,name=vnnfcontainerprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfContainerProfile{}
