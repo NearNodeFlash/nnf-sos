@@ -88,7 +88,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfAccess
-  version: ""
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
+  version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
