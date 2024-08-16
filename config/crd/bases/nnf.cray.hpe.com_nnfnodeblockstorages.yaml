@@ -160,6 +160,13 @@ spec:
                 - severity
                 - type
                 type: object
+              podStartTime:
+                description: |-
+                  PodStartTime is the value of pod.status.containerStatuses[].state.running.startedAt from the pod that did
+                  last successful full reconcile of the NnfNodeBlockStorage. This is used to tell whether the /dev paths
+                  listed in the status section are from the current boot of the node.
+                format: date-time
+                type: string
               ready:
                 type: boolean
             required:

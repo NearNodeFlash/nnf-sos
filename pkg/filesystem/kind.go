@@ -95,6 +95,10 @@ func (m *KindFileSystem) Unmount(ctx context.Context, path string) (bool, error)
 }
 
 func (m *KindFileSystem) SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error) {
+	if complete == true {
+		return false, nil
+	}
+
 	m.Log.Info("Set mock file system permissions")
 
 	return false, nil

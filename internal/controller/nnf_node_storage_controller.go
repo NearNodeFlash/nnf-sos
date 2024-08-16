@@ -306,11 +306,6 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	for index, fileSystem := range fileSystems {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-		// Skip allocations that are already created
-		if allocationStatus.Ready {
-			continue
-		}
-
 		ran, err := fileSystem.Create(ctx, allocationStatus.Ready)
 		if err != nil {
 			return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()

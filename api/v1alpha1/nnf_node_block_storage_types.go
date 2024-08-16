@@ -50,6 +50,11 @@ type NnfNodeBlockStorageStatus struct {
 
 	dwsv1alpha2.ResourceError `json:",inline"`
 
+	// PodStartTime is the value of pod.status.containerStatuses[].state.running.startedAt from the pod that did
+	// last successful full reconcile of the NnfNodeBlockStorage. This is used to tell whether the /dev paths
+	// listed in the status section are from the current boot of the node.
+	PodStartTime metav1.Time `json:"podStartTime,omitempty"`
+
 	Ready bool `json:"ready"`
 }
 

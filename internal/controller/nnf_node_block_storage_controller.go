@@ -30,7 +30,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -206,6 +208,33 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		if result != nil {
 			return *result, nil
+		}
+	}
+
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); !found {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      os.Getenv("NNF_POD_NAME"),
+				Namespace: os.Getenv("NNF_POD_NAMESPACE"),
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+			return ctrl.Result{}, dwsv1alpha2.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+		}
+
+		// Set the start time of the pod that did the reconcile. This allows us to detect when the Rabbit node has
+		// been rebooted and the /dev information is stale
+		for _, container := range pod.Status.ContainerStatuses {
+			if container.Name != "manager" {
+				continue
+			}
+
+			if container.State.Running == nil {
+				return ctrl.Result{}, dwsv1alpha2.NewResourceError("pod not in state running: %v", client.ObjectKeyFromObject(pod)).WithError(err).WithMajor()
+			}
+
+			nodeBlockStorage.Status.PodStartTime = container.State.Running.StartedAt
 		}
 	}
 
