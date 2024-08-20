@@ -11,17 +11,3 @@ spec:
         env:
         - name: ENVIRONMENT
           value: "production"
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: node-manager
-  namespace: system
-spec:
-  template:
-    spec:
-      containers:
-      - name: manager
-        env:
-        - name: ENVIRONMENT
-          value: "production"
