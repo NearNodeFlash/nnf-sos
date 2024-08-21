@@ -149,7 +149,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 		}
 	}
 
-	return false, nil
+	return false, fmt.Errorf("could not find logical volume %s: %w", lv.Name, err)
 }
 
 func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, error) {
