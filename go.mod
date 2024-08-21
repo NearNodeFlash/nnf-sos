@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/DataWorkflowServices/dws v0.0.1-0.20240801173757-1fb2188d84b9
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240709160956-40dcbac0aadf
-	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240708183336-34d1295977f5
+	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240820195316-cb407b151cb4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.3.1
