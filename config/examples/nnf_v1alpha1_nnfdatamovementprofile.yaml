@@ -11,3 +11,4 @@ data:
   logStdout: false
   storeStdout: false
   progressIntervalSeconds: 5
+  createDestDir: true
