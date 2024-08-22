@@ -359,19 +359,25 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		return err
 	}
 
-	if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
-		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
-		return err
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
+			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
+			return err
+		}
 	}
 
-	if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
-		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
-		return err
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
+			return err
+		}
 	}
 
-	if err := (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
-		ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfDataMovementProfile")
-		return err
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
+			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfDataMovementProfile")
+			return err
+		}
 	}
 
 	return nil

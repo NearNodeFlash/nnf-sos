@@ -35,12 +35,15 @@ import (
 // log is for logging in this package.
 var nnfstorageprofilelog = logf.Log.WithName("nnfstorageprofile")
 
+// SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *NnfStorageProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
+// NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
+// Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha1-nnfstorageprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=create;update,versions=v1alpha1,name=vnnfstorageprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfStorageProfile{}
