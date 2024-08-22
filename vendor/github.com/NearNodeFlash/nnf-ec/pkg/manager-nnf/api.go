@@ -95,7 +95,7 @@ type StorageServiceApi interface {
 	StorageServiceIdStoragePoolIdCapacitySourcesGet(string, string, *sf.CapacitySourceCollectionCapacitySourceCollection) error
 	StorageServiceIdStoragePoolIdCapacitySourceIdGet(string, string, string, *sf.CapacityCapacitySource) error
 	StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVolumesGet(string, string, string, *sf.VolumeCollectionVolumeCollection) error
-	StorageServiceIdStoragePoolIdAlloctedVolumesGet(string, string, *sf.VolumeCollectionVolumeCollection) error
+	StorageServiceIdStoragePoolIdAllocatedVolumesGet(string, string, *sf.VolumeCollectionVolumeCollection) error
 	StorageServiceIdStoragePoolIdAllocatedVolumeIdGet(string, string, string, *sf.VolumeV161Volume) error
 
 	StorageServiceIdStorageGroupsGet(string, *sf.StorageGroupCollectionStorageGroupCollection) error

@@ -396,7 +396,7 @@ func (s *StorageService) cleanupVolumes() {
 }
 
 // Initialize is responsible for initializing the NNF Storage Service; the
-// Storage Service must complete initialization without error prior any
+// Storage Service must complete initialization without error prior to any
 // access to the Storage Service. Failure to initialize will cause the
 // storage service to misbehave.
 func (s *StorageService) Initialize(log ec.Logger, ctrl NnfControllerInterface) error {
@@ -529,7 +529,7 @@ func (s *StorageService) EventHandler(e event.Event) error {
 	}
 
 	// Check if the fabric is ready; that is all devices are enumerated and discovery
-	// is complete. We
+	// is complete.
 	if e.Is(msgreg.FabricReadyNnf("")) {
 		log.V(1).Info("Fabric ready")
 
@@ -752,7 +752,7 @@ func (*StorageService) StorageServiceIdStoragePoolIdGet(storageServiceId, storag
 
 	model.Id = p.id
 	model.OdataId = p.OdataId()
-	model.AllocatedVolumes = p.OdataIdRef("/AlloctedVolumes")
+	model.AllocatedVolumes = p.OdataIdRef("/AllocatedVolumes")
 
 	model.BlockSizeBytes = 4096 // TODO
 	model.Capacity = sf.CapacityV100Capacity{
@@ -901,8 +901,8 @@ func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVol
 	return nil
 }
 
-// StorageServiceIdStoragePoolIdAlloctedVolumesGet -
-func (*StorageService) StorageServiceIdStoragePoolIdAlloctedVolumesGet(storageServiceId, storagePoolId string, model *sf.VolumeCollectionVolumeCollection) error {
+// StorageServiceIdStoragePoolIdAllocatedVolumesGet -
+func (*StorageService) StorageServiceIdStoragePoolIdAllocatedVolumesGet(storageServiceId, storagePoolId string, model *sf.VolumeCollectionVolumeCollection) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
 	if p == nil {
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolId))

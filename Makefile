@@ -59,7 +59,7 @@ NNFMFU_VERSION ?= 0.1.0
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28.0
+ENVTEST_K8S_VERSION = 1.29.0
 
 # Jenkins behaviors
 # pipeline_service builds its target docker image and stores it into 1 of 3 destination folders.

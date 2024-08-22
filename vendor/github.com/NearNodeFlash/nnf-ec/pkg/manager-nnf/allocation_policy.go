@@ -57,8 +57,8 @@ const (
 
 // Default AllocationPolicy and AllocationCompliance
 const (
-	DefaultAlloctionPolicy     = SpareAllocationPolicyType
-	DefaultAlloctionCompliance = StrictAllocationComplianceType
+	DefaultAllocationPolicy     = SpareAllocationPolicyType
+	DefaultAllocationCompliance = StrictAllocationComplianceType
 )
 
 // AllocationPolicyOem -
@@ -78,13 +78,13 @@ type AllocationPolicyOem struct {
 // is not as desired.
 func NewAllocationPolicy(config AllocationConfig, oem map[string]interface{}) AllocationPolicy {
 
-	policy := DefaultAlloctionPolicy
-	compliance := DefaultAlloctionCompliance
+	policy := DefaultAllocationPolicy
+	compliance := DefaultAllocationCompliance
 
 	if oem != nil {
 		overrides := AllocationPolicyOem{
-			Policy:     DefaultAlloctionPolicy,
-			Compliance: DefaultAlloctionCompliance,
+			Policy:     DefaultAllocationPolicy,
+			Compliance: DefaultAllocationCompliance,
 		}
 
 		if err := openapi.UnmarshalOem(oem, &overrides); err == nil {

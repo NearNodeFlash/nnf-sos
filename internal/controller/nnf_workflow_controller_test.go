@@ -59,6 +59,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		workflow              *dwsv1alpha2.Workflow
 		setup                 sync.Once
 		storageProfile        *nnfv1alpha1.NnfStorageProfile
+		dmProfile             *nnfv1alpha1.NnfDataMovementProfile
 		nnfNode               *nnfv1alpha1.NnfNode
 		namespace             *corev1.Namespace
 		persistentStorageName string
@@ -118,6 +119,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
 
+		// Create a default NnfDataMovementProfile for the unit tests.
+		dmProfile = createBasicDefaultNnfDataMovementProfile()
+
 		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
@@ -145,6 +149,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
+
+		Expect(k8sClient.Delete(context.TODO(), dmProfile)).To(Succeed())
+		dmProfExpected := &nnfv1alpha1.NnfDataMovementProfile{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
+		}).ShouldNot(Succeed())
 	})
 
 	getErroredDriverStatus := func(workflow *dwsv1alpha2.Workflow) *dwsv1alpha2.WorkflowDriverStatus {
@@ -170,7 +180,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Name:   name,
 				FsType: fsType,
 				// DWDirective: workflow.Spec.DWDirectives[0],
-				DWDirective: "#DW persistentdw name=" + name,
+				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
 				State:       dwsv1alpha2.PSIStateActive,
 			},
 		}
@@ -358,6 +368,199 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		It("Named profile", func() {
 			workflow.Spec.DWDirectives = []string{
 				fmt.Sprintf("#DW jobdw name=test profile=%s type=lustre capacity=1GiB", profNames[0]),
+			}
+		})
+	})
+
+	When("Negative tests for data movement profiles", func() {
+		var lustre *lusv1beta1.LustreFileSystem
+
+		BeforeEach(func() {
+			lustre = &lusv1beta1.LustreFileSystem{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "maui",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: lusv1beta1.LustreFileSystemSpec{
+					Name:      "maui",
+					MountRoot: "/lus/maui",
+					MgsNids:   "10.0.0.1@tcp",
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+		})
+
+		It("Fails to achieve proposal state when the named dm profile cannot be found", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_in profile=none-such source=/lus/maui/my-file.in destination=$DW_JOB_test",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			workflowAfter := &dwsv1alpha2.Workflow{}
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
+				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+					return nil
+				}
+				return fmt.Errorf("error state not achieved")
+			}).Should(Succeed(), "achieve error state")
+		})
+
+		It("Fails to achieve proposal state when a default profile cannot be found", func() {
+			dmProfile.Data.Default = false
+			Expect(k8sClient.Update(context.TODO(), dmProfile)).To(Succeed(), "remove default flag")
+
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test",
+			}
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			workflowAfter := &dwsv1alpha2.Workflow{}
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
+				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+					return nil
+				}
+				return fmt.Errorf("error state not achieved")
+			}).Should(Succeed(), "achieve error state")
+		})
+
+		When("More than one default profile", func() {
+
+			var dmProfile2 *nnfv1alpha1.NnfDataMovementProfile
+
+			BeforeEach(func() {
+				// The second profile will get a different name via the call to uuid.
+				// Then we'll have two that are default.
+				dmProfile2 = createBasicDefaultNnfDataMovementProfile()
+			})
+
+			AfterEach(func() {
+				Expect(k8sClient.Delete(context.TODO(), dmProfile2)).To(Succeed())
+				profExpected := &nnfv1alpha1.NnfDataMovementProfile{}
+				Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile2), profExpected)
+				}).ShouldNot(Succeed())
+			})
+
+			It("Fails to achieve proposal state when more than one default profile exists", func() {
+				workflow.Spec.DWDirectives = []string{
+					"#DW jobdw name=test type=lustre capacity=1GiB",
+					"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test",
+				}
+
+				Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+				workflowAfter := &dwsv1alpha2.Workflow{}
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
+					if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+						return nil
+					}
+					return fmt.Errorf("error state not achieved")
+				}).Should(Succeed(), "achieve error state")
+			})
+		})
+	})
+
+	When("Positive tests for data movement profiles", func() {
+
+		profiles := []*nnfv1alpha1.NnfDataMovementProfile{}
+		profNames := []string{}
+		var lustre *lusv1beta1.LustreFileSystem
+
+		BeforeEach(func() {
+			// Keep the underlying array memory, so the captures in AfterEach() and It() see the new values.
+			profNames = profNames[:0]
+			// Names to use for a batch of profiles.
+			profNames = append(profNames,
+				"test-"+uuid.NewString()[:8],
+				"test-"+uuid.NewString()[:8],
+				"test-"+uuid.NewString()[:8],
+			)
+
+			// Keep the underlying array memory, so the captures in AfterEach() and It() see the new values.
+			profiles = profiles[:0]
+			// Create a batch of profiles.
+			for _, pn := range profNames {
+				prof := basicNnfDataMovementProfile(pn)
+				prof = createNnfDataMovementProfile(prof, true)
+				profiles = append(profiles, prof)
+			}
+
+			lustre = &lusv1beta1.LustreFileSystem{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "maui",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: lusv1beta1.LustreFileSystemSpec{
+					Name:      "maui",
+					MountRoot: "/lus/maui",
+					MgsNids:   "10.0.0.1@tcp",
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), lustre)).To(Succeed())
+
+		})
+
+		AfterEach(func() {
+			for _, prof := range profiles {
+				Expect(k8sClient.Delete(context.TODO(), prof)).To(Succeed())
+			}
+
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(lustre), lustre)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
+		})
+
+		JustAfterEach(func() {
+			By("Verify workflow achieves proposal state with pinned profile")
+
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+
+			workflowAfter := &dwsv1alpha2.Workflow{}
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
+				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) == nil) {
+					return nil
+				}
+				return fmt.Errorf("ready state not achieved")
+			}).Should(Succeed(), "achieve ready state")
+
+			By("Verify that one DirectiveBreakdowns was created")
+			Expect(workflowAfter.Status.DirectiveBreakdowns).To(HaveLen(1))
+			By("Verify its pinned dm profile")
+			pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflowAfter, 1)
+			// The profile begins life with the workflow as the owner.
+			Expect(verifyPinnedDMProfile(context.TODO(), k8sClient, pinnedNamespace, pinnedName)).To(Succeed())
+		})
+
+		It("Implicit use of default profile", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				"#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test",
+			}
+		})
+
+		It("Named profile, which happens to also be the default", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test profile=%s", dmProfile.GetName()),
+			}
+		})
+
+		It("Named profile", func() {
+			workflow.Spec.DWDirectives = []string{
+				"#DW jobdw name=test type=lustre capacity=1GiB",
+				fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in destination=$DW_JOB_test profile=%s", profNames[0]),
 			}
 		})
 	})
@@ -592,18 +795,28 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(workflow.Namespace),
 					}))
 
-				Expect(dm.Spec.Profile).To(Equal(nnfv1alpha1.DataMovementProfileDefault))
+				Expect(dm.Spec.ProfileReference).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfDataMovementProfile{}).Name()),
+						"Name":      Equal(indexedResourceName(workflow, 1)),
+						"Namespace": Equal(corev1.NamespaceDefault),
+					},
+				))
+				Expect(dm.GetLabels()[nnfv1alpha1.DataMovementInitiatorLabel]).To(Equal("copy_in"))
 			})
 		})
 
 		When("using $DW_PERSISTENT_ references", func() {
+			dmProfile := basicNnfDataMovementProfile("test")
+
 			BeforeEach(func() {
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
-					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in profile=test destination=$DW_PERSISTENT_%s/my-persistent-file.out", strings.ReplaceAll(persistentStorageName, "-", "_")),
+					fmt.Sprintf("#DW copy_in source=/lus/maui/my-file.in profile=%s destination=$DW_PERSISTENT_%s/my-persistent-file.out", dmProfile.Name, strings.ReplaceAll(persistentStorageName, "-", "_")),
 				}
 
 				createPersistentStorageInstance(persistentStorageName, "lustre")
+				createNnfDataMovementProfile(dmProfile, true)
 			})
 
 			// Create/Delete the "nnf-system" namespace as part of the test life-cycle; the persistent storage instances are
@@ -621,6 +834,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			AfterEach(func() {
 				deletePersistentStorageInstance(persistentStorageName)
 
+				Expect(k8sClient.Delete(context.TODO(), dmProfile)).Should(Succeed())
 				Expect(k8sClient.Delete(context.TODO(), ns)).Should(Succeed())
 			})
 
@@ -660,7 +874,15 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Name":      Equal(persistentStorageName),
 						"Namespace": Equal(workflow.Namespace),
 					}))
-				Expect(dm.Spec.Profile).To(Equal("test"))
+				Expect(dm.Spec.ProfileReference).To(MatchFields(IgnoreExtras,
+					Fields{
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha1.NnfDataMovementProfile{}).Name()),
+						"Name":      Equal(indexedResourceName(workflow, 1)),
+						"Namespace": Equal(corev1.NamespaceDefault),
+					},
+				))
+				Expect(dm.GetLabels()[nnfv1alpha1.DataMovementInitiatorLabel]).To(Equal("copy_in"))
+
 			})
 		})
 	}) // When("Using copy_in directives", func()

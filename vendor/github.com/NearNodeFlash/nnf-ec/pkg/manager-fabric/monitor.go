@@ -38,7 +38,7 @@ type monitor struct {
 	fabric *Fabric
 }
 
-// Run will run the Fabirc Monitor forever
+// Run Fabric Monitor forever
 func (m *monitor) Run() {
 
 	for {
@@ -49,10 +49,18 @@ func (m *monitor) Run() {
 			s := &m.fabric.switches[idx]
 
 			// The normal path is when the switch is operating without issue and we can
-			// poll the switch for any events, and process those events
+			// poll the switch for any events then process those events
 			if s.isReady() {
 
 				if events, err := s.dev.GetEvents(); err == nil {
+
+					// In the steady state there will be no events.
+					// Refresh the port status to ensure we're up to date.
+					if len(events) == 0 {
+						s.refreshPortStatus()
+						continue
+					}
+
 					for _, event := range events {
 						physPortId, isDown := m.getEventInfo(event)
 
@@ -77,7 +85,7 @@ func (m *monitor) Run() {
 
 func (*monitor) checkSwitchStatus(s *Switch) {
 
-	// Check if the switch path changed by trying to re-identifying the switch.
+	// Check if the switch path changed by trying to re-identify the switch.
 	// If the switch is found, it's likely the switch path has changed and we
 	// need to re-open the switch.
 	if err := s.identify(); err != nil {
@@ -96,7 +104,7 @@ func (*monitor) checkSwitchStatus(s *Switch) {
 
 const invalidPhysicalPortId = math.MaxUint8
 
-func (m *monitor) getEventInfo(e switchtec.GfmsEvent) (uint8, bool) {
+func (m *monitor) getEventInfo(e switchtec.GfmsEvent) (uint8, bool /* is down event? */) {
 
 	switch e.Id {
 	case switchtec.FabricLinkUp_GfmsEvent, switchtec.FabricLinkDown_GfmsEvent:

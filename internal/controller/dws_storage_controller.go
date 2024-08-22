@@ -21,6 +21,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -45,6 +47,16 @@ type DWSStorageReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const taintCrayNnfNodeDrainPrefix string = "cray.nnf.node.drain"
+
+type K8sNodeState struct {
+	// nnfTaint is the name of any "cray.nnf.node.drain*" taint found in Node.Spec.Taints.
+	nnfTaint string
+
+	// nodeReady indicates whether Node.Status.Conditions shows Ready or NotReady.
+	nodeReady bool
+}
+
 // +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=storages,verbs=get;create;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=storages/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodes,verbs=get;list;watch;
@@ -67,14 +79,14 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
-	node := &nnfv1alpha1.NnfNode{
+	nnfNode := &nnfv1alpha1.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-nlc",
 			Namespace: storage.GetName(),
 		},
 	}
 
-	if err := r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -108,23 +120,23 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	storage.Status.Type = dwsv1alpha2.NVMe
-	storage.Status.Capacity = node.Status.Capacity
+	storage.Status.Capacity = nnfNode.Status.Capacity
 	storage.Status.Access.Protocol = dwsv1alpha2.PCIe
 
-	if len(node.Status.Servers) == 0 {
-		return ctrl.Result{}, nil // Wait until severs array has been filed in with Rabbit info
+	if len(nnfNode.Status.Servers) == 0 {
+		return ctrl.Result{}, nil // Wait until severs array has been filled in with Rabbit info
 	}
 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.
 	storage.Status.Access.Servers = []dwsv1alpha2.Node{{
 		Name:   storage.Name,
-		Status: node.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
+		Status: nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
 	}}
 
 	// Populate compute status'
-	if len(node.Status.Servers) > 1 {
+	if len(nnfNode.Status.Servers) > 1 {
 		storage.Status.Access.Computes = make([]dwsv1alpha2.Node, 0)
-		for _, server := range node.Status.Servers[1:] /*Skip Rabbit*/ {
+		for _, server := range nnfNode.Status.Servers[1:] /*Skip Rabbit*/ {
 
 			// Servers that are unassigned in the system configuration will
 			// not have a hostname and should be skipped.
@@ -141,8 +153,8 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Populate storage status'
-	storage.Status.Devices = make([]dwsv1alpha2.StorageDevice, len(node.Status.Drives))
-	for idx, drive := range node.Status.Drives {
+	storage.Status.Devices = make([]dwsv1alpha2.StorageDevice, len(nnfNode.Status.Drives))
+	for idx, drive := range nnfNode.Status.Drives {
 		device := &storage.Status.Devices[idx]
 
 		device.Slot = drive.Slot
@@ -171,11 +183,11 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Clear the fence status if the storage resource is enabled from a disabled state
 		if storage.Status.Status == dwsv1alpha2.DisabledStatus {
 
-			log.WithValues("fenced", node.Status.Fenced).Info("resource disabled")
-			if node.Status.Fenced {
-				node.Status.Fenced = false
+			if nnfNode.Status.Fenced {
+				log.WithValues("fenced", nnfNode.Status.Fenced).Info("resource disabled")
+				nnfNode.Status.Fenced = false
 
-				if err := r.Status().Update(ctx, node); err != nil {
+				if err := r.Status().Update(ctx, nnfNode); err != nil {
 					return ctrl.Result{}, err
 				}
 
@@ -190,23 +202,26 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Message = ""
 		}
 
-		if node.Status.Fenced {
+		if nnfNode.Status.Fenced {
 			storage.Status.Status = dwsv1alpha2.DegradedStatus
 			storage.Status.RebootRequired = true
 			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
 		} else {
-
-			ready, err := r.isKubernetesNodeReady(ctx, storage)
+			nodeState, err := r.coreNodeState(ctx, storage)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 
-			if !ready {
+			if !nodeState.nodeReady {
 				log.Info("storage node is offline")
 				storage.Status.Status = dwsv1alpha2.OfflineStatus
 				storage.Status.Message = "Kubernetes node is offline"
+			} else if len(nodeState.nnfTaint) > 0 {
+				log.Info(fmt.Sprintf("storage node is tainted with %s", nodeState.nnfTaint))
+				storage.Status.Status = dwsv1alpha2.DrainedStatus
+				storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
 			} else {
-				storage.Status.Status = node.Status.Status.ConvertToDWSResourceStatus()
+				storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
 			}
 		}
 
@@ -221,22 +236,33 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return ctrl.Result{}, nil
 }
 
-func (r *DWSStorageReconciler) isKubernetesNodeReady(ctx context.Context, storage *dwsv1alpha2.Storage) (bool, error) {
+func (r *DWSStorageReconciler) coreNodeState(ctx context.Context, storage *dwsv1alpha2.Storage) (K8sNodeState, error) {
+	nodeState := K8sNodeState{}
+
 	// Get the kubernetes node resource corresponding to the same node as the nnfNode resource.
 	// The kubelet has a heartbeat mechanism, so we can determine node failures from this resource.
 	node := &corev1.Node{}
 	if err := r.Get(ctx, types.NamespacedName{Name: storage.Name}, node); err != nil {
-		return false, err
+		return nodeState, err
 	}
 
 	// Look through the node conditions to determine if the node is up.
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == corev1.NodeReady && condition.Status == corev1.ConditionTrue {
-			return true, nil
+			nodeState.nodeReady = true
+			break
 		}
 	}
 
-	return false, nil
+	// Look for any "cray.nnf.node.drain*" taint.
+	for _, taint := range node.Spec.Taints {
+		if strings.HasPrefix(taint.Key, taintCrayNnfNodeDrainPrefix) {
+			nodeState.nnfTaint = taint.Key
+			break
+		}
+	}
+
+	return nodeState, nil
 }
 
 func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -252,7 +278,8 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Setup to watch the Kubernetes Node resource
 	nodeMapFunc := func(ctx context.Context, o client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{
-			Name: o.GetName(),
+			Name:      o.GetName(),
+			Namespace: corev1.NamespaceDefault,
 		}}}
 	}
 
