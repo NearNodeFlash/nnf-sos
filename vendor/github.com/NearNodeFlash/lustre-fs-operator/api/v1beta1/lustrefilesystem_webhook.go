@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -39,15 +39,18 @@ import (
 // log is for logging in this package.
 var lustrefilesystemlog = logf.Log.WithName("lustrefilesystem-resource")
 
+// SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *LustreFileSystem) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
+// NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
+// Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 //+kubebuilder:webhook:path=/validate-lus-cray-hpe-com-v1beta1-lustrefilesystem,mutating=false,failurePolicy=fail,sideEffects=None,groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=create;update,versions=v1beta1,name=vlustrefilesystem.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LustreFileSystem{}

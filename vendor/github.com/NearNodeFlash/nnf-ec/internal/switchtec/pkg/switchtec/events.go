@@ -728,7 +728,7 @@ func (dev *Device) GetGfmsEvents() ([]GfmsEvent, error) {
 	type response struct {
 		ResponseNumber       uint16 // Number of GFMS Event Entries in this response
 		RemainingNumberFlags uint16 // [0:14] Number of GFMS Event Entries remaining in GFMS Event Queue
-		// [15]   Flag to indicatre whether the event entry buffer queue has
+		// [15]   Flag to indicate whether the event entry buffer queue has
 		//        been overwritten as a result of not being read in time.
 		Data [maxDataLength - 4]byte
 	}

@@ -40,6 +40,13 @@ jobs:
         cat ${GITHUB_ENV}
       shell: bash
 
+    - name: "Verify auto-generated files"
+      run: |
+          make manifests generate
+          if [[ $(git status -s | wc -l) -gt 0 ]]; then \
+              git status; exit 1; \
+          fi
+
     - name: "Docker metadata"
       id: meta
       uses: docker/metadata-action@v4

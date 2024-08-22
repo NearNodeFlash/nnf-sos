@@ -1,8 +1,9 @@
 resources:
 - ../top
 
-patchesStrategicMerge:
+patches:
 # Let the node-manager daemonset mount host dirs for lustre tools and libs.
-- manager_volumes_patch.yaml
+- path: manager_volumes_patch.yaml
 # Arguments for the controller manager that are specific to craystack
-- manager_environment_patch.yaml
+- path: manager_environment_deploy_patch.yaml
+- path: manager_environment_daemonset_patch.yaml

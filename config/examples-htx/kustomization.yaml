@@ -1,6 +1,6 @@
 resources:
 - ../examples
 
-patchesStrategicMerge:
+patches:
 # configure lustre to use externalMgs
-- nnfstorageprofile_patch.yaml
+- path: nnfstorageprofile_patch.yaml

@@ -64,6 +64,7 @@ var _ = Describe("Integration Test", func() {
 		nodeNames          []string
 		setup              sync.Once
 		storageProfile     *nnfv1alpha1.NnfStorageProfile
+		dmProfile          *nnfv1alpha1.NnfDataMovementProfile
 		dmm                *nnfv1alpha1.NnfDataMovementManager
 	)
 
@@ -408,6 +409,9 @@ var _ = Describe("Integration Test", func() {
 		// Create a default NnfStorageProfile for the unit tests.
 		storageProfile = createBasicDefaultNnfStorageProfile()
 
+		// Create a default NnfDataMovementProfile for the unit tests.
+		dmProfile = createBasicDefaultNnfDataMovementProfile()
+
 		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
@@ -426,6 +430,12 @@ var _ = Describe("Integration Test", func() {
 		profExpected := &nnfv1alpha1.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
+		}).ShouldNot(Succeed())
+
+		Expect(k8sClient.Delete(context.TODO(), dmProfile)).To(Succeed())
+		dmProfExpected := &nnfv1alpha1.NnfDataMovementProfile{}
+		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
+			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
 		}).ShouldNot(Succeed())
 
 		for _, nodeName := range nodeNames {
@@ -1428,6 +1438,7 @@ var _ = Describe("Integration Test", func() {
 			intendedDirective     string
 			profileExternalMGS    *nnfv1alpha1.NnfStorageProfile
 			profileCombinedMGTMDT *nnfv1alpha1.NnfStorageProfile
+			nnfLustreMgt          *nnfv1alpha1.NnfLustreMGT
 
 			profileMgsNid string
 
@@ -1457,6 +1468,19 @@ var _ = Describe("Integration Test", func() {
 			profileCombinedMGTMDT.Data.LustreStorage.CombinedMGTMDT = true
 			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
 			Expect(createNnfStorageProfile(profileCombinedMGTMDT, true)).ToNot(BeNil())
+
+			nnfLustreMgt = &nnfv1alpha1.NnfLustreMGT{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "profile-mgs",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha1.NnfLustreMGTSpec{
+					Addresses:   []string{profileMgsNid},
+					FsNameStart: "dddddddd",
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), nnfLustreMgt)).To(Succeed())
 		})
 
 		// Destroy the custom storage profiles.
@@ -1464,6 +1488,7 @@ var _ = Describe("Integration Test", func() {
 			By("AfterEach destroy the custom storage profiles")
 			Expect(k8sClient.Delete(context.TODO(), profileExternalMGS)).To(Succeed())
 			Expect(k8sClient.Delete(context.TODO(), profileCombinedMGTMDT)).To(Succeed())
+			Expect(k8sClient.Delete(context.TODO(), nnfLustreMgt)).To(Succeed())
 
 		})
 

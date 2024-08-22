@@ -457,9 +457,12 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 	// The directive has been validated by the webhook, so we can assume the pieces we need are in the map.
 	filesystem := argsMap["type"]
-	capacity := argsMap["capacity"]
+	capacity, capacityExists := argsMap["capacity"]
 
 	breakdownCapacity, _ := getCapacityInBytes(capacity)
+	if breakdownCapacity == 0 && capacityExists {
+		return dwsv1alpha2.NewResourceError("").WithUserMessage("'capacity' must be a non-zero value").WithFatal()
+	}
 
 	// allocationSets represents the result we need to produce.
 	// We build it then check to see if the directiveBreakdown's
@@ -468,15 +471,51 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 	// Depending on the #DW's filesystem (#DW type=<>) , we have different work to do
 	switch filesystem {
-	case "raw", "xfs", "gfs2":
+	case "raw":
+		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.RawStorage.CapacityScalingFactor, 64)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for raw allocation").WithFatal()
+		}
+		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
+
 		component := dwsv1alpha2.StorageAllocationSet{}
-		populateStorageAllocationSet(&component, dwsv1alpha2.AllocatePerCompute, breakdownCapacity, 0, 0, filesystem, nil)
+		populateStorageAllocationSet(&component, dwsv1alpha2.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.RawStorage.StorageLabels, filesystem, nil)
 
 		log.Info("allocationSets", "comp", component)
 
 		allocationSets = append(allocationSets, component)
+	case "xfs":
+		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.XFSStorage.CapacityScalingFactor, 64)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for xfs allocation").WithFatal()
+		}
+		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
 
+		component := dwsv1alpha2.StorageAllocationSet{}
+		populateStorageAllocationSet(&component, dwsv1alpha2.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.XFSStorage.StorageLabels, filesystem, nil)
+
+		log.Info("allocationSets", "comp", component)
+
+		allocationSets = append(allocationSets, component)
+	case "gfs2":
+		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.GFS2Storage.CapacityScalingFactor, 64)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for gfs2 allocation").WithFatal()
+		}
+		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
+
+		component := dwsv1alpha2.StorageAllocationSet{}
+		populateStorageAllocationSet(&component, dwsv1alpha2.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.GFS2Storage.StorageLabels, filesystem, nil)
+
+		log.Info("allocationSets", "comp", component)
+
+		allocationSets = append(allocationSets, component)
 	case "lustre":
+		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.LustreStorage.CapacityScalingFactor, 64)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for lustre allocation").WithFatal()
+		}
+		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
 		mdtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMDT)
 		mgtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMGT)
 
@@ -514,7 +553,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		for _, i := range lustreComponents {
 			targetMiscOptions := nnfStorageProfile.GetLustreMiscOptions(i.labelsStr)
 			component := dwsv1alpha2.StorageAllocationSet{}
-			populateStorageAllocationSet(&component, i.strategy, i.cap, targetMiscOptions.Scale, targetMiscOptions.Count, i.labelsStr, i.colocationKey)
+			populateStorageAllocationSet(&component, i.strategy, i.cap, targetMiscOptions.Scale, targetMiscOptions.Count, targetMiscOptions.StorageLabels, i.labelsStr, i.colocationKey)
 
 			allocationSets = append(allocationSets, component)
 		}
@@ -569,11 +608,11 @@ func getCapacityInBytes(capacity string) (int64, error) {
 	return int64(math.Round(val * powers[matches[3]])), nil
 }
 
-func populateStorageAllocationSet(a *dwsv1alpha2.StorageAllocationSet, strategy dwsv1alpha2.AllocationStrategy, cap int64, scale int, count int, labelStr string, constraint *dwsv1alpha2.AllocationSetColocationConstraint) {
+func populateStorageAllocationSet(a *dwsv1alpha2.StorageAllocationSet, strategy dwsv1alpha2.AllocationStrategy, cap int64, scale int, count int, storageLabels []string, labelStr string, constraint *dwsv1alpha2.AllocationSetColocationConstraint) {
 	a.AllocationStrategy = strategy
 	a.Label = labelStr
 	a.MinimumCapacity = cap
-	a.Constraints.Labels = []string{dwsv1alpha2.StorageTypeLabel + "=Rabbit"}
+	a.Constraints.Labels = append(storageLabels, dwsv1alpha2.StorageTypeLabel+"=Rabbit")
 	a.Constraints.Scale = scale
 	a.Constraints.Count = count
 	if constraint != nil {

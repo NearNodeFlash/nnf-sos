@@ -109,8 +109,8 @@ func (aer *AerService) StorageServiceIdStoragePoolIdCapacitySourceIdGet(id0 stri
 func (aer *AerService) StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVolumesGet(id0 string, id1 string, id2 string, model *sf.VolumeCollectionVolumeCollection) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVolumesGet(id0, id1, id2, model))
 }
-func (aer *AerService) StorageServiceIdStoragePoolIdAlloctedVolumesGet(id0 string, id1 string, model *sf.VolumeCollectionVolumeCollection) error {
-	return aer.c(aer.s.StorageServiceIdStoragePoolIdAlloctedVolumesGet(id0, id1, model))
+func (aer *AerService) StorageServiceIdStoragePoolIdAllocatedVolumesGet(id0 string, id1 string, model *sf.VolumeCollectionVolumeCollection) error {
+	return aer.c(aer.s.StorageServiceIdStoragePoolIdAllocatedVolumesGet(id0, id1, model))
 }
 func (aer *AerService) StorageServiceIdStoragePoolIdAllocatedVolumeIdGet(id0 string, id1 string, id2 string, model *sf.VolumeV161Volume) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolIdAllocatedVolumeIdGet(id0, id1, id2, model))
