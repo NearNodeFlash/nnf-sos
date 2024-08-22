@@ -25,6 +25,7 @@ import (
 	"os"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -150,6 +151,43 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 	return nil, nil, dwsv1alpha2.NewResourceError("unsupported file system type %s", nnfNodeStorage.Spec.FileSystemType).WithMajor()
 }
 
+func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha1.NnfNodeBlockStorage) (bool, error) {
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		return true, nil
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      os.Getenv("NNF_POD_NAME"),
+			Namespace: os.Getenv("NNF_POD_NAMESPACE"),
+		},
+	}
+
+	if err := c.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
+		return false, dwsv1alpha2.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+	}
+
+	// The controllers for the NnfNodeStorage and NnfNodeBlockStorage both run in the same pod. Make sure that the NnfNodeBlockStorage
+	// has been reconciled by the same instance of the pod that's currently running the NnfNodeStorage controller.
+	for _, container := range pod.Status.ContainerStatuses {
+		if container.Name != "manager" {
+			continue
+		}
+
+		if container.State.Running == nil {
+			return false, nil
+		}
+
+		if container.State.Running.StartedAt != nnfNodeBlockStorage.Status.PodStartTime {
+			return false, nil
+		}
+
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
@@ -169,9 +207,29 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
+	if nnfNodeBlockStorage.Status.Ready == false {
+		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+	}
+
+	// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
+	// rebooted.
+	current, err := isNodeBlockStorageCurrent(ctx, c, nnfNodeBlockStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	if !current {
+		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
+	}
+
+	zpoolName, err := zpoolName(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not create zpool name").WithError(err).WithMajor()
+	}
+
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
-	zpool.Name = fmt.Sprintf("%s-%s-%d", nnfNodeStorage.Spec.LustreStorage.FileSystemName, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	zpool.Name = zpoolName
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
@@ -199,6 +257,21 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		err := c.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)
 		if err != nil {
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
+		}
+
+		if nnfNodeBlockStorage.Status.Ready == false {
+			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+		}
+
+		// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
+		// rebooted.
+		current, err := isNodeBlockStorageCurrent(ctx, c, nnfNodeBlockStorage)
+		if err != nil {
+			return nil, err
+		}
+
+		if !current {
+			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
 		}
 
 		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses) > 0 {
@@ -325,10 +398,16 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, cmdLines nnfv1alpha1.NnfStorageProfileLustreCmdLines, mountCommand string, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
+	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
+	}
+
 	fs.Log = log
 	fs.BlockDevice = blockDevice
 	fs.Name = nnfNodeStorage.Spec.LustreStorage.FileSystemName
 	fs.TargetType = nnfNodeStorage.Spec.LustreStorage.TargetType
+	fs.TargetPath = targetPath
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
@@ -352,6 +431,32 @@ func newMockFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	return &fs, nil
+}
+
+func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, targetType string, index int) (string, error) {
+	labels := nnfNodeStorage.GetLabels()
+
+	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
+	// This is important for persistent instances
+	nnfStorageUid, ok := labels[dwsv1alpha2.OwnerUidLabel]
+	if !ok {
+		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
+	}
+
+	return fmt.Sprintf("/mnt/nnf/%s-%s-%d", nnfStorageUid, targetType, index), nil
+}
+
+func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, targetType string, index int) (string, error) {
+	labels := nnfNodeStorage.GetLabels()
+
+	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
+	// This is important for persistent instances
+	nnfStorageUid, ok := labels[dwsv1alpha2.OwnerUidLabel]
+	if !ok {
+		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
+	}
+
+	return fmt.Sprintf("pool-%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
 func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha1.NnfNodeStorage, index int) (string, error) {

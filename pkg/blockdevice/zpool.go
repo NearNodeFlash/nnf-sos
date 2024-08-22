@@ -65,6 +65,10 @@ func (z *Zpool) parseArgs(args string) string {
 }
 
 func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
 	output, err := command.Run("zpool list -H", z.Log)
 	if err != nil {
 		if err != nil {

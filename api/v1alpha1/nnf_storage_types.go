@@ -42,10 +42,6 @@ type NnfStorageAllocationNodes struct {
 
 // NnfStorageLustreSpec defines the specifications for a Lustre filesystem
 type NnfStorageLustreSpec struct {
-	// FileSystemName is the fsname parameter for the Lustre filesystem.
-	// +kubebuilder:validation:MaxLength:=8
-	FileSystemName string `json:"fileSystemName,omitempty"`
-
 	// TargetType is the type of Lustre target to be created.
 	// +kubebuilder:validation:Enum=mgt;mdt;mgtmdt;ost
 	TargetType string `json:"targetType,omitempty"`
@@ -116,10 +112,22 @@ type NnfStorageAllocationSetStatus struct {
 	AllocationCount int `json:"allocationCount"`
 }
 
-// NnfStorageStatus defines the observed status of NNF Storage.
-type NnfStorageStatus struct {
+type NnfStorageLustreStatus struct {
 	// MgsAddress is the NID of the MGS.
 	MgsAddress string `json:"mgsAddress,omitempty"`
+
+	// FileSystemName is the fsname parameter for the Lustre filesystem.
+	// +kubebuilder:validation:MaxLength:=8
+	FileSystemName string `json:"fileSystemName,omitempty"`
+
+	// LustgreMgtReference is an object reference to the NnfLustreMGT resource used
+	// by the NnfStorage
+	LustreMgtReference corev1.ObjectReference `json:"lustreMgtReference,omitempty"`
+}
+
+// NnfStorageStatus defines the observed status of NNF Storage.
+type NnfStorageStatus struct {
+	NnfStorageLustreStatus `json:",inline"`
 
 	// AllocationsSets holds the status information for each of the AllocationSets
 	// from the spec.

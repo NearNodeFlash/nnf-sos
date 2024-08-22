@@ -9,12 +9,13 @@ configMapGenerator:
   - controller_manager_config.yaml
   name: manager-config
 
-#patchesStrategicMerge:
-#- manager_imagepullsecret_patch.yaml
+#patches:
+#- path: manager_imagepullsecret_daemonset_patch.yaml
+#- path: manager_imagepullsecret_deploy_patch.yaml
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/nearnodeflash/nnf-sos
-  newTag: 0.1.10
+  newTag: 0.1.11

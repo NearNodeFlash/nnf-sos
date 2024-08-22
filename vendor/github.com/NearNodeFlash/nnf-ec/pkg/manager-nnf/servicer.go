@@ -263,7 +263,7 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 		Name:      "Allocated Volume Collection",
 	}
 
-	err := s.ss.StorageServiceIdStoragePoolIdAlloctedVolumesGet(storageServiceId, storagePoolId, &model)
+	err := s.ss.StorageServiceIdStoragePoolIdAllocatedVolumesGet(storageServiceId, storagePoolId, &model)
 
 	EncodeResponse(model, err, w)
 }
