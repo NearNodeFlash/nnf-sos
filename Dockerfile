@@ -33,6 +33,7 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY vendor/ vendor/
 COPY config/ config/
+COPY github/ github/
 
 # Build
 # the GOARCH has a default value to allow the binary be built according to the host where the command
