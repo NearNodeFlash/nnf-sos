@@ -98,6 +98,21 @@ spec:
                   slots in the hostfile.
                 minimum: 0
                 type: integer
+              statCommand:
+                default: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE --
+                  setpriv --euid $UID --egid $GID --clear-groups stat --cached never
+                  -c '%F' $PATH
+                description: |-
+                  If CreateDestDir is true, then use StatCommand to perform the stat commands.
+                  Use setpriv to stat the path with the specified UID/GID.
+                  Available $VARS:
+                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+                              slots/max_slots for each host. This hostfile is created at
+                              `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
+                    UID: User ID that is inherited from the Workflow
+                    GID: Group ID that is inherited from the Workflow
+                    PATH: Path to stat
+                type: string
               storeStdout:
                 default: false
                 description: |-
@@ -109,6 +124,7 @@ spec:
             - createDestDir
             - maxSlots
             - slots
+            - statCommand
             type: object
           kind:
             description: |-
