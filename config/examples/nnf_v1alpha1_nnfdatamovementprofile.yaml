@@ -8,6 +8,7 @@ data:
   slots: 8
   maxSlots: 0
   command: ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --uid $UID --gid $GID $SRC $DEST
+  statCommand: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- setpriv --euid $UID --egid $GID --clear-groups stat --cached never -c '%F' $PATH 
   logStdout: false
   storeStdout: false
   progressIntervalSeconds: 5
