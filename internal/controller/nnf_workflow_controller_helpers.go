@@ -833,13 +833,14 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 			nnfv1alpha1.AddDataMovementTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha1.NnfAccessSpec{
-				DesiredState:    "mounted",
-				TeardownState:   teardownState,
-				Target:          "all",
-				UserID:          workflow.Spec.UserID,
-				GroupID:         workflow.Spec.GroupID,
-				MountPath:       buildServerMountPath(workflow, parentDwIndex),
-				MountPathPrefix: buildServerMountPath(workflow, parentDwIndex),
+				DesiredState:     "mounted",
+				TeardownState:    teardownState,
+				Target:           "all",
+				UserID:           workflow.Spec.UserID,
+				GroupID:          workflow.Spec.GroupID,
+				MakeClientMounts: true,
+				MountPath:        buildServerMountPath(workflow, parentDwIndex),
+				MountPathPrefix:  buildServerMountPath(workflow, parentDwIndex),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
