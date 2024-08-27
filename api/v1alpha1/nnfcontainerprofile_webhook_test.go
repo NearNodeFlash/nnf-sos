@@ -228,7 +228,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		},
 		Entry("to 0", pointy.Int64(0), pointy.Int64(0), true),
 		Entry("to 45", pointy.Int64(45), pointy.Int64(45), true),
-		Entry("to nil and get the default(60)", nil, pointy.Int64(60), true),
+		Entry("to nil and get the default(300)", nil, pointy.Int64(300), true),
 		Entry("to -1 and fail", pointy.Int64(-1), nil, false),
 	)
 
@@ -252,7 +252,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		},
 		Entry("to 0", pointy.Int64(0), pointy.Int64(0), true),
 		Entry("to 45", pointy.Int64(45), pointy.Int64(45), true),
-		Entry("to nil and get the default(60)", nil, pointy.Int64(60), true),
+		Entry("to nil and get the default(300)", nil, pointy.Int64(300), true),
 		Entry("to -1 and fail", pointy.Int64(-1), nil, false),
 	)
 
