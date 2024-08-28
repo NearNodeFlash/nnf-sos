@@ -75,7 +75,7 @@ spec:
                 default: 0
                 description: |-
                   MaxSlots is the number of max_slots specified in the MPI hostfile. A value of 0 disables the
-                  use of max_slots in the hostfile.
+                  use of max_slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
                 minimum: 0
                 type: integer
               pinned:
@@ -95,7 +95,7 @@ spec:
                 default: 8
                 description: |-
                   Slots is the number of slots specified in the MPI hostfile. A value of 0 disables the use of
-                  slots in the hostfile.
+                  slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
                 minimum: 0
                 type: integer
               statCommand:

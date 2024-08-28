@@ -35,13 +35,13 @@ type NnfDataMovementProfileData struct {
 	Pinned bool `json:"pinned,omitempty"`
 
 	// Slots is the number of slots specified in the MPI hostfile. A value of 0 disables the use of
-	// slots in the hostfile.
+	// slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
 	// +kubebuilder:default:=8
 	// +kubebuilder:validation:Minimum:=0
 	Slots int `json:"slots"`
 
 	// MaxSlots is the number of max_slots specified in the MPI hostfile. A value of 0 disables the
-	// use of max_slots in the hostfile.
+	// use of max_slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
 	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Minimum:=0
 	MaxSlots int `json:"maxSlots"`

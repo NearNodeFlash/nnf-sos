@@ -249,6 +249,10 @@ spec:
                       The number of max_slots specified in the MPI hostfile. A value of 0 disables the use of slots
                       in the hostfile. Nil will defer to the value specified in the NnfDataMovementProfile.
                     type: integer
+                  mpirunOptions:
+                    description: Extra options to pass to the mpirun command (used
+                      to perform data movement).
+                    type: string
                   slots:
                     description: |-
                       The number of slots specified in the MPI hostfile. A value of 0 disables the use of slots in
