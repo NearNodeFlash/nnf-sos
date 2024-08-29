@@ -74,7 +74,7 @@ type NnfSystemStorageSpec struct {
 	Capacity int64 `json:"capacity"`
 
 	// Type is the file system type to use for the storage allocation
-	// +kubebuilder:validation:Enum=raw
+	// +kubebuilder:validation:Enum=raw;xfs;gfs2
 	// +kubebuilder:default:=raw
 	Type string `json:"type"`
 

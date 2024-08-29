@@ -195,6 +195,8 @@ spec:
                 description: Type is the file system type to use for the storage allocation
                 enum:
                 - raw
+                - xfs
+                - gfs2
                 type: string
             required:
             - capacity
