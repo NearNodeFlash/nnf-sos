@@ -42,7 +42,8 @@ type NnfAccessSpec struct {
 	// Target specifies which storage targets the client should mount
 	// - single: Only one of the storage the client can access
 	// - all: All of the storage the client can access
-	// +kubebuilder:validation:Enum=single;all
+	// - shared: Multiple clients access the same storage
+	// +kubebuilder:validation:Enum=single;all;shared
 	Target string `json:"target"`
 
 	// UserID for the new mount. Currently only used for raw
@@ -58,8 +59,14 @@ type NnfAccessSpec struct {
 	// MountPath for the storage target on the client
 	MountPath string `json:"mountPath,omitempty"`
 
+	// MakeClientMounts determines whether the ClientMount resources are made, or if only
+	// the access list on the NnfNodeBlockStorage is updated
+	// +kubebuilder:default=true
+	MakeClientMounts bool `json:"makeClientMounts"`
+
 	// MountPathPrefix to  mount the storage target on the client when there is
 	// more than one mount on a client
+
 	MountPathPrefix string `json:"mountPathPrefix,omitempty"`
 
 	// StorageReference is the NnfStorage reference

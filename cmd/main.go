@@ -359,6 +359,14 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		return err
 	}
 
+	if err := (&controllers.NnfSystemStorageReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemStorage"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")

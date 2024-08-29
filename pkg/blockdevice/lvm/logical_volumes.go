@@ -73,6 +73,10 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 }
 
 func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := lv.parseArgs(rawArgs)
 	if err != nil {
 		return false, err
@@ -97,6 +101,10 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := lv.parseArgs(rawArgs)
 	if err != nil {
 		return false, err
@@ -121,6 +129,10 @@ func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (lv *LogicalVolume) Change(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := lv.parseArgs(rawArgs)
 	if err != nil {
 		return false, err
@@ -134,6 +146,10 @@ func (lv *LogicalVolume) Change(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
@@ -153,6 +169,10 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 }
 
 func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	existingLVs, err := lvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err

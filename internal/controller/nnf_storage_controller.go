@@ -702,8 +702,6 @@ func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnf
 }
 
 func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1alpha1.NnfStorage) (string, error) {
-	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: nnfStorage.Name, Namespace: nnfStorage.Namespace})
-
 	nnfLustreMgt, err := r.getLustreMgt(ctx, nnfStorage)
 	if err != nil {
 		return "", dwsv1alpha2.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
@@ -730,7 +728,6 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 	// Check the status section of the NnfLustreMGT to see if an fsname has been assigned yet
 	for _, existingClaim := range nnfLustreMgt.Status.ClaimList {
 		if existingClaim.Reference == reference {
-			log.Info("Found ready claim")
 			return existingClaim.FsName, nil
 		}
 	}
