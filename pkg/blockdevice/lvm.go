@@ -242,11 +242,11 @@ func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-	}
 
-	// Activation can take a while. Wait for device to become available
-	if err := l.waitForMapper(); err != nil {
-		return false, err
+		// Activation can take a while. Wait for device to become available
+		if err := l.waitForMapper(); err != nil {
+			return false, err
+		}
 	}
 
 	return false, nil

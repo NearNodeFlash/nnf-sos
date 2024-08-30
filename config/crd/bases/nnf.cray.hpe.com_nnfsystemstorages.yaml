@@ -4,39 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
-  name: nnfaccesses.nnf.cray.hpe.com
+  name: nnfsystemstorages.nnf.cray.hpe.com
 spec:
   group: nnf.cray.hpe.com
   names:
-    kind: NnfAccess
-    listKind: NnfAccessList
-    plural: nnfaccesses
-    singular: nnfaccess
+    kind: NnfSystemStorage
+    listKind: NnfSystemStorageList
+    plural: nnfsystemstorages
+    singular: nnfsystemstorage
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - description: The desired state
-      jsonPath: .spec.desiredState
-      name: DESIREDSTATE
-      type: string
-    - description: The current state
-      jsonPath: .status.state
-      name: STATE
-      type: string
-    - description: Whether the state has been achieved
-      jsonPath: .status.ready
-      name: READY
-      type: boolean
-    - jsonPath: .status.error.severity
-      name: ERROR
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: NnfAccess is the Schema for the nnfaccesses API
+        description: NnfSystemStorage is the Schema for the nnfsystemstorages API
         properties:
           apiVersion:
             description: |-
@@ -56,164 +37,176 @@ spec:
           metadata:
             type: object
           spec:
-            description: NnfAccessSpec defines the desired state of NnfAccess
+            description: NnfSystemStorageSpec defines the desired state of NnfSystemStorage
             properties:
-              clientReference:
-                description: |-
-                  ClientReference is for a client resource. (DWS) Computes is the only client
-                  resource type currently supported
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  fieldPath:
-                    description: |-
-                      If referring to a piece of an object instead of an entire object, this string
-                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within a pod, this would take on a value like:
-                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]" (container with
-                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                      referencing a part of an object.
-                      TODO: this design is not final and this field is subject to change in the future.
-                    type: string
-                  kind:
-                    description: |-
-                      Kind of the referent.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                    type: string
-                  resourceVersion:
-                    description: |-
-                      Specific resourceVersion to which this reference is made, if any.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                    type: string
-                  uid:
-                    description: |-
-                      UID of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              desiredState:
-                description: DesiredState is the desired state for the mounts on the
-                  client
-                enum:
-                - mounted
-                - unmounted
-                type: string
-              groupID:
-                description: GroupID for the new mount. Currently only used for raw
-                format: int32
+              capacity:
+                default: 1073741824
+                description: Capacity is the allocation size on each Rabbit
+                format: int64
                 type: integer
-              makeClientMounts:
-                default: true
-                description: |-
-                  MakeClientMounts determines whether the ClientMount resources are made, or if only
-                  the access list on the NnfNodeBlockStorage is updated
-                type: boolean
-              mountPath:
-                description: MountPath for the storage target on the client
+              clientMountPath:
+                description: ClientMountPath is an optional path for where to mount
+                  the file system on the computes
                 type: string
-              mountPathPrefix:
-                type: string
-              storageReference:
-                description: StorageReference is the NnfStorage reference
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  fieldPath:
-                    description: |-
-                      If referring to a piece of an object instead of an entire object, this string
-                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within a pod, this would take on a value like:
-                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]" (container with
-                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                      referencing a part of an object.
-                      TODO: this design is not final and this field is subject to change in the future.
-                    type: string
-                  kind:
-                    description: |-
-                      Kind of the referent.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                    type: string
-                  resourceVersion:
-                    description: |-
-                      Specific resourceVersion to which this reference is made, if any.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                    type: string
-                  uid:
-                    description: |-
-                      UID of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              target:
+              computesPattern:
                 description: |-
-                  Target specifies which storage targets the client should mount
-                  - single: Only one of the storage the client can access
-                  - all: All of the storage the client can access
-                  - shared: Multiple clients access the same storage
+                  ComputesPattern is a list of compute node indexes (0-15) to make the storage accessible to. This
+                  is only used if ComputesTarget is "pattern"
+                items:
+                  type: integer
+                maxItems: 16
+                type: array
+              computesTarget:
+                default: all
+                description: ComputesTarget specifies which computes to make the storage
+                  accessible to
                 enum:
-                - single
                 - all
-                - shared
+                - even
+                - odd
+                - pattern
                 type: string
-              teardownState:
-                allOf:
-                - enum:
-                  - Proposal
-                  - Setup
-                  - DataIn
-                  - PreRun
-                  - PostRun
-                  - DataOut
-                  - Teardown
-                - enum:
-                  - PreRun
-                  - PostRun
-                  - Teardown
+              excludeComputes:
                 description: |-
-                  TeardownState is the desired state of the workflow for this NNF Access resource to
-                  be torn down and deleted.
+                  ExcludeComputes is a list of compute nodes to exclude from the the compute nodes listed in the
+                  SystemConfiguration
+                items:
+                  type: string
+                type: array
+              excludeRabbits:
+                description: ExludeRabbits is a list of Rabbits to exclude from the
+                  Rabbits in the SystemConfiguration
+                items:
+                  type: string
+                type: array
+              includeComputes:
+                description: |-
+                  IncludeComputes is a list of computes nodes to use rather than getting the list of compute nodes
+                  from the SystemConfiguration
+                items:
+                  type: string
+                type: array
+              includeRabbits:
+                description: |-
+                  IncludeRabbits is a list of Rabbits to use rather than getting the list of Rabbits from the
+                  SystemConfiguration
+                items:
+                  type: string
+                type: array
+              makeClientMounts:
+                default: false
+                description: |-
+                  MakeClientMounts specifies whether to make ClientMount resources or just
+                  make the devices available to the client
+                type: boolean
+              storageProfile:
+                description: StorageProfile is an object reference to the storage
+                  profile to use
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              systemConfiguration:
+                description: |-
+                  SystemConfiguration is an object reference to the SystemConfiguration resource to use. If this
+                  field is empty, name: default namespace: default is used.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              type:
+                default: raw
+                description: Type is the file system type to use for the storage allocation
+                enum:
+                - raw
+                - xfs
+                - gfs2
                 type: string
-              userID:
-                description: UserID for the new mount. Currently only used for raw
-                format: int32
-                type: integer
             required:
-            - desiredState
-            - groupID
+            - capacity
+            - computesTarget
             - makeClientMounts
-            - storageReference
-            - target
-            - teardownState
-            - userID
+            - storageProfile
+            - type
             type: object
           status:
-            description: NnfAccessStatus defines the observed state of NnfAccess
+            description: NnfSystemStorageStatus defines the observed state of NnfSystemStorage
             properties:
               error:
                 description: Error information
@@ -247,17 +240,10 @@ spec:
                 - type
                 type: object
               ready:
-                description: Ready signifies whether status.state has been achieved
+                description: Ready signifies whether all work has been completed
                 type: boolean
-              state:
-                description: State is the current state
-                enum:
-                - mounted
-                - unmounted
-                type: string
             required:
             - ready
-            - state
             type: object
         type: object
     served: true

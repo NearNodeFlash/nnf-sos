@@ -682,12 +682,18 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			}
 
 			// If target==all, then the client wants to access all the storage it can see
-			if access.Spec.Target == "all" {
+			switch access.Spec.Target {
+			case "all":
 				storageMapping[client] = append(storageMapping[client], existingStorage[storageName]...)
 				existingStorage[storageName] = []dwsv1alpha2.ClientMountInfo{}
-			} else {
+			case "single":
 				storageMapping[client] = append(storageMapping[client], existingStorage[storageName][0])
 				existingStorage[storageName] = existingStorage[storageName][1:]
+			case "shared":
+				// Allow storages to be re-used for the shared case
+				storageMapping[client] = append(storageMapping[client], existingStorage[storageName][0])
+			default:
+				return nil, dwsv1alpha2.NewResourceError("invalid target type '%s'", access.Spec.Target).WithFatal()
 			}
 		}
 	}
@@ -898,6 +904,10 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha1.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
+	if !access.Spec.MakeClientMounts {
+		return nil
+	}
+
 	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name() {
 		return dwsv1alpha2.NewResourceError("invalid StorageReference kind %s", access.Spec.StorageReference.Kind).WithFatal()
 	}
@@ -972,6 +982,10 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
 func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha1.NnfAccess, clientList []string) (bool, error) {
+	if !access.Spec.MakeClientMounts {
+		return true, nil
+	}
+
 	clientMounts := []dwsv1alpha2.ClientMount{}
 
 	for _, clientName := range clientList {

@@ -35,13 +35,13 @@ type NnfDataMovementProfileData struct {
 	Pinned bool `json:"pinned,omitempty"`
 
 	// Slots is the number of slots specified in the MPI hostfile. A value of 0 disables the use of
-	// slots in the hostfile.
+	// slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
 	// +kubebuilder:default:=8
 	// +kubebuilder:validation:Minimum:=0
 	Slots int `json:"slots"`
 
 	// MaxSlots is the number of max_slots specified in the MPI hostfile. A value of 0 disables the
-	// use of max_slots in the hostfile.
+	// use of max_slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
 	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Minimum:=0
 	MaxSlots int `json:"maxSlots"`
@@ -82,6 +82,18 @@ type NnfDataMovementProfileData struct {
 	// is issued.
 	// +kubebuilder:default:=true
 	CreateDestDir bool `json:"createDestDir"`
+
+	// If CreateDestDir is true, then use StatCommand to perform the stat commands.
+	// Use setpriv to stat the path with the specified UID/GID.
+	// Available $VARS:
+	//   HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+	//             slots/max_slots for each host. This hostfile is created at
+	//             `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
+	//   UID: User ID that is inherited from the Workflow
+	//   GID: Group ID that is inherited from the Workflow
+	//   PATH: Path to stat
+	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- setpriv --euid $UID --egid $GID --clear-groups stat --cached never -c '%F' $PATH"
+	StatCommand string `json:"statCommand"`
 }
 
 // +kubebuilder:object:root=true

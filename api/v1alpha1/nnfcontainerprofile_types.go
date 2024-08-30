@@ -42,15 +42,15 @@ type NnfContainerProfileData struct {
 
 	// Containers are launched in the PreRun state. Allow this many seconds for the containers to
 	// start before declaring an error to the workflow.
-	// Defaults to 60 if not set. A value of 0 disables this behavior.
-	// +kubebuilder:default:=60
+	// Defaults to 300 if not set. A value of 0 disables this behavior.
+	// +kubebuilder:default:=300
 	// +kubebuilder:validation:Minimum:=0
 	PreRunTimeoutSeconds *int64 `json:"preRunTimeoutSeconds,omitempty"`
 
 	// Containers are expected to complete in the PostRun State. Allow this many seconds for the
 	// containers to exit before declaring an error the workflow.
-	// Defaults to 60 if not set. A value of 0 disables this behavior.
-	// +kubebuilder:default:=60
+	// Defaults to 300 if not set. A value of 0 disables this behavior.
+	// +kubebuilder:default:=300
 	// +kubebuilder:validation:Minimum:=0
 	PostRunTimeoutSeconds *int64 `json:"postRunTimeoutSeconds,omitempty"`
 

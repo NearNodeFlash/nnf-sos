@@ -11,4 +11,5 @@ resources:
 - nnf_v1alpha1_nnfnodeecdata.yaml
 - nnf_v1alpha1_nnflustremgt.yaml
 - nnf_v1alpha1_nnfdatamovementprofile.yaml
+- nnf_v1alpha1_nnfsystemstorage.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

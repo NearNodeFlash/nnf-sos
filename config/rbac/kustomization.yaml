@@ -31,5 +31,7 @@ configurations:
 # default, aiding admins in cluster management. Those roles are
 # not used by the Project itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- nnfsystemstorage_editor_role.yaml
+- nnfsystemstorage_viewer_role.yaml
 - nnflustremgt_editor_role.yaml
 - nnflustremgt_viewer_role.yaml

@@ -15,6 +15,7 @@ resources:
   - bases/nnf.cray.hpe.com_nnfportmanagers.yaml
   - bases/nnf.cray.hpe.com_nnflustremgts.yaml
   - bases/nnf.cray.hpe.com_nnfdatamovementprofiles.yaml
+  - bases/nnf.cray.hpe.com_nnfsystemstorages.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -48,6 +49,7 @@ patches:
 #- path: patches/cainjection_in_nnfportmanagers.yaml
 #- path: patches/cainjection_in_nnflustremgts.yaml
 #- path: patches/cainjection_in_nnfdatamovementprofiles.yaml
+#- path: patches/cainjection_in_nnfsystemstorages.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
