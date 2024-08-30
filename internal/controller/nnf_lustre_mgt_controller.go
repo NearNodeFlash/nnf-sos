@@ -344,6 +344,9 @@ func (r *NnfLustreMGTReconciler) RemoveOldClaims(ctx context.Context, nnfLustreM
 func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha1.NnfLustreMGT, fsname string) error {
 	log := r.Log.WithValues("NnfLustreMGT", client.ObjectKeyFromObject(nnfLustreMgt))
 
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		return nil
+	}
 	if r.ControllerType == ControllerRabbit {
 		if cmd, found := os.LookupEnv("NNF_LUSTRE_FSNAME_ERASE_COMMAND"); found {
 			log.Info("Erasing fsname from MGT", "fsname", fsname)

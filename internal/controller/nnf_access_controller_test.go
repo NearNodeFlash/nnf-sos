@@ -296,12 +296,13 @@ func verifyClientMount(storage *nnfv1alpha1.NnfStorage, storageProfile *nnfv1alp
 		},
 		Spec: nnfv1alpha1.NnfAccessSpec{
 
-			DesiredState:    "mounted",
-			TeardownState:   dwsv1alpha2.StatePreRun,
-			Target:          "all",
-			ClientReference: corev1.ObjectReference{},
-			MountPath:       mountPath,
-			MountPathPrefix: mountPath,
+			DesiredState:     "mounted",
+			TeardownState:    dwsv1alpha2.StatePreRun,
+			Target:           "all",
+			ClientReference:  corev1.ObjectReference{},
+			MakeClientMounts: true,
+			MountPath:        mountPath,
+			MountPathPrefix:  mountPath,
 
 			StorageReference: corev1.ObjectReference{
 				Kind:      reflect.TypeOf(nnfv1alpha1.NnfStorage{}).Name(),

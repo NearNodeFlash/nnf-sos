@@ -264,6 +264,13 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&NnfSystemStorageReconciler{
+		Client: k8sManager.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NnfSystemStorage"),
+		Scheme: testEnv.Scheme,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -284,6 +291,8 @@ var _ = BeforeSuite(func() {
 		ControllerType: ControllerTest,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
+
+	// +crdbumper:scaffold:builder
 
 	// Coordinate the startup of the NLC controllers that use EC.
 

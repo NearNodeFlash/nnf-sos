@@ -55,6 +55,7 @@ rules:
   - get
   - list
   - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -100,6 +101,8 @@ rules:
   - computes
   verbs:
   - create
+  - delete
+  - deletecollection
   - get
   - list
   - patch
@@ -578,3 +581,29 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfsystemstorages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfsystemstorages/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfsystemstorages/status
+  verbs:
+  - get
+  - patch
+  - update

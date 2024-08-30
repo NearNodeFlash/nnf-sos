@@ -91,8 +91,11 @@ type NnfDataMovementConfig struct {
 	// +kubebuilder:default:=false
 	Dryrun bool `json:"dryrun,omitempty"`
 
+	// Extra options to pass to the mpirun command (used to perform data movement).
+	MpirunOptions string `json:"mpirunOptions,omitempty"`
+
 	// Extra options to pass to the dcp command (used to perform data movement).
-	DCPOptions string `json:"dcpOptions,omitempty"`
+	DcpOptions string `json:"dcpOptions,omitempty"`
 
 	// If true, enable the command's stdout to be saved in the log when the command completes
 	// successfully. On failure, the output is always logged.
