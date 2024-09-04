@@ -62,14 +62,6 @@ resources:
     namespaced: true
   domain: cray.hpe.com
   group: nnf
-  kind: NnfJobStorageInstance
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: cray.hpe.com
-  group: nnf
   kind: NnfDataMovement
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
@@ -88,22 +80,6 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfAccess
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: cray.hpe.com
-  group: nnf
-  kind: NnfPersistentStorageInstance
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  domain: cray.hpe.com
-  group: nnf
-  kind: NnfDataMovementWorkflow
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
 - api:
