@@ -55,7 +55,13 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfAccessSpec{},
+				Spec: nnfv1alpha2.NnfAccessSpec{
+					DesiredState:  "mounted",
+					TeardownState: "Teardown",
+					Target:        "all",
+					UserID:        1001,
+					GroupID:       2002,
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -102,7 +108,12 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfContainerProfileSpec{},
+				Data: nnfv1alpha2.NnfContainerProfileData{
+					Spec: &corev1.PodSpec{
+						NodeName:   "rabbit-1",
+						Containers: []corev1.Container{{Name: "one"}},
+					},
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -149,7 +160,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfDataMovementSpec{},
+				Spec: nnfv1alpha2.NnfDataMovementSpec{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -196,7 +207,16 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfDataMovementManagerSpec{},
+				Spec: nnfv1alpha2.NnfDataMovementManagerSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:  "dm-worker-dummy",
+								Image: "nginx",
+							}},
+						},
+					},
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -243,7 +263,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfDataMovementProfileSpec{},
+				Data: nnfv1alpha2.NnfDataMovementProfileData{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -290,7 +310,9 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfLustreMGTSpec{},
+				Spec: nnfv1alpha2.NnfLustreMGTSpec{
+					Addresses: []string{"rabbit-1@tcp", "rabbit-2@tcp"},
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -337,7 +359,9 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfNodeSpec{},
+				Spec: nnfv1alpha2.NnfNodeSpec{
+					State: "Enable",
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -384,7 +408,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfNodeBlockStorageSpec{},
+				Spec: nnfv1alpha2.NnfNodeBlockStorageSpec{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -431,7 +455,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfNodeECDataSpec{},
+				Spec: nnfv1alpha2.NnfNodeECDataSpec{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -478,7 +502,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfNodeStorageSpec{},
+				Spec: nnfv1alpha2.NnfNodeStorageSpec{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -525,7 +549,9 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfPortManagerSpec{},
+				Spec: nnfv1alpha2.NnfPortManagerSpec{
+					Allocations: make([]nnfv1alpha2.NnfPortManagerAllocationSpec, 0),
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -572,7 +598,9 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfStorageSpec{},
+				Spec: nnfv1alpha2.NnfStorageSpec{
+					AllocationSets: []nnfv1alpha2.NnfStorageAllocationSetSpec{},
+				},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -619,7 +647,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfStorageProfileSpec{},
+				Data: nnfv1alpha2.NnfStorageProfileData{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
@@ -666,7 +694,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Name:      id,
 					Namespace: corev1.NamespaceDefault,
 				},
-				//Spec: nnfv1alpha2.NnfSystemStorageSpec{},
+				Spec: nnfv1alpha2.NnfSystemStorageSpec{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), resHub)).To(Succeed())
