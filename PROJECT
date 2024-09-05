@@ -91,9 +91,6 @@ resources:
   kind: NnfStorageProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
-  webhooks:
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -111,9 +108,6 @@ resources:
   kind: NnfContainerProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
-  webhooks:
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -140,9 +134,6 @@ resources:
   kind: NnfDataMovementProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha1
   version: v1alpha1
-  webhooks:
-    validation: true
-    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -168,6 +159,9 @@ resources:
   kind: NnfContainerProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha2
   version: v1alpha2
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -192,6 +186,9 @@ resources:
   kind: NnfDataMovementProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha2
   version: v1alpha2
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -256,6 +253,9 @@ resources:
   kind: NnfStorageProfile
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha2
   version: v1alpha2
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -264,4 +264,4 @@ resources:
   kind: NnfSystemStorage
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha2
   version: v1alpha2
-version: "3"
+version: '3'
