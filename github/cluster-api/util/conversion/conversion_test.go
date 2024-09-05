@@ -22,6 +22,7 @@ import (
 	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -126,11 +127,11 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfAccessSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfAccessSpec{
+				DesiredState: "mounted",
+				UserID:       1551,
+				GroupID:      2442,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -143,13 +144,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mounted"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("2442"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("1551"))
 	})
 
 	t.Run("NnfAccess should append the annotation", func(*testing.T) {
@@ -170,6 +167,9 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfContainerProfile should write source object to destination", func(*testing.T) {
+		prerun := int64(345)
+		userid := uint32(7667)
+		groupid := uint32(8448)
 		src := &nnfv1alpha2.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
@@ -177,11 +177,11 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfContainerProfileSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Data: nnfv1alpha2.NnfContainerProfileData{
+				PreRunTimeoutSeconds: &prerun,
+				UserID:               &userid,
+				GroupID:              &groupid,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -194,13 +194,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("345"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("7667"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("8448"))
 	})
 
 	t.Run("NnfContainerProfile should append the annotation", func(*testing.T) {
@@ -221,6 +217,12 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovement should write source object to destination", func(*testing.T) {
+		destpath := &nnfv1alpha2.NnfDataMovementSpecSourceDestination{
+			Path: "little/red",
+		}
+		srcpath := &nnfv1alpha2.NnfDataMovementSpecSourceDestination{
+			Path: "/dev/null",
+		}
 		src := &nnfv1alpha2.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
@@ -228,11 +230,10 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfDataMovementSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfDataMovementSpec{
+				Destination: destpath,
+				Source:      srcpath,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -245,13 +246,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("little/red"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/dev/null"))
 	})
 
 	t.Run("NnfDataMovement should append the annotation", func(*testing.T) {
@@ -279,11 +275,10 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfDataMovementManagerSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfDataMovementManagerSpec{
+				HostPath:  "/this/dir",
+				MountPath: "/mnts",
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -296,13 +291,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/this/dir"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/mnts"))
 	})
 
 	t.Run("NnfDataMovementManager should append the annotation", func(*testing.T) {
@@ -330,11 +320,10 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfDataMovementProfileSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Data: nnfv1alpha2.NnfDataMovementProfileData{
+				Command:     "mpirun is cool",
+				StatCommand: "stat --something",
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -347,13 +336,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mpirun is cool"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("stat --something"))
 	})
 
 	t.Run("NnfDataMovementProfile should append the annotation", func(*testing.T) {
@@ -374,6 +358,7 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfLustreMGT should write source object to destination", func(*testing.T) {
+		blacklist := []string{"black-fly", "black bird"}
 		src := &nnfv1alpha2.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
@@ -381,11 +366,10 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfLustreMGTSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfLustreMGTSpec{
+				FsNameStart:     "aaaa-pizza",
+				FsNameBlackList: blacklist,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -398,13 +382,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("aaaa-pizza"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("black-fly"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("black bird"))
 	})
 
 	t.Run("NnfLustreMGT should append the annotation", func(*testing.T) {
@@ -432,11 +412,10 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfNodeSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfNodeSpec{
+				Name: "rabbit-1",
+				Pod:  "nnf-thingy-122",
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -449,13 +428,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-1"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("nnf-thingy-122"))
 	})
 
 	t.Run("NnfNode should append the annotation", func(*testing.T) {
@@ -476,6 +450,9 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeBlockStorage should write source object to destination", func(*testing.T) {
+		alloc := []nnfv1alpha2.NnfNodeBlockStorageAllocationSpec{
+			{Access: []string{"rabbit-44", "rabbit-10002"}},
+		}
 		src := &nnfv1alpha2.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
@@ -483,11 +460,9 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfNodeBlockStorageSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfNodeBlockStorageSpec{
+				Allocations: alloc,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -500,13 +475,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-44"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-10002"))
 	})
 
 	t.Run("NnfNodeBlockStorage should append the annotation", func(*testing.T) {
@@ -527,6 +497,10 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeECData should write source object to destination", func(*testing.T) {
+		elem1 := nnfv1alpha2.NnfNodeECPrivateData{"element1": "the world"}
+		priv := map[string]nnfv1alpha2.NnfNodeECPrivateData{
+			"thing1": elem1,
+		}
 		src := &nnfv1alpha2.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
@@ -534,11 +508,9 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfNodeECDataSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Status: nnfv1alpha2.NnfNodeECDataStatus{
+				Data: priv,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -551,13 +523,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("thing1"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("element1"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("the world"))
 	})
 
 	t.Run("NnfNodeECData should append the annotation", func(*testing.T) {
@@ -585,11 +553,11 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfNodeStorageSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfNodeStorageSpec{
+				UserID:         4997,
+				GroupID:        2112,
+				FileSystemType: "gfs2",
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -602,13 +570,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("4997"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("2112"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("gfs2"))
 	})
 
 	t.Run("NnfNodeStorage should append the annotation", func(*testing.T) {
@@ -636,11 +600,12 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfPortManagerSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfPortManagerSpec{
+				SystemConfiguration: corev1.ObjectReference{
+					Namespace: "willy-wonka",
+					Name:      "candy-land",
+				},
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -653,13 +618,8 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("willy-wonka"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("candy-land"))
 	})
 
 	t.Run("NnfPortManager should append the annotation", func(*testing.T) {
@@ -687,11 +647,11 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfStorageSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfStorageSpec{
+				FileSystemType: "gfs2",
+				UserID:         4004,
+				GroupID:        2992,
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -704,13 +664,9 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("gfs2"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("4004"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("2992"))
 	})
 
 	t.Run("NnfStorage should append the annotation", func(*testing.T) {
@@ -738,11 +694,11 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfStorageProfileSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Data: nnfv1alpha2.NnfStorageProfileData{
+				LustreStorage: nnfv1alpha2.NnfStorageProfileLustreData{
+					ExternalMGS: "kfi@1:this@that",
+				},
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -755,13 +711,7 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("kfi@1:this@that"))
 	})
 
 	t.Run("NnfStorageProfile should append the annotation", func(*testing.T) {
@@ -789,11 +739,9 @@ func TestMarshalData(t *testing.T) {
 					"label1": "",
 				},
 			},
-			//Spec: nnfv1alpha2.NnfSystemStorageSpec{
-			//	// ACTION: Fill in a few valid fields so
-			//	// they can be tested in the annotation checks
-			//	// below.
-			//},
+			Spec: nnfv1alpha2.NnfSystemStorageSpec{
+				ClientMountPath: "/on/this",
+			},
 		}
 
 		dst := &unstructured.Unstructured{}
@@ -806,13 +754,7 @@ func TestMarshalData(t *testing.T) {
 
 		g.Expect(dst.GetAnnotations()[DataAnnotation]).ToNot(BeEmpty())
 
-		// ACTION: Fill in a few valid fields above in the Spec so
-		// they can be tested here in the annotation checks.
-
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mgsNids"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("rabbit-03@tcp"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("mountRoot"))
-		//g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/lus/w0"))
+		g.Expect(dst.GetAnnotations()[DataAnnotation]).To(ContainSubstring("/on/this"))
 	})
 
 	t.Run("NnfSystemStorage should append the annotation", func(*testing.T) {
