@@ -1,0 +1,26 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-lus-cray-hpe-com-v1beta1-lustrefilesystem
+  failurePolicy: Fail
+  name: vlustrefilesystem.kb.io
+  rules:
+  - apiGroups:
+    - lus.cray.hpe.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - lustrefilesystems
+  sideEffects: None

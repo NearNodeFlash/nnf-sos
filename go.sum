@@ -4,8 +4,8 @@ github.com/DataWorkflowServices/dws v0.0.1-0.20240820212105-5950825b3d74 h1:u0Zq
 github.com/DataWorkflowServices/dws v0.0.1-0.20240820212105-5950825b3d74/go.mod h1:6MrEEHISskyooSKcKU6R3mFqH6Yh6KzWgajhcw2s+nM=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240820214524-99d5da17471d h1:iiE1EhefucdPBJwYfRRGIqDXnBXTV9tfgn+trJc7RSg=
-github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240820214524-99d5da17471d/go.mod h1:N5X1obpl0mBI0VoCJdQhv7cFXOC6g3VlXj712qWj0JE=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240905174034-b32f94689b37 h1:49InWDMfWX61GqY8LiXKKa+wD2ITkOrfvluAOY9w16g=
+github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240905174034-b32f94689b37/go.mod h1:2FDU8J1jJRCVN5dDm9n3dKGThJvHfo/gcl7hGTlqbQY=
 github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240820195316-cb407b151cb4 h1:cxUkRTnynEvCLbYL+d/FVyITLODO/goscivJLq5kipY=
 github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240820195316-cb407b151cb4/go.mod h1:oxdwMqfttOF9dabJhqrWlirCnMk8/8eyLMwl+hducjk=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
