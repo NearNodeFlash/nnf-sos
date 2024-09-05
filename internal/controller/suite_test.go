@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"go.uber.org/zap"
@@ -53,6 +54,7 @@ import (
 	_ "github.com/DataWorkflowServices/dws/config/crd/bases"
 	_ "github.com/DataWorkflowServices/dws/config/webhook"
 	_ "github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases"
+	_ "github.com/NearNodeFlash/lustre-fs-operator/config/webhook"
 
 	dwsctrls "github.com/DataWorkflowServices/dws/controllers"
 	//+kubebuilder:scaffold:imports
@@ -123,13 +125,39 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
+	var err error
 
-	webhookPaths := []string{
+	// See https://github.com/kubernetes-sigs/controller-runtime/issues/1882
+	// about getting the conversion webhook to register properly.
+	// Begin by relocating the code that builds the scheme, so it happens
+	// before calling envtest.Start().
+	// Then add the scheme to envtest.CRDInstallOptions.
+
+	err = dwsv1alpha2.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = lusv1beta1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	//+kubebuilder:scaffold:scheme
+
+	webhookPaths := []string{}
+	webhookPathsAlt := []string{
+		filepath.Join("..", "..", "config", "webhook"),
 		filepath.Join("..", "..", "vendor", "github.com", "DataWorkflowServices", "dws", "config", "webhook"),
-		filepath.Join("..", "..", "config", "dws"),
+		filepath.Join("..", "..", "vendor", "github.com", "NearNodeFlash", "lustre-fs-operator", "config", "webhook"),
 	}
-	if env, found := os.LookupEnv("WEBHOOK_DIR"); found {
-		webhookPaths = append(webhookPaths, env)
+	// Envtest doesn't run kustomize, so the basic configs don't have the
+	// `namePrefix` and they will all collide on the same name. The WEBHOOK_DIRS
+	// variable points to pre-processed webhook configs that have had the
+	// namePrefix added to them.
+	if env, found := os.LookupEnv("WEBHOOK_DIRS"); found {
+		webhookPaths = append(webhookPaths, strings.Split(env, ":")...)
+	} else {
+		webhookPaths = append(webhookPaths, webhookPathsAlt...)
 	}
 
 	testEnv = &envtest.Environment{
@@ -140,26 +168,17 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "vendor", "github.com", "DataWorkflowServices", "dws", "config", "crd", "bases"),
 			filepath.Join("..", "..", "vendor", "github.com", "NearNodeFlash", "lustre-fs-operator", "config", "crd", "bases"),
 		},
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			// This adds the conversion webhook configuration to
+			// the CRDs.
+			Scheme: scheme.Scheme,
+		},
 		//AttachControlPlaneOutput: true,
 	}
 
-	cfg, err := testEnv.Start()
+	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
-
-	err = nnfv1alpha1.AddToScheme(testEnv.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = dwsv1alpha2.AddToScheme(testEnv.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = lusv1beta1.AddToScheme(testEnv.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
@@ -178,6 +197,27 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	/*
+		Start webhooks
+	*/
+
+	err = (&dwsv1alpha2.Workflow{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&lusv1beta1.LustreFileSystem{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	// +crdbumper:scaffold:builder
+
+	/*
 		Start DWS pieces
 	*/
 
@@ -193,9 +233,6 @@ var _ = BeforeSuite(func() {
 		Log:    ctrl.Log.WithName("controllers").WithName("ClientMount"),
 		Scheme: testEnv.Scheme,
 	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&dwsv1alpha2.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	/*
@@ -271,15 +308,6 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
 	/*
 		Start NNF-SOS NLC pieces
 	*/
@@ -291,8 +319,6 @@ var _ = BeforeSuite(func() {
 		ControllerType: ControllerTest,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
-
-	// +crdbumper:scaffold:builder
 
 	// Coordinate the startup of the NLC controllers that use EC.
 
