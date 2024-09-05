@@ -190,7 +190,6 @@ spec:
                 type: integer
             required:
             - allocationSets
-            - fileSystemType
             - groupID
             - userID
             type: object

@@ -54,7 +54,7 @@ type NnfNodeStorageSpec struct {
 	// block device.
 	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre
 	// +kubebuilder:default:=raw
-	FileSystemType string `json:"fileSystemType"`
+	FileSystemType string `json:"fileSystemType,omitempty"`
 
 	// LustreStorageSpec describes the Lustre target created here, if
 	// FileSystemType specifies a Lustre target.

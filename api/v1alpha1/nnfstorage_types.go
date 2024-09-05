@@ -88,7 +88,7 @@ type NnfStorageSpec struct {
 	// block device.
 	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre
 	// +kubebuilder:default:=raw
-	FileSystemType string `json:"fileSystemType"`
+	FileSystemType string `json:"fileSystemType,omitempty"`
 
 	// User ID for file system
 	UserID uint32 `json:"userID"`

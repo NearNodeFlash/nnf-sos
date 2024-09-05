@@ -170,7 +170,6 @@ spec:
                 type: integer
             required:
             - count
-            - fileSystemType
             - groupID
             - sharedAllocation
             - userID
