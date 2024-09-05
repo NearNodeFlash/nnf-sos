@@ -53,6 +53,7 @@ import (
 
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
@@ -76,6 +77,7 @@ func init() {
 	utilruntime.Must(lusv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
