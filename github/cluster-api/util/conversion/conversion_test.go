@@ -19,12 +19,12 @@ package conversion
 import (
 	"testing"
 
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	//"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	//"k8s.io/apimachinery/pkg/runtime/schema"
-	//nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 var (
@@ -116,7 +116,7 @@ var (
 )
 
 func TestMarshalData(t *testing.T) {
-	_ = NewWithT(t)
+	g := NewWithT(t)
 
 	t.Run("NnfAccess should write source object to destination", func(*testing.T) {
 		src := &nnfv1alpha2.NnfAccess{
@@ -836,7 +836,7 @@ func TestMarshalData(t *testing.T) {
 }
 
 func TestUnmarshalData(t *testing.T) {
-	_ = NewWithT(t)
+	g := NewWithT(t)
 
 	t.Run("NnfAccess should return false without errors if annotation doesn't exist", func(*testing.T) {
 		src := &nnfv1alpha2.NnfAccess{
