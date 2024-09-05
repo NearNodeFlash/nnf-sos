@@ -51,7 +51,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -115,7 +115,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 			log.Info("Created Namespace")
 		}
 
-		node := &nnfv1alpha1.NnfNode{}
+		node := &nnfv1alpha2.NnfNode{}
 		if err := r.Get(ctx, r.NamespacedName, node); err != nil {
 
 			if !errors.IsNotFound(err) {
@@ -136,7 +136,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 		} else {
 
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				node := &nnfv1alpha1.NnfNode{}
+				node := &nnfv1alpha2.NnfNode{}
 				if err := r.Get(ctx, r.NamespacedName, node); err != nil {
 					return err
 				}
@@ -152,8 +152,8 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 				}
 
 				// Mark the node's status as starting
-				if node.Status.Status != nnfv1alpha1.ResourceStarting {
-					node.Status.Status = nnfv1alpha1.ResourceStarting
+				if node.Status.Status != nnfv1alpha2.ResourceStarting {
+					node.Status.Status = nnfv1alpha2.ResourceStarting
 
 					if err := r.Status().Update(ctx, node); err != nil {
 						return err
@@ -248,7 +248,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	metrics.NnfNodeReconcilesTotal.Inc()
 
-	node := &nnfv1alpha1.NnfNode{}
+	node := &nnfv1alpha2.NnfNode{}
 	if err := r.Get(ctx, req.NamespacedName, node); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -257,7 +257,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}
 
 	// Prepare to update the node's status
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha1.NnfNodeStatus](node)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha2.NnfNodeStatus](node)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Access the default storage service running in the NNF Element
@@ -270,8 +270,8 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	node.Status.Status = nnfv1alpha1.ResourceStatus(storageService.Status)
-	node.Status.Health = nnfv1alpha1.ResourceHealth(storageService.Status)
+	node.Status.Status = nnfv1alpha2.ResourceStatus(storageService.Status)
+	node.Status.Health = nnfv1alpha2.ResourceHealth(storageService.Status)
 
 	if storageService.Status.State != sf.ENABLED_RST {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
@@ -361,26 +361,26 @@ func (r *NnfNodeReconciler) createNamespace() *corev1.Namespace {
 	}
 }
 
-func (r *NnfNodeReconciler) createNode() *nnfv1alpha1.NnfNode {
-	return &nnfv1alpha1.NnfNode{
+func (r *NnfNodeReconciler) createNode() *nnfv1alpha2.NnfNode {
+	return &nnfv1alpha2.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.Name,
 			Namespace: r.Namespace,
 		},
-		Spec: nnfv1alpha1.NnfNodeSpec{
+		Spec: nnfv1alpha2.NnfNodeSpec{
 			Name:  r.Namespace,               // Note the conversion here from namespace to name, each NNF Node is given a unique namespace, which then becomes how the NLC is controlled.
 			Pod:   os.Getenv("NNF_POD_NAME"), // Providing the podname gives users quick means to query the pod for a particular NNF Node
-			State: nnfv1alpha1.ResourceEnable,
+			State: nnfv1alpha2.ResourceEnable,
 		},
-		Status: nnfv1alpha1.NnfNodeStatus{
-			Status:   nnfv1alpha1.ResourceStarting,
+		Status: nnfv1alpha2.NnfNodeStatus{
+			Status:   nnfv1alpha2.ResourceStarting,
 			Capacity: 0,
 		},
 	}
 }
 
 // Update the Servers status of the NNF Node if necessary
-func updateServers(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
+func updateServers(node *nnfv1alpha2.NnfNode, log logr.Logger) error {
 
 	ss := nnf.NewDefaultStorageService()
 
@@ -392,7 +392,7 @@ func updateServers(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 	}
 
 	if len(node.Status.Servers) < len(serverEndpointCollection.Members) {
-		node.Status.Servers = make([]nnfv1alpha1.NnfServerStatus, len(serverEndpointCollection.Members))
+		node.Status.Servers = make([]nnfv1alpha2.NnfServerStatus, len(serverEndpointCollection.Members))
 	}
 
 	// Iterate over the server endpoints to ensure we've reflected
@@ -406,11 +406,11 @@ func updateServers(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 			return err
 		}
 
-		node.Status.Servers[idx].NnfResourceStatus = nnfv1alpha1.NnfResourceStatus{
+		node.Status.Servers[idx].NnfResourceStatus = nnfv1alpha2.NnfResourceStatus{
 			ID:     serverEndpoint.Id,
 			Name:   serverEndpoint.Name,
-			Status: nnfv1alpha1.ResourceStatus(serverEndpoint.Status),
-			Health: nnfv1alpha1.ResourceHealth(serverEndpoint.Status),
+			Status: nnfv1alpha2.ResourceStatus(serverEndpoint.Status),
+			Health: nnfv1alpha2.ResourceHealth(serverEndpoint.Status),
 		}
 	}
 
@@ -418,7 +418,7 @@ func updateServers(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 }
 
 // Update the Drives status of the NNF Node if necessary
-func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
+func updateDrives(node *nnfv1alpha2.NnfNode, log logr.Logger) error {
 	storageService := nvme.NewDefaultStorageService()
 
 	storageCollection := &sf.StorageCollectionStorageCollection{}
@@ -428,7 +428,7 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 	}
 
 	if len(node.Status.Drives) < len(storageCollection.Members) {
-		node.Status.Drives = make([]nnfv1alpha1.NnfDriveStatus, len(storageCollection.Members))
+		node.Status.Drives = make([]nnfv1alpha2.NnfDriveStatus, len(storageCollection.Members))
 	}
 
 	// Iterate over the storage devices and controllers to ensure we've reflected
@@ -444,11 +444,11 @@ func updateDrives(node *nnfv1alpha1.NnfNode, log logr.Logger) error {
 		}
 
 		drive.Slot = fmt.Sprintf("%d", storage.Location.PartLocation.LocationOrdinalValue)
-		drive.NnfResourceStatus = nnfv1alpha1.NnfResourceStatus{
+		drive.NnfResourceStatus = nnfv1alpha2.NnfResourceStatus{
 			ID:     storage.Id,
 			Name:   storage.Name,
-			Status: nnfv1alpha1.ResourceStatus(storage.Status),
-			Health: nnfv1alpha1.ResourceHealth(storage.Status),
+			Status: nnfv1alpha2.ResourceStatus(storage.Status),
+			Health: nnfv1alpha2.ResourceHealth(storage.Status),
 		}
 
 		if storage.Status.State == sf.ENABLED_RST {
@@ -512,7 +512,7 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// There can be only one NnfNode resource for this controller to
 	// manage, so we don't set MaxConcurrentReconciles.
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nnfv1alpha1.NnfNode{}).
+		For(&nnfv1alpha2.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
 		Watches(&dwsv1alpha2.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		Complete(r)

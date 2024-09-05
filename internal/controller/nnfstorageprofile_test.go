@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -30,17 +30,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 )
 
 // createNnfStorageProfile creates the given profile in the "default" namespace.
 // When expectSuccess=false, we expect to find that it was failed by the webhook.
-func createNnfStorageProfile(storageProfile *nnfv1alpha1.NnfStorageProfile, expectSuccess bool) *nnfv1alpha1.NnfStorageProfile {
+func createNnfStorageProfile(storageProfile *nnfv1alpha2.NnfStorageProfile, expectSuccess bool) *nnfv1alpha2.NnfStorageProfile {
 	// Place NnfStorageProfiles in "default" for the test environment.
 	storageProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
 	profKey := client.ObjectKeyFromObject(storageProfile)
-	profExpected := &nnfv1alpha1.NnfStorageProfile{}
+	profExpected := &nnfv1alpha2.NnfStorageProfile{}
 	err := k8sClient.Get(context.TODO(), profKey, profExpected)
 	Expect(err).ToNot(BeNil())
 	Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -61,8 +61,8 @@ func createNnfStorageProfile(storageProfile *nnfv1alpha1.NnfStorageProfile, expe
 }
 
 // basicNnfStorageProfile creates a simple NnfStorageProfile struct.
-func basicNnfStorageProfile(name string) *nnfv1alpha1.NnfStorageProfile {
-	storageProfile := &nnfv1alpha1.NnfStorageProfile{
+func basicNnfStorageProfile(name string) *nnfv1alpha2.NnfStorageProfile {
+	storageProfile := &nnfv1alpha2.NnfStorageProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -71,14 +71,14 @@ func basicNnfStorageProfile(name string) *nnfv1alpha1.NnfStorageProfile {
 }
 
 // createBasicDefaultNnfStorageProfile creates a simple default storage profile.
-func createBasicDefaultNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
+func createBasicDefaultNnfStorageProfile() *nnfv1alpha2.NnfStorageProfile {
 	storageProfile := basicNnfStorageProfile("durable-" + uuid.NewString()[:8])
 	storageProfile.Data.Default = true
 	return createNnfStorageProfile(storageProfile, true)
 }
 
 // createBasicDefaultNnfStorageProfile creates a simple default storage profile.
-func createBasicPinnedNnfStorageProfile() *nnfv1alpha1.NnfStorageProfile {
+func createBasicPinnedNnfStorageProfile() *nnfv1alpha2.NnfStorageProfile {
 	storageProfile := basicNnfStorageProfile("durable-" + uuid.NewString()[:8])
 	storageProfile.Data.Pinned = true
 	return createNnfStorageProfile(storageProfile, true)

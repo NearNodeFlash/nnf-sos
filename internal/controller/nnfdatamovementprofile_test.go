@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -30,17 +30,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 )
 
 // createNnfDataMovementProfile creates the given profile in the "default" namespace.
 // When expectSuccess=false, we expect to find that it was failed by the webhook.
-func createNnfDataMovementProfile(DataMovementProfile *nnfv1alpha1.NnfDataMovementProfile, expectSuccess bool) *nnfv1alpha1.NnfDataMovementProfile {
+func createNnfDataMovementProfile(DataMovementProfile *nnfv1alpha2.NnfDataMovementProfile, expectSuccess bool) *nnfv1alpha2.NnfDataMovementProfile {
 	// Place NnfDataMovementProfiles in "default" for the test environment.
 	DataMovementProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
 	profKey := client.ObjectKeyFromObject(DataMovementProfile)
-	profExpected := &nnfv1alpha1.NnfDataMovementProfile{}
+	profExpected := &nnfv1alpha2.NnfDataMovementProfile{}
 	err := k8sClient.Get(context.TODO(), profKey, profExpected)
 	Expect(err).ToNot(BeNil())
 	Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -61,8 +61,8 @@ func createNnfDataMovementProfile(DataMovementProfile *nnfv1alpha1.NnfDataMoveme
 }
 
 // basicNnfDataMovementProfile creates a simple NnfDataMovementProfile struct.
-func basicNnfDataMovementProfile(name string) *nnfv1alpha1.NnfDataMovementProfile {
-	DataMovementProfile := &nnfv1alpha1.NnfDataMovementProfile{
+func basicNnfDataMovementProfile(name string) *nnfv1alpha2.NnfDataMovementProfile {
+	DataMovementProfile := &nnfv1alpha2.NnfDataMovementProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
@@ -71,14 +71,14 @@ func basicNnfDataMovementProfile(name string) *nnfv1alpha1.NnfDataMovementProfil
 }
 
 // createBasicDefaultNnfDataMovementProfile creates a simple default storage profile.
-func createBasicDefaultNnfDataMovementProfile() *nnfv1alpha1.NnfDataMovementProfile {
+func createBasicDefaultNnfDataMovementProfile() *nnfv1alpha2.NnfDataMovementProfile {
 	DataMovementProfile := basicNnfDataMovementProfile("durable-" + uuid.NewString()[:8])
 	DataMovementProfile.Data.Default = true
 	return createNnfDataMovementProfile(DataMovementProfile, true)
 }
 
 // createBasicDefaultNnfDataMovementProfile creates a simple default storage profile.
-func createBasicPinnedNnfDataMovementProfile() *nnfv1alpha1.NnfDataMovementProfile {
+func createBasicPinnedNnfDataMovementProfile() *nnfv1alpha2.NnfDataMovementProfile {
 	DataMovementProfile := basicNnfDataMovementProfile("durable-" + uuid.NewString()[:8])
 	DataMovementProfile.Data.Pinned = true
 	return createNnfDataMovementProfile(DataMovementProfile, true)

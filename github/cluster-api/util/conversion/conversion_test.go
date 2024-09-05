@@ -24,7 +24,7 @@ import (
 	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	//"k8s.io/apimachinery/pkg/runtime/schema"
-	//nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	//nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 )
 
 var (
