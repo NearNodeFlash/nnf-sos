@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -31,13 +31,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 )
 
 var _ = PDescribe("NNF Node Storage Controller Test", func() {
 	var (
 		key     types.NamespacedName
-		storage *nnfv1alpha1.NnfNodeStorage
+		storage *nnfv1alpha2.NnfNodeStorage
 	)
 
 	BeforeEach(func() {
@@ -55,12 +55,12 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 			Namespace: corev1.NamespaceDefault,
 		}
 
-		storage = &nnfv1alpha1.NnfNodeStorage{
+		storage = &nnfv1alpha2.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      key.Name,
 				Namespace: key.Namespace,
 			},
-			Spec: nnfv1alpha1.NnfNodeStorageSpec{
+			Spec: nnfv1alpha2.NnfNodeStorageSpec{
 				Count: 1,
 			},
 		}
@@ -70,13 +70,13 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 		Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
 
 		Eventually(func() error {
-			expected := &nnfv1alpha1.NnfNodeStorage{}
+			expected := &nnfv1alpha2.NnfNodeStorage{}
 			return k8sClient.Get(context.TODO(), key, expected)
 		}, "3s", "1s").Should(Succeed(), "expected return after create. key: "+key.String())
 	})
 
 	AfterEach(func() {
-		expected := &nnfv1alpha1.NnfNodeStorage{}
+		expected := &nnfv1alpha2.NnfNodeStorage{}
 		Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
 		Expect(k8sClient.Delete(context.TODO(), expected)).To(Succeed())
 	})
@@ -87,7 +87,7 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 		})
 
 		It("is successful", func() {
-			expected := &nnfv1alpha1.NnfNodeStorage{}
+			expected := &nnfv1alpha2.NnfNodeStorage{}
 			Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
 		})
 	})
@@ -96,7 +96,7 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 		BeforeEach(func() {
 			storage.Spec.FileSystemType = "lustre"
 
-			storage.Spec.LustreStorage = nnfv1alpha1.LustreStorageSpec{
+			storage.Spec.LustreStorage = nnfv1alpha2.LustreStorageSpec{
 				FileSystemName: "test",
 				StartIndex:     0,
 				MgsAddress:     "test",
@@ -106,7 +106,7 @@ var _ = PDescribe("NNF Node Storage Controller Test", func() {
 		})
 
 		It("is successful", func() {
-			expected := &nnfv1alpha1.NnfNodeStorage{}
+			expected := &nnfv1alpha2.NnfNodeStorage{}
 			Expect(k8sClient.Get(context.TODO(), key, expected)).To(Succeed())
 		})
 	})
