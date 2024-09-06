@@ -38,11 +38,13 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
-	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
+	nnfevent "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg/manager-nnf"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
@@ -71,6 +73,7 @@ type NnfNodeReconciler struct {
 	types.NamespacedName
 
 	sync.Mutex
+	Events          chan event.GenericEvent
 	started         bool
 	reconcilerAwake bool
 }
@@ -194,7 +197,7 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	}
 
 	// Subscribe to the NNF Event Manager
-	event.EventManager.Subscribe(r)
+	nnfevent.EventManager.Subscribe(r)
 
 	r.Lock()
 	r.started = true
@@ -207,23 +210,30 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 // EventHandler implements event.Subscription. Every Upstream or Downstream event runs the reconciler
 // so all the NNF Node server/drive status stays current.
-func (r *NnfNodeReconciler) EventHandler(e event.Event) error {
+func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
+	log := r.Log.WithValues("nnf-ec event", "node-up/node-down")
 
 	// Upstream link events
-	linkEstablished := e.Is(msgreg.UpstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedUpstreamLinkEstablishedFabric("", ""))
-	linkDropped := e.Is(msgreg.UpstreamLinkDroppedFabric("", ""))
-
-	if linkEstablished || linkDropped {
-		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
-	}
+	upstreamLinkEstablished := e.Is(msgreg.UpstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedUpstreamLinkEstablishedFabric("", ""))
+	upstreamLinkDropped := e.Is(msgreg.UpstreamLinkDroppedFabric("", ""))
 
 	// Downstream link events
-	linkEstablished = e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
-	linkDropped = e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
+	downstreamLinkEstablished := e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
+	downstreamLinkDropped := e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
 
-	if linkEstablished || linkDropped {
-		r.Reconcile(context.TODO(), ctrl.Request{NamespacedName: r.NamespacedName})
+	// Check if the event is one that we care about
+	if !upstreamLinkEstablished && !upstreamLinkDropped && !downstreamLinkEstablished && !downstreamLinkDropped {
+		return nil
 	}
+
+	log.Info("triggering watch")
+
+	r.Events <- event.GenericEvent{Object: &nnfv1alpha2.NnfNode{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      r.NamespacedName.Name,
+			Namespace: r.NamespacedName.Namespace,
+		},
+	}}
 
 	return nil
 }
@@ -515,5 +525,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&nnfv1alpha2.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
 		Watches(&dwsv1alpha2.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
+		WatchesRawSource(&source.Channel{Source: r.Events}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

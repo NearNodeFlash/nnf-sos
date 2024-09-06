@@ -39,6 +39,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -216,6 +217,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Client:           mgr.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           mgr.GetScheme(),
+		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 	}).SetupWithManager(mgr); err != nil {
@@ -240,6 +242,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            mgr.GetScheme(),
+		Events:            make(chan event.GenericEvent),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
 	}).SetupWithManager(mgr); err != nil {
