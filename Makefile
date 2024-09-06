@@ -234,7 +234,8 @@ test: manifests generate fmt vet envtest ## Run tests.
 	export WEBHOOK_DIRS=${ENVTEST_ASSETS_DIR}/webhook-nnf:${ENVTEST_ASSETS_DIR}/webhook-lus:${ENVTEST_ASSETS_DIR}/webhook-dws; \
 	for subdir in ${TESTDIRS}; do \
 		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover-$$(basename $$subdir.out) -ginkgo.v $$failfast; \
-	done
+	done; \
+	rm -rf internal/controller/nnf.db
 
 ##@ Build
 RPM_PLATFORM ?= linux/amd64
