@@ -6,5 +6,5 @@ extra_go_dirs: mount-daemon
 # A comma-separated list of directories of Kustomize config files that have
 # references to the API and that must be updated to the new hub version so
 # that ArgoCD can sync them.
-extra_config_dirs: config/examples
+extra_config_dirs: config/examples,config/ports
 
