@@ -212,7 +212,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha2.Nnf
 		return &ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
-	// Add compute node information to the storage map, if necessary.
+	// Request that the devices be made available on the correct nodes
 	err = r.addBlockStorageAccess(ctx, access, storageMapping)
 	if err != nil {
 		if apierrors.IsConflict(err) {
@@ -220,6 +220,16 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha2.Nnf
 		}
 
 		return nil, dwsv1alpha2.NewResourceError("unable to add endpoints to NnfNodeStorage").WithError(err)
+	}
+
+	// Wait for all the devices to be made available on the correct nodes
+	ready, err := r.getBlockStorageAccessStatus(ctx, access, storageMapping)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
+	}
+
+	if ready == false {
+		return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
 	// Create the ClientMount resources. One ClientMount resource is created per client
@@ -230,15 +240,6 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha2.Nnf
 		}
 
 		return nil, dwsv1alpha2.NewResourceError("unable to create ClientMount resources").WithError(err)
-	}
-
-	ready, err := r.getBlockStorageAccessStatus(ctx, access, storageMapping)
-	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
-	}
-
-	if ready == false {
-		return &ctrl.Result{}, nil
 	}
 
 	// Aggregate the status from all the ClientMount resources
@@ -741,15 +742,26 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 
 	// Loop through the NnfNodeBlockStorages and add client access information for each of the
 	// computes that need access to an allocation.
-	for nodeBlockStorageReference, mountRefList := range nodeStorageMap {
-		namespacedName := types.NamespacedName{
-			Name:      nodeBlockStorageReference.Name,
-			Namespace: nodeBlockStorageReference.Namespace,
+	for nodeStorageReference, mountRefList := range nodeStorageMap {
+		nnfNodeStorage := &nnfv1alpha2.NnfNodeStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nodeStorageReference.Name,
+				Namespace: nodeStorageReference.Namespace,
+			},
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha2.NnfNodeBlockStorage{}
-		err := r.Get(ctx, namespacedName, nnfNodeBlockStorage)
-		if err != nil {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage); err != nil {
+			return err
+		}
+
+		nnfNodeBlockStorage := &nnfv1alpha2.NnfNodeBlockStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfNodeStorage.Spec.BlockReference.Name,
+				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err != nil {
 			return err
 		}
 
@@ -780,7 +792,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 			continue
 		}
 
-		if err = r.Update(ctx, nnfNodeBlockStorage); err != nil {
+		if err := r.Update(ctx, nnfNodeBlockStorage); err != nil {
 			return err
 		}
 	}
@@ -795,11 +807,11 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		return true, nil
 	}
 
-	nodeStorageMap := make(map[corev1.ObjectReference]bool)
+	nodeStorageMap := make(map[corev1.ObjectReference][]mountReference)
 
 	// Make a map of NnfNodeStorage references that were mounted by this
 	// nnfAccess
-	for _, storageList := range storageMapping {
+	for client, storageList := range storageMapping {
 		for _, mount := range storageList {
 			if mount.Device.DeviceReference == nil {
 				continue
@@ -809,27 +821,65 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 				continue
 			}
 
-			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = true
+			mountRef := mountReference{
+				client:          client,
+				allocationIndex: mount.Device.DeviceReference.Data,
+			}
+
+			nodeStorageMap[mount.Device.DeviceReference.ObjectReference] = append(nodeStorageMap[mount.Device.DeviceReference.ObjectReference], mountRef)
+
 		}
 	}
 
-	// Update each of the NnfNodeStorage resources to remove the clientEndpoints that
-	// were added earlier. Leave the first endpoint since that corresponds to the
-	// rabbit node.
+	nnfNodeBlockStorages := []nnfv1alpha2.NnfNodeBlockStorage{}
+
 	for nodeStorageReference := range nodeStorageMap {
-		namespacedName := types.NamespacedName{
-			Name:      nodeStorageReference.Name,
-			Namespace: nodeStorageReference.Namespace,
+		nnfNodeStorage := &nnfv1alpha2.NnfNodeStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nodeStorageReference.Name,
+				Namespace: nodeStorageReference.Namespace,
+			},
 		}
 
-		nnfNodeStorage := &nnfv1alpha2.NnfNodeStorage{}
-		err := r.Get(ctx, namespacedName, nnfNodeStorage)
-		if err != nil {
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage); err != nil {
 			return false, err
 		}
 
-		if nnfNodeStorage.Status.Error != nil {
-			return false, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
+		nnfNodeBlockStorage := &nnfv1alpha2.NnfNodeBlockStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfNodeStorage.Spec.BlockReference.Name,
+				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err != nil {
+			return false, err
+		}
+
+		nnfNodeBlockStorages = append(nnfNodeBlockStorages, *nnfNodeBlockStorage)
+	}
+
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
+		if nnfNodeBlockStorage.Status.Error != nil {
+			return false, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeBlockStorage.GetNamespace()).WithError(nnfNodeBlockStorage.Status.Error)
+		}
+	}
+
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
+		for allocationIndex, allocation := range nnfNodeBlockStorage.Spec.Allocations {
+			for _, nodeName := range allocation.Access {
+				blockAccess, exists := nnfNodeBlockStorage.Status.Allocations[allocationIndex].Accesses[nodeName]
+
+				// if the map entry doesn't exist in the status section for this node yet, then keep waiting
+				if !exists {
+					return false, nil
+				}
+
+				// Check that the storage group has been created
+				if blockAccess.StorageGroupId == "" {
+					return false, nil
+				}
+			}
 		}
 	}
 

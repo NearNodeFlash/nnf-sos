@@ -38,6 +38,7 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -364,6 +365,7 @@ var _ = BeforeSuite(func() {
 		Client:           k8sManager.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           testEnv.Scheme,
+		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -384,6 +386,7 @@ var _ = BeforeSuite(func() {
 		Client:            k8sManager.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            testEnv.Scheme,
+		Events:            make(chan event.GenericEvent),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
 	}).SetupWithManager(k8sManager)
