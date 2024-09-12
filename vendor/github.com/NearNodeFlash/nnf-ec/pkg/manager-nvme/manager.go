@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -82,7 +82,7 @@ type Manager struct {
 
 	// Command-Line Options
 	purge       bool // Purge existing namespaces on storage controllers
-	purgeMockDb bool // Purge the persistent mock databse
+	purgeMockDb bool // Purge the persistent mock database
 
 	log ec.Logger
 }
@@ -635,7 +635,7 @@ func (s *Storage) findVolume(volumeId string) *Volume {
 
 func (v *Volume) Id() string                               { return v.id }
 func (v *Volume) GetOdataId() string                       { return v.storage.OdataId() + "/Volumes/" + v.id }
-func (v *Volume) GetCapaityBytes() uint64                  { return uint64(v.capacityBytes) }
+func (v *Volume) GetCapacityBytes() uint64                 { return uint64(v.capacityBytes) }
 func (v *Volume) GetNamespaceId() nvme.NamespaceIdentifier { return v.namespaceId }
 
 func (v *Volume) GetGloballyUniqueIdentifier() nvme.NamespaceGloballyUniqueIdentifier {

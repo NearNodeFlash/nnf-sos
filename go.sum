@@ -6,8 +6,8 @@ github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5r
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240905174034-b32f94689b37 h1:49InWDMfWX61GqY8LiXKKa+wD2ITkOrfvluAOY9w16g=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20240905174034-b32f94689b37/go.mod h1:2FDU8J1jJRCVN5dDm9n3dKGThJvHfo/gcl7hGTlqbQY=
-github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240820195316-cb407b151cb4 h1:cxUkRTnynEvCLbYL+d/FVyITLODO/goscivJLq5kipY=
-github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240820195316-cb407b151cb4/go.mod h1:oxdwMqfttOF9dabJhqrWlirCnMk8/8eyLMwl+hducjk=
+github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240912200758-f862bc773739 h1:T49ixk8TBeiYQ3CPpx463GL2gKk94dD9nXpoLBfdmqg=
+github.com/NearNodeFlash/nnf-ec v0.0.1-0.20240912200758-f862bc773739/go.mod h1:oxdwMqfttOF9dabJhqrWlirCnMk8/8eyLMwl+hducjk=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=

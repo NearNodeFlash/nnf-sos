@@ -220,6 +220,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+		Options:          opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -245,6 +246,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Events:            make(chan event.GenericEvent),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+		Options:           opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}

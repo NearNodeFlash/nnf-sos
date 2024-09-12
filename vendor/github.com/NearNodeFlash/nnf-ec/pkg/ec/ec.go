@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -109,7 +109,7 @@ type Options struct {
 }
 
 func NewDefaultOptions() *Options {
-	return &Options{Http: true, Port: 8080, Log: false, Verbose: false}
+	return &Options{Http: false, Port: 8080, Log: false, Verbose: false}
 }
 
 func NewDefaultTestOptions() *Options {
@@ -322,7 +322,7 @@ func (c *Controller) Init(opts *Options) error {
 
 // Run - Run a controller with standard behavior - that is with GRPC server and
 // request handling that operates by unpacking the GRPC request and
-// forwardining it to the element controller's handlers.
+// forwarding it to the element controller's handlers.
 func (c *Controller) Run() error {
 	if c.processor == nil {
 		return fmt.Errorf("controller processor uninitialized")
