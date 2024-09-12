@@ -49,6 +49,11 @@ type NnfSystemStorageSpec struct {
 	// SystemConfiguration
 	IncludeRabbits []string `json:"includeRabbits,omitempty"`
 
+	// ExcludeDisabledRabbits looks at the Storage resource for a Rabbit and does not use it if it's
+	// marked as "disabled"
+	// +kubebuilder:default:=false
+	ExcludeDisabledRabbits bool `json:"excludeDisabledRabbits,omitempty"`
+
 	// ExcludeComputes is a list of compute nodes to exclude from the the compute nodes listed in the
 	// SystemConfiguration
 	ExcludeComputes []string `json:"excludeComputes,omitempty"`

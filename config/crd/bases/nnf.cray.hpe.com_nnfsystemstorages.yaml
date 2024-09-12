@@ -307,6 +307,12 @@ spec:
                 items:
                   type: string
                 type: array
+              excludeDisabledRabbits:
+                default: false
+                description: |-
+                  ExcludeDisabledRabbits looks at the Storage resource for a Rabbit and does not use it if it's
+                  marked as "disabled"
+                type: boolean
               excludeRabbits:
                 description: ExludeRabbits is a list of Rabbits to exclude from the
                   Rabbits in the SystemConfiguration

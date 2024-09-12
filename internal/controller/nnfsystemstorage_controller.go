@@ -30,9 +30,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -252,6 +255,40 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 
 			rabbitList = append(rabbitList, storageNode.Name)
 		}
+	}
+
+	// Look at the Storages resources an determine whether each of the Rabbits is enabled. If any are not,
+	// remove them from the list.
+	if nnfSystemStorage.Spec.ExcludeDisabledRabbits {
+		tempRabbitList := rabbitList[:0]
+		for _, rabbit := range rabbitList {
+			storage := &dwsv1alpha2.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rabbit,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+
+			if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+				return dwsv1alpha2.NewResourceError("could not get Storage '%v'", client.ObjectKeyFromObject(storage)).WithError(err)
+			}
+
+			labels := storage.GetLabels()
+			if labels == nil {
+				continue
+			}
+
+			if storageType := labels[dwsv1alpha2.StorageTypeLabel]; storageType != "Rabbit" {
+				continue
+			}
+
+			if storage.Spec.State == dwsv1alpha2.DisabledState || storage.Status.Status == dwsv1alpha2.DisabledStatus {
+				continue
+			}
+
+			tempRabbitList = append(tempRabbitList, rabbit)
+		}
+		rabbitList = tempRabbitList
 	}
 
 	// Use the Rabbit list to fill in the servers resource with one allocation per Rabbit
@@ -615,6 +652,26 @@ func (r *NnfSystemStorageReconciler) waitForNnfAccess(ctx context.Context, nnfSy
 	return false, nil
 }
 
+// NnfSystemStorageEnqueueAll enqueues all of the NnfSystemStorage resources after a watch is triggered
+func (r *NnfSystemStorageReconciler) NnfSystemStorageEnqueueAll(ctx context.Context, o client.Object) []reconcile.Request {
+	log := r.Log.WithValues("NnfSystemStorage", "Enqueue All")
+
+	requests := []reconcile.Request{}
+
+	// Find all the NnfSystemStorage resources and add them to the Request list
+	nnfSystemStorageList := &nnfv1alpha2.NnfSystemStorageList{}
+	if err := r.List(context.TODO(), nnfSystemStorageList, []client.ListOption{}...); err != nil {
+		log.Info("Could not list NnfSystemStorage", "error", err)
+		return requests
+	}
+
+	for _, nnfSystemStorage := range nnfSystemStorageList.Items {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: nnfSystemStorage.GetName(), Namespace: nnfSystemStorage.GetNamespace()}})
+	}
+
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfSystemStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha2.ObjectList{
@@ -626,7 +683,10 @@ func (r *NnfSystemStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha2.NnfSystemStorage{}).
-		Owns(&nnfv1alpha2.NnfAccess{}).
+		Owns(&dwsv1alpha2.Computes{}).
+		Owns(&dwsv1alpha2.Servers{}).
 		Owns(&nnfv1alpha2.NnfStorage{}).
+		Owns(&nnfv1alpha2.NnfAccess{}).
+		Watches(&dwsv1alpha2.Storage{}, handler.EnqueueRequestsFromMapFunc(r.NnfSystemStorageEnqueueAll)).
 		Complete(r)
 }
