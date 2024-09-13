@@ -367,6 +367,7 @@ var _ = BeforeSuite(func() {
 		Scheme:           testEnv.Scheme,
 		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
+		Options:          &nnf.Options{},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -389,6 +390,7 @@ var _ = BeforeSuite(func() {
 		Events:            make(chan event.GenericEvent),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+		Options:           &nnf.Options{},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -55,7 +55,8 @@ var storageService = StorageService{
 	health: sf.CRITICAL_RH,
 }
 
-func NewDefaultStorageService() StorageServiceApi {
+func NewDefaultStorageService(unknownVolumes bool) StorageServiceApi {
+	storageService.deleteUnknownVolumes = unknownVolumes
 	return NewAerService(&storageService) // Wrap the default storage service with Advanced Error Reporting capabilities
 }
 
@@ -76,8 +77,11 @@ type StorageService struct {
 
 	// Index of the Id field of any Storage Service resource (Pools, Groups, Endpoints, FileSystems)
 	// That is, given a Storage Service resource OdataId field, ResourceIndex will correspond to the
-	// index within the OdataId splity by "/" i.e.     strings.split(OdataId, "/")[ResourceIndex]
+	// index within the OdataId split by "/" i.e.     strings.split(OdataId, "/")[ResourceIndex]
 	resourceIndex int
+
+	// This flag controls whether we delete volumes that don't appear in storage pools we know about.
+	deleteUnknownVolumes bool
 
 	log ec.Logger
 }
@@ -528,8 +532,8 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		return nil
 	}
 
-	// Check if the fabric is ready; that is all devices are enumerated and discovery
-	// is complete.
+	// Check if the fabric is ready;
+	// that is all devices are enumerated and discovery is complete.
 	if e.Is(msgreg.FabricReadyNnf("")) {
 		log.V(1).Info("Fabric ready")
 
@@ -539,8 +543,10 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		}
 
 		// Remove any namespaces that are not part of a Storage Pool
-		log.V(2).Info("Cleanup obsolete volumes")
-		s.cleanupVolumes()
+		if s.deleteUnknownVolumes {
+			log.V(2).Info("Cleanup unknown volumes")
+			s.cleanupVolumes()
+		}
 
 		s.state = sf.ENABLED_RST
 		s.health = sf.OK_RH
