@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -210,7 +210,7 @@ func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]nvme.ProvidingVolume,
 			return volumes, fmt.Errorf("Create Volume Failure: %s", err)
 		}
 
-		remainingCapacityBytes = remainingCapacityBytes - volume.GetCapaityBytes()
+		remainingCapacityBytes = remainingCapacityBytes - volume.GetCapacityBytes()
 		volumes = append(volumes, nvme.ProvidingVolume{Storage: storage, VolumeId: volume.Id()})
 	}
 

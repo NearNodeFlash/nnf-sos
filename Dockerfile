@@ -49,7 +49,6 @@ WORKDIR /workspace
 
 ARG FAILFAST
 COPY hack/ hack/
-COPY test-tools.sh .
 COPY Makefile .
 
 RUN echo "building test target after copy" && pwd && ls -al

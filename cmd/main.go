@@ -39,6 +39,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	zapcr "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -53,6 +54,7 @@ import (
 
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
@@ -76,6 +78,7 @@ func init() {
 	utilruntime.Must(lusv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -150,8 +153,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	//+kubebuilder:scaffold:builder
-
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
@@ -216,8 +217,10 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Client:           mgr.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           mgr.GetScheme(),
+		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
+		Options:          opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -240,8 +243,10 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Client:            mgr.GetClient(),
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            mgr.GetScheme(),
+		Events:            make(chan event.GenericEvent),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+		Options:           opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
@@ -367,26 +372,96 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 		return err
 	}
 
+	var err error
+
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err := (&nnfv1alpha1.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha2.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
 			return err
 		}
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err := (&nnfv1alpha1.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha2.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
 			return err
 		}
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err := (&nnfv1alpha1.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha2.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfDataMovementProfile")
 			return err
 		}
 	}
+
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfAccess{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfAccess")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfDataMovement{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfDataMovement")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfDataMovementManager{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfDataMovementManager")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfLustreMGT{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfLustreMGT")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfNode{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNode")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfNodeBlockStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeBlockStorage")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfNodeECData{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeECData")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfNodeStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeStorage")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfPortManager{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfPortManager")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfStorage")
+			os.Exit(1)
+		}
+	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&nnfv1alpha2.NnfSystemStorage{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "NnfSystemStorage")
+			os.Exit(1)
+		}
+	}
+	//+kubebuilder:scaffold:builder
 
 	return nil
 }
