@@ -375,17 +375,13 @@ var _ = Describe("Integration Test", func() {
 
 			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
-			// Create the DWS Storage resource
+			// Check that the DWS storage resource was updated with the compute node information
 			storage := &dwsv1alpha2.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
 				},
 			}
-
-			Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed())
-
-			// Check that the DWS storage resource was updated with the compute node information
 
 			Eventually(func() error {
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
@@ -438,18 +434,6 @@ var _ = Describe("Integration Test", func() {
 		}).ShouldNot(Succeed())
 
 		for _, nodeName := range nodeNames {
-			storage := &dwsv1alpha2.Storage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: corev1.NamespaceDefault,
-				},
-			}
-			Expect(k8sClient.Delete(context.TODO(), storage)).To(Succeed())
-			tempStorage := &dwsv1alpha2.Storage{}
-			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
-				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), tempStorage)
-			}).ShouldNot(Succeed())
-
 			nnfNode := &nnfv1alpha2.NnfNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",

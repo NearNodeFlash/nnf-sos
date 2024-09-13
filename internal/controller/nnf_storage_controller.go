@@ -1085,7 +1085,22 @@ func (r *NnfStorageReconciler) releaseLustreMgt(ctx context.Context, storage *nn
 // - Different allocations in an NnfStorage could be targeting the same Rabbit node (e.g., MGS and MDS on the same Rabbit)
 // - The same Rabbit node could be listed more than once within the same allocation.
 func nnfNodeStorageName(storage *nnfv1alpha2.NnfStorage, allocationSetIndex int, i int) string {
-	return storage.Namespace + "-" + storage.Name + "-" + storage.Spec.AllocationSets[allocationSetIndex].Name + "-" + strconv.Itoa(i)
+	nodeName := storage.Spec.AllocationSets[allocationSetIndex].Nodes[i].Name
+
+	// If the same Rabbit is listed more than once, the index on the end of the name needs to show
+	// which instance this is.
+	duplicateRabbitIndex := 0
+	for j, node := range storage.Spec.AllocationSets[allocationSetIndex].Nodes {
+		if j == i {
+			break
+		}
+
+		if node.Name == nodeName {
+			duplicateRabbitIndex++
+		}
+	}
+
+	return storage.Namespace + "-" + storage.Name + "-" + storage.Spec.AllocationSets[allocationSetIndex].Name + "-" + strconv.Itoa(duplicateRabbitIndex)
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -1110,6 +1111,67 @@ func getIndexMountDir(namespace string, index int) string {
 	return fmt.Sprintf("%s-%s", namespace, strconv.Itoa(index))
 }
 
+// ComputesEnqueueRequests triggers on a Computes resource. It finds any NnfAccess resources with the
+// same owner as the Computes resource and adds them to the Request list.
+func (r *NnfAccessReconciler) ComputesEnqueueRequests(ctx context.Context, o client.Object) []reconcile.Request {
+	log := r.Log.WithValues("Computes", "Enqueue")
+
+	requests := []reconcile.Request{}
+
+	// Ensure the storage resource is updated with the latest NNF Node resource status
+	computes := &dwsv1alpha2.Computes{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      o.GetName(),
+			Namespace: o.GetNamespace(),
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(computes), computes); err != nil {
+		return requests
+	}
+
+	labels := computes.GetLabels()
+	if labels == nil {
+		return []reconcile.Request{}
+	}
+
+	ownerName, exists := labels[dwsv1alpha2.OwnerNameLabel]
+	if !exists {
+		return []reconcile.Request{}
+	}
+
+	ownerNamespace, exists := labels[dwsv1alpha2.OwnerNamespaceLabel]
+	if !exists {
+		return []reconcile.Request{}
+	}
+
+	ownerKind, exists := labels[dwsv1alpha2.OwnerKindLabel]
+	if !exists {
+		return []reconcile.Request{}
+	}
+
+	// Find all the NnfAccess resource with the same owner as the Computes resource
+	listOptions := []client.ListOption{
+		client.MatchingLabels(map[string]string{
+			dwsv1alpha2.OwnerKindLabel:      ownerKind,
+			dwsv1alpha2.OwnerNameLabel:      ownerName,
+			dwsv1alpha2.OwnerNamespaceLabel: ownerNamespace,
+		}),
+	}
+
+	nnfAccessList := &nnfv1alpha2.NnfAccessList{}
+	if err := r.List(context.TODO(), nnfAccessList, listOptions...); err != nil {
+		log.Info("Could not list NnfAccesses", "error", err)
+		return requests
+	}
+
+	for _, nnfAccess := range nnfAccessList.Items {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: nnfAccess.GetName(), Namespace: nnfAccess.GetNamespace()}})
+	}
+
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha2.ObjectList{
@@ -1136,6 +1198,7 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha2.NnfAccess{}).
+		Watches(&dwsv1alpha2.Computes{}, handler.EnqueueRequestsFromMapFunc(r.ComputesEnqueueRequests)).
 		Watches(&dwsv1alpha2.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		Complete(r)
 }
