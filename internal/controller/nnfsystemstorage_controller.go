@@ -282,7 +282,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 				continue
 			}
 
-			if storage.Spec.State == dwsv1alpha2.DisabledState || storage.Status.Status == dwsv1alpha2.DisabledStatus {
+			if storage.Spec.State == dwsv1alpha2.DisabledState || storage.Status.Status != dwsv1alpha2.ReadyStatus {
 				continue
 			}
 
