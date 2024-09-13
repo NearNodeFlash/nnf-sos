@@ -73,6 +73,7 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 	// in systemConfiguration.Status{} change
 	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.SystemConfigurationStatus](systemConfiguration)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+	defer func() { systemConfiguration.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Handle cleanup if the resource is being deleted
 	if !systemConfiguration.GetDeletionTimestamp().IsZero() {
