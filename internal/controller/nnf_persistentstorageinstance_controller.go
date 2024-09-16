@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -38,7 +38,7 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -153,8 +153,8 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, dwsv1alpha2.NewResourceError("").WithUserMessage("creating persistent MGT does not accept 'capacity' argument").WithFatal().WithUser()
 		}
 		labels := persistentStorage.GetLabels()
-		if _, ok := labels[nnfv1alpha1.StandaloneMGTLabel]; !ok {
-			labels[nnfv1alpha1.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
+		if _, ok := labels[nnfv1alpha2.StandaloneMGTLabel]; !ok {
+			labels[nnfv1alpha2.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
 			persistentStorage.SetLabels(labels)
 			if err := r.Update(ctx, persistentStorage); err != nil {
 				if !apierrors.IsConflict(err) {
@@ -193,7 +193,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	} else if persistentStorage.Spec.State == dwsv1alpha2.PSIStateActive {
 		// Wait for the NnfStorage to be ready before marking the persistent storage
 		// state as "active"
-		nnfStorage := &nnfv1alpha1.NnfStorage{}
+		nnfStorage := &nnfv1alpha2.NnfStorage{}
 		if err := r.Get(ctx, req.NamespacedName, nnfStorage); err != nil {
 			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
@@ -261,9 +261,9 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 // SetupWithManager sets up the controller with the Manager.
 func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ChildObjects = []dwsv1alpha2.ObjectList{
-		&nnfv1alpha1.NnfStorageList{},
+		&nnfv1alpha2.NnfStorageList{},
 		&dwsv1alpha2.ServersList{},
-		&nnfv1alpha1.NnfStorageProfileList{},
+		&nnfv1alpha2.NnfStorageProfileList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
@@ -271,7 +271,7 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha2.PersistentStorageInstance{}).
 		Owns(&dwsv1alpha2.Servers{}).
-		Owns(&nnfv1alpha1.NnfStorage{}).
-		Owns(&nnfv1alpha1.NnfStorageProfile{}).
+		Owns(&nnfv1alpha2.NnfStorage{}).
+		Owns(&nnfv1alpha2.NnfStorageProfile{}).
 		Complete(r)
 }

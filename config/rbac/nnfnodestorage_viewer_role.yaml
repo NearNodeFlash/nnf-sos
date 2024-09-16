@@ -1,0 +1,23 @@
+# permissions for end users to view nnfnodestorages.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: nnf-sos
+    app.kubernetes.io/managed-by: kustomize
+  name: nnfnodestorage-viewer-role
+rules:
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodestorages
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nnf.cray.hpe.com
+  resources:
+  - nnfnodestorages/status
+  verbs:
+  - get

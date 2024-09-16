@@ -222,17 +222,20 @@ TESTDIRS ?= internal api github/cluster-api
 FAILFAST ?= no
 test: manifests generate fmt vet envtest ## Run tests.
 	find internal -name "*.db" -type d -exec rm -rf {} +
-	source test-tools.sh; prefix_webhook_names config/webhook ${ENVTEST_ASSETS_DIR}/webhook
+	./hack/prefix-webhook-names.sh config/webhook ${ENVTEST_ASSETS_DIR}/webhook-nnf nnf
+	./hack/prefix-webhook-names.sh vendor/github.com/NearNodeFlash/lustre-fs-operator/config/webhook ${ENVTEST_ASSETS_DIR}/webhook-lus lus
+	./hack/prefix-webhook-names.sh vendor/github.com/DataWorkflowServices/dws/config/webhook ${ENVTEST_ASSETS_DIR}/webhook-dws dws
 	if [[ "${FAILFAST}" == yes ]]; then \
 		failfast="-ginkgo.fail-fast"; \
 	fi; \
 	set -o errexit; \
 	export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=${EVENTUALLY_TIMEOUT}; \
 	export GOMEGA_DEFAULT_EVENTUALLY_INTERVAL=${EVENTUALLY_INTERVAL}; \
-	export WEBHOOK_DIR=${ENVTEST_ASSETS_DIR}/webhook; \
+	export WEBHOOK_DIRS=${ENVTEST_ASSETS_DIR}/webhook-nnf:${ENVTEST_ASSETS_DIR}/webhook-lus:${ENVTEST_ASSETS_DIR}/webhook-dws; \
 	for subdir in ${TESTDIRS}; do \
 		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path --bin-dir $(LOCALBIN))" go test -v ./$$subdir/... -coverprofile cover-$$(basename $$subdir.out) -ginkgo.v $$failfast; \
-	done
+	done; \
+	rm -rf internal/controller/nnf.db
 
 ##@ Build
 RPM_PLATFORM ?= linux/amd64

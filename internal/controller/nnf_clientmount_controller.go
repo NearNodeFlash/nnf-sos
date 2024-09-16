@@ -41,7 +41,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -285,8 +285,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int) (*nnfv1alpha1.NnfNodeStorage, error) {
-	nnfNodeStorage := &nnfv1alpha1.NnfNodeStorage{
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int) (*nnfv1alpha2.NnfNodeStorage, error) {
+	nnfNodeStorage := &nnfv1alpha2.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
 			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
@@ -298,7 +298,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha1.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[nnfv1alpha2.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	labels[dwsv1alpha2.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 

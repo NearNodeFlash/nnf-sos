@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
+	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 )
 
 type DWSStorageReconciler struct {
@@ -73,13 +73,37 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Only reconcile this Storage resource if it is marked as Rabbit Storage
+	labels := storage.GetLabels()
+	if labels == nil {
+		return ctrl.Result{}, nil
+	}
+
+	if storageType := labels[dwsv1alpha2.StorageTypeLabel]; storageType != "Rabbit" {
+		return ctrl.Result{}, nil
+	}
+
+	// Create the status updater to update the status section if any changes are made
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.StorageStatus](storage)
+	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
+
 	// Check if the object is being deleted
 	if !storage.GetDeletionTimestamp().IsZero() {
 		return ctrl.Result{}, nil
 	}
 
+	if storage.Spec.State == dwsv1alpha2.DisabledState {
+		storage.Status.Status = dwsv1alpha2.DisabledStatus
+		storage.Status.Message = "Storage node manually disabled"
+	}
+
+	if storage.Spec.Mode != "Live" {
+		log.Info("Reconciliation skipped, not in live mode")
+		return ctrl.Result{}, nil
+	}
+
 	// Ensure the storage resource is updated with the latest NNF Node resource status
-	nnfNode := &nnfv1alpha1.NnfNode{
+	nnfNode := &nnfv1alpha2.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-nlc",
 			Namespace: storage.GetName(),
@@ -89,35 +113,6 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
-	// Now that it is confirmed an NNF Node resource exists for this Storage resource,
-	// ensure the proper labels are set on the resource
-	labels := storage.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	const rabbitStorageType = "Rabbit"
-	if label, found := labels[dwsv1alpha2.StorageTypeLabel]; !found || label != rabbitStorageType {
-		labels[dwsv1alpha2.StorageTypeLabel] = rabbitStorageType
-		storage.SetLabels(labels)
-
-		if err := r.Update(ctx, storage); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	if storage.Spec.Mode != "Live" {
-		log.Info("Reconciliation skipped, not in live mode")
-		return ctrl.Result{}, nil
-	}
-
-	// Create a new status
-
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.StorageStatus](storage)
-	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	storage.Status.Type = dwsv1alpha2.NVMe
 	storage.Status.Capacity = nnfNode.Status.Capacity
@@ -160,7 +155,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		device.Slot = drive.Slot
 		device.Status = drive.Status.ConvertToDWSResourceStatus()
 
-		if drive.Status == nnfv1alpha1.ResourceReady {
+		if drive.Status == nnfv1alpha2.ResourceReady {
 			wearLevel := drive.WearLevel
 			device.Model = drive.Model
 			device.SerialNumber = drive.SerialNumber
@@ -176,61 +171,54 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	// Handle any state transitions
-	switch storage.Spec.State {
-	case dwsv1alpha2.EnabledState:
+	// If the Rabbit is disabled we don't have to check the fenced status
+	if storage.Spec.State == dwsv1alpha2.DisabledState {
+		return ctrl.Result{}, nil
+	}
 
-		// Clear the fence status if the storage resource is enabled from a disabled state
-		if storage.Status.Status == dwsv1alpha2.DisabledStatus {
-
-			if nnfNode.Status.Fenced {
-				log.WithValues("fenced", nnfNode.Status.Fenced).Info("resource disabled")
-				nnfNode.Status.Fenced = false
-
-				if err := r.Status().Update(ctx, nnfNode); err != nil {
-					return ctrl.Result{}, err
-				}
-
-				log.Info("fenced status cleared")
-				return ctrl.Result{}, nil
-			}
-
-			// TODO: Fencing Agent Phase #2: Resume Rabbit NLC pods, wait for the pods to
-			//       resume, then change Node Status to Enabled
-
-			storage.Status.RebootRequired = false
-			storage.Status.Message = ""
-		}
+	// Clear the fence status if the storage resource is enabled from a disabled state
+	if storage.Status.Status == dwsv1alpha2.DisabledStatus {
 
 		if nnfNode.Status.Fenced {
-			storage.Status.Status = dwsv1alpha2.DegradedStatus
-			storage.Status.RebootRequired = true
-			storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
-		} else {
-			nodeState, err := r.coreNodeState(ctx, storage)
-			if err != nil {
+			log.WithValues("fenced", nnfNode.Status.Fenced).Info("resource disabled")
+			nnfNode.Status.Fenced = false
+
+			if err := r.Status().Update(ctx, nnfNode); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			if !nodeState.nodeReady {
-				log.Info("storage node is offline")
-				storage.Status.Status = dwsv1alpha2.OfflineStatus
-				storage.Status.Message = "Kubernetes node is offline"
-			} else if len(nodeState.nnfTaint) > 0 {
-				log.Info(fmt.Sprintf("storage node is tainted with %s", nodeState.nnfTaint))
-				storage.Status.Status = dwsv1alpha2.DrainedStatus
-				storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
-			} else {
-				storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
-			}
+			log.Info("fenced status cleared")
+			return ctrl.Result{}, nil
 		}
 
-	case dwsv1alpha2.DisabledState:
-		// TODO: Fencing Agent Phase #2: Pause Rabbit NLC pods, wait for pods to be
-		//       removed, then change Node Status to Disabled
+		// TODO: Fencing Agent Phase #2: Resume Rabbit NLC pods, wait for the pods to
+		//       resume, then change Node Status to Enabled
 
-		storage.Status.Status = dwsv1alpha2.DisabledStatus
-		storage.Status.Message = "Storage node manually disabled"
+		storage.Status.RebootRequired = false
+		storage.Status.Message = ""
+	}
+
+	if nnfNode.Status.Fenced {
+		storage.Status.Status = dwsv1alpha2.DegradedStatus
+		storage.Status.RebootRequired = true
+		storage.Status.Message = "Storage node requires reboot to recover from STONITH event"
+	} else {
+		nodeState, err := r.coreNodeState(ctx, storage)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if !nodeState.nodeReady {
+			log.Info("storage node is offline")
+			storage.Status.Status = dwsv1alpha2.OfflineStatus
+			storage.Status.Message = "Kubernetes node is offline"
+		} else if len(nodeState.nnfTaint) > 0 {
+			log.Info(fmt.Sprintf("storage node is tainted with %s", nodeState.nnfTaint))
+			storage.Status.Status = dwsv1alpha2.DrainedStatus
+			storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
+		} else {
+			storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -285,7 +273,7 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha2.Storage{}).
-		Watches(&nnfv1alpha1.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
+		Watches(&nnfv1alpha2.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
 		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
 		Complete(r)
 }

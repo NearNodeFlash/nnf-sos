@@ -82,6 +82,9 @@ type SystemConfigurationSpec struct {
 type SystemConfigurationStatus struct {
 	// Ready indicates when the SystemConfiguration has been reconciled
 	Ready bool `json:"ready"`
+
+	// Error information
+	ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

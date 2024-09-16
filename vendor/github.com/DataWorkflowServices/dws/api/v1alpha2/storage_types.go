@@ -22,6 +22,7 @@ package v1alpha2
 import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -163,6 +164,16 @@ type StorageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Storage `json:"items"`
+}
+
+func (s *StorageList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range s.Items {
+		objectList = append(objectList, &s.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {
