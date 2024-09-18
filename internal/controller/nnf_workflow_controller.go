@@ -621,6 +621,19 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		}
 	}
 
+	// Allow lustre mounts to settle to workaround dcp mknod() issue on HPE dev systems. This only
+	// appears to be an issue with certain lustre versions.
+	// See https://github.com/NearNodeFlash/NearNodeFlash.github.io/issues/161
+	if pauseStr, found := os.LookupEnv("NNF_DATAIN_PAUSE_IN_S"); found && dwArgs["command"] == "copy_in" {
+		pause, err := strconv.Atoi(pauseStr)
+		if err != nil {
+			pause = 1
+		}
+		log.Info(fmt.Sprintf("Pausing for %ds after mount for the copy_in", pause))
+		time.Sleep(time.Duration(pause) * time.Second)
+		log.Info("Done pausing")
+	}
+
 	// Verify data movement is ready
 	dmm := &nnfv1alpha2.NnfDataMovementManager{ObjectMeta: metav1.ObjectMeta{
 		Name:      nnfv1alpha2.DataMovementManagerName,
