@@ -432,6 +432,27 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		}
 	}
 
+	childTimeoutString := os.Getenv("NNF_CHILD_RESOURCE_TIMEOUT_SECONDS")
+	if len(childTimeoutString) > 0 {
+		childTimeout, err := strconv.Atoi(childTimeoutString)
+		if err != nil {
+			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS value: %s", childTimeoutString)
+		}
+
+		for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
+			// check if the finalizer has been added by the controller on the Rabbit
+			if len(nnfNodeBlockStorage.GetFinalizers()) > 0 {
+				continue
+			}
+
+			if nnfNodeBlockStorage.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
+				return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s: NnfNodeBlockStorage has not been reconciled after %d seconds", nnfNodeBlockStorage.GetNamespace(), childTimeout).WithMajor()
+			}
+
+			return &ctrl.Result{RequeueAfter: time.Minute}, nil
+		}
+	}
+
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
 		if nnfNodeBlockStorage.Status.Ready == false {
 			return &ctrl.Result{}, nil
@@ -469,7 +490,6 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 						if storage.Status.AllocationSets[i].Ready == false {
 							return nil, nil
 						}
-
 					}
 
 					mgsNode = allocationSet.Nodes[0].Name
@@ -629,6 +649,27 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		}
 		if nnfNodeStorage.Status.Error != nil {
 			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
+		}
+	}
+
+	childTimeoutString := os.Getenv("NNF_CHILD_RESOURCE_TIMEOUT_SECONDS")
+	if len(childTimeoutString) > 0 {
+		childTimeout, err := strconv.Atoi(childTimeoutString)
+		if err != nil {
+			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS value: %s", childTimeoutString)
+		}
+
+		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+			// check if the finalizer has been added by the controller on the Rabbit
+			if len(nnfNodeStorage.GetFinalizers()) > 0 {
+				continue
+			}
+
+			if nnfNodeStorage.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
+				return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s: NnfNodeStorage has not been reconciled after %d seconds", nnfNodeStorage.GetNamespace(), childTimeout).WithMajor()
+			}
+
+			return &ctrl.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
