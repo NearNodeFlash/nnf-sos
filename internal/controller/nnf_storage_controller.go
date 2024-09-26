@@ -436,7 +436,8 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	if len(childTimeoutString) > 0 {
 		childTimeout, err := strconv.Atoi(childTimeoutString)
 		if err != nil {
-			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS value: %s", childTimeoutString)
+			log.Info("Error: Invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS. Defaulting to 300 seconds", "value", childTimeoutString)
+			childTimeout = 300
 		}
 
 		for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
@@ -656,7 +657,8 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	if len(childTimeoutString) > 0 {
 		childTimeout, err := strconv.Atoi(childTimeoutString)
 		if err != nil {
-			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS value: %s", childTimeoutString)
+			log.Info("Error: Invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS. Defaulting to 300 seconds", "value", childTimeoutString)
+			childTimeout = 300
 		}
 
 		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
