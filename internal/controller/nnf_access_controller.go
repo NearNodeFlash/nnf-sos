@@ -251,7 +251,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha2.Nnf
 
 	// Wait for all of the ClientMounts to be ready
 	if ready == false {
-		return &ctrl.Result{}, nil
+		return &ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	return nil, nil
@@ -1033,6 +1033,8 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
 func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha2.NnfAccess, clientList []string) (bool, error) {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
+
 	if !access.Spec.MakeClientMounts {
 		return true, nil
 	}
@@ -1062,6 +1064,28 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	for _, clientMount := range clientMounts {
 		if clientMount.Status.Error != nil {
 			return false, dwsv1alpha2.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
+		}
+	}
+
+	childTimeoutString := os.Getenv("NNF_CHILD_RESOURCE_TIMEOUT_SECONDS")
+	if len(childTimeoutString) > 0 {
+		childTimeout, err := strconv.Atoi(childTimeoutString)
+		if err != nil {
+			log.Info("Error: Invalid NNF_CHILD_RESOURCE_TIMEOUT_SECONDS. Defaulting to 300 seconds", "value", childTimeoutString)
+			childTimeout = 300
+		}
+
+		for _, clientMount := range clientMounts {
+			// check if the finalizer has been added by the controller on the Rabbit
+			if len(clientMount.GetFinalizers()) > 0 {
+				continue
+			}
+
+			if clientMount.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
+				return false, dwsv1alpha2.NewResourceError("Node: %s: ClientMount has not been reconciled after %d seconds", clientMount.GetNamespace(), childTimeout).WithMajor()
+			}
+
+			return false, nil
 		}
 	}
 
