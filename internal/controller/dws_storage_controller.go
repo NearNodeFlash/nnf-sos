@@ -27,6 +27,7 @@ import (
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -92,6 +93,11 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// Initialize the status
+	if len(storage.Status.Status) == 0 {
+		storage.Status.Status = dwsv1alpha3.StartingStatus
+	}
+
 	if storage.Spec.State == dwsv1alpha3.DisabledState {
 		storage.Status.Status = dwsv1alpha3.DisabledStatus
 		storage.Status.Message = "Storage node manually disabled"
@@ -111,7 +117,12 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			storage.Status.Status = dwsv1alpha2.NotPresentStatus
+			return ctrl.Result{}, nil
+		}
+
+		return ctrl.Result{}, err
 	}
 
 	storage.Status.Type = dwsv1alpha3.NVMe
@@ -119,7 +130,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	storage.Status.Access.Protocol = dwsv1alpha3.PCIe
 
 	if len(nnfNode.Status.Servers) == 0 {
-		return ctrl.Result{}, nil // Wait until severs array has been filled in with Rabbit info
+		return ctrl.Result{}, nil // Wait until servers array has been filled in with Rabbit info
 	}
 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.

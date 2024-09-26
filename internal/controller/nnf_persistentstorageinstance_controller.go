@@ -129,8 +129,11 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, nil
 	}
 
-	if persistentStorage.Status.State == "" {
-		persistentStorage.Status.State = dwsv1alpha3.PSIStateCreating
+	if persistentStorage.Status.State != persistentStorage.Spec.State {
+		persistentStorage.Status.State = persistentStorage.Spec.State
+		persistentStorage.Status.Ready = false
+
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
@@ -186,9 +189,9 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		Namespace: servers.Namespace,
 	}
 
-	if persistentStorage.Spec.State == dwsv1alpha3.PSIStateDestroying {
+	if persistentStorage.Spec.State == dwsv1alpha3.PSIStateDisabled {
 		if len(persistentStorage.Spec.ConsumerReferences) == 0 {
-			persistentStorage.Status.State = dwsv1alpha3.PSIStateDestroying
+			persistentStorage.Status.Ready = true
 		}
 	} else if persistentStorage.Spec.State == dwsv1alpha3.PSIStateActive {
 		// Wait for the NnfStorage to be ready before marking the persistent storage
@@ -212,7 +215,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		if complete == true {
-			persistentStorage.Status.State = dwsv1alpha3.PSIStateActive
+			persistentStorage.Status.Ready = true
 		}
 	}
 

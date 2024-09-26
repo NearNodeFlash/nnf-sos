@@ -107,7 +107,7 @@ func (r *result) info() []interface{} {
 
 // Validate the workflow and return any error found
 func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1alpha3.Workflow) error {
-	var createPersistentCount, deletePersistentCount, directiveCount, containerCount int
+	var createPersistentCount, deletePersistentCount, drainPersistentCount, directiveCount, containerCount int
 	for index, directive := range wf.Spec.DWDirectives {
 
 		directiveCount++
@@ -125,6 +125,9 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 
 		case "create_persistent":
 			createPersistentCount++
+
+		case "drain_persistent":
+			drainPersistentCount++
 
 		case "destroy_persistent":
 			deletePersistentCount++
@@ -144,8 +147,8 @@ func (r *NnfWorkflowReconciler) validateWorkflow(ctx context.Context, wf *dwsv1a
 	}
 
 	if directiveCount > 1 {
-		// Ensure create_persistent or destroy_persistent are singletons in the workflow
-		if createPersistentCount+deletePersistentCount > 0 {
+		// Ensure create_persistent, drain_persistent, and destroy_persistent are singletons in the workflow
+		if createPersistentCount+deletePersistentCount+drainPersistentCount > 0 {
 			return dwsv1alpha3.NewResourceError("").WithUserMessage("only a single create_persistent or destroy_persistent directive is allowed per workflow").WithFatal().WithUser()
 		}
 

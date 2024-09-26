@@ -436,6 +436,31 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		}
 	case "container":
 		return r.getContainerPorts(ctx, workflow, index)
+	case "drain_persistent":
+		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
+			}
+
+			return nil, nil
+		}
+
+		if persistentStorage.Spec.UserID != workflow.Spec.UserID {
+			return nil, dwsv1alpha2.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
+		}
+
+		if persistentStorage.Status.State == dwsv1alpha2.PSIStateDestroying {
+			return nil, dwsv1alpha2.NewResourceError("persistent storage %v is being destroyed", dwArgs["name"]).WithUserMessage("peristent storage is being destroyed").WithFatal().WithUser()
+		}
+
+		persistentStorage.Spec.State = dwsv1alpha2.PSIStateDrain
+
+		err = r.Update(ctx, persistentStorage)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+		}
+		log.Info("Add owner reference for persistent storage for deletion", "psi", persistentStorage)
 	}
 
 	return nil, nil

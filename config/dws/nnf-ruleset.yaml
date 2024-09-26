@@ -59,6 +59,15 @@ spec:
         pattern: "^[a-z][a-z0-9-]+$"
         isRequired: false
         isValueRequired: true
+  - command: "drain_persistent"
+    watchStates: Proposal,Setup
+    ruleDefs:
+      - key: "^name$"
+        type: "string"
+        pattern: "^[a-z][a-z0-9-]+$"
+        isRequired: true
+        isValueRequired: true
+        uniqueWithin: "destroy_persistent_name"
   - command: "destroy_persistent"
     watchStates: Proposal,Teardown
     ruleDefs:
