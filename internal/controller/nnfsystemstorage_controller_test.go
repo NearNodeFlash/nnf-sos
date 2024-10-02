@@ -43,7 +43,6 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		"rabbit-systemstorage-node-2"}
 
 	nnfNodes := [2]*nnfv1alpha2.NnfNode{}
-	storages := [2]*dwsv1alpha2.Storage{}
 	nodes := [2]*corev1.Node{}
 
 	var systemConfiguration *dwsv1alpha2.SystemConfiguration
@@ -57,55 +56,6 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed(), "Create Namespace")
 			}
 		})
-
-		for i, nodeName := range nodeNames {
-			// Create the node - set it to up as ready
-			nodes[i] = &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: nodeName,
-					Labels: map[string]string{
-						nnfv1alpha2.RabbitNodeSelectorLabel: "true",
-					},
-				},
-				Status: corev1.NodeStatus{
-					Conditions: []corev1.NodeCondition{
-						{
-							Status: corev1.ConditionTrue,
-							Type:   corev1.NodeReady,
-						},
-					},
-				},
-			}
-
-			Expect(k8sClient.Create(context.TODO(), nodes[i])).To(Succeed())
-
-			nnfNodes[i] = &nnfv1alpha2.NnfNode{
-				TypeMeta: metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nnf-nlc",
-					Namespace: nodeName,
-				},
-				Spec: nnfv1alpha2.NnfNodeSpec{
-					State: nnfv1alpha2.ResourceEnable,
-				},
-			}
-			Expect(k8sClient.Create(context.TODO(), nnfNodes[i])).To(Succeed())
-
-			Eventually(func(g Gomega) error {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), nnfNodes[i])).To(Succeed())
-				nnfNodes[i].Status.LNetNid = "1.2.3.4@tcp0"
-				return k8sClient.Update(context.TODO(), nnfNodes[i])
-			}).Should(Succeed(), "set LNet Nid in NnfNode")
-
-			storages[i] = &dwsv1alpha2.Storage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodeName,
-					Namespace: corev1.NamespaceDefault,
-				},
-			}
-
-			Expect(k8sClient.Create(context.TODO(), storages[i])).To(Succeed())
-		}
 
 		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
 			TypeMeta: metav1.TypeMeta{},
@@ -260,6 +210,56 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		}
 
 		Expect(k8sClient.Create(context.TODO(), systemConfiguration)).To(Succeed())
+		for i, nodeName := range nodeNames {
+			// Create the node - set it to up as ready
+			nodes[i] = &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+					Labels: map[string]string{
+						nnfv1alpha2.RabbitNodeSelectorLabel: "true",
+					},
+				},
+				Status: corev1.NodeStatus{
+					Conditions: []corev1.NodeCondition{
+						{
+							Status: corev1.ConditionTrue,
+							Type:   corev1.NodeReady,
+						},
+					},
+				},
+			}
+
+			Expect(k8sClient.Create(context.TODO(), nodes[i])).To(Succeed())
+
+			nnfNodes[i] = &nnfv1alpha2.NnfNode{
+				TypeMeta: metav1.TypeMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-nlc",
+					Namespace: nodeName,
+				},
+				Spec: nnfv1alpha2.NnfNodeSpec{
+					State: nnfv1alpha2.ResourceEnable,
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), nnfNodes[i])).To(Succeed())
+
+			Eventually(func(g Gomega) error {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), nnfNodes[i])).To(Succeed())
+				nnfNodes[i].Status.LNetNid = "1.2.3.4@tcp0"
+				return k8sClient.Update(context.TODO(), nnfNodes[i])
+			}).Should(Succeed(), "set LNet Nid in NnfNode")
+
+			storage := &dwsv1alpha2.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeName,
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+
+			Eventually(func() error { // wait until the SystemConfiguration controller creates the storage
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
+			}).Should(Succeed())
+		}
 
 		// Create a pinned NnfStorageProfile for the unit tests.
 		storageProfile = createBasicPinnedNnfStorageProfile()
@@ -273,12 +273,6 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		}).ShouldNot(Succeed())
 
 		for i := range nodeNames {
-			Expect(k8sClient.Delete(context.TODO(), storages[i])).To(Succeed())
-			tempStorage := &dwsv1alpha2.Storage{}
-			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
-				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storages[i]), tempStorage)
-			}).ShouldNot(Succeed())
-
 			Expect(k8sClient.Delete(context.TODO(), nnfNodes[i])).To(Succeed())
 			tempNnfNode := &nnfv1alpha2.NnfNode{}
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
