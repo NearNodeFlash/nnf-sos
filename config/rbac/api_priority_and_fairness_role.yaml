@@ -1,0 +1,25 @@
+# APF (API Priority and Fairness)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: apf-view
+rules:
+- nonResourceURLs:
+  - "/debug/api_priority_and_fairness/dump_priority_levels"
+  - "/debug/api_priority_and_fairness/dump_queues"
+  - "/debug/api_priority_and_fairness/dump_requests"
+  - "/metrics"
+  verbs:
+  - get
+- apiGroups:
+  - flowcontrol.apiserver.k8s.io
+  resources:
+  - flowschemas
+  - flowschemas/status
+  - prioritylevelconfigurations
+  - prioritylevelconfigurations/status
+  verbs:
+  - get
+  - list
+  - watch
+
