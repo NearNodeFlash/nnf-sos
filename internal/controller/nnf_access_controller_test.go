@@ -44,7 +44,6 @@ var _ = Describe("Access Controller Test", func() {
 		"rabbit-nnf-access-test-node-2"}
 
 	nnfNodes := [2]*nnfv1alpha2.NnfNode{}
-	storages := [2]*dwsv1alpha2.Storage{}
 	nodes := [2]*corev1.Node{}
 
 	var systemConfiguration *dwsv1alpha2.SystemConfiguration
@@ -58,6 +57,26 @@ var _ = Describe("Access Controller Test", func() {
 				Expect(k8sClient.Create(context.TODO(), ns)).To(Succeed(), "Create Namespace")
 			}
 		})
+
+		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
+			TypeMeta: metav1.TypeMeta{},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "default",
+				Namespace: corev1.NamespaceDefault,
+			},
+			Spec: dwsv1alpha2.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+					{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-1",
+					},
+					{
+						Type: "Rabbit",
+						Name: "rabbit-nnf-access-test-node-2",
+					},
+				},
+			},
+		}
 
 		for i, nodeName := range nodeNames {
 			// Create the node - set it to up as ready
@@ -98,34 +117,16 @@ var _ = Describe("Access Controller Test", func() {
 				return k8sClient.Update(context.TODO(), nnfNodes[i])
 			}).Should(Succeed(), "set LNet Nid in NnfNode")
 
-			storages[i] = &dwsv1alpha2.Storage{
+			storage := &dwsv1alpha2.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
 				},
 			}
 
-			Expect(k8sClient.Create(context.TODO(), storages[i])).To(Succeed())
-		}
-
-		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
-			TypeMeta: metav1.TypeMeta{},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "default",
-				Namespace: corev1.NamespaceDefault,
-			},
-			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
-					{
-						Type: "Rabbit",
-						Name: "rabbit-nnf-access-test-node-1",
-					},
-					{
-						Type: "Rabbit",
-						Name: "rabbit-nnf-access-test-node-2",
-					},
-				},
-			},
+			Eventually(func() error { // wait until the SystemConfiguration controller creates the storage
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)
+			}).ShouldNot(Succeed())
 		}
 
 		Expect(k8sClient.Create(context.TODO(), systemConfiguration)).To(Succeed())
@@ -142,12 +143,6 @@ var _ = Describe("Access Controller Test", func() {
 		}).ShouldNot(Succeed())
 
 		for i := range nodeNames {
-			Expect(k8sClient.Delete(context.TODO(), storages[i])).To(Succeed())
-			tempStorage := &dwsv1alpha2.Storage{}
-			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
-				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storages[i]), tempStorage)
-			}).ShouldNot(Succeed())
-
 			Expect(k8sClient.Delete(context.TODO(), nnfNodes[i])).To(Succeed())
 			tempNnfNode := &nnfv1alpha2.NnfNode{}
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
