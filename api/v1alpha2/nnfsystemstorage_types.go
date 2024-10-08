@@ -105,7 +105,6 @@ type NnfSystemStorageStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:storageversion
 // NnfSystemStorage is the Schema for the nnfsystemstorages API
 type NnfSystemStorage struct {
 	metav1.TypeMeta   `json:",inline"`
