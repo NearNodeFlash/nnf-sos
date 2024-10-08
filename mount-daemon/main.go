@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -46,7 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
 	//+kubebuilder:scaffold:imports
@@ -69,7 +69,7 @@ type Service struct {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha3.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

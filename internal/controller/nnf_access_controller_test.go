@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 )
 
 var _ = Describe("Access Controller Test", func() {
@@ -43,11 +43,11 @@ var _ = Describe("Access Controller Test", func() {
 		"rabbit-nnf-access-test-node-1",
 		"rabbit-nnf-access-test-node-2"}
 
-	nnfNodes := [2]*nnfv1alpha2.NnfNode{}
+	nnfNodes := [2]*nnfv1alpha3.NnfNode{}
 	nodes := [2]*corev1.Node{}
 
 	var systemConfiguration *dwsv1alpha2.SystemConfiguration
-	var storageProfile *nnfv1alpha2.NnfStorageProfile
+	var storageProfile *nnfv1alpha3.NnfStorageProfile
 	var setup sync.Once
 
 	BeforeEach(func() {
@@ -84,7 +84,7 @@ var _ = Describe("Access Controller Test", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeName,
 					Labels: map[string]string{
-						nnfv1alpha2.RabbitNodeSelectorLabel: "true",
+						nnfv1alpha3.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{
@@ -99,14 +99,14 @@ var _ = Describe("Access Controller Test", func() {
 
 			Expect(k8sClient.Create(context.TODO(), nodes[i])).To(Succeed())
 
-			nnfNodes[i] = &nnfv1alpha2.NnfNode{
+			nnfNodes[i] = &nnfv1alpha3.NnfNode{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",
 					Namespace: nodeName,
 				},
-				Spec: nnfv1alpha2.NnfNodeSpec{
-					State: nnfv1alpha2.ResourceEnable,
+				Spec: nnfv1alpha3.NnfNodeSpec{
+					State: nnfv1alpha3.ResourceEnable,
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), nnfNodes[i])).To(Succeed())
@@ -137,14 +137,14 @@ var _ = Describe("Access Controller Test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha2.NnfStorageProfile{}
+		profExpected := &nnfv1alpha3.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
 
 		for i := range nodeNames {
 			Expect(k8sClient.Delete(context.TODO(), nnfNodes[i])).To(Succeed())
-			tempNnfNode := &nnfv1alpha2.NnfNode{}
+			tempNnfNode := &nnfv1alpha3.NnfNode{}
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), tempNnfNode)
 			}).ShouldNot(Succeed())
@@ -166,29 +166,29 @@ var _ = Describe("Access Controller Test", func() {
 	Describe("Create Client Mounts", func() {
 
 		It("Creates Lustre Client Mount", func() {
-			allocationNodes := make([]nnfv1alpha2.NnfStorageAllocationNodes, len(nodeNames))
+			allocationNodes := make([]nnfv1alpha3.NnfStorageAllocationNodes, len(nodeNames))
 			for idx, nodeName := range nodeNames {
-				allocationNodes[idx] = nnfv1alpha2.NnfStorageAllocationNodes{
+				allocationNodes[idx] = nnfv1alpha3.NnfStorageAllocationNodes{
 					Count: 1,
 					Name:  nodeName,
 				}
 			}
 
-			storage := &nnfv1alpha2.NnfStorage{
+			storage := &nnfv1alpha3.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-access-test-storage-lustre",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha2.NnfStorageSpec{
+				Spec: nnfv1alpha3.NnfStorageSpec{
 					FileSystemType: "lustre",
-					AllocationSets: []nnfv1alpha2.NnfStorageAllocationSetSpec{
+					AllocationSets: []nnfv1alpha3.NnfStorageAllocationSetSpec{
 						{
 							Name:     "mgtmdt",
 							Capacity: 50000000000,
-							NnfStorageLustreSpec: nnfv1alpha2.NnfStorageLustreSpec{
+							NnfStorageLustreSpec: nnfv1alpha3.NnfStorageLustreSpec{
 								TargetType: "mgtmdt",
 							},
-							Nodes: []nnfv1alpha2.NnfStorageAllocationNodes{
+							Nodes: []nnfv1alpha3.NnfStorageAllocationNodes{
 								{
 									Count: 1,
 									Name:  nodeNames[0],
@@ -198,7 +198,7 @@ var _ = Describe("Access Controller Test", func() {
 						{
 							Name:     "ost",
 							Capacity: 50000000000,
-							NnfStorageLustreSpec: nnfv1alpha2.NnfStorageLustreSpec{
+							NnfStorageLustreSpec: nnfv1alpha3.NnfStorageLustreSpec{
 								TargetType: "ost",
 							},
 							Nodes: allocationNodes,
@@ -212,18 +212,18 @@ var _ = Describe("Access Controller Test", func() {
 
 		It("Creates XFS Client Mount", func() {
 
-			storage := &nnfv1alpha2.NnfStorage{
+			storage := &nnfv1alpha3.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-access-test-storage-xfs",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha2.NnfStorageSpec{
+				Spec: nnfv1alpha3.NnfStorageSpec{
 					FileSystemType: "xfs",
-					AllocationSets: []nnfv1alpha2.NnfStorageAllocationSetSpec{
+					AllocationSets: []nnfv1alpha3.NnfStorageAllocationSetSpec{
 						{
 							Name:     "xfs",
 							Capacity: 50000000000,
-							Nodes: []nnfv1alpha2.NnfStorageAllocationNodes{
+							Nodes: []nnfv1alpha3.NnfStorageAllocationNodes{
 								{
 									Count: 1,
 									Name:  nodeNames[0],
@@ -243,18 +243,18 @@ var _ = Describe("Access Controller Test", func() {
 
 		It("Creates GFS2 Client Mount", func() {
 
-			storage := &nnfv1alpha2.NnfStorage{
+			storage := &nnfv1alpha3.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-access-test-storage-gfs2",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha2.NnfStorageSpec{
+				Spec: nnfv1alpha3.NnfStorageSpec{
 					FileSystemType: "gfs2",
-					AllocationSets: []nnfv1alpha2.NnfStorageAllocationSetSpec{
+					AllocationSets: []nnfv1alpha3.NnfStorageAllocationSetSpec{
 						{
 							Name:     "gfs2",
 							Capacity: 50000000000,
-							Nodes: []nnfv1alpha2.NnfStorageAllocationNodes{
+							Nodes: []nnfv1alpha3.NnfStorageAllocationNodes{
 								{
 									Count: 1,
 									Name:  nodeNames[0],
@@ -274,7 +274,7 @@ var _ = Describe("Access Controller Test", func() {
 	})
 })
 
-func verifyClientMount(storage *nnfv1alpha2.NnfStorage, storageProfile *nnfv1alpha2.NnfStorageProfile, nodeNames []string) {
+func verifyClientMount(storage *nnfv1alpha3.NnfStorage, storageProfile *nnfv1alpha3.NnfStorageProfile, nodeNames []string) {
 	Expect(k8sClient.Create(context.TODO(), storage)).To(Succeed(), "Create NNF Storage")
 	Eventually(func(g Gomega) error {
 		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
@@ -283,12 +283,12 @@ func verifyClientMount(storage *nnfv1alpha2.NnfStorage, storageProfile *nnfv1alp
 	}).Should(Succeed())
 
 	mountPath := "/mnt/nnf/12345-0/"
-	access := &nnfv1alpha2.NnfAccess{
+	access := &nnfv1alpha3.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-access-test-access-" + storage.Spec.FileSystemType,
 			Namespace: corev1.NamespaceDefault,
 		},
-		Spec: nnfv1alpha2.NnfAccessSpec{
+		Spec: nnfv1alpha3.NnfAccessSpec{
 
 			DesiredState:     "mounted",
 			TeardownState:    dwsv1alpha2.StatePreRun,
@@ -299,7 +299,7 @@ func verifyClientMount(storage *nnfv1alpha2.NnfStorage, storageProfile *nnfv1alp
 			MountPathPrefix:  mountPath,
 
 			StorageReference: corev1.ObjectReference{
-				Kind:      reflect.TypeOf(nnfv1alpha2.NnfStorage{}).Name(),
+				Kind:      reflect.TypeOf(nnfv1alpha3.NnfStorage{}).Name(),
 				Name:      storage.Name,
 				Namespace: storage.Namespace,
 			},

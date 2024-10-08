@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -220,12 +220,12 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				labels = make(map[string]string)
 			}
 
-			if _, present := labels[nnfv1alpha2.TaintsAndLabelsCompletedLabel]; present {
+			if _, present := labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel]; present {
 				continue
 			}
 
 			taint := &corev1.Taint{
-				Key:    nnfv1alpha2.RabbitNodeTaintKey,
+				Key:    nnfv1alpha3.RabbitNodeTaintKey,
 				Value:  "true",
 				Effect: effect,
 			}
@@ -239,7 +239,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels[nnfv1alpha2.TaintsAndLabelsCompletedLabel] = "true"
+				labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
@@ -252,8 +252,8 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels[nnfv1alpha2.RabbitNodeSelectorLabel]; !present {
-				labels[nnfv1alpha2.RabbitNodeSelectorLabel] = "true"
+			if _, present := labels[nnfv1alpha3.RabbitNodeSelectorLabel]; !present {
+				labels[nnfv1alpha3.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}
