@@ -331,6 +331,166 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Current desired state
+      jsonPath: .spec.state
+      name: STATE
+      type: string
+    - description: Health of node
+      jsonPath: .status.health
+      name: HEALTH
+      type: string
+    - description: Current status of node
+      jsonPath: .status.status
+      name: STATUS
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - description: Parent pod name
+      jsonPath: .spec.pod
+      name: POD
+      priority: 1
+      type: string
+    name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        description: NnfNode is the Schema for the NnfNode API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NnfNodeSpec defines the desired state of NNF Node
+            properties:
+              name:
+                description: The unique name for this NNF Node
+                type: string
+              pod:
+                description: Pod name for this NNF Node
+                type: string
+              state:
+                description: State reflects the desired state of this NNF Node resource
+                enum:
+                - Enable
+                - Disable
+                type: string
+            required:
+            - state
+            type: object
+          status:
+            description: NnfNodeStatus defines the observed status of NNF Node
+            properties:
+              capacity:
+                format: int64
+                type: integer
+              capacityAllocated:
+                format: int64
+                type: integer
+              drives:
+                items:
+                  description: NnfDriveStatus defines the observe status of drives
+                    connected to this NNF Node
+                  properties:
+                    capacity:
+                      description: |-
+                        Capacity in bytes of the device. The full capacity may not
+                        be usable depending on what the storage driver can provide.
+                      format: int64
+                      type: integer
+                    firmwareVersion:
+                      description: The firmware version of this storage controller.
+                      type: string
+                    health:
+                      description: NnfResourceHealthType defines the health of an
+                        NNF resource.
+                      type: string
+                    id:
+                      description: ID reflects the NNF Node unique identifier for
+                        this NNF Server resource.
+                      type: string
+                    model:
+                      description: Model is the manufacturer information about the
+                        device
+                      type: string
+                    name:
+                      description: Name reflects the common name of this NNF Server
+                        resource.
+                      type: string
+                    serialNumber:
+                      description: The serial number for this storage controller.
+                      type: string
+                    slot:
+                      description: Physical slot location of the storage controller.
+                      type: string
+                    status:
+                      description: NnfResourceStatusType is the string that indicates
+                        the resource's status
+                      type: string
+                    wearLevel:
+                      description: WearLevel in percent for SSDs
+                      format: int64
+                      type: integer
+                  type: object
+                type: array
+              fenced:
+                description: Fenced is true when the NNF Node is fenced by the STONITH
+                  agent, and false otherwise.
+                type: boolean
+              health:
+                description: NnfResourceHealthType defines the health of an NNF resource.
+                type: string
+              lnetNid:
+                description: LNetNid is the LNet address for the NNF node
+                type: string
+              servers:
+                items:
+                  description: NnfServerStatus defines the observed status of servers
+                    connected to this NNF Node
+                  properties:
+                    health:
+                      description: NnfResourceHealthType defines the health of an
+                        NNF resource.
+                      type: string
+                    hostname:
+                      type: string
+                    id:
+                      description: ID reflects the NNF Node unique identifier for
+                        this NNF Server resource.
+                      type: string
+                    name:
+                      description: Name reflects the common name of this NNF Server
+                        resource.
+                      type: string
+                    status:
+                      description: NnfResourceStatusType is the string that indicates
+                        the resource's status
+                      type: string
+                  type: object
+                type: array
+              status:
+                description: Status reflects the current status of the NNF Node
+                type: string
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}
