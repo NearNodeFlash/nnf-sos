@@ -49,6 +49,22 @@ func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup, size in
 	}
 }
 
+// Exists determines if the LV exists in the OS
+func (lv *LogicalVolume) Exists(ctx context.Context) (bool, error) {
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	if err != nil {
+		return false, err
+	}
+
+	for _, existingLV := range existingLVs {
+		if existingLV.Name == lv.Name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 	deviceNames := []string{}
 	for _, pv := range lv.VolumeGroup.PhysicalVolumes {

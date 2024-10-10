@@ -41,6 +41,14 @@ type NnfStorageProfileLustreCmdLines struct {
 	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
 	// argument to mkfs.lustre instead.
 	MountTarget string `json:"mountTarget,omitempty"`
+
+	// PostActivate specifies a list of commands to run on the Rabbit after the
+	// Lustre target has been activated
+	PostActivate []string `json:"postActivate,omitempty"`
+
+	// PreDeactivate specifies a list of commands to run on the Rabbit before the
+	// Lustre target is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
@@ -170,8 +178,16 @@ type NnfStorageProfileCmdLines struct {
 	// MountRabbit specifies mount options for mounting on the Rabbit.
 	MountRabbit string `json:"mountRabbit,omitempty"`
 
+	// PreDeactivate specifies a list of commands to run on the Rabbit after the
+	// file system has been activated
+	PostActivate []string `json:"postActivate,omitempty"`
+
 	// MountCompute specifies mount options for mounting on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
+
+	// PreDeactivate specifies a list of commands to run on the Rabbit before the
+	// file system is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines
@@ -246,16 +262,16 @@ type NnfStorageProfileData struct {
 	Pinned bool `json:"pinned,omitempty"`
 
 	// LustreStorage defines the Lustre-specific configuration
-	LustreStorage NnfStorageProfileLustreData `json:"lustreStorage"`
+	LustreStorage NnfStorageProfileLustreData `json:"lustreStorage,omitempty"`
 
 	// GFS2Storage defines the GFS2-specific configuration
-	GFS2Storage NnfStorageProfileGFS2Data `json:"gfs2Storage"`
+	GFS2Storage NnfStorageProfileGFS2Data `json:"gfs2Storage,omitempty"`
 
 	// XFSStorage defines the XFS-specific configuration
-	XFSStorage NnfStorageProfileXFSData `json:"xfsStorage"`
+	XFSStorage NnfStorageProfileXFSData `json:"xfsStorage,omitempty"`
 
 	// RawStorage defines the Raw-specific configuration
-	RawStorage NnfStorageProfileRawData `json:"rawStorage"`
+	RawStorage NnfStorageProfileRawData `json:"rawStorage,omitempty"`
 }
 
 //+kubebuilder:object:root=true

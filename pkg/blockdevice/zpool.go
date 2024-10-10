@@ -136,6 +136,28 @@ func (z *Zpool) CheckFormatted() (bool, error) {
 	return true, nil
 }
 
+func (z *Zpool) CheckExists(ctx context.Context) (bool, error) {
+	output, err := command.Run("zpool list -H", z.Log)
+	if err != nil {
+		if err != nil {
+			return false, fmt.Errorf("could not list zpools")
+		}
+	}
+
+	// Check whether the zpool already exists
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == z.Name {
+			if fields[9] == "ONLINE" {
+				return true, nil
+			}
+			return false, fmt.Errorf("zpool has unexpected health %s", fields[9])
+		}
+	}
+
+	return false, nil
+}
+
 func ZpoolImportAll(log logr.Logger) (bool, error) {
 	// If test environment or KIND, don't do anything
 	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
