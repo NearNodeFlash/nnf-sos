@@ -286,3 +286,25 @@ func (l *Lvm) CheckFormatted() (bool, error) {
 
 	return true, nil
 }
+
+func (l *Lvm) CheckExists(ctx context.Context) (bool, error) {
+	vgExists, err := l.VolumeGroup.Exists(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if !vgExists {
+		return false, nil
+	}
+
+	lvExists, err := l.LogicalVolume.Exists(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	if !lvExists {
+		return false, nil
+	}
+
+	return true, nil
+}

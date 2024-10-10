@@ -236,6 +236,38 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		return nil, err
 	}
 
+	// If we never successfully completed creating the allocation or if it's already gone, then don't try to run PreDeactivate
+	blockDeviceExists, err := blockDevice.CheckExists(ctx)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not check if block device exists").WithError(err).WithMajor()
+	}
+
+	if blockDeviceExists && nnfNodeStorage.Status.Allocations[index].Ready {
+		ran, err := blockDevice.Activate(ctx)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Activated block device", "allocation", index)
+		}
+
+		ran, err = fileSystem.Activate(ctx, false)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Activated file system", "allocation", index)
+		}
+
+		ran, err = fileSystem.PreDeactivate(ctx)
+		if err != nil {
+			return nil, dwsv1alpha2.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Pre deactivate file system", "allocation", index)
+		}
+	}
+
 	ran, err := fileSystem.Deactivate(ctx)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
@@ -323,12 +355,12 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			log.Info("Activated file system", "allocation", index)
 		}
 
-		ran, err = fileSystem.SetPermissions(ctx, nnfNodeStorage.Spec.UserID, nnfNodeStorage.Spec.GroupID, allocationStatus.Ready)
+		ran, err = fileSystem.PostActivate(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not set file system permissions").WithError(err).WithMajor()
+			return nil, dwsv1alpha2.NewResourceError("could not run post activate").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Set file system permission", "allocation", index)
+			log.Info("Post activate file system", "allocation", index)
 		}
 
 		allocationStatus.Ready = true
