@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/cli-runtime/pkg/printers"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -57,6 +59,9 @@ const (
 	// uses on the ClientMount resource. This prevents the ClientMount resource
 	// from being fully deleted until this controller removes the finalizer.
 	finalizerNnfClientMount = "nnf.cray.hpe.com/nnf_clientmount"
+
+	// filepath to append to clientmount directory to store lustre information in (servers resource)
+	lustreServersFilepath = ".nnf-servers.json"
 )
 
 // NnfClientMountReconciler contains the pieces used by the reconciler
@@ -89,6 +94,7 @@ func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -254,7 +260,23 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
 				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
+
+			// If we're setting permissions then we know this is only happening once.  Dump the
+			// servers resource to a file that can be accessed on the computes. Users can then
+			// obtain ost/mdt information.
+			// FIXME: decouple from SetPermissions?
+			if clientMount.Spec.Mounts[index].Type == "lustre" {
+				serversFilepath := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
+				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath); err != nil {
+					return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
+				}
+
+				if err := os.Chown(serversFilepath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
+					return dwsv1alpha2.NewResourceError("unable to set owner and group for server resource file").WithError(err).WithMajor()
+				}
+			}
 		}
+
 	} else {
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
@@ -277,6 +299,50 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		if deactivated {
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
 		}
+	}
+
+	return nil
+}
+
+// Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string) error {
+	// Obtain the correct workflow/namespace from the Clientmount's labels
+	wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
+	ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
+	if !wfFound || !wfNsFound {
+		return dwsv1alpha2.NewResourceError("unable to determine workflow from labels").WithMajor()
+	}
+
+	// Use the workflow/namespace labels to find the matching Server resource
+	matchLabels := dwsv1alpha2.MatchingWorkflow(&dwsv1alpha2.Workflow{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      wf,
+			Namespace: ns,
+		},
+	})
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+	serverList := &dwsv1alpha2.ServersList{}
+	if err := r.List(ctx, serverList, listOptions...); err != nil {
+		return dwsv1alpha2.NewResourceError("unable retrieve servers resource").WithError(err).WithMajor()
+	}
+
+	// Something is wrong if we found more than 1
+	if len(serverList.Items) != 1 {
+		return dwsv1alpha2.NewResourceError("wrong number of servers resources, expected 1").WithMajor()
+	}
+
+	// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
+	file, err := os.Create(path)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
+	}
+	defer file.Close()
+
+	p := printers.JSONPrinter{}
+	if err := p.PrintObj(&serverList.Items[0], file); err != nil {
+		return dwsv1alpha2.NewResourceError("could not write servers resource to file").WithError(err).WithMajor()
 	}
 
 	return nil
