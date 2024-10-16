@@ -21,7 +21,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -57,6 +60,9 @@ const (
 	// uses on the ClientMount resource. This prevents the ClientMount resource
 	// from being fully deleted until this controller removes the finalizer.
 	finalizerNnfClientMount = "nnf.cray.hpe.com/nnf_clientmount"
+
+	// filepath to append to clientmount directory to store lustre information in (servers resource)
+	lustreServersFilepath = ".nnf-servers.json"
 )
 
 // NnfClientMountReconciler contains the pieces used by the reconciler
@@ -89,6 +95,7 @@ func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -254,7 +261,19 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
 				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
+
+			// If we're setting permissions then we know this is only happening once.  Dump the
+			// servers resource to a file that can be accessed on the computes. Users can then
+			// obtain ost/mdt information.
+			// FIXME: decouple from SetPermissions?
+			if clientMount.Spec.Mounts[index].Type == "lustre" {
+				serversFilepath := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
+				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath, clientMount.Spec.Mounts[index].UserID, clientMount.Spec.Mounts[index].GroupID); err != nil {
+					return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
+				}
+			}
 		}
+
 	} else {
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
@@ -280,6 +299,151 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	}
 
 	return nil
+}
+
+// Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string, uid, gid uint32) error {
+
+	// Get the NnfServers Resource
+	server, err := r.getServerForClientMount(ctx, clientMount)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not retrieve corresponding NnfServer resource for this ClientMount").WithError(err).WithMajor()
+	}
+
+	// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
+	file, err := os.Create(path)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(createLustreMapping(server))
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not write JSON to file").WithError(err).WithMajor()
+	}
+
+	// Change permissions to user
+	if err := os.Chown(path, int(uid), int(gid)); err != nil {
+		return dwsv1alpha2.NewResourceError("unable to set owner and group").WithError(err).WithMajor()
+	}
+
+	return nil
+}
+
+// Retrieve the ClientMount's corresponding NnfServer resource. To do this, we first need to get the corresponding NnfStorage resource. That is done by
+// looking at the owner of the ClientMount resource. It should be NnfStorage. Then, we inspect the NnfStorage resource's owner. In this case, there can
+// be two different owners:
+//
+// 1. Workflow (non-persistent storage case)
+// 2. PersistentStorageInstance (persistent storage case)
+//
+// Once we understand who owns the NnfStorage resource, we can then obtain the NnfServer resource through slightly different methods.
+func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, clientMount *dwsv1alpha2.ClientMount) (*dwsv1alpha2.Servers, error) {
+	storageKind := "NnfStorage"
+	persistentKind := "PersistentStorageInstance"
+	workflowKind := "Workflow"
+
+	// Get the owner and directive index from ClientMount's labels
+	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha2.OwnerKindLabel]
+	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha2.OwnerNameLabel]
+	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha2.OwnerNamespaceLabel]
+	_, idxExists := clientMount.Labels[nnfv1alpha3.DirectiveIndexLabel]
+
+	// We should expect the owner of the ClientMount to be NnfStorage and have the expected labels
+	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
+		return nil, dwsv1alpha2.NewResourceError("expected ClientMount owner to be of kind NnfStorage and have the expected labels").WithMajor()
+	}
+
+	// Retrieve the NnfStorage resource
+	storage := &nnfv1alpha3.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ownerName,
+			Namespace: ownerNS,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable retrieve NnfStorage resource").WithError(err).WithMajor()
+	}
+
+	// Get the owner and directive index from NnfStorage's labels
+	ownerKind, ownerExists = storage.Labels[dwsv1alpha2.OwnerKindLabel]
+	ownerName, ownerNameExists = storage.Labels[dwsv1alpha2.OwnerNameLabel]
+	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha2.OwnerNamespaceLabel]
+	idx, idxExists := storage.Labels[nnfv1alpha3.DirectiveIndexLabel]
+
+	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
+	// have the expected labels
+	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || (ownerKind != workflowKind && ownerKind != persistentKind) {
+		return nil, dwsv1alpha2.NewResourceError("expected NnfStorage owner to be of kind Workflow or PersistentStorageInstance and have the expected labels").WithMajor()
+	}
+
+	// If the owner is a workflow, then we can use the workflow labels and directive index to get
+	// the Servers Resource.
+	var listOptions []client.ListOption
+	if ownerKind == workflowKind {
+		listOptions = []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				dwsv1alpha2.WorkflowNameLabel:      ownerName,
+				dwsv1alpha2.WorkflowNamespaceLabel: ownerNS,
+				nnfv1alpha3.DirectiveIndexLabel:    idx,
+			}),
+		}
+	} else {
+		// Otherwise the owner is a PersistentStorageInstance and we'll need to use the owner
+		// labels. It also will not have a directive index.
+		listOptions = []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				dwsv1alpha2.OwnerKindLabel:      ownerKind,
+				dwsv1alpha2.OwnerNameLabel:      ownerName,
+				dwsv1alpha2.OwnerNamespaceLabel: ownerNS,
+			}),
+		}
+	}
+
+	serversList := &dwsv1alpha2.ServersList{}
+	if err := r.List(ctx, serversList, listOptions...); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable retrieve NnfServers resource").WithError(err).WithMajor()
+	}
+
+	// We should only have 1
+	if len(serversList.Items) != 1 {
+		return nil, dwsv1alpha2.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
+	}
+
+	return &serversList.Items[0], nil
+}
+
+/*
+Flatten the AllocationSets to create mapping for lustre information. Example:
+
+	{
+		"ost": [
+			"rabbit-node-1",
+			"rabbit-node=2"
+		]
+		"mdt": [
+			"rabbit-node-1",
+			"rabbit-node=2"
+		]
+	}
+*/
+func createLustreMapping(server *dwsv1alpha2.Servers) map[string][]string {
+
+	m := map[string][]string{}
+
+	for _, allocationSet := range server.Status.AllocationSets {
+		label := allocationSet.Label
+		if _, found := m[label]; !found {
+			m[label] = []string{}
+		}
+
+		for nnfNode, _ := range allocationSet.Storage {
+			m[label] = append(m[label], nnfNode)
+		}
+	}
+
+	return m
 }
 
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
