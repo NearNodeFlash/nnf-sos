@@ -261,53 +261,9 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
 
-			// If mount is lustre, then grab the servers resource and make it available in a file
-			// on the mount point. This is so lustre information can be retrieved on the compute node.
-			//
-			// TODO: put this in a function
-			// TODO: shore up the error handling messages
-			// TODO: permission for this new file
-			if clientMount.Spec.Mounts[index].Type == "lustre" {
-				// Obtain the correct workflow/namespace from the Clientmount's labels
-				wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
-				ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
-				if !wfFound || !wfNsFound {
-					return dwsv1alpha2.NewResourceError("unable to determine workflow to retrieve servers resource for lustre filesystem").WithError(err).WithMajor()
-				}
-
-				// Use the workflow/namespace labels to find the matching Server resource
-				matchLabels := dwsv1alpha2.MatchingWorkflow(&dwsv1alpha2.Workflow{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      wf,
-						Namespace: ns,
-					},
-				})
-				listOptions := []client.ListOption{
-					matchLabels,
-				}
-				serverList := &dwsv1alpha2.ServersList{}
-				if err := r.List(ctx, serverList, listOptions...); err != nil {
-					return dwsv1alpha2.NewResourceError("unable retrieve servers resource for lustre filesystem").WithError(err).WithMajor()
-				}
-
-				// Something is wrong if we found more than 1
-				if len(serverList.Items) != 1 {
-					return dwsv1alpha2.NewResourceError("wrong number of servers resources").WithError(err).WithMajor()
-				}
-
-				// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
-				path := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
-				file, err := os.Create(path)
-				defer file.Close()
-				if err != nil {
-					return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
-				}
-				p := printers.JSONPrinter{}
-				if err := p.PrintObj(&serverList.Items[0], file); err != nil {
-					return dwsv1alpha2.NewResourceError("could not dump servers object to file").WithError(err).WithMajor()
-				}
-
-				log.Info("BLAKE - should only see this once")
+			// TODO: add another option to set this - decouple from SetPermissions
+			if err := r.dumpServersToFile(ctx, clientMount, clientMountInfo.MountPath, index); err != nil {
+				return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
 			}
 		}
 
@@ -335,6 +291,59 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 	}
 
+	return nil
+}
+
+// Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, mountPath string, index int) error {
+	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
+
+	// TODO: permission for this new file
+	// TODO: only do this for lustre or for everything?
+	if clientMount.Spec.Mounts[index].Type == "lustre" {
+		// Obtain the correct workflow/namespace from the Clientmount's labels
+		wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
+		ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
+		if !wfFound || !wfNsFound {
+			return dwsv1alpha2.NewResourceError("unable to determine workflow from labels").WithMajor()
+		}
+
+		// Use the workflow/namespace labels to find the matching Server resource
+		matchLabels := dwsv1alpha2.MatchingWorkflow(&dwsv1alpha2.Workflow{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      wf,
+				Namespace: ns,
+			},
+		})
+		listOptions := []client.ListOption{
+			matchLabels,
+		}
+		serverList := &dwsv1alpha2.ServersList{}
+		if err := r.List(ctx, serverList, listOptions...); err != nil {
+			return dwsv1alpha2.NewResourceError("unable retrieve servers resource").WithError(err).WithMajor()
+		}
+
+		// Something is wrong if we found more than 1
+		if len(serverList.Items) != 1 {
+			return dwsv1alpha2.NewResourceError("wrong number of servers resources, expected 1").WithMajor()
+		}
+
+		// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
+		path := filepath.Join(mountPath, lustreServersFilepath)
+		file, err := os.Create(path)
+		if err != nil {
+			return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
+		}
+		defer file.Close()
+
+		p := printers.JSONPrinter{}
+		if err := p.PrintObj(&serverList.Items[0], file); err != nil {
+			return dwsv1alpha2.NewResourceError("could not write servers resource to file").WithError(err).WithMajor()
+		}
+	}
+
+	// TODO: remove this
+	log.Info("BLAKE - should only see this once")
 	return nil
 }
 
