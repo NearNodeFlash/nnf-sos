@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/cli-runtime/pkg/printers"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -57,6 +59,9 @@ const (
 	// uses on the ClientMount resource. This prevents the ClientMount resource
 	// from being fully deleted until this controller removes the finalizer.
 	finalizerNnfClientMount = "nnf.cray.hpe.com/nnf_clientmount"
+
+	// filepath to append to clientmount directory to store lustre information in (servers resource)
+	lustreServersFilepath = ".nnf-servers.json"
 )
 
 // NnfClientMountReconciler contains the pieces used by the reconciler
@@ -89,6 +94,7 @@ func (r *NnfClientMountReconciler) Start(ctx context.Context) error {
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/finalizers,verbs=update
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=servers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -254,7 +260,54 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
 				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
+
+			// If mount is lustre, then grab the servers resource and make it available in a file
+			// on the mount point. This is so lustre information can be retrieved on the compute node.
+			//
+			// TODO: put this in a function
+			// TODO: shore up the error handling messages
+			if clientMount.Spec.Mounts[index].Type == "lustre" {
+				// Obtain the correct workflow/namespace from the Clientmount's labels
+				wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
+				ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
+				if !wfFound || !wfNsFound {
+					return dwsv1alpha2.NewResourceError("unable to determine workflow to retrieve servers resource for lustre filesystem").WithError(err).WithMajor()
+				}
+
+				// Use the workflow/namespace labels to find the matching Server resource
+				matchLabels := dwsv1alpha2.MatchingWorkflow(&dwsv1alpha2.Workflow{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      wf,
+						Namespace: ns,
+					},
+				})
+				listOptions := []client.ListOption{
+					matchLabels,
+				}
+				serverList := &dwsv1alpha2.ServersList{}
+				if err := r.List(ctx, serverList, listOptions...); err != nil {
+					return dwsv1alpha2.NewResourceError("unable retrieve servers resource for lustre filesystem").WithError(err).WithMajor()
+				}
+
+				// Something is wrong if we found more than 1
+				if len(serverList.Items) != 1 {
+					return dwsv1alpha2.NewResourceError("wrong number of servers resources").WithError(err).WithMajor()
+				}
+
+				// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
+				path := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
+				file, err := os.Create(path)
+				defer file.Close()
+				if err != nil {
+					return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
+				}
+				p := printers.JSONPrinter{}
+				if err := p.PrintObj(&serverList.Items[0], file); err != nil {
+					return dwsv1alpha2.NewResourceError("could not dump servers object to file").WithError(err).WithMajor()
+				}
+			}
 		}
+
 	} else {
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
