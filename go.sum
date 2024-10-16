@@ -148,6 +148,8 @@ github.com/kubeflow/common v0.4.6 h1:yzJf/HEdS6ginD0GlVkgbOFie0Sp66VdGjXidAGZIlk
 github.com/kubeflow/common v0.4.6/go.mod h1:43MAof/uhpJA2C0urynqatE3oKFQc7m2HLmJty7waqY=
 github.com/kubeflow/mpi-operator v0.3.1-0.20230228224311-5946ef415759 h1:HrgG/sZ2OIbgFciVgKMzU+f4mLBa5Po5evbk9jYNoQY=
 github.com/kubeflow/mpi-operator v0.3.1-0.20230228224311-5946ef415759/go.mod h1:TRq/EvvzlWkzvz6XJs1BNXpUokLNyvHE384E0GSeS5o=
+github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de h1:9TO3cAIGXtEhnIaL+V+BEER86oLrvS+kWobKpbJuye0=
+github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de/go.mod h1:zAbeS9B/r2mtpb6U+EI2rYA5OAXxsYw6wTamcNW+zcE=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
@@ -382,6 +384,8 @@ k8s.io/apiextensions-apiserver v0.28.0 h1:CszgmBL8CizEnj4sj7/PtLGey6Na3YgWyGCPON
 k8s.io/apiextensions-apiserver v0.28.0/go.mod h1:uRdYiwIuu0SyqJKriKmqEN2jThIJPhVmOWETm8ud1VE=
 k8s.io/apimachinery v0.28.1 h1:EJD40og3GizBSV3mkIoXQBsws32okPOy+MkRyzh6nPY=
 k8s.io/apimachinery v0.28.1/go.mod h1:X0xh/chESs2hP9koe+SdIAcXWcQ+RM5hy0ZynB+yEvw=
+k8s.io/cli-runtime v0.28.1 h1:7Njc4eD5kaO4tYdSYVJJEs54koYD/vT6gxOq8dEVf9g=
+k8s.io/cli-runtime v0.28.1/go.mod h1:yIThSWkAVLqeRs74CMkq6lNFW42GyJmvMtcNn01SZho=
 k8s.io/client-go v0.28.1 h1:pRhMzB8HyLfVwpngWKE8hDcXRqifh1ga2Z/PU9SXVK8=
 k8s.io/client-go v0.28.1/go.mod h1:pEZA3FqOsVkCc07pFVzK076R+P/eXqsgx5zuuRWukNE=
 k8s.io/component-base v0.28.1 h1:LA4AujMlK2mr0tZbQDZkjWbdhTV5bRyEyAFe0TJxlWg=
