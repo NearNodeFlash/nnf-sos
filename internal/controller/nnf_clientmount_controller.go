@@ -266,6 +266,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			//
 			// TODO: put this in a function
 			// TODO: shore up the error handling messages
+			// TODO: permission for this new file
 			if clientMount.Spec.Mounts[index].Type == "lustre" {
 				// Obtain the correct workflow/namespace from the Clientmount's labels
 				wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
@@ -305,6 +306,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				if err := p.PrintObj(&serverList.Items[0], file); err != nil {
 					return dwsv1alpha2.NewResourceError("could not dump servers object to file").WithError(err).WithMajor()
 				}
+
+				log.Info("BLAKE - should only see this once")
 			}
 		}
 
