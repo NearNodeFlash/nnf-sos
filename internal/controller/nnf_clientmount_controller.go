@@ -261,9 +261,15 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				return dwsv1alpha2.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
 
-			// TODO: add another option to set this - decouple from SetPermissions
-			if err := r.dumpServersToFile(ctx, clientMount, clientMountInfo.MountPath, index); err != nil {
+			// Dump the servers resource to a file that can be accessed on the computes
+			// FIXME: decouple from SetPermissions?
+			serversFilepath := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
+			if err := r.dumpServersToFile(ctx, clientMount, serversFilepath, index); err != nil {
 				return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
+			}
+
+			if err := os.Chown(serversFilepath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
+				return dwsv1alpha2.NewResourceError("unable to set owner and group for server resource file").WithError(err).WithMajor()
 			}
 		}
 
@@ -295,10 +301,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 }
 
 // Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
-func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, mountPath string, index int) error {
-	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
-
-	// TODO: permission for this new file
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string, index int) error {
 	// TODO: only do this for lustre or for everything?
 	if clientMount.Spec.Mounts[index].Type == "lustre" {
 		// Obtain the correct workflow/namespace from the Clientmount's labels
@@ -329,7 +332,6 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 		}
 
 		// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
-		path := filepath.Join(mountPath, lustreServersFilepath)
 		file, err := os.Create(path)
 		if err != nil {
 			return dwsv1alpha2.NewResourceError("could not create servers file").WithError(err).WithMajor()
@@ -342,8 +344,6 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 		}
 	}
 
-	// TODO: remove this
-	log.Info("BLAKE - should only see this once")
 	return nil
 }
 
