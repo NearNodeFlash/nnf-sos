@@ -99,6 +99,7 @@ type NnfSystemStorageStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 // +kubebuilder:subresource:status
 // NnfSystemStorage is the Schema for the nnfsystemstorages API
 type NnfSystemStorage struct {
