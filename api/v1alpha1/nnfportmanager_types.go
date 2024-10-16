@@ -112,6 +112,7 @@ type NnfPortManagerStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:unservedversion
 //+kubebuilder:subresource:status
 
 // NnfPortManager is the Schema for the nnfportmanagers API
