@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -34,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/cli-runtime/pkg/printers"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -267,13 +267,10 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			// FIXME: decouple from SetPermissions?
 			if clientMount.Spec.Mounts[index].Type == "lustre" {
 				serversFilepath := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
-				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath); err != nil {
+				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath, clientMount.Spec.Mounts[index].UserID, clientMount.Spec.Mounts[index].GroupID); err != nil {
 					return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
 				}
 
-				if err := os.Chown(serversFilepath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
-					return dwsv1alpha2.NewResourceError("unable to set owner and group for server resource file").WithError(err).WithMajor()
-				}
 			}
 		}
 
@@ -305,7 +302,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 }
 
 // Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
-func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string) error {
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string, uid, gid uint32) error {
 	// Obtain the correct workflow/namespace from the Clientmount's labels
 	wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
 	ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
@@ -340,12 +337,55 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 	}
 	defer file.Close()
 
-	p := printers.JSONPrinter{}
-	if err := p.PrintObj(&serverList.Items[0], file); err != nil {
-		return dwsv1alpha2.NewResourceError("could not write servers resource to file").WithError(err).WithMajor()
+	encoder := json.NewEncoder(file)
+	err = encoder.Encode(createLustreMapping(&serverList.Items[0]))
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not write JSON to file").WithError(err).WithMajor()
+	}
+
+	// p := printers.JSONPrinter{}
+	// if err := p.PrintObj(&serverList.Items[0], file); err != nil {
+	// 	return dwsv1alpha2.NewResourceError("could not write servers resource to file").WithError(err).WithMajor()
+	// }
+
+	// Change permissions to user
+	if err := os.Chown(path, int(uid), int(gid)); err != nil {
+		return dwsv1alpha2.NewResourceError("unable to set owner and group").WithError(err).WithMajor()
 	}
 
 	return nil
+}
+
+/*
+Flatten the AllocationSets to create mapping for lustre information. Example:
+
+	{
+		"ost": [
+			"rabbit-node-1",
+			"rabbit-node=2"
+		]
+		"mdt": [
+			"rabbit-node-1",
+			"rabbit-node=2"
+		]
+	}
+*/
+func createLustreMapping(server *dwsv1alpha2.Servers) map[string][]string {
+
+	m := map[string][]string{}
+
+	for _, allocationSet := range server.Status.AllocationSets {
+		label := allocationSet.Label
+		if _, found := m[label]; !found {
+			m[label] = []string{}
+		}
+
+		for nnfNode, _ := range allocationSet.Storage {
+			m[label] = append(m[label], nnfNode)
+		}
+	}
+
+	return m
 }
 
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields

@@ -23,7 +23,6 @@ require (
 	golang.org/x/sync v0.6.0
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
-	k8s.io/cli-runtime v0.28.1
 	k8s.io/client-go v0.28.1
 	k8s.io/kubernetes v1.28.4
 	k8s.io/mount-utils v0.27.1
@@ -60,7 +59,6 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
-	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
