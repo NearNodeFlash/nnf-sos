@@ -220,14 +220,43 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				labels = make(map[string]string)
 			}
 
-			if _, present := labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel]; present {
-				continue
+			taint := &corev1.Taint{
+				Key:   nnfv1alpha3.RabbitNodeTaintKey,
+				Value: "true",
 			}
 
-			taint := &corev1.Taint{
-				Key:    nnfv1alpha3.RabbitNodeTaintKey,
-				Value:  "true",
-				Effect: effect,
+			staleLabel := false
+			_, hasCompletedLabel := labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel]
+			if effect == corev1.TaintEffectNoSchedule && hasCompletedLabel {
+				// We're in pass 1.
+				// The presence of the label means that the taint state has been
+				// completed. On the first pass we verify that this node is
+				// correctly labelled.
+
+				// NoSchedule should be there...
+				taint.Effect = corev1.TaintEffectNoSchedule
+				if !taints.TaintExists(node.Spec.Taints, taint) {
+					// The label is incorrect; the expected taint was not present.
+					staleLabel = true
+
+				}
+				// NoExecute should NOT be there...
+				taint.Effect = corev1.TaintEffectNoExecute
+				if taints.TaintExists(node.Spec.Taints, taint) {
+					// The label is incorrect; this taint should not have been here.
+					staleLabel = true
+
+				}
+				if !staleLabel {
+					// This node is complete and correct; go to the next one.
+					continue
+				}
+				// Clear the label and continue working on this node.
+				delete(labels, nnfv1alpha3.TaintsAndLabelsCompletedLabel)
+				node.SetLabels(labels)
+			} else if hasCompletedLabel {
+				// All other passes honor the label.
+				continue
 			}
 
 			if effect == clearNoExecute {
@@ -244,6 +273,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				node.SetLabels(labels)
 			} else {
 				// Add the taint.
+				taint.Effect = effect
 				node, doUpdate, err = taints.AddOrUpdateTaint(node, taint)
 				if err != nil {
 					log.Error(err, "unable to add taint to spec", "key", taint.Key, "effect", taint.Effect)
@@ -258,7 +288,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				node.SetLabels(labels)
 			}
 
-			if doUpdate {
+			if doUpdate || staleLabel {
 				updatedNode = true
 				if err := r.Update(ctx, node); err != nil {
 					log.Error(err, "unable to update taints and/or labels")
