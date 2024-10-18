@@ -157,6 +157,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 
 	When("a node is added", func() {
 		It("should be properly tainted and labeled", func() {
+			var err error
+			var updated bool
 			node1 := makeNode("rabbit1")
 			Expect(k8sClient.Create(context.TODO(), node1)).To(Succeed())
 			By("verifying node1")
@@ -186,6 +188,36 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 			By("verifying node1 was not touched when nodes 2 and 3 were added")
 			node1ResVer3 := verifyTaintsAndLabels(node1)
 			Expect(node1ResVer3).To(Equal(node1ResVer2))
+
+			By("verifying node1 repairs itself when its two taints are flipped")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
+			node1, updated, err = taints.RemoveTaint(node1, taintNoSchedule)
+			Expect(err).To(BeNil())
+			Expect(updated).To(BeTrue())
+			node1, updated, err = taints.AddOrUpdateTaint(node1, taintNoExecute)
+			Expect(err).To(BeNil())
+			Expect(updated).To(BeTrue())
+			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
+			By("verifying node1")
+			_ = verifyTaintsAndLabels(node1)
+
+			By("verifying node1 repairs itself when it loses its NoSchedule taint")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
+			node1, updated, err = taints.RemoveTaint(node1, taintNoSchedule)
+			Expect(err).To(BeNil())
+			Expect(updated).To(BeTrue())
+			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
+			By("verifying node1")
+			_ = verifyTaintsAndLabels(node1)
+
+			By("verifying node1 repairs itself when it acquires its NoExecute taint")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
+			node1, updated, err = taints.AddOrUpdateTaint(node1, taintNoExecute)
+			Expect(err).To(BeNil())
+			Expect(updated).To(BeTrue())
+			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
+			By("verifying node1")
+			_ = verifyTaintsAndLabels(node1)
 		})
 
 		It("should not taint and label a non-Rabbit node", func() {
