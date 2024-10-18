@@ -40,6 +40,9 @@ type FileSystem interface {
 	// Unmount the file system
 	Unmount(ctx context.Context, path string) (bool, error)
 
-	// Set the UID and GID for the file system
-	SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error)
+	// Run any commands against the file system after it has been activated
+	PostActivate(ctx context.Context, complete bool) (bool, error)
+
+	// Run any commands against the activated file system before it is deactivated
+	PreDeactivate(ctx context.Context) (bool, error)
 }

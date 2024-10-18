@@ -21,6 +21,7 @@ package v1alpha2
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -425,12 +426,30 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha3.NnfStorageProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Data.LustreStorage.MgtCmdLines.PostActivate = append([]string(nil), restored.Data.LustreStorage.MgtCmdLines.PostActivate...)
+		dst.Data.LustreStorage.MgtCmdLines.PreDeactivate = append([]string(nil), restored.Data.LustreStorage.MgtCmdLines.PreDeactivate...)
+		dst.Data.LustreStorage.MgtMdtCmdLines.PostActivate = append([]string(nil), restored.Data.LustreStorage.MgtMdtCmdLines.PostActivate...)
+		dst.Data.LustreStorage.MgtMdtCmdLines.PreDeactivate = append([]string(nil), restored.Data.LustreStorage.MgtMdtCmdLines.PreDeactivate...)
+		dst.Data.LustreStorage.MdtCmdLines.PostActivate = append([]string(nil), restored.Data.LustreStorage.MdtCmdLines.PostActivate...)
+		dst.Data.LustreStorage.MdtCmdLines.PreDeactivate = append([]string(nil), restored.Data.LustreStorage.MdtCmdLines.PreDeactivate...)
+		dst.Data.LustreStorage.OstCmdLines.PostActivate = append([]string(nil), restored.Data.LustreStorage.OstCmdLines.PostActivate...)
+		dst.Data.LustreStorage.OstCmdLines.PreDeactivate = append([]string(nil), restored.Data.LustreStorage.OstCmdLines.PreDeactivate...)
+		dst.Data.RawStorage.CmdLines.PostActivate = append([]string(nil), restored.Data.RawStorage.CmdLines.PostActivate...)
+		dst.Data.RawStorage.CmdLines.PreDeactivate = append([]string(nil), restored.Data.RawStorage.CmdLines.PreDeactivate...)
+		dst.Data.XFSStorage.CmdLines.PostActivate = append([]string(nil), restored.Data.XFSStorage.CmdLines.PostActivate...)
+		dst.Data.XFSStorage.CmdLines.PreDeactivate = append([]string(nil), restored.Data.XFSStorage.CmdLines.PreDeactivate...)
+		dst.Data.GFS2Storage.CmdLines.PostActivate = append([]string(nil), restored.Data.GFS2Storage.CmdLines.PostActivate...)
+		dst.Data.GFS2Storage.CmdLines.PreDeactivate = append([]string(nil), restored.Data.GFS2Storage.CmdLines.PreDeactivate...)
+	}
 
 	return nil
 }
@@ -598,4 +617,15 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
+func Convert_v1alpha3_NnfStorageProfileCmdLines_To_v1alpha2_NnfStorageProfileCmdLines(in *nnfv1alpha3.NnfStorageProfileCmdLines, out *NnfStorageProfileCmdLines, s apiconversion.Scope) error {
+	return autoConvert_v1alpha3_NnfStorageProfileCmdLines_To_v1alpha2_NnfStorageProfileCmdLines(in, out, s)
+}
+
+func Convert_v1alpha3_NnfStorageProfileLustreCmdLines_To_v1alpha2_NnfStorageProfileLustreCmdLines(in *nnfv1alpha3.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
+	return autoConvert_v1alpha3_NnfStorageProfileLustreCmdLines_To_v1alpha2_NnfStorageProfileLustreCmdLines(in, out, s)
 }

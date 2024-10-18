@@ -34,8 +34,10 @@ import (
 )
 
 type SimpleFileSystemCommandArgs struct {
-	Mkfs  string
-	Mount string
+	Mkfs          string
+	Mount         string
+	PostActivate  []string
+	PreDeactivate []string
 
 	Vars map[string]string
 }
@@ -196,7 +198,11 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	return false, nil
 }
 
-func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, groupID uint32, complete bool) (bool, error) {
+func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	if len(f.CommandArgs.PostActivate) == 0 {
+		return false, nil
+	}
+
 	if complete {
 		return false, nil
 	}
@@ -206,18 +212,67 @@ func (f *SimpleFileSystem) SetPermissions(ctx context.Context, userID uint32, gr
 	}
 
 	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
-		return false, fmt.Errorf("could not mount temp dir '%s' to set permissions: %w", f.TempDir, err)
+		return false, fmt.Errorf("could not mount temp dir '%s': %w", f.TempDir, err)
 	}
 
-	if err := os.Chown(f.TempDir, int(userID), int(groupID)); err != nil {
-		if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
-			return false, fmt.Errorf("could not unmount after setting owner permissions failed '%s': %w", f.TempDir, unmountErr)
+	// Build the commands from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = f.TempDir
+
+	for _, rawCommand := range f.CommandArgs.PostActivate {
+		formattedCommand := f.parseArgs(rawCommand)
+		f.Log.Info("PostActivate", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, f.Log); err != nil {
+			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
+				return false, fmt.Errorf("could not unmount after post activate command failed: %s: %w", formattedCommand, unmountErr)
+			}
+			return false, fmt.Errorf("could not run post activate command: %s: %w", formattedCommand, err)
 		}
-		return false, fmt.Errorf("could not set owner permissions '%s': %w", f.TempDir, err)
 	}
 
 	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
-		return false, fmt.Errorf("could not unmount after setting owner permissions '%s': %w", f.TempDir, err)
+		return false, fmt.Errorf("could not unmount after post activate '%s': %w", f.TempDir, err)
+	}
+
+	return false, nil
+}
+
+func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
+	if len(f.CommandArgs.PreDeactivate) == 0 {
+		return false, nil
+	}
+
+	if f.Type == "none" {
+		return false, nil
+	}
+
+	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
+		return false, fmt.Errorf("could not mount temp dir '%s': %w", f.TempDir, err)
+	}
+
+	// Build the commands from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = f.TempDir
+
+	for _, rawCommand := range f.CommandArgs.PreDeactivate {
+		formattedCommand := f.parseArgs(rawCommand)
+		f.Log.Info("PreDeactivate", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, f.Log); err != nil {
+			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
+				return false, fmt.Errorf("could not unmount after pre-deactivate command failed: %s: %w", formattedCommand, unmountErr)
+			}
+			return false, fmt.Errorf("could not run pre-deactivate command: %s: %w", formattedCommand, err)
+		}
+	}
+
+	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
+		return false, fmt.Errorf("could not unmount after pre-deactivate '%s': %w", f.TempDir, err)
 	}
 
 	return false, nil
