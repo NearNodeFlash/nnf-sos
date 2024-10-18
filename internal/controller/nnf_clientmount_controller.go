@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -360,24 +361,15 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	}
 
 	// Retrieve the NnfStorage resource
-	listOptions := []client.ListOption{
-		client.MatchingLabels(map[string]string{
-			dwsv1alpha2.OwnerKindLabel:      ownerKind,
-			dwsv1alpha2.OwnerNameLabel:      ownerName,
-			dwsv1alpha2.OwnerNamespaceLabel: ownerNS,
-			nnfv1alpha3.DirectiveIndexLabel: idx,
-		}),
+	storage := &nnfv1alpha3.NnfStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ownerName,
+			Namespace: ownerNS,
+		},
 	}
-	storageList := &dwsv1alpha2.StorageList{}
-	if err := r.List(ctx, storageList, listOptions...); err != nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
 		return nil, dwsv1alpha2.NewResourceError("unable retrieve NnfStorage resource").WithError(err).WithMajor()
 	}
-
-	// We should only have 1 NnfStorage
-	if len(storageList.Items) != 1 {
-		return nil, dwsv1alpha2.NewResourceError("wrong number of NnfStorage resources, expected 1").WithMajor()
-	}
-	storage := &storageList.Items[0]
 
 	// Get the owner and directive index from NnfStorage's labels
 	ownerKind, ownerExists = storage.Labels[dwsv1alpha2.OwnerKindLabel]
@@ -393,6 +385,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 
 	// If the owner is a workflow, then we can use the workflow labels and directive index to get
 	// the Servers Resource.
+	var listOptions []client.ListOption
 	if ownerKind == workflowKind {
 		listOptions = []client.ListOption{
 			client.MatchingLabels(map[string]string{
@@ -420,7 +413,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 
 	// We should only have 1
 	if len(serversList.Items) != 1 {
-		return nil, dwsv1alpha2.NewResourceError("wrong number of NnfServers resources, expected 1").WithMajor()
+		return nil, dwsv1alpha2.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
 	}
 
 	return &serversList.Items[0], nil
