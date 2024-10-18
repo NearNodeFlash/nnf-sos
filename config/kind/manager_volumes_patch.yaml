@@ -20,6 +20,7 @@ spec:
           hostPath:
             path: /mnt
         - name: localdisk
+          type: DirectoryOrCreate
           hostPath:
             path: /localdisk
 
