@@ -11,6 +11,7 @@ spec:
           args:
             - --controller=node
             - --deleteUnknownVolumes
+          workingDir: /localdisk
           volumeMounts:
             - mountPath: /mnt
               name: mnt-dir
@@ -45,6 +46,8 @@ spec:
               name: tmp-dir
             - mountPath: /etc
               name: etc-dir
+            - mountPath: /localdisk
+              name: localdisk
       volumes:
         - name: mnt-dir
           hostPath:
@@ -97,4 +100,7 @@ spec:
         - name: mdadm-dir
           hostPath:
             path: /run/mdadm
+        - name: localdisk
+          hostPath:
+            path: /localdisk
 

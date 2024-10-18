@@ -89,9 +89,6 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 				return err
 			}
 		}
-
-		// This resource acts as the storage provider for the NNF Element Controller
-		persistent.StorageProvider = r
 	}
 
 	// NNF Element Controller logger provides 4 verbosity levels. By default, nnf-ec

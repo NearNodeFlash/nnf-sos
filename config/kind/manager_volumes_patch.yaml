@@ -8,12 +8,18 @@ spec:
     spec:
       containers:
         - name: manager
+          workingDir: /localdisk
           volumeMounts:
             - mountPath: /mnt
               name: mnt-dir
               mountPropagation: Bidirectional
+            - mountPath: /localdisk
+              name: localdisk
       volumes:
         - name: mnt-dir
           hostPath:
             path: /mnt
+        - name: localdisk
+          hostPath:
+            path: /localdisk
 
