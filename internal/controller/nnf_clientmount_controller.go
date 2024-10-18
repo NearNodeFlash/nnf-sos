@@ -270,7 +270,6 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath, clientMount.Spec.Mounts[index].UserID, clientMount.Spec.Mounts[index].GroupID); err != nil {
 					return dwsv1alpha2.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
 				}
-
 			}
 		}
 
@@ -303,31 +302,11 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 // Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
 func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, path string, uid, gid uint32) error {
-	// Obtain the correct workflow/namespace from the Clientmount's labels
-	wf, wfFound := clientMount.Labels[dwsv1alpha2.WorkflowNameLabel]
-	ns, wfNsFound := clientMount.Labels[dwsv1alpha2.WorkflowNamespaceLabel]
-	if !wfFound || !wfNsFound {
-		return dwsv1alpha2.NewResourceError("unable to determine workflow from labels").WithMajor()
-	}
 
-	// Use the workflow/namespace labels to find the matching Server resource
-	matchLabels := dwsv1alpha2.MatchingWorkflow(&dwsv1alpha2.Workflow{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      wf,
-			Namespace: ns,
-		},
-	})
-	listOptions := []client.ListOption{
-		matchLabels,
-	}
-	serverList := &dwsv1alpha2.ServersList{}
-	if err := r.List(ctx, serverList, listOptions...); err != nil {
-		return dwsv1alpha2.NewResourceError("unable retrieve servers resource").WithError(err).WithMajor()
-	}
-
-	// Something is wrong if we found more than 1
-	if len(serverList.Items) != 1 {
-		return dwsv1alpha2.NewResourceError("wrong number of servers resources, expected 1").WithMajor()
+	// Get the NnfServers Resource
+	server, err := r.getServerForClientMount(ctx, clientMount)
+	if err != nil {
+		return dwsv1alpha2.NewResourceError("could not retrieve corresponding NnfServer resource for this ClientMount").WithError(err).WithMajor()
 	}
 
 	// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
@@ -338,7 +317,7 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	err = encoder.Encode(createLustreMapping(&serverList.Items[0]))
+	err = encoder.Encode(createLustreMapping(server))
 	if err != nil {
 		return dwsv1alpha2.NewResourceError("could not write JSON to file").WithError(err).WithMajor()
 	}
@@ -354,6 +333,97 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 	}
 
 	return nil
+}
+
+// Retrieve the ClientMount's corresponding NnfServer resource. To do this, we first need to get the corresponding NnfStorage resource. That is done by
+// looking at the owner of the ClientMount resource. It should be NnfStorage. Then, we inspect the NnfStorage resource's owner. In this case, there can
+// be two different owners:
+//
+// 1. Workflow (non-persistent storage case)
+// 2. PersistentStorageInstance (persistent storage case)
+//
+// Once we understand who owns the NnfStorage resource, we can then obtain the NnfServer resource through slightly different methods.
+func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, clientMount *dwsv1alpha2.ClientMount) (*dwsv1alpha2.Servers, error) {
+	storageKind := "NnfStorage"
+	persistentKind := "PersistentStorageInstance"
+	workflowKind := "Workflow"
+
+	// Get the owner and directive index from ClientMount's labels
+	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha2.OwnerKindLabel]
+	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha2.OwnerNameLabel]
+	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha2.OwnerNamespaceLabel]
+	idx, idxExists := clientMount.Labels[nnfv1alpha3.DirectiveIndexLabel]
+
+	// We should expect the owner of the ClientMount to be NnfStorage and have the expected labels
+	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
+		return nil, dwsv1alpha2.NewResourceError("expected ClientMount owner to be of kind NnfStorage and have the expected labels").WithMajor()
+	}
+
+	// Retrieve the NnfStorage resource
+	listOptions := []client.ListOption{
+		client.MatchingLabels(map[string]string{
+			dwsv1alpha2.OwnerKindLabel:      ownerKind,
+			dwsv1alpha2.OwnerNameLabel:      ownerName,
+			dwsv1alpha2.OwnerNamespaceLabel: ownerNS,
+			nnfv1alpha3.DirectiveIndexLabel: idx,
+		}),
+	}
+	storageList := &dwsv1alpha2.StorageList{}
+	if err := r.List(ctx, storageList, listOptions...); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable retrieve NnfStorage resource").WithError(err).WithMajor()
+	}
+
+	// We should only have 1 NnfStorage
+	if len(storageList.Items) != 1 {
+		return nil, dwsv1alpha2.NewResourceError("wrong number of NnfStorage resources, expected 1").WithMajor()
+	}
+	storage := &storageList.Items[0]
+
+	// Get the owner and directive index from NnfStorage's labels
+	ownerKind, ownerExists = storage.Labels[dwsv1alpha2.OwnerKindLabel]
+	ownerName, ownerNameExists = storage.Labels[dwsv1alpha2.OwnerNameLabel]
+	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha2.OwnerNamespaceLabel]
+	idx, idxExists = storage.Labels[nnfv1alpha3.DirectiveIndexLabel]
+
+	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
+	// have the expected labels
+	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || (ownerKind != workflowKind && ownerKind != persistentKind) {
+		return nil, dwsv1alpha2.NewResourceError("expected NnfStorage owner to be of kind Workflow or PersistentStorageInstance and have the expected labels").WithMajor()
+	}
+
+	// If the owner is a workflow, then we can use the workflow labels and directive index to get
+	// the Servers Resource.
+	if ownerKind == workflowKind {
+		listOptions = []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				dwsv1alpha2.WorkflowNameLabel:      ownerName,
+				dwsv1alpha2.WorkflowNamespaceLabel: ownerNS,
+				nnfv1alpha3.DirectiveIndexLabel:    idx,
+			}),
+		}
+	} else {
+		// Otherwise the owner is a PersistentStorageInstance and we'll need to use the owner
+		// labels. It also will not have a directive index.
+		listOptions = []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				dwsv1alpha2.OwnerKindLabel:      ownerKind,
+				dwsv1alpha2.OwnerNameLabel:      ownerName,
+				dwsv1alpha2.OwnerNamespaceLabel: ownerNS,
+			}),
+		}
+	}
+
+	serversList := &dwsv1alpha2.ServersList{}
+	if err := r.List(ctx, serversList, listOptions...); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("unable retrieve NnfServers resource").WithError(err).WithMajor()
+	}
+
+	// We should only have 1
+	if len(serversList.Items) != 1 {
+		return nil, dwsv1alpha2.NewResourceError("wrong number of NnfServers resources, expected 1").WithMajor()
+	}
+
+	return &serversList.Items[0], nil
 }
 
 /*
