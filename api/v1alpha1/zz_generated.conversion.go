@@ -848,11 +848,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.NnfSystemStorageSpec)(nil), (*NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_NnfSystemStorageSpec_To_v1alpha1_NnfSystemStorageSpec(a.(*v1alpha3.NnfSystemStorageSpec), b.(*NnfSystemStorageSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageStatus)(nil), (*v1alpha3.NnfSystemStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_NnfSystemStorageStatus_To_v1alpha3_NnfSystemStorageStatus(a.(*NnfSystemStorageStatus), b.(*v1alpha3.NnfSystemStorageStatus), scope)
 	}); err != nil {
@@ -870,6 +865,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha3.NnfStorageProfileLustreCmdLines)(nil), (*NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha3_NnfStorageProfileLustreCmdLines_To_v1alpha1_NnfStorageProfileLustreCmdLines(a.(*v1alpha3.NnfStorageProfileLustreCmdLines), b.(*NnfStorageProfileLustreCmdLines), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha3.NnfSystemStorageSpec)(nil), (*NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha3_NnfSystemStorageSpec_To_v1alpha1_NnfSystemStorageSpec(a.(*v1alpha3.NnfSystemStorageSpec), b.(*NnfSystemStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
