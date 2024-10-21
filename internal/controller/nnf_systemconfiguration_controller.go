@@ -212,7 +212,6 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			if err = r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
 				// Maybe it's been removed for administrative purposes and the
 				// SystemConfiguration hasn't been updated.
-				log.Info("unable to find node", "error", err)
 				continue
 			}
 			labels := node.GetLabels()
