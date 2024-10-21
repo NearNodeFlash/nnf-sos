@@ -76,7 +76,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 			return nil, nil, dwsv1alpha2.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, blockDevice, index, log)
+		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.CmdLines, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha2.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
 		}
@@ -338,7 +338,7 @@ func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nn
 	return &blockDevice, nil
 }
 
-func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha3.NnfNodeStorage, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha3.NnfNodeStorage, cmdLines nnfv1alpha3.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -348,6 +348,12 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
+	fs.CommandArgs.PostActivate = cmdLines.PostActivate
+	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.Vars = map[string]string{
+		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
+		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
+	}
 
 	return &fs, nil
 }
@@ -366,11 +372,15 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	} else {
 		fs.CommandArgs.Mount = cmdLines.MountCompute
 	}
+	fs.CommandArgs.PostActivate = cmdLines.PostActivate
+	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
 	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
 	fs.CommandArgs.Vars = map[string]string{
 		"$CLUSTER_NAME": nnfNodeStorage.Namespace,
 		"$LOCK_SPACE":   fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5]),
 		"$PROTOCOL":     "lock_dlm",
+		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
+		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
 	}
 
 	return &fs, nil
@@ -390,7 +400,13 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	} else {
 		fs.CommandArgs.Mount = cmdLines.MountCompute
 	}
+	fs.CommandArgs.PostActivate = cmdLines.PostActivate
+	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
+	fs.CommandArgs.Vars = map[string]string{
+		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
+		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
+	}
 
 	return &fs, nil
 }
@@ -415,6 +431,12 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.MountTarget = cmdLines.MountTarget
 	fs.CommandArgs.Mount = mountCommand
+	fs.CommandArgs.PostActivate = cmdLines.PostActivate
+	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.Vars = map[string]string{
+		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
+		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
+	}
 
 	return &fs, nil
 }

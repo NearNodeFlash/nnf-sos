@@ -1249,6 +1249,20 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
+                      postActivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit after the
+                          file system has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated
+                        items:
+                          type: string
+                        type: array
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
@@ -1346,6 +1360,20 @@ spec:
                           For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
                           argument to mkfs.lustre instead.
                         type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
                       zpoolCreate:
                         description: |-
                           ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
@@ -1398,6 +1426,20 @@ spec:
                           For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
                           argument to mkfs.lustre instead.
                         type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
                       zpoolCreate:
                         description: |-
                           ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
@@ -1421,6 +1463,20 @@ spec:
                           For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
                           argument to mkfs.lustre instead.
                         type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
                       zpoolCreate:
                         description: |-
                           ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
@@ -1511,6 +1567,20 @@ spec:
                           For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
                           argument to mkfs.lustre instead.
                         type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
                       zpoolCreate:
                         description: |-
                           ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
@@ -1604,6 +1674,20 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
+                      postActivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit after the
+                          file system has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated
+                        items:
+                          type: string
+                        type: array
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
@@ -1693,6 +1777,20 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
+                      postActivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit after the
+                          file system has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated
+                        items:
+                          type: string
+                        type: array
                       pvCreate:
                         description: PvCreate specifies the pvcreate commandline,
                           minus the "pvcreate".
@@ -1737,11 +1835,6 @@ spec:
                       type: string
                     type: array
                 type: object
-            required:
-            - gfs2Storage
-            - lustreStorage
-            - rawStorage
-            - xfsStorage
             type: object
           kind:
             description: |-

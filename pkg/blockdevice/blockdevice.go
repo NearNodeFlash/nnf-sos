@@ -34,6 +34,9 @@ type BlockDevice interface {
 	// Deactivate the block device (e.g., LVM lockstop and lvchange --activate n)
 	Deactivate(ctx context.Context, full bool) (bool, error)
 
+	// Check if the block device exists
+	CheckExists(ctx context.Context) (bool, error)
+
 	// Get device /dev path
 	GetDevice() string
 
