@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -212,7 +212,6 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			if err = r.Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
 				// Maybe it's been removed for administrative purposes and the
 				// SystemConfiguration hasn't been updated.
-				log.Info("unable to find node", "error", err)
 				continue
 			}
 			labels := node.GetLabels()
@@ -220,14 +219,43 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 				labels = make(map[string]string)
 			}
 
-			if _, present := labels[nnfv1alpha2.TaintsAndLabelsCompletedLabel]; present {
-				continue
+			taint := &corev1.Taint{
+				Key:   nnfv1alpha3.RabbitNodeTaintKey,
+				Value: "true",
 			}
 
-			taint := &corev1.Taint{
-				Key:    nnfv1alpha2.RabbitNodeTaintKey,
-				Value:  "true",
-				Effect: effect,
+			staleLabel := false
+			_, hasCompletedLabel := labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel]
+			if effect == corev1.TaintEffectNoSchedule && hasCompletedLabel {
+				// We're in pass 1.
+				// The presence of the label means that the taint state has been
+				// completed. On the first pass we verify that this node is
+				// correctly labelled.
+
+				// NoSchedule should be there...
+				taint.Effect = corev1.TaintEffectNoSchedule
+				if !taints.TaintExists(node.Spec.Taints, taint) {
+					// The label is incorrect; the expected taint was not present.
+					staleLabel = true
+
+				}
+				// NoExecute should NOT be there...
+				taint.Effect = corev1.TaintEffectNoExecute
+				if taints.TaintExists(node.Spec.Taints, taint) {
+					// The label is incorrect; this taint should not have been here.
+					staleLabel = true
+
+				}
+				if !staleLabel {
+					// This node is complete and correct; go to the next one.
+					continue
+				}
+				// Clear the label and continue working on this node.
+				delete(labels, nnfv1alpha3.TaintsAndLabelsCompletedLabel)
+				node.SetLabels(labels)
+			} else if hasCompletedLabel {
+				// All other passes honor the label.
+				continue
 			}
 
 			if effect == clearNoExecute {
@@ -239,11 +267,12 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels[nnfv1alpha2.TaintsAndLabelsCompletedLabel] = "true"
+				labels[nnfv1alpha3.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
 				// Add the taint.
+				taint.Effect = effect
 				node, doUpdate, err = taints.AddOrUpdateTaint(node, taint)
 				if err != nil {
 					log.Error(err, "unable to add taint to spec", "key", taint.Key, "effect", taint.Effect)
@@ -252,13 +281,13 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels[nnfv1alpha2.RabbitNodeSelectorLabel]; !present {
-				labels[nnfv1alpha2.RabbitNodeSelectorLabel] = "true"
+			if _, present := labels[nnfv1alpha3.RabbitNodeSelectorLabel]; !present {
+				labels[nnfv1alpha3.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}
 
-			if doUpdate {
+			if doUpdate || staleLabel {
 				updatedNode = true
 				if err := r.Update(ctx, node); err != nil {
 					log.Error(err, "unable to update taints and/or labels")

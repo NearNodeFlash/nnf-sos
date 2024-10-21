@@ -67,3 +67,7 @@ func (m *MockBlockDevice) GetDevice() string {
 func (m *MockBlockDevice) CheckFormatted() (bool, error) {
 	return true, nil
 }
+
+func (m *MockBlockDevice) CheckExists(ctx context.Context) (bool, error) {
+	return true, nil
+}

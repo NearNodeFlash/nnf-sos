@@ -131,6 +131,8 @@ spec:
             value: nnf-port-manager
           - name: NNF_PORT_MANAGER_NAMESPACE
             value: nnf-system
+          - name: NNF_CHILD_RESOURCE_TIMEOUT_SECONDS
+            value: "300"
         ports:
           - containerPort: 50057
             name: nnf-ec

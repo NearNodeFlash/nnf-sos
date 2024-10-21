@@ -32,14 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 )
 
 // findProfileToUse verifies a NnfDataMovementProfile named in the directive or verifies that a default can be found.
-func findDMProfileToUse(ctx context.Context, clnt client.Client, args map[string]string) (*nnfv1alpha2.NnfDataMovementProfile, error) {
+func findDMProfileToUse(ctx context.Context, clnt client.Client, args map[string]string) (*nnfv1alpha3.NnfDataMovementProfile, error) {
 	var profileName string
 
-	NnfDataMovementProfile := &nnfv1alpha2.NnfDataMovementProfile{}
+	NnfDataMovementProfile := &nnfv1alpha3.NnfDataMovementProfile{}
 
 	profileNamespace := os.Getenv("NNF_DM_PROFILE_NAMESPACE")
 
@@ -47,7 +47,7 @@ func findDMProfileToUse(ctx context.Context, clnt client.Client, args map[string
 	// that a default profile can be found.
 	profileName, present := args["profile"]
 	if present == false {
-		NnfDataMovementProfiles := &nnfv1alpha2.NnfDataMovementProfileList{}
+		NnfDataMovementProfiles := &nnfv1alpha3.NnfDataMovementProfileList{}
 		if err := clnt.List(ctx, NnfDataMovementProfiles, &client.ListOptions{Namespace: profileNamespace}); err != nil {
 			return nil, err
 		}
@@ -78,9 +78,9 @@ func findDMProfileToUse(ctx context.Context, clnt client.Client, args map[string
 }
 
 // findPinnedProfile finds the specified pinned profile.
-func findPinnedDMProfile(ctx context.Context, clnt client.Client, namespace string, pinnedName string) (*nnfv1alpha2.NnfDataMovementProfile, error) {
+func findPinnedDMProfile(ctx context.Context, clnt client.Client, namespace string, pinnedName string) (*nnfv1alpha3.NnfDataMovementProfile, error) {
 
-	NnfDataMovementProfile := &nnfv1alpha2.NnfDataMovementProfile{}
+	NnfDataMovementProfile := &nnfv1alpha3.NnfDataMovementProfile{}
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: namespace, Name: pinnedName}, NnfDataMovementProfile)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func findPinnedDMProfile(ctx context.Context, clnt client.Client, namespace stri
 }
 
 // createPinnedProfile finds the specified profile and makes a pinned copy of it.
-func createPinnedDMProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Scheme, args map[string]string, owner metav1.Object, pinnedName string) (*nnfv1alpha2.NnfDataMovementProfile, error) {
+func createPinnedDMProfile(ctx context.Context, clnt client.Client, clntScheme *runtime.Scheme, args map[string]string, owner metav1.Object, pinnedName string) (*nnfv1alpha3.NnfDataMovementProfile, error) {
 
 	// If we've already pinned a profile, then we're done and
 	// we no longer have a use for the original profile.

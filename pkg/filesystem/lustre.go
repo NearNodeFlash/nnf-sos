@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -34,9 +35,11 @@ import (
 )
 
 type LustreFileSystemCommandArgs struct {
-	Mkfs        string
-	MountTarget string
-	Mount       string
+	Mkfs          string
+	MountTarget   string
+	Mount         string
+	PostActivate  []string
+	PreDeactivate []string
 
 	Vars map[string]string
 }
@@ -60,12 +63,13 @@ var _ FileSystem = &LustreFileSystem{}
 
 func (l *LustreFileSystem) parseArgs(args string) string {
 	m := map[string]string{
-		"$DEVICE":    l.BlockDevice.GetDevice(),
-		"$ZVOL_NAME": l.BlockDevice.GetDevice(),
-		"$MGS_NID":   l.MgsAddress,
-		"$INDEX":     fmt.Sprintf("%d", l.Index),
-		"$FS_NAME":   l.Name,
-		"$BACKFS":    l.BackFs,
+		"$DEVICE":      l.BlockDevice.GetDevice(),
+		"$ZVOL_NAME":   l.BlockDevice.GetDevice(),
+		"$MGS_NID":     l.MgsAddress,
+		"$INDEX":       fmt.Sprintf("%d", l.Index),
+		"$FS_NAME":     l.Name,
+		"$BACKFS":      l.BackFs,
+		"$TARGET_NAME": fmt.Sprintf("%s-%s%04d", l.Name, strings.ToUpper(l.TargetType), l.Index),
 	}
 
 	for k, v := range l.CommandArgs.Vars {
@@ -268,6 +272,44 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	return false, nil
 }
 
-func (l *LustreFileSystem) SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error) {
+func (l *LustreFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
+
+	for _, rawCommand := range l.CommandArgs.PostActivate {
+		formattedCommand := l.parseArgs(rawCommand)
+		l.Log.Info("PostActivate", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			return false, fmt.Errorf("could not run post activate command: %s: %w", formattedCommand, err)
+		}
+	}
+
+	return false, nil
+}
+
+func (l *LustreFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
+
+	for _, rawCommand := range l.CommandArgs.PreDeactivate {
+		formattedCommand := l.parseArgs(rawCommand)
+		l.Log.Info("PreDeactivate", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			return false, fmt.Errorf("could not run pre deactivate command: %s: %w", formattedCommand, err)
+		}
+	}
+
 	return false, nil
 }

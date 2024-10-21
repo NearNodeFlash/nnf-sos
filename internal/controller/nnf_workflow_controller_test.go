@@ -41,7 +41,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
+	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 )
 
 var (
@@ -58,9 +58,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		key                   types.NamespacedName
 		workflow              *dwsv1alpha2.Workflow
 		setup                 sync.Once
-		storageProfile        *nnfv1alpha2.NnfStorageProfile
-		dmProfile             *nnfv1alpha2.NnfDataMovementProfile
-		nnfNode               *nnfv1alpha2.NnfNode
+		storageProfile        *nnfv1alpha3.NnfStorageProfile
+		dmProfile             *nnfv1alpha3.NnfDataMovementProfile
+		nnfNode               *nnfv1alpha3.NnfNode
 		namespace             *corev1.Namespace
 		persistentStorageName string
 	)
@@ -73,14 +73,14 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), namespace)).To(Succeed())
 
-			nnfNode = &nnfv1alpha2.NnfNode{
+			nnfNode = &nnfv1alpha3.NnfNode{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",
 					Namespace: "rabbit-node",
 				},
-				Spec: nnfv1alpha2.NnfNodeSpec{
-					State: nnfv1alpha2.ResourceEnable,
+				Spec: nnfv1alpha3.NnfNodeSpec{
+					State: nnfv1alpha3.ResourceEnable,
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
@@ -145,13 +145,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		}).ShouldNot(Succeed())
 
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha2.NnfStorageProfile{}
+		profExpected := &nnfv1alpha3.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
 
 		Expect(k8sClient.Delete(context.TODO(), dmProfile)).To(Succeed())
-		dmProfExpected := &nnfv1alpha2.NnfDataMovementProfile{}
+		dmProfExpected := &nnfv1alpha3.NnfDataMovementProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
 		}).ShouldNot(Succeed())
@@ -192,15 +192,15 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		// operate.
 		// An alternative is to create a workflow with 'create_persistent'
 		// as its directive and actually create the full-blown persistent instance.. (painful)
-		nnfStorage := &nnfv1alpha2.NnfStorage{
+		nnfStorage := &nnfv1alpha3.NnfStorage{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: workflow.Namespace,
 			},
-			Spec: nnfv1alpha2.NnfStorageSpec{
+			Spec: nnfv1alpha3.NnfStorageSpec{
 				FileSystemType: fsType,
-				AllocationSets: []nnfv1alpha2.NnfStorageAllocationSetSpec{},
+				AllocationSets: []nnfv1alpha3.NnfStorageAllocationSetSpec{},
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
@@ -214,7 +214,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(psi), psi)).To(Succeed())
 		Expect(k8sClient.Delete(context.TODO(), psi)).Should(Succeed())
 
-		nnfStorage := &nnfv1alpha2.NnfStorage{
+		nnfStorage := &nnfv1alpha3.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
 		}
 
@@ -263,7 +263,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		When("More than one default profile", func() {
 
-			var storageProfile2 *nnfv1alpha2.NnfStorageProfile
+			var storageProfile2 *nnfv1alpha3.NnfStorageProfile
 
 			BeforeEach(func() {
 				// The second profile will get a different name via the call to uuid.
@@ -273,7 +273,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			AfterEach(func() {
 				Expect(k8sClient.Delete(context.TODO(), storageProfile2)).To(Succeed())
-				profExpected := &nnfv1alpha2.NnfStorageProfile{}
+				profExpected := &nnfv1alpha3.NnfStorageProfile{}
 				Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile2), profExpected)
 				}).ShouldNot(Succeed())
@@ -301,7 +301,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	When("Positive tests for storage profiles", func() {
 
-		profiles := []*nnfv1alpha2.NnfStorageProfile{}
+		profiles := []*nnfv1alpha3.NnfStorageProfile{}
 		profNames := []string{}
 
 		BeforeEach(func() {
@@ -436,7 +436,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		When("More than one default profile", func() {
 
-			var dmProfile2 *nnfv1alpha2.NnfDataMovementProfile
+			var dmProfile2 *nnfv1alpha3.NnfDataMovementProfile
 
 			BeforeEach(func() {
 				// The second profile will get a different name via the call to uuid.
@@ -446,7 +446,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			AfterEach(func() {
 				Expect(k8sClient.Delete(context.TODO(), dmProfile2)).To(Succeed())
-				profExpected := &nnfv1alpha2.NnfDataMovementProfile{}
+				profExpected := &nnfv1alpha3.NnfDataMovementProfile{}
 				Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile2), profExpected)
 				}).ShouldNot(Succeed())
@@ -474,7 +474,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	When("Positive tests for data movement profiles", func() {
 
-		profiles := []*nnfv1alpha2.NnfDataMovementProfile{}
+		profiles := []*nnfv1alpha3.NnfDataMovementProfile{}
 		profNames := []string{}
 		var lustre *lusv1beta1.LustreFileSystem
 
@@ -665,7 +665,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	When("Using copy_in directives", func() {
 		var (
-			dmm *nnfv1alpha2.NnfDataMovementManager
+			dmm *nnfv1alpha3.NnfDataMovementManager
 		)
 
 		JustBeforeEach(func() {
@@ -693,18 +693,18 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		BeforeEach(func() {
 			ns := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nnfv1alpha2.DataMovementNamespace,
+					Name: nnfv1alpha3.DataMovementNamespace,
 				},
 			}
 
 			k8sClient.Create(context.TODO(), ns) // Ignore errors as namespace may be created from other tests
 
-			dmm = &nnfv1alpha2.NnfDataMovementManager{
+			dmm = &nnfv1alpha3.NnfDataMovementManager{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nnfv1alpha2.DataMovementManagerName,
-					Namespace: nnfv1alpha2.DataMovementNamespace,
+					Name:      nnfv1alpha3.DataMovementManagerName,
+					Namespace: nnfv1alpha3.DataMovementNamespace,
 				},
-				Spec: nnfv1alpha2.NnfDataMovementManagerSpec{
+				Spec: nnfv1alpha3.NnfDataMovementManagerSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{{
@@ -714,7 +714,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						},
 					},
 				},
-				Status: nnfv1alpha2.NnfDataMovementManagerStatus{
+				Status: nnfv1alpha3.NnfDataMovementManagerStatus{
 					Ready: true,
 				},
 			}
@@ -766,10 +766,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}).Should(Succeed(), "update to DataIn")
 
 				By("creates the data movement resource")
-				dm := &nnfv1alpha2.NnfDataMovement{
+				dm := &nnfv1alpha3.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-%d", workflow.Name, 1),
-						Namespace: nnfv1alpha2.DataMovementNamespace,
+						Namespace: nnfv1alpha3.DataMovementNamespace,
 					},
 				}
 
@@ -790,19 +790,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha2.NnfStorage{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha3.NnfStorage{}).Name()),
 						"Name":      Equal(fmt.Sprintf("%s-%d", workflow.Name, 0)),
 						"Namespace": Equal(workflow.Namespace),
 					}))
 
 				Expect(dm.Spec.ProfileReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha2.NnfDataMovementProfile{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha3.NnfDataMovementProfile{}).Name()),
 						"Name":      Equal(indexedResourceName(workflow, 1)),
 						"Namespace": Equal(corev1.NamespaceDefault),
 					},
 				))
-				Expect(dm.GetLabels()[nnfv1alpha2.DataMovementInitiatorLabel]).To(Equal("copy_in"))
+				Expect(dm.GetLabels()[nnfv1alpha3.DataMovementInitiatorLabel]).To(Equal("copy_in"))
 			})
 		})
 
@@ -846,10 +846,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "transition desired state to DataIn")
 
-				dm := &nnfv1alpha2.NnfDataMovement{
+				dm := &nnfv1alpha3.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      indexedResourceName(workflow, 1),
-						Namespace: nnfv1alpha2.DataMovementNamespace,
+						Namespace: nnfv1alpha3.DataMovementNamespace,
 					},
 				}
 
@@ -870,18 +870,18 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha2.NnfStorage{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha3.NnfStorage{}).Name()),
 						"Name":      Equal(persistentStorageName),
 						"Namespace": Equal(workflow.Namespace),
 					}))
 				Expect(dm.Spec.ProfileReference).To(MatchFields(IgnoreExtras,
 					Fields{
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha2.NnfDataMovementProfile{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha3.NnfDataMovementProfile{}).Name()),
 						"Name":      Equal(indexedResourceName(workflow, 1)),
 						"Namespace": Equal(corev1.NamespaceDefault),
 					},
 				))
-				Expect(dm.GetLabels()[nnfv1alpha2.DataMovementInitiatorLabel]).To(Equal("copy_in"))
+				Expect(dm.GetLabels()[nnfv1alpha3.DataMovementInitiatorLabel]).To(Equal("copy_in"))
 
 			})
 		})
@@ -1283,7 +1283,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 
-				nnfStorage := &nnfv1alpha2.NnfStorage{
+				nnfStorage := &nnfv1alpha3.NnfStorage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      servers.Name,
 						Namespace: servers.Namespace,
@@ -1365,8 +1365,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			createGlobalLustre bool
 			globalLustre       *lusv1beta1.LustreFileSystem
 
-			containerProfile         *nnfv1alpha2.NnfContainerProfile
-			containerProfileStorages []nnfv1alpha2.NnfContainerProfileStorage
+			containerProfile         *nnfv1alpha3.NnfContainerProfile
+			containerProfileStorages []nnfv1alpha3.NnfContainerProfileStorage
 			createContainerProfile   bool
 		)
 
@@ -1503,7 +1503,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		Context("when an optional storage in the container profile is not present in the container arguments", func() {
 			BeforeEach(func() {
-				containerProfileStorages = []nnfv1alpha2.NnfContainerProfileStorage{
+				containerProfileStorages = []nnfv1alpha3.NnfContainerProfileStorage{
 					{Name: "DW_JOB_foo_local_storage", Optional: false},
 					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 					{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
@@ -1548,7 +1548,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 		Context("when a required storage in the container profile is not present in the arguments", func() {
 			BeforeEach(func() {
-				containerProfileStorages = []nnfv1alpha2.NnfContainerProfileStorage{
+				containerProfileStorages = []nnfv1alpha3.NnfContainerProfileStorage{
 					{Name: "DW_JOB_foo_local_storage", Optional: false},
 					{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 				}
@@ -1592,7 +1592,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				}
 			})
 
-			buildContainerProfile := func(storages []nnfv1alpha2.NnfContainerProfileStorage) {
+			buildContainerProfile := func(storages []nnfv1alpha3.NnfContainerProfileStorage) {
 				By("Creating a profile with specific storages")
 				tempProfile := basicNnfContainerProfile("restricted-"+uuid.NewString()[:8], storages)
 				containerProfile = createNnfContainerProfile(tempProfile, true)
@@ -1609,7 +1609,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 
 			DescribeTable("should not go to Proposal Ready",
-				func(argIdx int, storages []nnfv1alpha2.NnfContainerProfileStorage) {
+				func(argIdx int, storages []nnfv1alpha3.NnfContainerProfileStorage) {
 					buildContainerProfile(storages)
 					buildContainerWorkflowWithArgs(storageArgsList[argIdx])
 					Eventually(func(g Gomega) bool {
@@ -1620,19 +1620,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				},
 
 				Entry("when DW_JOB_ not present in the container profile", 0,
-					[]nnfv1alpha2.NnfContainerProfileStorage{
+					[]nnfv1alpha3.NnfContainerProfileStorage{
 						{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 						{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 					},
 				),
 				Entry("when DW_PERSISTENT_ not present in the container profile", 1,
-					[]nnfv1alpha2.NnfContainerProfileStorage{
+					[]nnfv1alpha3.NnfContainerProfileStorage{
 						{Name: "DW_JOB_foo_local_storage", Optional: true},
 						{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 					},
 				),
 				Entry("when DW_GLOBAL_ not present in the container profile", 2,
-					[]nnfv1alpha2.NnfContainerProfileStorage{
+					[]nnfv1alpha3.NnfContainerProfileStorage{
 						{Name: "DW_JOB_foo_local_storage", Optional: true},
 						{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 					},
@@ -1738,7 +1738,7 @@ var _ = Describe("NnfStorageProfile Webhook test", func() {
 	})
 })
 
-func WaitForDMMReady(dmm *nnfv1alpha2.NnfDataMovementManager) {
+func WaitForDMMReady(dmm *nnfv1alpha3.NnfDataMovementManager) {
 	Eventually(func(g Gomega) bool {
 		g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmm), dmm)).To(Succeed())
 		if !dmm.Status.Ready {
