@@ -692,6 +692,7 @@ func (v *Volume) WaitFormatComplete() error {
 		return err
 	}
 
+	stalledCount := 0
 	for ns.Utilization != 0 {
 		log.V(3).Info("Namespace in use", "utilization", ns.Utilization)
 
@@ -708,7 +709,14 @@ func (v *Volume) WaitFormatComplete() error {
 		}
 
 		if lastUtilization == ns.Utilization {
-			return fmt.Errorf("Device %s Format Stalled: Namespace: %d Delay: %s Utilization: %d", v.storage.id, v.namespaceId, delay.String(), ns.Utilization)
+			stalledCount++
+			if stalledCount == 10 {
+				return fmt.Errorf("Device %s Format Stalled: Namespace: %d Delay: %s Stall Count: %d Utilization: %d", v.storage.id, v.namespaceId, delay.String(), stalledCount, ns.Utilization)
+			}
+
+			log.V(1).Info("Format stalled", "device", v.storage.id, "Namespace", v.namespaceId, "utilization", ns.Utilization, "stall count", stalledCount)
+		} else {
+			stalledCount = 0
 		}
 	}
 
