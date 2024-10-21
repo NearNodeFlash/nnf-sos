@@ -838,11 +838,21 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 	}
 
 	deleteFunc := func() error {
-		return p.deallocateVolumes()
+		err := p.deallocateVolumes()
+		if err != nil {
+			log.Error(err, "deallocateVolumes failed, but returning success anyway")
+		}
+
+		return nil
 	}
 
 	if err := s.persistentController.DeletePersistentObject(p, deleteFunc, storagePoolStorageDeleteStartLogEntryType, storagePoolStorageDeleteCompleteLogEntryType); err != nil {
-		return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause(fmt.Sprintf("Failed to delete storage pool"))
+		err := ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause(fmt.Sprintf("Failed to delete storage pool"))
+		if err != nil {
+			log.Error(err, "DeletePersistentObject failed, but returning success anyway")
+		}
+
+		return nil
 	}
 
 	event.EventManager.PublishResourceEvent(msgreg.ResourceRemovedResourceEvent(), p)
