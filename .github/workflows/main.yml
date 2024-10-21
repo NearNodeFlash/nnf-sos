@@ -42,9 +42,10 @@ jobs:
 
     - name: "Verify auto-generated files"
       run: |
-          make manifests generate
+          make manifests generate generate-go-conversions
+          git status
           if [[ $(git status -s | wc -l) -gt 0 ]]; then \
-              git status; exit 1; \
+              exit 1; \
           fi
 
     - name: "Docker metadata"
