@@ -94,12 +94,18 @@ func (m *KindFileSystem) Unmount(ctx context.Context, path string) (bool, error)
 	return true, nil
 }
 
-func (m *KindFileSystem) SetPermissions(ctx context.Context, uid uint32, gid uint32, complete bool) (bool, error) {
+func (m *KindFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
 	if complete == true {
 		return false, nil
 	}
 
-	m.Log.Info("Set mock file system permissions")
+	m.Log.Info("Ran PostActivate")
 
-	return false, nil
+	return true, nil
+}
+
+func (m *KindFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
+	m.Log.Info("Ran PreDeactivate")
+
+	return true, nil
 }

@@ -52,6 +52,8 @@ data:
       mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
       mountRabbit: $DEVICE $MOUNT_PATH
       mountCompute: $DEVICE $MOUNT_PATH
+      postActivate:
+      - "chown $USERID:$GROUPID $MOUNT_PATH"
   xfsStorage:
     commandlines:
       sharedVg: true
@@ -70,6 +72,8 @@ data:
       mkfs: $DEVICE
       mountRabbit: $DEVICE $MOUNT_PATH
       mountCompute: $DEVICE $MOUNT_PATH
+      postActivate:
+      - "chown $USERID:$GROUPID $MOUNT_PATH"
   rawStorage:
     commandlines:
       sharedVg: true
