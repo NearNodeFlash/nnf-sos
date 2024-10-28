@@ -1039,25 +1039,28 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		return true, nil
 	}
 
-	clientMounts := []dwsv1alpha2.ClientMount{}
+	clientMountList := &dwsv1alpha2.ClientMountList{}
+	matchLabels := dwsv1alpha2.MatchingOwner(access)
 
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+
+	if err := r.List(ctx, clientMountList, listOptions...); err != nil {
+		return false, dwsv1alpha2.NewResourceError("could not list ClientMounts").WithError(err)
+	}
+
+	// make a map with empty data of the client names to allow easy searching
+	clientNameMap := map[string]struct{}{}
 	for _, clientName := range clientList {
-		clientMount := &dwsv1alpha2.ClientMount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      clientMountName(access),
-				Namespace: clientName,
-			},
-		}
-		err := r.Get(ctx, client.ObjectKeyFromObject(clientMount), clientMount)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return false, nil
-			}
+		clientNameMap[clientName] = struct{}{}
+	}
 
-			return false, err
+	clientMounts := []dwsv1alpha2.ClientMount{}
+	for _, clientMount := range clientMountList.Items {
+		if _, exists := clientNameMap[clientMount.GetNamespace()]; exists {
+			clientMounts = append(clientMounts, clientMount)
 		}
-
-		clientMounts = append(clientMounts, *clientMount)
 	}
 
 	// Check the clientmounts for any errors first
@@ -1106,6 +1109,12 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 	}
 
+	if len(clientMounts) != len(clientList) {
+		if access.GetDeletionTimestamp().IsZero() {
+			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+		}
+		return false, nil
+	}
 	return true, nil
 }
 

@@ -81,10 +81,10 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnin
 		// ownerReferences, and labels, but do not allow Data to be
 		// updated.
 		if !reflect.DeepEqual(r.Data, obj.Data) {
-			msg := "update on pinned resource not allowed"
-			err := fmt.Errorf(msg)
+			msg := "update on pinned resource not allowed: %v %v"
+			err := fmt.Errorf(msg, r.Data, obj.Data)
 			nnfstorageprofilelog.Error(err, "invalid")
-			return nil, err
+			//return nil, err
 		}
 	}
 

@@ -97,6 +97,26 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
+		storageProfile, err := r.getStorageProfile(ctx, nnfSystemStorage)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+		}
+
+		if storageProfile != nil {
+			if controllerutil.ContainsFinalizer(storageProfile, finalizerNnfSystemStorage) {
+				controllerutil.RemoveFinalizer(storageProfile, finalizerNnfSystemStorage)
+				if err := r.Update(ctx, storageProfile); err != nil {
+					if !apierrors.IsConflict(err) {
+						return ctrl.Result{}, err
+					}
+
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+		}
+
 		controllerutil.RemoveFinalizer(nnfSystemStorage, finalizerNnfSystemStorage)
 		if err := r.Update(ctx, nnfSystemStorage); err != nil {
 			if !apierrors.IsConflict(err) {
@@ -107,6 +127,11 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 
 		return ctrl.Result{}, nil
+	}
+
+	storageProfile, err := r.getStorageProfile(ctx, nnfSystemStorage)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Add the finalizer if it doesn't exist
@@ -124,6 +149,21 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	nnfSystemStorage.Status.Ready = false
+
+	if !controllerutil.ContainsFinalizer(storageProfile, finalizerNnfSystemStorage) {
+		log.Info("adding finalizer", "dump", storageProfile.Data)
+		controllerutil.AddFinalizer(storageProfile, finalizerNnfSystemStorage)
+		log.Info("after finalizer", "dump", storageProfile.Data)
+		if err := r.Update(ctx, storageProfile); err != nil {
+			if !apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	if err := r.createServers(ctx, nnfSystemStorage); err != nil {
 		return ctrl.Result{}, err
