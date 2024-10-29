@@ -63,6 +63,7 @@ func MatchingOwner(owner metav1.Object) client.MatchingLabels {
 		OwnerKindLabel:      reflect.Indirect(reflect.ValueOf(owner)).Type().Name(),
 		OwnerNameLabel:      owner.GetName(),
 		OwnerNamespaceLabel: owner.GetNamespace(),
+		OwnerUidLabel:       string(owner.GetUID()),
 	})
 }
 
