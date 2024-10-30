@@ -95,7 +95,7 @@ func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 		}
 	}
 
-	return false, fmt.Errorf("timeout waiting for VG %w", err)
+	return false, fmt.Errorf("timeout waiting for VG")
 }
 
 func (vg *VolumeGroup) parseArgs(args string) (string, error) {
