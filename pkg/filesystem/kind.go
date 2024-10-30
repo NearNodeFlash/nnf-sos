@@ -109,3 +109,13 @@ func (m *KindFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 
 	return true, nil
 }
+
+func (m *KindFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if complete == true {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}

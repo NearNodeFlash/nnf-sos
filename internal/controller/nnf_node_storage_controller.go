@@ -22,11 +22,13 @@ package controller
 import (
 	"context"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -363,10 +365,91 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			log.Info("Post activate file system", "allocation", index)
 		}
 
-		allocationStatus.Ready = true
+		// Perform PostMount activites, but only on lustre OST0
+		// TODO: do we need to handle xfs/gfs here too?
+		if nnfNodeStorage.Spec.FileSystemType != "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType != "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex != 0 {
+			ran, err = r.postMount(ctx, allocationStatus, fileSystem, nnfNodeStorage)
+			if err != nil {
+				return nil, dwsv1alpha2.NewResourceError("could not run post mount").WithError(err).WithMajor()
+			}
+			if ran {
+				log.Info("Post mount file system", "allocation", index)
+				allocationStatus.Ready = true
+			}
+
+		} else {
+			// Ensure this is Ready when we do not need to run postMount
+			allocationStatus.Ready = true
+		}
 	}
 
 	return nil, nil
+}
+
+// Mount the Filesystem and run PostMount commands. Before that happens, we need to make sure every
+// NnfNodeBlockStorage is marked as ready. Obtain the list of NnfNodeBlockStorages by the NnfStorage
+// owner.
+func (r *NnfNodeStorageReconciler) postMount(ctx context.Context, allocationStatus *nnfv1alpha3.NnfNodeStorageAllocationStatus, fileSystem filesystem.FileSystem, nnfNodeStorage *nnfv1alpha3.NnfNodeStorage) (bool, error) {
+	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
+
+	// Get the owner and directive index from labels
+	ownerKind, ownerExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerKindLabel]
+	ownerName, ownerNameExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerNameLabel]
+	ownerNS, ownerNSExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerNamespaceLabel]
+	idx, idxExists := nnfNodeStorage.Labels[nnfv1alpha3.DirectiveIndexLabel]
+
+	// We should expect the owner to be NnfStorage and have the expected labels
+	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != "NnfStorage" {
+		return false, dwsv1alpha2.NewResourceError("expected NnfNodeStorage owner to be of kind NnfStorage and have the expected labels").WithMajor()
+	}
+
+	// Get the NnfStorage owner and use it to retrieve the other NnfBlockStorages
+	storage := &nnfv1alpha3.NnfStorage{ObjectMeta: metav1.ObjectMeta{
+		Name:      ownerName,
+		Namespace: ownerNS,
+	}}
+	matchLabels := dwsv1alpha2.MatchingOwner(storage)
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+	nnfNodeBlockStorageList := &nnfv1alpha3.NnfNodeBlockStorageList{}
+	if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
+		return false, dwsv1alpha2.NewResourceError("could not list NnfNodeBlockStorages").WithError(err).WithMajor()
+	}
+
+	if len(nnfNodeBlockStorageList.Items) < 1 {
+		return false, dwsv1alpha2.NewResourceError("no NnfNodeBlockStorages found").WithMajor()
+	}
+
+	// Wait until all block storages are ready
+	for _, blockStorage := range nnfNodeBlockStorageList.Items {
+		if !blockStorage.Status.Ready {
+			// TODO: signal requeue, right now this is no different than the top when we don't need to run
+			return false, nil
+		}
+	}
+
+	idxStr, err := strconv.Atoi(idx)
+	if err != nil {
+		return false, dwsv1alpha2.NewResourceError("failed to convert directive index label to int").WithError(err).WithMajor()
+	}
+
+	// TODO: is this mounted somewhere else already? what happens if it's mounted at a different
+	// path and ready==true? Does this not mount then?
+	path := getTempClientMountDir(storage, idxStr)
+	mounted, err := fileSystem.Mount(ctx, path, allocationStatus.Ready)
+	if err != nil {
+		return false, dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
+	}
+	if mounted {
+		log.Info("Mounted file system for post mount commands", "Mount path", path)
+	}
+	// TODO: handle unmount
+	defer fileSystem.Unmount(ctx, path)
+
+	fileSystem.PostMount(ctx, allocationStatus.Ready)
+
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

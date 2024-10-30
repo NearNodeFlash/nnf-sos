@@ -237,7 +237,7 @@ func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (boo
 		return false, fmt.Errorf("could not unmount after post activate '%s': %w", f.TempDir, err)
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
@@ -275,5 +275,12 @@ func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("could not unmount after pre-deactivate '%s': %w", f.TempDir, err)
 	}
 
-	return false, nil
+	return true, nil
+}
+
+func (f *SimpleFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+
+	// TODO: Make this the same as PostActivate? Rename PostActivate Here? Have them both do the same thing?
+
+	return true, nil
 }

@@ -96,3 +96,13 @@ func (m *MockFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 
 	return true, nil
 }
+
+func (m *MockFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if complete == true {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}

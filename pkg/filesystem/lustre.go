@@ -40,6 +40,7 @@ type LustreFileSystemCommandArgs struct {
 	Mount         string
 	PostActivate  []string
 	PreDeactivate []string
+	PostMount     []string
 
 	Vars map[string]string
 }
@@ -311,5 +312,28 @@ func (l *LustreFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 		}
 	}
 
-	return false, nil
+	return true, nil
+}
+
+func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
+
+	for _, rawCommand := range l.CommandArgs.PostMount {
+		formattedCommand := l.parseArgs(rawCommand)
+		l.Log.Info("PostActivate", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			return false, fmt.Errorf("could not run post mount command: %s: %w", formattedCommand, err)
+		}
+	}
+
+	return true, nil
 }

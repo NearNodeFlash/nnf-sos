@@ -433,6 +433,10 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.CommandArgs.Mount = mountCommand
 	fs.CommandArgs.PostActivate = cmdLines.PostActivate
 	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	// TODO: hook this into CRD
+	fs.CommandArgs.PostMount = []string{
+		"lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH",
+	}
 	fs.CommandArgs.Vars = map[string]string{
 		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
 		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),

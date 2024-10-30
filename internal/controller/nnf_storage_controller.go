@@ -871,11 +871,6 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("zero length node array for OST").WithFatal()
 		}
 
-		tempMountDir := os.Getenv("NNF_TEMP_MOUNT_PATH")
-		if len(tempMountDir) == 0 {
-			tempMountDir = "/mnt/tmp/"
-		}
-
 		dwsv1alpha2.InheritParentLabels(clientMount, nnfStorage)
 		dwsv1alpha2.AddOwnerLabels(clientMount, nnfStorage)
 
@@ -885,7 +880,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 			dwsv1alpha2.ClientMountInfo{
 				Type:       nnfStorage.Spec.FileSystemType,
 				TargetType: "directory",
-				MountPath:  fmt.Sprintf("/%s/%s", tempMountDir, nnfNodeStorageName(nnfStorage, index, 0)),
+				MountPath:  getTempClientMountDir(nnfStorage, index),
 				Device: dwsv1alpha2.ClientMountDevice{
 					Type: dwsv1alpha2.ClientMountDeviceTypeLustre,
 					Lustre: &dwsv1alpha2.ClientMountDeviceLustre{
@@ -951,6 +946,18 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	return &ctrl.Result{}, nil
+}
+
+func getTempMountDir() string {
+	tempMountDir := os.Getenv("NNF_TEMP_MOUNT_PATH")
+	if len(tempMountDir) == 0 {
+		tempMountDir = "/mnt/tmp/"
+	}
+	return tempMountDir
+}
+
+func getTempClientMountDir(nnfStorage *nnfv1alpha3.NnfStorage, index int) string {
+	return fmt.Sprintf("/%s/%s", getTempMountDir(), nnfNodeStorageName(nnfStorage, index, 0))
 }
 
 // Get the status from all the child NnfNodeStorage resources and use them to build the status
