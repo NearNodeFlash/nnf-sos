@@ -22,7 +22,6 @@ package controller
 import (
 	"context"
 	"runtime"
-	"strconv"
 	"sync"
 	"time"
 
@@ -390,13 +389,13 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 // NnfNodeBlockStorage is marked as ready. Obtain the list of NnfNodeBlockStorages by the NnfStorage
 // owner.
 func (r *NnfNodeStorageReconciler) postMount(ctx context.Context, allocationStatus *nnfv1alpha3.NnfNodeStorageAllocationStatus, fileSystem filesystem.FileSystem, nnfNodeStorage *nnfv1alpha3.NnfNodeStorage) (bool, error) {
-	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
+	// log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
 	// Get the owner and directive index from labels
 	ownerKind, ownerExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerKindLabel]
 	ownerName, ownerNameExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerNameLabel]
 	ownerNS, ownerNSExists := nnfNodeStorage.Labels[dwsv1alpha2.OwnerNamespaceLabel]
-	idx, idxExists := nnfNodeStorage.Labels[nnfv1alpha3.DirectiveIndexLabel]
+	_, idxExists := nnfNodeStorage.Labels[nnfv1alpha3.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != "NnfStorage" {
@@ -429,23 +428,23 @@ func (r *NnfNodeStorageReconciler) postMount(ctx context.Context, allocationStat
 		}
 	}
 
-	idxStr, err := strconv.Atoi(idx)
-	if err != nil {
-		return false, dwsv1alpha2.NewResourceError("failed to convert directive index label to int").WithError(err).WithMajor()
-	}
+	// idxStr, err := strconv.Atoi(idx)
+	// if err != nil {
+	// 	return false, dwsv1alpha2.NewResourceError("failed to convert directive index label to int").WithError(err).WithMajor()
+	// }
 
 	// TODO: is this mounted somewhere else already? what happens if it's mounted at a different
 	// path and ready==true? Does this not mount then?
-	path := getTempClientMountDir(storage, idxStr)
-	mounted, err := fileSystem.Mount(ctx, path, allocationStatus.Ready)
-	if err != nil {
-		return false, dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
-	}
-	if mounted {
-		log.Info("Mounted file system for post mount commands", "Mount path", path)
-	}
-	// TODO: handle unmount
-	defer fileSystem.Unmount(ctx, path)
+	// path := getTempClientMountDir(storage, idxStr)
+	// mounted, err := fileSystem.Mount(ctx, path, allocationStatus.Ready)
+	// if err != nil {
+	// 	return false, dwsv1alpha2.NewResourceError("unable to mount file system").WithError(err).WithMajor()
+	// }
+	// if mounted {
+	// 	log.Info("Mounted file system for post mount commands", "Mount path", path)
+	// }
+	// // TODO: handle unmount
+	// defer fileSystem.Unmount(ctx, path)
 
 	fileSystem.PostMount(ctx, allocationStatus.Ready)
 

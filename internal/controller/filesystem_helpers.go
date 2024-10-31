@@ -107,7 +107,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 		return blockDevice, fileSystem, nil
 	case "lustre":
-		commandLines := nnfv1alpha3.NnfStorageProfileLustreCmdLines{}
+		var commandLines nnfv1alpha3.NnfStorageProfileLustreCmdLines
 
 		switch nnfNodeStorage.Spec.LustreStorage.TargetType {
 		case "mgt":
@@ -427,6 +427,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
+	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.MountTarget = cmdLines.MountTarget

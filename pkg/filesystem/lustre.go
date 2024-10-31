@@ -55,6 +55,7 @@ type LustreFileSystem struct {
 	MgsAddress string
 	Index      int
 	BackFs     string
+	TempDir    string
 
 	BlockDevice blockdevice.BlockDevice
 }
@@ -316,8 +317,20 @@ func (l *LustreFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 }
 
 func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if len(l.CommandArgs.PostMount) == 0 {
+		return false, nil
+	}
+
 	if complete {
 		return false, nil
+	}
+
+	if l.TargetType == "none" {
+		return false, nil
+	}
+
+	if _, err := l.Mount(ctx, l.TempDir, false); err != nil {
+		return false, fmt.Errorf("could not mount temp dir '%s' for post mount: %w", l.TempDir, err)
 	}
 
 	// Build the commands from the args provided
@@ -333,6 +346,10 @@ func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, 
 		if _, err := command.Run(formattedCommand, l.Log); err != nil {
 			return false, fmt.Errorf("could not run post mount command: %s: %w", formattedCommand, err)
 		}
+	}
+
+	if _, err := l.Unmount(ctx, l.TempDir); err != nil {
+		return false, fmt.Errorf("could not unmount after post mount '%s': %w", l.TempDir, err)
 	}
 
 	return true, nil
