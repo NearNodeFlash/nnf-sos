@@ -428,12 +428,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
 
-	// fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
-	storage := nnfv1alpha3.NnfStorage{ObjectMeta: metav1.ObjectMeta{
-		Name:      nnfNodeStorage.Labels[dwsv1alpha2.OwnerNameLabel],
-		Namespace: nnfNodeStorage.Labels[dwsv1alpha2.OwnerNamespaceLabel],
-	}}
-	fs.TempDir = getTempClientMountDir(&storage, index)
+	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d/postmount", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.MountTarget = cmdLines.MountTarget
