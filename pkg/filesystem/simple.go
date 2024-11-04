@@ -38,6 +38,7 @@ type SimpleFileSystemCommandArgs struct {
 	Mount         string
 	PostActivate  []string
 	PreDeactivate []string
+	PostMount     []string
 
 	Vars map[string]string
 }
@@ -281,6 +282,7 @@ func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 func (f *SimpleFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
 
 	// TODO: Make this the same as PostActivate? Rename PostActivate Here? Have them both do the same thing?
+	// TODO: what about PreDeactivate? Is that PreUnmount then?
 
-	return true, nil
+	return f.PostActivate(ctx, complete)
 }

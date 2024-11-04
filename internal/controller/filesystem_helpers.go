@@ -407,6 +407,10 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
 		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
 	}
+	// TODO
+	fs.CommandArgs.PostMount = []string{
+		"touch $MOUNT_PATH/blake-test",
+	}
 
 	return &fs, nil
 }
@@ -427,14 +431,12 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
-
-	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d/postmount", nnfNodeStorage.Name, index)
-
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.MountTarget = cmdLines.MountTarget
 	fs.CommandArgs.Mount = mountCommand
 	fs.CommandArgs.PostActivate = cmdLines.PostActivate
 	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d/postmount", nnfNodeStorage.Name, index)
 	// TODO: hook this into CRD
 	fs.CommandArgs.PostMount = []string{
 		"lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH",
