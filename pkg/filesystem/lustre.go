@@ -337,7 +337,7 @@ func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, 
 	if l.CommandArgs.Vars == nil {
 		l.CommandArgs.Vars = make(map[string]string)
 	}
-	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TempDir)
 
 	for _, rawCommand := range l.CommandArgs.PostMount {
 		formattedCommand := l.parseArgs(rawCommand)
