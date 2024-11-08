@@ -450,17 +450,14 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 			return nil, dwsv1alpha2.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
 		}
 
-		if persistentStorage.Status.State == dwsv1alpha2.PSIStateDestroying {
-			return nil, dwsv1alpha2.NewResourceError("persistent storage %v is being destroyed", dwArgs["name"]).WithUserMessage("peristent storage is being destroyed").WithFatal().WithUser()
-		}
+		if persistentStorage.Spec.State != dwsv1alpha2.PSIStateDisabled {
+			persistentStorage.Spec.State = dwsv1alpha2.PSIStateDisabled
 
-		persistentStorage.Spec.State = dwsv1alpha2.PSIStateDrain
-
-		err = r.Update(ctx, persistentStorage)
-		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+			err = r.Update(ctx, persistentStorage)
+			if err != nil {
+				return nil, dwsv1alpha2.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+			}
 		}
-		log.Info("Add owner reference for persistent storage for deletion", "psi", persistentStorage)
 	}
 
 	return nil, nil
@@ -472,6 +469,19 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	switch dwArgs["command"] {
 	case "container":
 		return r.checkContainerPorts(ctx, workflow, index)
+	case "drain_persistent":
+		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithFatal().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
+			}
+
+			return nil, nil
+		}
+
+		if persistentStorage.Status.State != dwsv1alpha2.PSIStateDisabled || persistentStorage.Status.Ready == false {
+			return Requeue("draining persistent storage").withObject(persistentStorage), nil
+		}
 	default:
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
@@ -1181,7 +1191,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return nil, dwsv1alpha3.NewResourceError("persistent storage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences)).WithError(err).WithUserMessage("persistent storage cannot be deleted while in use").WithFatal().WithUser()
 		}
 
-		persistentStorage.Spec.State = dwsv1alpha3.PSIStateDestroying
+		persistentStorage.Spec.State = dwsv1alpha3.PSIStateDisabled
 
 		dwsv1alpha3.AddOwnerLabels(persistentStorage, workflow)
 		addDirectiveIndexLabel(persistentStorage, index)
@@ -1209,6 +1219,10 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		ownerUid, exists := labels[dwsv1alpha3.OwnerUidLabel]
 		if !exists || types.UID(ownerUid) != workflow.GetUID() {
 			return Requeue("persistent storage owner add").after(2 * time.Second).withObject(persistentStorage), nil
+		}
+
+		if persistentStorage.Status.State != dwsv1alpha2.PSIStateDisabled || persistentStorage.Status.Ready != true {
+			return Requeue("persistent storage ready disabled").after(2 * time.Second).withObject(persistentStorage), nil
 		}
 	case "persistentdw":
 		err := r.removePersistentStorageReference(ctx, workflow, index)

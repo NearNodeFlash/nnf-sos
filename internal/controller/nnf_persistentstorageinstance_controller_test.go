@@ -63,7 +63,7 @@ var _ = Describe("PersistentStorage test", func() {
 				DWDirective: "#DW create_persistent name=persistent_lustre type=lustre capacity=1GiB",
 				FsType:      "lustre",
 				UserID:      999,
-				State:       dwsv1alpha3.PSIStateActive,
+				State:       dwsv1alpha3.PSIStateEnabled,
 			},
 		}
 
@@ -71,7 +71,12 @@ var _ = Describe("PersistentStorage test", func() {
 		Eventually(func(g Gomega) dwsv1alpha3.PersistentStorageInstanceState {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
 			return persistentStorage.Status.State
-		}).Should(Equal(dwsv1alpha3.PSIStateCreating))
+		}).Should(Equal(dwsv1alpha3.PSIStateEnabled))
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
+			return persistentStorage.Status.Ready
+		}).Should(Equal(true))
 
 		servers := &dwsv1alpha3.Servers{
 			ObjectMeta: metav1.ObjectMeta{
@@ -107,7 +112,7 @@ var _ = Describe("PersistentStorage test", func() {
 		By("Marking the persistentStorage as destroying")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
-			persistentStorage.Spec.State = dwsv1alpha3.PSIStateDestroying
+			persistentStorage.Spec.State = dwsv1alpha3.PSIStateDisabled
 
 			return k8sClient.Update(context.TODO(), persistentStorage)
 		}).Should(Succeed(), "Set as destroying")
@@ -115,7 +120,12 @@ var _ = Describe("PersistentStorage test", func() {
 		Eventually(func(g Gomega) dwsv1alpha3.PersistentStorageInstanceState {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
 			return persistentStorage.Status.State
-		}).Should(Equal(dwsv1alpha3.PSIStateCreating))
+		}).Should(Equal(dwsv1alpha3.PSIStateDisabled))
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
+			return persistentStorage.Status.Ready
+		}).Should(Equal(false))
 
 		By("Removing consumer reference")
 		Eventually(func(g Gomega) error {
@@ -125,10 +135,10 @@ var _ = Describe("PersistentStorage test", func() {
 			return k8sClient.Update(context.TODO(), persistentStorage)
 		}).Should(Succeed(), "Remove fake consumer reference")
 
-		Eventually(func(g Gomega) dwsv1alpha3.PersistentStorageInstanceState {
+		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentStorage), persistentStorage)).To(Succeed())
-			return persistentStorage.Status.State
-		}).Should(Equal(dwsv1alpha3.PSIStateDestroying))
+			return persistentStorage.Status.Ready
+		}).Should(Equal(true))
 
 		By("Deleting the PersistentStorageInstance")
 		Expect(k8sClient.Delete(context.TODO(), persistentStorage)).To(Succeed())

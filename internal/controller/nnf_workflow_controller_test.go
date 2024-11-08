@@ -181,7 +181,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				FsType: fsType,
 				// DWDirective: workflow.Spec.DWDirectives[0],
 				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
-				State:       dwsv1alpha3.PSIStateActive,
+				State:       dwsv1alpha3.PSIStateEnabled,
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())

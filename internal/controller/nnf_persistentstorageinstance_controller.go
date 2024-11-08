@@ -193,9 +193,9 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if len(persistentStorage.Spec.ConsumerReferences) == 0 {
 			persistentStorage.Status.Ready = true
 		}
-	} else if persistentStorage.Spec.State == dwsv1alpha3.PSIStateActive {
+	} else if persistentStorage.Spec.State == dwsv1alpha3.PSIStateEnabled {
 		// Wait for the NnfStorage to be ready before marking the persistent storage
-		// state as "active"
+		// as ready
 		nnfStorage := &nnfv1alpha3.NnfStorage{}
 		if err := r.Get(ctx, req.NamespacedName, nnfStorage); err != nil {
 			return ctrl.Result{}, client.IgnoreNotFound(err)

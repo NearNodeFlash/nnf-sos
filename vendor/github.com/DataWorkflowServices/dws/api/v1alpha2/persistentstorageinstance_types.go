@@ -38,18 +38,18 @@ const (
 // PersistentStorageInstanceState specifies the golang type for PSIState
 type PersistentStorageInstanceState string
 
-// Spec.State enumerations
+// State enumerations
 const (
+	// The PSI resource exists in k8s, but the storage and filesystem that it represents has not been created yet
+	PSIStateCreating PersistentStorageInstanceState = "Creating"
+
 	// The storage and filesystem represented by the PSI exists and is ready for use
 	PSIStateActive PersistentStorageInstanceState = "Active"
-
-	// The PersistentStorageInstance will not accept any new consumers
-	PSIStateDrain PersistentStorageInstanceState = "Drain"
 
 	// A #DW destroy_persistent directive has been issued in a workflow.
 	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be destroyed.
 	// New #DW persistent_dw requests after the PSI enters the 'destroying' state will fail.
-	PSIStateDestroy PersistentStorageInstanceState = "Destroy"
+	PSIStateDestroying PersistentStorageInstanceState = "Destroying"
 )
 
 // PersistentStorageInstanceSpec defines the desired state of PersistentStorageInstance
@@ -68,7 +68,7 @@ type PersistentStorageInstanceSpec struct {
 	UserID uint32 `json:"userID"`
 
 	// Desired state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum:=Active;Drain;Destroy
+	// +kubebuilder:validation:Enum:=Active;Destroying
 	State PersistentStorageInstanceState `json:"state"`
 
 	// List of consumers using this persistent storage
@@ -81,10 +81,8 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// Current state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum:=Active;Drain;Destroy
-	State PersistentStorageInstanceState `jsonn:"state"`
-
-	Ready bool `json:"ready"`
+	// +kubebuilder:validation:Enum:=Creating;Active;Destroying
+	State PersistentStorageInstanceState `json:"state"`
 
 	// Error information
 	ResourceError `json:",inline"`
