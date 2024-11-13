@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -30,19 +30,21 @@ import (
 type NnfNodeECDataSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of NnfNodeECData. Edit nnfnodeecdata_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
 }
 
 // NnfNodeECDataStatus defines the observed state of NnfNodeECData
 type NnfNodeECDataStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	Data map[string]NnfNodeECPrivateData `json:"data,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+type NnfNodeECPrivateData map[string]string
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+// +kubebuilder:storageversion
 
 // NnfNodeECData is the Schema for the nnfnodeecdata API
 type NnfNodeECData struct {
@@ -53,7 +55,7 @@ type NnfNodeECData struct {
 	Status NnfNodeECDataStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+//+kubebuilder:object:root=true
 
 // NnfNodeECDataList contains a list of NnfNodeECData
 type NnfNodeECDataList struct {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,31 +20,92 @@
 package v1alpha4
 
 import (
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// NnfNodeSpec defines the desired state of NnfNode
+// NnfNodeSpec defines the desired state of NNF Node
 type NnfNodeSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of NnfNode. Edit nnfnode_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// The unique name for this NNF Node
+	Name string `json:"name,omitempty"`
+
+	// Pod name for this NNF Node
+	Pod string `json:"pod,omitempty"`
+
+	// State reflects the desired state of this NNF Node resource
+	// +kubebuilder:validation:Enum=Enable;Disable
+	State NnfResourceStateType `json:"state"`
 }
 
-// NnfNodeStatus defines the observed state of NnfNode
+// NnfNodeStatus defines the observed status of NNF Node
 type NnfNodeStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Status reflects the current status of the NNF Node
+	Status NnfResourceStatusType `json:"status,omitempty"`
+
+	Health NnfResourceHealthType `json:"health,omitempty"`
+
+	// Fenced is true when the NNF Node is fenced by the STONITH agent, and false otherwise.
+	Fenced bool `json:"fenced,omitempty"`
+
+	// LNetNid is the LNet address for the NNF node
+	LNetNid string `json:"lnetNid,omitempty"`
+
+	Capacity          int64 `json:"capacity,omitempty"`
+	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
+
+	Servers []NnfServerStatus `json:"servers,omitempty"`
+
+	Drives []NnfDriveStatus `json:"drives,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+// NnfServerStatus defines the observed status of servers connected to this NNF Node
+type NnfServerStatus struct {
+	Hostname string `json:"hostname,omitempty"`
 
-// NnfNode is the Schema for the nnfnodes API
+	NnfResourceStatus `json:",inline"`
+}
+
+// NnfDriveStatus defines the observe status of drives connected to this NNF Node
+type NnfDriveStatus struct {
+	// Model is the manufacturer information about the device
+	Model string `json:"model,omitempty"`
+
+	// The serial number for this storage controller.
+	SerialNumber string `json:"serialNumber,omitempty"`
+
+	// The firmware version of this storage controller.
+	FirmwareVersion string `json:"firmwareVersion,omitempty"`
+
+	// Physical slot location of the storage controller.
+	Slot string `json:"slot,omitempty"`
+
+	// Capacity in bytes of the device. The full capacity may not
+	// be usable depending on what the storage driver can provide.
+	Capacity int64 `json:"capacity,omitempty"`
+
+	// WearLevel in percent for SSDs
+	WearLevel int64 `json:"wearLevel,omitempty"`
+
+	NnfResourceStatus `json:",inline"`
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+// +kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".spec.state",description="Current desired state"
+//+kubebuilder:printcolumn:name="HEALTH",type="string",JSONPath=".status.health",description="Health of node"
+//+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Current status of node"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="POD",type="string",JSONPath=".spec.pod",description="Parent pod name",priority=1
+
+// NnfNode is the Schema for the NnfNode API
 type NnfNode struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,9 +114,13 @@ type NnfNode struct {
 	Status NnfNodeStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+func (n *NnfNode) GetStatus() updater.Status[*NnfNodeStatus] {
+	return &n.Status
+}
 
-// NnfNodeList contains a list of NnfNode
+//+kubebuilder:object:root=true
+
+// NnfNodeList contains a list of NNF Nodes
 type NnfNodeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
