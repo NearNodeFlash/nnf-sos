@@ -36,7 +36,7 @@ import (
 	"github.com/go-logr/logr"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
+	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 )
 
 // NnfPortManagerReconciler reconciles a NnfPortManager object
@@ -46,8 +46,8 @@ type NnfPortManagerReconciler struct {
 }
 
 // type aliases for name shortening
-type AllocationSpec = nnfv1alpha3.NnfPortManagerAllocationSpec
-type AllocationStatus = nnfv1alpha3.NnfPortManagerAllocationStatus
+type AllocationSpec = nnfv1alpha4.NnfPortManagerAllocationSpec
+type AllocationStatus = nnfv1alpha4.NnfPortManagerAllocationStatus
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfportmanagers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfportmanagers/status,verbs=get;update;patch
@@ -65,13 +65,13 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log := log.FromContext(ctx)
 	unsatisfiedRequests := 0
 
-	mgr := &nnfv1alpha3.NnfPortManager{}
+	mgr := &nnfv1alpha4.NnfPortManager{}
 	if err := r.Get(ctx, req.NamespacedName, mgr); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// Create a resource status updater to ensure the status subresource is updated.
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha3.NnfPortManagerStatus](mgr)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha4.NnfPortManagerStatus](mgr)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Read in the system configuration which contains the available ports.
@@ -82,14 +82,14 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		},
 	}
 
-	mgr.Status.Status = nnfv1alpha3.NnfPortManagerStatusReady
+	mgr.Status.Status = nnfv1alpha4.NnfPortManagerStatusReady
 	if err := r.Get(ctx, client.ObjectKeyFromObject(config), config); err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 
 		log.Info("System Configuration not found", "config", client.ObjectKeyFromObject(config).String())
-		mgr.Status.Status = nnfv1alpha3.NnfPortManagerStatusSystemConfigurationNotFound
+		mgr.Status.Status = nnfv1alpha4.NnfPortManagerStatusSystemConfigurationNotFound
 		res = ctrl.Result{Requeue: true} // Force a requeue - we want the manager to go ready even if there are zero allocations
 	}
 
@@ -100,18 +100,18 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// allocating the desired ports.
 	for _, spec := range mgr.Spec.Allocations {
 		var ports []uint16
-		var status nnfv1alpha3.NnfPortManagerAllocationStatusStatus
-		var allocationStatus *nnfv1alpha3.NnfPortManagerAllocationStatus
+		var status nnfv1alpha4.NnfPortManagerAllocationStatusStatus
+		var allocationStatus *nnfv1alpha4.NnfPortManagerAllocationStatus
 
 		// If the specification is already included in the allocations and InUse, continue
 		allocationStatus = r.findAllocationStatus(mgr, spec)
-		if allocationStatus != nil && allocationStatus.Status == nnfv1alpha3.NnfPortManagerAllocationStatusInUse {
+		if allocationStatus != nil && allocationStatus.Status == nnfv1alpha4.NnfPortManagerAllocationStatusInUse {
 			continue
 		}
 
 		// Determine if the port manager is ready and find a free port
-		if mgr.Status.Status != nnfv1alpha3.NnfPortManagerStatusReady {
-			ports, status = nil, nnfv1alpha3.NnfPortManagerAllocationStatusInvalidConfiguration
+		if mgr.Status.Status != nnfv1alpha4.NnfPortManagerStatusReady {
+			ports, status = nil, nnfv1alpha4.NnfPortManagerAllocationStatusInvalidConfiguration
 		} else {
 			ports, status = r.findFreePorts(log, mgr, config, spec)
 		}
@@ -119,7 +119,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Info("Allocation", "requester", spec.Requester, "count", spec.Count, "ports", ports, "status", status)
 
 		// Port could not be allocated - try again next time
-		if status != nnfv1alpha3.NnfPortManagerAllocationStatusInUse {
+		if status != nnfv1alpha4.NnfPortManagerAllocationStatusInUse {
 			unsatisfiedRequests++
 			log.Info("Allocation unsatisfied", "requester", spec.Requester, "count", spec.Count, "ports", ports, "status", status)
 		}
@@ -135,7 +135,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			spec.Requester.DeepCopyInto(allocationStatus.Requester)
 
 			if mgr.Status.Allocations == nil {
-				mgr.Status.Allocations = make([]nnfv1alpha3.NnfPortManagerAllocationStatus, 0)
+				mgr.Status.Allocations = make([]nnfv1alpha4.NnfPortManagerAllocationStatus, 0)
 			}
 
 			mgr.Status.Allocations = append(mgr.Status.Allocations, allocationStatus)
@@ -158,8 +158,8 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 // isAllocationNeeded returns true if the provided Port Allocation Status has a matching value
 // requester in the specification, and false otherwise.
-func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha3.NnfPortManager, status *AllocationStatus) bool {
-	if status.Status != nnfv1alpha3.NnfPortManagerAllocationStatusInUse && status.Status != nnfv1alpha3.NnfPortManagerAllocationStatusInsufficientResources {
+func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha4.NnfPortManager, status *AllocationStatus) bool {
+	if status.Status != nnfv1alpha4.NnfPortManagerAllocationStatusInUse && status.Status != nnfv1alpha4.NnfPortManagerAllocationStatusInsufficientResources {
 		return false
 	}
 
@@ -176,7 +176,7 @@ func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha3.NnfPortMa
 	return false
 }
 
-func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr *nnfv1alpha3.NnfPortManager, cooldown int) {
+func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr *nnfv1alpha4.NnfPortManager, cooldown int) {
 
 	// Free unused allocations. This will check if the Status.Allocations exist in
 	// the list of desired allocations in the Spec field and mark any unused allocations
@@ -193,7 +193,7 @@ func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr
 			if cooldown == 0 {
 				allocsToRemove = append(allocsToRemove, idx)
 				log.Info("Allocation unused - removing", "requester", status.Requester, "status", status.Status)
-			} else if status.Status == nnfv1alpha3.NnfPortManagerAllocationStatusCooldown {
+			} else if status.Status == nnfv1alpha4.NnfPortManagerAllocationStatusCooldown {
 				period := now.Sub(status.TimeUnallocated.Time)
 				log.Info("Allocation unused - checking cooldown", "requester", status.Requester, "status", status.Status, "period", period, "time", status.TimeUnallocated.String())
 				if period >= time.Duration(cooldown)*time.Second {
@@ -202,7 +202,7 @@ func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr
 				}
 			} else if status.TimeUnallocated == nil {
 				status.TimeUnallocated = &now
-				status.Status = nnfv1alpha3.NnfPortManagerAllocationStatusCooldown
+				status.Status = nnfv1alpha4.NnfPortManagerAllocationStatusCooldown
 				log.Info("Allocation unused -- cooldown set", "requester", status.Requester, "status", status.Status)
 			}
 		}
@@ -214,7 +214,7 @@ func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr
 	}
 }
 
-func (r *NnfPortManagerReconciler) findAllocationStatus(mgr *nnfv1alpha3.NnfPortManager, spec AllocationSpec) *AllocationStatus {
+func (r *NnfPortManagerReconciler) findAllocationStatus(mgr *nnfv1alpha4.NnfPortManager, spec AllocationSpec) *AllocationStatus {
 	for idx := range mgr.Status.Allocations {
 		status := &mgr.Status.Allocations[idx]
 		if status.Requester == nil {
@@ -231,17 +231,17 @@ func (r *NnfPortManagerReconciler) findAllocationStatus(mgr *nnfv1alpha3.NnfPort
 
 // isAllocated returns true if the provided specification is in the Port Manager's allocation
 // status', and false otherwise.
-func (r *NnfPortManagerReconciler) isAllocated(mgr *nnfv1alpha3.NnfPortManager, spec AllocationSpec) bool {
+func (r *NnfPortManagerReconciler) isAllocated(mgr *nnfv1alpha4.NnfPortManager, spec AllocationSpec) bool {
 	return r.findAllocationStatus(mgr, spec) != nil
 }
 
 // Find free ports to satisfy the provided specification.
-func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alpha3.NnfPortManager, config *dwsv1alpha2.SystemConfiguration, spec AllocationSpec) ([]uint16, nnfv1alpha3.NnfPortManagerAllocationStatusStatus) {
+func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alpha4.NnfPortManager, config *dwsv1alpha2.SystemConfiguration, spec AllocationSpec) ([]uint16, nnfv1alpha4.NnfPortManagerAllocationStatusStatus) {
 
 	portsInUse := make([]uint16, 0)
 	for _, status := range mgr.Status.Allocations {
-		if status.Status == nnfv1alpha3.NnfPortManagerAllocationStatusInUse ||
-			status.Status == nnfv1alpha3.NnfPortManagerAllocationStatusCooldown {
+		if status.Status == nnfv1alpha4.NnfPortManagerAllocationStatusInUse ||
+			status.Status == nnfv1alpha4.NnfPortManagerAllocationStatusCooldown {
 			portsInUse = append(portsInUse, status.Ports...)
 		}
 	}
@@ -276,7 +276,7 @@ func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alph
 
 	if len(ports) >= count {
 		log.Info("Ports claimed from system configuration", "ports", ports)
-		return ports[:count], nnfv1alpha3.NnfPortManagerAllocationStatusInUse
+		return ports[:count], nnfv1alpha4.NnfPortManagerAllocationStatusInUse
 	}
 
 	// If we still haven't found a sufficient number of free ports, free up unused allocations
@@ -293,7 +293,7 @@ func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alph
 		for idx := range mgr.Status.Allocations {
 			status := &mgr.Status.Allocations[idx]
 
-			if status.Status == nnfv1alpha3.NnfPortManagerAllocationStatusFree {
+			if status.Status == nnfv1alpha4.NnfPortManagerAllocationStatusFree {
 				log.Info("Ports claimed from free list", "ports", status.Ports)
 
 				// Append this values ports to the returned ports. We could over-allocate here, but
@@ -314,18 +314,18 @@ func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alph
 	for len(ports) < count {
 		switch claimPortsFromFreeAllocation() {
 		case exhausted:
-			return []uint16{}, nnfv1alpha3.NnfPortManagerAllocationStatusInsufficientResources
+			return []uint16{}, nnfv1alpha4.NnfPortManagerAllocationStatusInsufficientResources
 		case more:
 			// loop again if needed
 		}
 	}
 
-	return ports[:count], nnfv1alpha3.NnfPortManagerAllocationStatusInUse
+	return ports[:count], nnfv1alpha4.NnfPortManagerAllocationStatusInUse
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfPortManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nnfv1alpha3.NnfPortManager{}).
+		For(&nnfv1alpha4.NnfPortManager{}).
 		Complete(r)
 }
