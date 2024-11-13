@@ -1274,7 +1274,7 @@ func (r *NnfWorkflowReconciler) addPersistentStorageReference(ctx context.Contex
 	}
 
 	if persistentStorage.Status.State != dwsv1alpha3.PSIStateEnabled || persistentStorage.Status.Ready != true {
-		return dwsv1alpha2.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal().WithUser()
+		return dwsv1alpha3.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal().WithUser()
 	}
 
 	// Add a consumer reference to the persistent storage for this directive

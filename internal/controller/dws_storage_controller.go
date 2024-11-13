@@ -118,7 +118,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
 		if apierrors.IsNotFound(err) {
-			storage.Status.Status = dwsv1alpha2.NotPresentStatus
+			storage.Status.Status = dwsv1alpha3.NotPresentStatus
 			return ctrl.Result{}, nil
 		}
 

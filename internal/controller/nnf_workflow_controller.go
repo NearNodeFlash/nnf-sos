@@ -440,22 +440,22 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
+				return nil, dwsv1alpha3.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
 			}
 
 			return nil, nil
 		}
 
 		if persistentStorage.Spec.UserID != workflow.Spec.UserID {
-			return nil, dwsv1alpha2.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
+			return nil, dwsv1alpha3.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
 		}
 
-		if persistentStorage.Spec.State != dwsv1alpha2.PSIStateDisabled {
-			persistentStorage.Spec.State = dwsv1alpha2.PSIStateDisabled
+		if persistentStorage.Spec.State != dwsv1alpha3.PSIStateDisabled {
+			persistentStorage.Spec.State = dwsv1alpha3.PSIStateDisabled
 
 			err = r.Update(ctx, persistentStorage)
 			if err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+				return nil, dwsv1alpha3.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
 			}
 		}
 	}
@@ -473,13 +473,13 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				return nil, dwsv1alpha2.NewResourceError("").WithError(err).WithFatal().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
+				return nil, dwsv1alpha3.NewResourceError("").WithError(err).WithFatal().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
 			}
 
 			return nil, nil
 		}
 
-		if persistentStorage.Status.State != dwsv1alpha2.PSIStateDisabled || persistentStorage.Status.Ready == false {
+		if persistentStorage.Status.State != dwsv1alpha3.PSIStateDisabled || persistentStorage.Status.Ready == false {
 			return Requeue("draining persistent storage").withObject(persistentStorage), nil
 		}
 	default:
@@ -1221,7 +1221,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return Requeue("persistent storage owner add").after(2 * time.Second).withObject(persistentStorage), nil
 		}
 
-		if persistentStorage.Status.State != dwsv1alpha2.PSIStateDisabled || persistentStorage.Status.Ready != true {
+		if persistentStorage.Status.State != dwsv1alpha3.PSIStateDisabled || persistentStorage.Status.Ready != true {
 			return Requeue("persistent storage ready disabled").after(2 * time.Second).withObject(persistentStorage), nil
 		}
 	case "persistentdw":
