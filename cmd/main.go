@@ -57,6 +57,7 @@ import (
 	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 
+	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 	//+kubebuilder:scaffold:imports
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
@@ -82,6 +83,7 @@ func init() {
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha3.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha4.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
