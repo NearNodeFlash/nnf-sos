@@ -26,7 +26,7 @@ package v1alpha2
 import (
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 

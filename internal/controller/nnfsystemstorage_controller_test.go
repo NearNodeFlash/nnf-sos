@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 )
 
@@ -45,7 +45,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 	nnfNodes := [2]*nnfv1alpha4.NnfNode{}
 	nodes := [2]*corev1.Node{}
 
-	var systemConfiguration *dwsv1alpha2.SystemConfiguration
+	var systemConfiguration *dwsv1alpha3.SystemConfiguration
 	var storageProfile *nnfv1alpha4.NnfStorageProfile
 	var setup sync.Once
 
@@ -57,18 +57,18 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 			}
 		})
 
-		systemConfiguration = &dwsv1alpha2.SystemConfiguration{
+		systemConfiguration = &dwsv1alpha3.SystemConfiguration{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha3.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha3.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: nodeNames[0],
-						ComputesAccess: []dwsv1alpha2.SystemConfigurationComputeNodeReference{
+						ComputesAccess: []dwsv1alpha3.SystemConfigurationComputeNodeReference{
 							{
 								Name:  "0-0",
 								Index: 0,
@@ -138,7 +138,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					{
 						Type: "Rabbit",
 						Name: nodeNames[1],
-						ComputesAccess: []dwsv1alpha2.SystemConfigurationComputeNodeReference{
+						ComputesAccess: []dwsv1alpha3.SystemConfigurationComputeNodeReference{
 							{
 								Name:  "1-0",
 								Index: 0,
@@ -249,7 +249,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return k8sClient.Update(context.TODO(), nnfNodes[i])
 			}).Should(Succeed(), "set LNet Nid in NnfNode")
 
-			storage := &dwsv1alpha2.Storage{
+			storage := &dwsv1alpha3.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
@@ -287,7 +287,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		}
 
 		Expect(k8sClient.Delete(context.TODO(), systemConfiguration)).To(Succeed())
-		tempConfig := &dwsv1alpha2.SystemConfiguration{}
+		tempConfig := &dwsv1alpha3.SystemConfiguration{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(systemConfiguration), tempConfig)
 		}).ShouldNot(Succeed())
@@ -320,7 +320,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
 
-			servers := &dwsv1alpha2.Servers{
+			servers := &dwsv1alpha3.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -333,7 +333,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 			Expect(servers.Spec.AllocationSets).To(HaveLen(1))
 			Expect(servers.Spec.AllocationSets[0].Storage).To(HaveLen(2))
 
-			computes := &dwsv1alpha2.Computes{
+			computes := &dwsv1alpha3.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -379,7 +379,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
 
-			servers := &dwsv1alpha2.Servers{
+			servers := &dwsv1alpha3.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -392,7 +392,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 			Expect(servers.Spec.AllocationSets).To(HaveLen(1))
 			Expect(servers.Spec.AllocationSets[0].Storage).To(HaveLen(2))
 
-			computes := &dwsv1alpha2.Computes{
+			computes := &dwsv1alpha3.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -439,7 +439,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
 
-			servers := &dwsv1alpha2.Servers{
+			servers := &dwsv1alpha3.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -452,7 +452,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 			Expect(servers.Spec.AllocationSets).To(HaveLen(1))
 			Expect(servers.Spec.AllocationSets[0].Storage).To(HaveLen(2))
 
-			computes := &dwsv1alpha2.Computes{
+			computes := &dwsv1alpha3.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -500,7 +500,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
 
-			servers := &dwsv1alpha2.Servers{
+			servers := &dwsv1alpha3.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),
@@ -517,7 +517,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				"AllocationCount": Equal(1),
 			}))
 
-			computes := &dwsv1alpha2.Computes{
+			computes := &dwsv1alpha3.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfSystemStorage.GetName(),
 					Namespace: nnfSystemStorage.GetNamespace(),

@@ -23,31 +23,31 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 )
 
 var _ = Describe("Clientmount Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for Servers ", func() {
-		s := dwsv1alpha2.Servers{
-			Status: dwsv1alpha2.ServersStatus{
-				AllocationSets: []dwsv1alpha2.ServersStatusAllocationSet{
-					{Label: "ost", Storage: map[string]dwsv1alpha2.ServersStatusStorage{
-						"rabbit-node-1": dwsv1alpha2.ServersStatusStorage{
+		s := dwsv1alpha3.Servers{
+			Status: dwsv1alpha3.ServersStatus{
+				AllocationSets: []dwsv1alpha3.ServersStatusAllocationSet{
+					{Label: "ost", Storage: map[string]dwsv1alpha3.ServersStatusStorage{
+						"rabbit-node-1": dwsv1alpha3.ServersStatusStorage{
 							AllocationSize: 123345,
 						},
-						"rabbit-node-2": dwsv1alpha2.ServersStatusStorage{
+						"rabbit-node-2": dwsv1alpha3.ServersStatusStorage{
 							AllocationSize: 123345,
 						},
 					}},
-					{Label: "mdt", Storage: map[string]dwsv1alpha2.ServersStatusStorage{
-						"rabbit-node-3": dwsv1alpha2.ServersStatusStorage{
+					{Label: "mdt", Storage: map[string]dwsv1alpha3.ServersStatusStorage{
+						"rabbit-node-3": dwsv1alpha3.ServersStatusStorage{
 							AllocationSize: 123345,
 						},
-						"rabbit-node-4": dwsv1alpha2.ServersStatusStorage{
+						"rabbit-node-4": dwsv1alpha3.ServersStatusStorage{
 							AllocationSize: 123345,
 						},
-						"rabbit-node-8": dwsv1alpha2.ServersStatusStorage{
+						"rabbit-node-8": dwsv1alpha3.ServersStatusStorage{
 							AllocationSize: 123345,
 						},
 					}},
