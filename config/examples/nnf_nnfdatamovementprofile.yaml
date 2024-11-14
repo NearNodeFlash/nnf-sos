@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfDataMovementProfile
 metadata:
   name: template
