@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -34,10 +34,10 @@ import (
 )
 
 type SimpleFileSystemCommandArgs struct {
-	Mkfs          string
-	Mount         string
-	PostActivate  []string
-	PreDeactivate []string
+	Mkfs       string
+	Mount      string
+	PostMount  []string
+	PreUnmount []string
 
 	Vars map[string]string
 }
@@ -198,8 +198,8 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	return false, nil
 }
 
-func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
-	if len(f.CommandArgs.PostActivate) == 0 {
+func (f *SimpleFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if len(f.CommandArgs.PostMount) == 0 {
 		return false, nil
 	}
 
@@ -212,7 +212,7 @@ func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (boo
 	}
 
 	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
-		return false, fmt.Errorf("could not mount temp dir '%s': %w", f.TempDir, err)
+		return false, fmt.Errorf("could not mount temp dir '%s' for post mount: %w", f.TempDir, err)
 	}
 
 	// Build the commands from the args provided
@@ -221,9 +221,9 @@ func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (boo
 	}
 	f.CommandArgs.Vars["$MOUNT_PATH"] = f.TempDir
 
-	for _, rawCommand := range f.CommandArgs.PostActivate {
+	for _, rawCommand := range f.CommandArgs.PostMount {
 		formattedCommand := f.parseArgs(rawCommand)
-		f.Log.Info("PostActivate", "command", formattedCommand)
+		f.Log.Info("PostMount", "command", formattedCommand)
 
 		if _, err := command.Run(formattedCommand, f.Log); err != nil {
 			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
@@ -237,11 +237,11 @@ func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (boo
 		return false, fmt.Errorf("could not unmount after post activate '%s': %w", f.TempDir, err)
 	}
 
-	return false, nil
+	return true, nil
 }
 
-func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
-	if len(f.CommandArgs.PreDeactivate) == 0 {
+func (f *SimpleFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+	if len(f.CommandArgs.PreUnmount) == 0 {
 		return false, nil
 	}
 
@@ -250,7 +250,7 @@ func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 	}
 
 	if _, err := f.Mount(ctx, f.TempDir, false); err != nil {
-		return false, fmt.Errorf("could not mount temp dir '%s': %w", f.TempDir, err)
+		return false, fmt.Errorf("could not mount temp dir '%s' for pre unmount: %w", f.TempDir, err)
 	}
 
 	// Build the commands from the args provided
@@ -259,21 +259,31 @@ func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 	}
 	f.CommandArgs.Vars["$MOUNT_PATH"] = f.TempDir
 
-	for _, rawCommand := range f.CommandArgs.PreDeactivate {
+	for _, rawCommand := range f.CommandArgs.PreUnmount {
 		formattedCommand := f.parseArgs(rawCommand)
-		f.Log.Info("PreDeactivate", "command", formattedCommand)
+		f.Log.Info("PreUnmount", "command", formattedCommand)
 
 		if _, err := command.Run(formattedCommand, f.Log); err != nil {
 			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
-				return false, fmt.Errorf("could not unmount after pre-deactivate command failed: %s: %w", formattedCommand, unmountErr)
+				return false, fmt.Errorf("could not unmount after pre-unmount command failed: %s: %w", formattedCommand, unmountErr)
 			}
-			return false, fmt.Errorf("could not run pre-deactivate command: %s: %w", formattedCommand, err)
+			return false, fmt.Errorf("could not run pre-unmount command: %s: %w", formattedCommand, err)
 		}
 	}
 
 	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
-		return false, fmt.Errorf("could not unmount after pre-deactivate '%s': %w", f.TempDir, err)
+		return false, fmt.Errorf("could not unmount after pre-unmount'%s': %w", f.TempDir, err)
 	}
 
+	return true, nil
+}
+
+// PostActivate is not supported for simple filesystems
+func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	return false, nil
+}
+
+// PreDeactivate is not supported for simple filesystems
+func (f *SimpleFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 	return false, nil
 }

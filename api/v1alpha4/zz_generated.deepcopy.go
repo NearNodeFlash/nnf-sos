@@ -1646,13 +1646,13 @@ func (in *NnfStorageProfileCmdLines) DeepCopyInto(out *NnfStorageProfileCmdLines
 	*out = *in
 	out.VgChange = in.VgChange
 	out.LvChange = in.LvChange
-	if in.PostActivate != nil {
-		in, out := &in.PostActivate, &out.PostActivate
+	if in.PostMount != nil {
+		in, out := &in.PostMount, &out.PostMount
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.PreDeactivate != nil {
-		in, out := &in.PreDeactivate, &out.PreDeactivate
+	if in.PreUnmount != nil {
+		in, out := &in.PreUnmount, &out.PreUnmount
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
@@ -1775,6 +1775,16 @@ func (in *NnfStorageProfileLustreCmdLines) DeepCopyInto(out *NnfStorageProfileLu
 	*out = *in
 	if in.PostActivate != nil {
 		in, out := &in.PostActivate, &out.PostActivate
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.PostMount != nil {
+		in, out := &in.PostMount, &out.PostMount
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.PreUnmount != nil {
+		in, out := &in.PreUnmount, &out.PreUnmount
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

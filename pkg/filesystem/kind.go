@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -39,7 +39,7 @@ type KindFileSystem struct {
 var _ FileSystem = &KindFileSystem{}
 
 func (m *KindFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -60,7 +60,7 @@ func (m *KindFileSystem) Destroy(ctx context.Context) (bool, error) {
 }
 
 func (m *KindFileSystem) Activate(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -74,7 +74,7 @@ func (m *KindFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (m *KindFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -95,7 +95,7 @@ func (m *KindFileSystem) Unmount(ctx context.Context, path string) (bool, error)
 }
 
 func (m *KindFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -106,6 +106,22 @@ func (m *KindFileSystem) PostActivate(ctx context.Context, complete bool) (bool,
 
 func (m *KindFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 	m.Log.Info("Ran PreDeactivate")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+	m.Log.Info("Ran PreUnmount")
 
 	return true, nil
 }

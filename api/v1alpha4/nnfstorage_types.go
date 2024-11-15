@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	AllocationSetLabel = "nnf.cray.hpe.com/allocationset"
+	AllocationSetLabel     = "nnf.cray.hpe.com/allocationset"
+	AllocationSetOST0Label = "nnf.cray.hpe.com/allocationset_ost0"
 )
 
 // NnfStorageAllocationNodes identifies the node and properties of the allocation to make on that node

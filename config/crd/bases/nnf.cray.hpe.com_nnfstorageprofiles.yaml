@@ -1923,17 +1923,17 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
-                      postActivate:
+                      postMount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit after the
-                          file system has been activated
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
                         items:
                           type: string
                         type: array
-                      preDeactivate:
+                      preUnmount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
                         items:
                           type: string
                         type: array
@@ -2041,10 +2041,26 @@ spec:
                         items:
                           type: string
                         type: array
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -2107,10 +2123,26 @@ spec:
                         items:
                           type: string
                         type: array
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -2144,10 +2176,26 @@ spec:
                         items:
                           type: string
                         type: array
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -2248,10 +2296,26 @@ spec:
                         items:
                           type: string
                         type: array
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -2348,17 +2412,17 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
-                      postActivate:
+                      postMount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit after the
-                          file system has been activated
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
                         items:
                           type: string
                         type: array
-                      preDeactivate:
+                      preUnmount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
                         items:
                           type: string
                         type: array
@@ -2451,17 +2515,17 @@ spec:
                         description: MountRabbit specifies mount options for mounting
                           on the Rabbit.
                         type: string
-                      postActivate:
+                      postMount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit after the
-                          file system has been activated
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
                         items:
                           type: string
                         type: array
-                      preDeactivate:
+                      preUnmount:
                         description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
                         items:
                           type: string
                         type: array

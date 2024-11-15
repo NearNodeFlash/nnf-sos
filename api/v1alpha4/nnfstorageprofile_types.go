@@ -46,6 +46,16 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target has been activated
 	PostActivate []string `json:"postActivate,omitempty"`
 
+	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+	// it afterward.
+	PostMount []string `json:"postMount,omitempty"`
+
+	// PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+	// unmounting it afterward.
+	PreUnmount []string `json:"preUnmount,omitempty"`
+
 	// PreDeactivate specifies a list of commands to run on the Rabbit before the
 	// Lustre target is deactivated
 	PreDeactivate []string `json:"preDeactivate,omitempty"`
@@ -178,16 +188,16 @@ type NnfStorageProfileCmdLines struct {
 	// MountRabbit specifies mount options for mounting on the Rabbit.
 	MountRabbit string `json:"mountRabbit,omitempty"`
 
-	// PreDeactivate specifies a list of commands to run on the Rabbit after the
-	// file system has been activated
-	PostActivate []string `json:"postActivate,omitempty"`
+	// PostMount specifies a list of commands to run on the Rabbit after the
+	// file system has been activated and mounted.
+	PostMount []string `json:"postMount,omitempty"`
 
 	// MountCompute specifies mount options for mounting on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
 
-	// PreDeactivate specifies a list of commands to run on the Rabbit before the
-	// file system is deactivated
-	PreDeactivate []string `json:"preDeactivate,omitempty"`
+	// PreUnmount specifies a list of commands to run on the Rabbit before the
+	// file system is deactivated and unmounted.
+	PreUnmount []string `json:"preUnmount,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines

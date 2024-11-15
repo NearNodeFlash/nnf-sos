@@ -2683,9 +2683,9 @@ func autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha2_NnfStorageProfil
 	}
 	out.LvRemove = in.LvRemove
 	out.MountRabbit = in.MountRabbit
-	// WARNING: in.PostActivate requires manual conversion: does not exist in peer-type
+	// WARNING: in.PostMount requires manual conversion: does not exist in peer-type
 	out.MountCompute = in.MountCompute
-	// WARNING: in.PreDeactivate requires manual conversion: does not exist in peer-type
+	// WARNING: in.PreUnmount requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -2866,6 +2866,8 @@ func autoConvert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha2_NnfStorage
 	out.Mkfs = in.Mkfs
 	out.MountTarget = in.MountTarget
 	// WARNING: in.PostActivate requires manual conversion: does not exist in peer-type
+	// WARNING: in.PostMount requires manual conversion: does not exist in peer-type
+	// WARNING: in.PreUnmount requires manual conversion: does not exist in peer-type
 	// WARNING: in.PreDeactivate requires manual conversion: does not exist in peer-type
 	return nil
 }

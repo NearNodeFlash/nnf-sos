@@ -94,7 +94,10 @@ var _ = Describe("Integration Test", func() {
 					},
 				}
 
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage)).To(Succeed())
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage)
+				}).Should(Succeed())
+
 				By("Verify that the NnfNodeStorage has a label for the pinned profile")
 				_, err := getPinnedStorageProfileFromLabel(context.TODO(), k8sClient, nnfNodeStorage)
 				Expect(err).ShouldNot(HaveOccurred())

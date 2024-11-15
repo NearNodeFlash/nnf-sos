@@ -49,8 +49,6 @@ const (
 	// prevents the system from deleting the custom resource until the
 	// reconciler has finished using the resource.
 	finalizerNnfNodeStorage = "nnf.cray.hpe.com/nnf_node_storage"
-
-	nnfNodeStorageResourceName = "nnf-node-storage"
 )
 
 // NnfNodeStorageReconciler contains the elements needed during reconciliation for NnfNodeStorage
@@ -216,7 +214,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	for _, allocation := range nnfNodeStorage.Status.Allocations {
-		if allocation.Ready == false {
+		if !allocation.Ready {
 			nnfNodeStorage.Status.Ready = false
 
 			return ctrl.Result{Requeue: true}, nil
@@ -257,6 +255,17 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		}
 		if ran {
 			log.Info("Activated file system", "allocation", index)
+		}
+
+		lustreOST0 := nnfNodeStorage.Spec.FileSystemType == "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType == "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex == 0
+		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
+			ran, err = fileSystem.PreUnmount(ctx)
+			if err != nil {
+				return nil, dwsv1alpha2.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
+			}
+			if ran {
+				log.Info("Pre unmount file system", "allocation", index)
+			}
 		}
 
 		ran, err = fileSystem.PreDeactivate(ctx)
@@ -361,6 +370,19 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 		}
 		if ran {
 			log.Info("Post activate file system", "allocation", index)
+		}
+
+		// For lustre, PostMount should only happen on OST0 only. For other file systems, just run
+		// PostMount
+		lustreOST0 := nnfNodeStorage.Spec.FileSystemType == "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType == "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex == 0
+		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
+			ran, err = fileSystem.PostMount(ctx, allocationStatus.Ready)
+			if err != nil {
+				return nil, dwsv1alpha2.NewResourceError("could not run post mount").WithError(err).WithMajor()
+			}
+			if ran {
+				log.Info("Post mount file system", "allocation", index)
+			}
 		}
 
 		allocationStatus.Ready = true
