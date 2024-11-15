@@ -1093,25 +1093,27 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	}
 
 	// Check whether the clientmounts have finished mounting/unmounting
+	count := 0
 	for _, clientMount := range clientMounts {
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
 		}
 
 		for _, mount := range clientMount.Status.Mounts {
+			count++
 			if string(mount.State) != access.Status.State {
 				return false, nil
 			}
 
-			if mount.Ready == false {
+			if !mount.Ready {
 				return false, nil
 			}
 		}
 	}
 
-	if len(clientMounts) != len(clientList) {
+	if count != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+			log.Info("unexpected number of ClientMounts", "found", count, "expected", len(clientList))
 		}
 		return false, nil
 	}

@@ -63,10 +63,6 @@ const (
 	// has finished in using the resource.
 	finalizerNnfStorage = "nnf.cray.hpe.com/nnf_storage"
 
-	// ownerAnnotation is a name/namespace pair used on the NnfNodeStorage resources
-	// for owner information. See nnfNodeStorageMapFunc() below.
-	ownerAnnotation = "nnf.cray.hpe.com/owner"
-
 	// Minimum size of lustre allocation sizes. If a user requests less than this, then the capacity
 	// is set to this value.
 	minimumLustreAllocationSizeInBytes = 4000000000
@@ -218,7 +214,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Spec.AllocationSets {
-		res, err := r.aggregateNodeStorageStatus(ctx, storage, i, false)
+		res, err := r.aggregateNodeStorageStatus(ctx, storage, i, false, false)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -234,12 +230,12 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Wait for all the allocation sets to be ready
 	for _, allocationSet := range storage.Status.AllocationSets {
-		if allocationSet.Ready == false {
+		if !allocationSet.Ready {
 			return ctrl.Result{}, nil
 		}
 	}
 
-	if storage.Spec.FileSystemType == "lustre" && storage.Status.Ready == false {
+	if storage.Spec.FileSystemType == "lustre" && !storage.Status.Ready {
 		res, err := r.setLustreOwnerGroup(ctx, storage)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -470,7 +466,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	}
 
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
-		if nnfNodeBlockStorage.Status.Ready == false {
+		if !nnfNodeBlockStorage.Status.Ready {
 			return &ctrl.Result{}, nil
 		}
 	}
@@ -503,7 +499,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 				if allocationSet.TargetType == "mgt" || allocationSet.TargetType == "mgtmdt" {
 					// Wait for the MGT to be set up before creating nnfnodestorages for the other allocation sets
 					if allocationSetIndex != i {
-						if storage.Status.AllocationSets[i].Ready == false {
+						if !storage.Status.AllocationSets[i].Ready {
 							return nil, nil
 						}
 					}
@@ -573,6 +569,31 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 	}
 
 	allocationSet := storage.Spec.AllocationSets[allocationSetIndex]
+	lustreOST := storage.Spec.FileSystemType == "lustre" && allocationSet.TargetType == "ost"
+
+	// When creating lustre filesystems, we want to create Lustre OST0 last so we can signal to the
+	// NnfNodeStorage controller when it is OK to run PostMount commands. OST0 should be created
+	// last and only when all of the other NnfNodeStorage for each allocation sets is ready. Until
+	// those are ready, skip the creation of OST0.
+	skipOST0 := false
+	if lustreOST {
+		for i := range storage.Spec.AllocationSets {
+			res, err := r.aggregateNodeStorageStatus(ctx, storage, i, false, true)
+			if err != nil {
+				return &ctrl.Result{}, err
+			}
+
+			if res != nil {
+				if *res == (ctrl.Result{}) {
+					skipOST0 = true // not ready, skip OST0
+					continue
+				} else {
+					return res, nil
+				}
+			}
+		}
+	}
+
 	startIndex := 0
 	for i, node := range allocationSet.Nodes {
 		// Per Rabbit namespace.
@@ -583,6 +604,12 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 			},
 		}
 
+		// Do not create lustre OST0 until all other NnfNodeStorages are ready
+		if lustreOST && startIndex == 0 && skipOST0 {
+			startIndex += node.Count
+			continue
+		}
+
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeStorage,
 			func() error {
 				dwsv1alpha2.InheritParentLabels(nnfNodeStorage, storage)
@@ -590,6 +617,9 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 
 				labels := nnfNodeStorage.GetLabels()
 				labels[nnfv1alpha4.AllocationSetLabel] = allocationSet.Name
+				if lustreOST && startIndex == 0 {
+					labels[nnfv1alpha4.AllocationSetOST0Label] = "true"
+				}
 				nnfNodeStorage.SetLabels(labels)
 
 				nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{
@@ -641,9 +671,11 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 }
 
 // Get the status from all the child NnfNodeStorage resources and use them to build the status
-// for the NnfStorage.
-func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, storage *nnfv1alpha4.NnfStorage, allocationSetIndex int, deleting bool) (*ctrl.Result, error) {
+// for the NnfStorage. When skipOST0 is set, expect 1 less NnfNodeStorage resource when processing
+// allocationSets for Lustre OST.
+func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, storage *nnfv1alpha4.NnfStorage, allocationSetIndex int, deleting, skipOST0 bool) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: storage.Name, Namespace: storage.Namespace})
+	lustreOST := storage.Spec.FileSystemType == "lustre" && storage.Spec.AllocationSets[allocationSetIndex].TargetType == "ost"
 
 	nnfNodeStorageList := &nnfv1alpha4.NnfNodeStorageList{}
 	matchLabels := dwsv1alpha2.MatchingOwner(storage)
@@ -706,7 +738,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	}
 
 	for _, nnfNodeStorage := range nnfNodeStorages {
-		if nnfNodeStorage.Status.Ready == false {
+		if !nnfNodeStorage.Status.Ready {
 			return &ctrl.Result{}, nil
 		}
 	}
@@ -714,9 +746,18 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	// Ensure that we found all the NnfNodeStorage resources we were expecting. This can be expected
 	// transiently as it takes time for the client cache to be updated. Log a message in case the count
 	// never reaches the expected value.
-	if len(nnfNodeStorages) != len(storage.Spec.AllocationSets[allocationSetIndex].Nodes) {
+	found := len(nnfNodeStorages)
+	expected := len(storage.Spec.AllocationSets[allocationSetIndex].Nodes)
+
+	// In the Lustre OST0 case, the NnfNodeStorage has not been created yet, so we can safely expect
+	// 1 less than the total number of OSTs.
+	if lustreOST && skipOST0 {
+		expected = expected - 1
+	}
+
+	if found != expected {
 		if storage.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of NnfNodeStorages", "found", len(nnfNodeStorages), "expected", len(storage.Spec.AllocationSets[allocationSetIndex].Nodes))
+			log.Info("unexpected number of NnfNodeStorages", "found", found, "expected", expected)
 		}
 		return &ctrl.Result{}, nil
 	}
@@ -901,21 +942,16 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("zero length node array for OST").WithFatal()
 		}
 
-		tempMountDir := os.Getenv("NNF_TEMP_MOUNT_PATH")
-		if len(tempMountDir) == 0 {
-			tempMountDir = "/mnt/tmp/"
-		}
-
 		dwsv1alpha2.InheritParentLabels(clientMount, nnfStorage)
 		dwsv1alpha2.AddOwnerLabels(clientMount, nnfStorage)
 
 		clientMount.Spec.Node = allocationSet.Nodes[0].Name
 		clientMount.Spec.DesiredState = dwsv1alpha2.ClientMountStateMounted
 		clientMount.Spec.Mounts = []dwsv1alpha2.ClientMountInfo{
-			dwsv1alpha2.ClientMountInfo{
+			{
 				Type:       nnfStorage.Spec.FileSystemType,
 				TargetType: "directory",
-				MountPath:  fmt.Sprintf("/%s/%s", tempMountDir, nnfNodeStorageName(nnfStorage, index, 0)),
+				MountPath:  getTempClientMountDir(nnfStorage, index),
 				Device: dwsv1alpha2.ClientMountDevice{
 					Type: dwsv1alpha2.ClientMountDeviceTypeLustre,
 					Lustre: &dwsv1alpha2.ClientMountDeviceLustre{
@@ -955,7 +991,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 
 	switch clientMount.Status.Mounts[0].State {
 	case dwsv1alpha2.ClientMountStateMounted:
-		if clientMount.Status.Mounts[0].Ready == false {
+		if !clientMount.Status.Mounts[0].Ready {
 			return &ctrl.Result{}, nil
 		}
 
@@ -972,7 +1008,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 
 		return &ctrl.Result{}, nil
 	case dwsv1alpha2.ClientMountStateUnmounted:
-		if clientMount.Status.Mounts[0].Ready == false {
+		if !clientMount.Status.Mounts[0].Ready {
 			return &ctrl.Result{}, nil
 		}
 
@@ -981,6 +1017,18 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	return &ctrl.Result{}, nil
+}
+
+func getTempMountDir() string {
+	tempMountDir := os.Getenv("NNF_TEMP_MOUNT_PATH")
+	if len(tempMountDir) == 0 {
+		tempMountDir = "/mnt/tmp/"
+	}
+	return tempMountDir
+}
+
+func getTempClientMountDir(nnfStorage *nnfv1alpha4.NnfStorage, index int) string {
+	return fmt.Sprintf("/%s/%s", getTempMountDir(), nnfNodeStorageName(nnfStorage, index, 0))
 }
 
 // Get the status from all the child NnfNodeStorage resources and use them to build the status
@@ -1031,12 +1079,32 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 	}
 
 	if storage.Spec.FileSystemType == "lustre" {
-		// Delete the OSTs and MDTs first so we can drop the claim on the NnfLustreMgt resource. This will trigger
-		// an lctl command to run to remove the fsname from the MGT.
 		childObjects := []dwsv1alpha2.ObjectList{
 			&nnfv1alpha4.NnfNodeStorageList{},
 		}
 
+		// Delete OST0 first so that PreUnmount commands can happen
+		ost0DeleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha4.AllocationSetOST0Label: "true"})
+		if err != nil {
+			return nodeStoragesExist, err
+		}
+
+		// Collect status information from the NnfNodeStorage resources and aggregate it into the
+		// NnfStorage
+		for i := range storage.Status.AllocationSets {
+			_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
+			if err != nil {
+				return nodeStoragesExist, err
+			}
+		}
+
+		// Ensure OST0 is deleted before continuing
+		if !ost0DeleteStatus.Complete() {
+			return nodeStoragesExist, nil
+		}
+
+		// Then, delete the rest of the OSTs and MDTs so we can drop the claim on the NnfLustreMgt
+		// resource. This will trigger an lctl command to run to remove the fsname from the MGT.
 		ostDeleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha4.AllocationSetLabel: "ost"})
 		if err != nil {
 			return nodeStoragesExist, err
@@ -1050,7 +1118,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		// Collect status information from the NnfNodeStorage resources and aggregate it into the
 		// NnfStorage
 		for i := range storage.Status.AllocationSets {
-			_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true)
+			_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
 			if err != nil {
 				return nodeStoragesExist, err
 			}
@@ -1091,7 +1159,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 	// Collect status information from the NnfNodeStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Status.AllocationSets {
-		_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true)
+		_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1174,6 +1242,34 @@ func nnfNodeStorageName(storage *nnfv1alpha4.NnfStorage, allocationSetIndex int,
 	}
 
 	return storage.Namespace + "-" + storage.Name + "-" + storage.Spec.AllocationSets[allocationSetIndex].Name + "-" + strconv.Itoa(duplicateRabbitIndex)
+}
+
+// Get the NnfNodeStorage for Lustre OST0 for a given NnfStorage
+func (r *NnfStorageReconciler) getLustreOST0(ctx context.Context, storage *nnfv1alpha4.NnfStorage) (*nnfv1alpha4.NnfNodeStorage, error) {
+	if storage.Spec.FileSystemType != "lustre" {
+		return nil, nil
+	}
+
+	// Get al the NnfNodeStorages for the OSTs
+	nnfNodeStorageList := &nnfv1alpha4.NnfNodeStorageList{}
+	matchLabels := dwsv1alpha2.MatchingOwner(storage)
+	matchLabels[nnfv1alpha4.AllocationSetLabel] = "ost"
+
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+
+	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not list NnfNodeStorages").WithError(err)
+	}
+
+	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+		if nnfNodeStorage.Spec.LustreStorage.StartIndex == 0 {
+			return &nnfNodeStorage, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

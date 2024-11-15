@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -40,6 +40,8 @@ type LustreFileSystemCommandArgs struct {
 	Mount         string
 	PostActivate  []string
 	PreDeactivate []string
+	PostMount     []string
+	PreUnmount    []string
 
 	Vars map[string]string
 }
@@ -54,6 +56,7 @@ type LustreFileSystem struct {
 	MgsAddress string
 	Index      int
 	BackFs     string
+	TempDir    string
 
 	BlockDevice blockdevice.BlockDevice
 }
@@ -82,7 +85,7 @@ func (l *LustreFileSystem) parseArgs(args string) string {
 }
 
 func (l *LustreFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -212,8 +215,9 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 		}
 
 		// Found an existing mount at this path. Check if it's the mount we expect
-		if m.Type != "lustre" {
-			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
+		devStr := fmt.Sprintf("%s:/%s", l.MgsAddress, l.Name)
+		if m.Device != devStr || m.Type != "lustre" {
+			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
 
 		// The file system is already mounted. Nothing left to do
@@ -254,8 +258,9 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		}
 
 		// Found an existing mount at this path. Check if it's the mount we expect
-		if m.Device != fmt.Sprintf("%s:/%s", l.MgsAddress, l.Name) || m.Type != "lustre" {
-			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
+		devStr := fmt.Sprintf("%s:/%s", l.MgsAddress, l.Name)
+		if m.Device != devStr || m.Type != "lustre" {
+			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
 
 		if _, err := command.Run(fmt.Sprintf("umount %s", path), l.Log); err != nil {
@@ -311,5 +316,84 @@ func (l *LustreFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 		}
 	}
 
-	return false, nil
+	return true, nil
+}
+
+func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if len(l.CommandArgs.PostMount) == 0 {
+		return false, nil
+	}
+
+	if complete {
+		return false, nil
+	}
+
+	if l.TargetType == "none" {
+		return false, nil
+	}
+
+	if _, err := l.Mount(ctx, l.TempDir, false); err != nil {
+		return false, fmt.Errorf("could not mount temp dir '%s' for post mount: %w", l.TempDir, err)
+	}
+
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TempDir)
+
+	for _, rawCommand := range l.CommandArgs.PostMount {
+		formattedCommand := l.parseArgs(rawCommand)
+		l.Log.Info("PostMount", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			if _, unmountErr := l.Unmount(ctx, l.TempDir); unmountErr != nil {
+				return false, fmt.Errorf("could not unmount after post mount command failed: %s: %w", formattedCommand, unmountErr)
+			}
+			return false, fmt.Errorf("could not run post mount command: %s: %w", formattedCommand, err)
+		}
+	}
+
+	if _, err := l.Unmount(ctx, l.TempDir); err != nil {
+		return false, fmt.Errorf("could not unmount after post mount '%s': %w", l.TempDir, err)
+	}
+
+	return true, nil
+}
+
+func (l *LustreFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+	if len(l.CommandArgs.PreUnmount) == 0 {
+		return false, nil
+	}
+
+	if l.TargetType == "none" {
+		return false, nil
+	}
+
+	if _, err := l.Mount(ctx, l.TempDir, false); err != nil {
+		return false, fmt.Errorf("could not mount temp dir '%s' for pre unmount: %w", l.TempDir, err)
+	}
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TempDir)
+
+	for _, rawCommand := range l.CommandArgs.PreUnmount {
+		formattedCommand := l.parseArgs(rawCommand)
+		l.Log.Info("PreUnmount", "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			if _, unmountErr := l.Unmount(ctx, l.TempDir); unmountErr != nil {
+				return false, fmt.Errorf("could not unmount after pre unmount command failed: %s: %w", formattedCommand, unmountErr)
+			}
+			return false, fmt.Errorf("could not run pre unmount command: %s: %w", formattedCommand, err)
+		}
+	}
+
+	if _, err := l.Unmount(ctx, l.TempDir); err != nil {
+		return false, fmt.Errorf("could not unmount after pre unmount '%s': %w", l.TempDir, err)
+	}
+
+	return true, nil
 }

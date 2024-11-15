@@ -348,8 +348,8 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
-	fs.CommandArgs.PostActivate = cmdLines.PostActivate
-	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.PostMount = cmdLines.PostMount
+	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Vars = map[string]string{
 		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
 		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
@@ -372,8 +372,8 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	} else {
 		fs.CommandArgs.Mount = cmdLines.MountCompute
 	}
-	fs.CommandArgs.PostActivate = cmdLines.PostActivate
-	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.PostMount = cmdLines.PostMount
+	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
 	fs.CommandArgs.Vars = map[string]string{
 		"$CLUSTER_NAME": nnfNodeStorage.Namespace,
@@ -400,8 +400,8 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	} else {
 		fs.CommandArgs.Mount = cmdLines.MountCompute
 	}
-	fs.CommandArgs.PostActivate = cmdLines.PostActivate
-	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.PostMount = cmdLines.PostMount
+	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.Vars = map[string]string{
 		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
@@ -427,12 +427,15 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
-
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 	fs.CommandArgs.MountTarget = cmdLines.MountTarget
 	fs.CommandArgs.Mount = mountCommand
 	fs.CommandArgs.PostActivate = cmdLines.PostActivate
+	fs.CommandArgs.PostMount = cmdLines.PostMount
+	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
+
 	fs.CommandArgs.Vars = map[string]string{
 		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
 		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
