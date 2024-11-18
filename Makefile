@@ -303,8 +303,6 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 kind-push: VERSION ?= $(shell cat .version)
 kind-push: .version ## Push docker image to kind
 	kind load docker-image $(IMAGE_TAG_BASE):$(VERSION)
-	${CONTAINER_TOOL} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
-	kind load docker-image gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
 
