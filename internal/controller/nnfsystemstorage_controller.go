@@ -291,6 +291,19 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 		rabbitList = tempRabbitList
 	}
 
+	allocationCount := 1
+	if nnfSystemStorage.Spec.Shared == false {
+		switch nnfSystemStorage.Spec.ComputesTarget {
+		case nnfv1alpha4.ComputesTargetAll:
+			allocationCount = 16
+		case nnfv1alpha4.ComputesTargetEven, nnfv1alpha4.ComputesTargetOdd:
+			allocationCount = 8
+		case nnfv1alpha4.ComputesTargetPattern:
+			allocationCount = len(nnfSystemStorage.Spec.ComputesPattern)
+		default:
+			return dwsv1alpha2.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
+		}
+	}
 	// Use the Rabbit list to fill in the servers resource with one allocation per Rabbit
 	servers := &dwsv1alpha2.Servers{
 		ObjectMeta: metav1.ObjectMeta{
@@ -312,7 +325,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 			servers.Spec.AllocationSets[0].Storage = []dwsv1alpha2.ServersSpecStorage{}
 
 			for _, rabbitName := range rabbitList {
-				servers.Spec.AllocationSets[0].Storage = append(servers.Spec.AllocationSets[0].Storage, dwsv1alpha2.ServersSpecStorage{Name: rabbitName, AllocationCount: 1})
+				servers.Spec.AllocationSets[0].Storage = append(servers.Spec.AllocationSets[0].Storage, dwsv1alpha2.ServersSpecStorage{Name: rabbitName, AllocationCount: allocationCount})
 			}
 
 			return ctrl.SetControllerReference(nnfSystemStorage, servers, r.Scheme)
@@ -384,7 +397,7 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 		case nnfv1alpha4.ComputesTargetPattern:
 			indexList = append([]int(nil), nnfSystemStorage.Spec.ComputesPattern...)
 		default:
-			return dwsv1alpha2.NewResourceError("undexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
+			return dwsv1alpha2.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
 		}
 
 		indexMap := map[int]bool{}
@@ -592,7 +605,11 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			nnfAccess.Spec.DesiredState = "mounted"
 			nnfAccess.Spec.UserID = 0
 			nnfAccess.Spec.GroupID = 0
-			nnfAccess.Spec.Target = "shared"
+			if nnfSystemStorage.Spec.Shared {
+				nnfAccess.Spec.Target = "shared"
+			} else {
+				nnfAccess.Spec.Target = "single"
+			}
 			nnfAccess.Spec.MakeClientMounts = nnfSystemStorage.Spec.MakeClientMounts
 			nnfAccess.Spec.MountPath = nnfSystemStorage.Spec.ClientMountPath
 			nnfAccess.Spec.ClientReference = corev1.ObjectReference{

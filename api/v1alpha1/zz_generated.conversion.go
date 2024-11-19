@@ -3200,6 +3200,7 @@ func autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha1_NnfSystemStorageSpec(
 	out.ComputesPattern = *(*[]int)(unsafe.Pointer(&in.ComputesPattern))
 	out.Capacity = in.Capacity
 	out.Type = in.Type
+	// WARNING: in.Shared requires manual conversion: does not exist in peer-type
 	out.StorageProfile = in.StorageProfile
 	out.MakeClientMounts = in.MakeClientMounts
 	out.ClientMountPath = in.ClientMountPath

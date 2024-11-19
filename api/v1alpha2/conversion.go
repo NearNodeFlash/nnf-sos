@@ -484,12 +484,19 @@ func (src *NnfSystemStorage) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha4.NnfSystemStorage{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Spec.Shared = restored.Spec.Shared
+	} else {
+		dst.Spec.Shared = false
+	}
 
 	return nil
 }
@@ -636,4 +643,8 @@ func Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha2_NnfStorageProfileCmd
 
 func Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha2_NnfStorageProfileLustreCmdLines(in *nnfv1alpha4.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
 	return autoConvert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha2_NnfStorageProfileLustreCmdLines(in, out, s)
+}
+
+func Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha2_NnfSystemStorageSpec(in *nnfv1alpha4.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha2_NnfSystemStorageSpec(in, out, s)
 }
