@@ -10,15 +10,16 @@ spec:
         - name: manager
           workingDir: /localdisk
           volumeMounts:
-            - mountPath: /mnt
-              name: mnt-dir
+            - mountPath: /mnt/nnf
+              name: mock-filesystems
               mountPropagation: Bidirectional
             - mountPath: /localdisk
               name: localdisk
       volumes:
-        - name: mnt-dir
+        - name: mock-filesystems
           hostPath:
-            path: /mnt
+            path: /mnt/nnf
+            type: DirectoryOrCreate
         - name: localdisk
           hostPath:
             type: DirectoryOrCreate
