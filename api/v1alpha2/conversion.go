@@ -495,7 +495,7 @@ func (src *NnfSystemStorage) ConvertTo(dstRaw conversion.Hub) error {
 	if hasAnno {
 		dst.Spec.Shared = restored.Spec.Shared
 	} else {
-		dst.Spec.Shared = false
+		dst.Spec.Shared = true
 	}
 
 	return nil
