@@ -50,7 +50,7 @@ data:
       lvChange:
         activate: --activate ys $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME
-      lvRemove: $VG_NAME
+      lvRemove: $VG_NAME/$LV_NAME
       mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
       mountRabbit: $DEVICE $MOUNT_PATH
       mountCompute: $DEVICE $MOUNT_PATH
@@ -70,7 +70,7 @@ data:
       lvChange:
         activate: --activate y $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME
-      lvRemove: $VG_NAME
+      lvRemove: $VG_NAME/$LV_NAME
       mkfs: $DEVICE
       mountRabbit: $DEVICE $MOUNT_PATH
       mountCompute: $DEVICE $MOUNT_PATH
@@ -90,4 +90,4 @@ data:
       lvChange:
         activate: --activate y $VG_NAME/$LV_NAME
         deactivate: --activate n $VG_NAME/$LV_NAME
-      lvRemove: $VG_NAME
+      lvRemove: $VG_NAME/$LV_NAME
