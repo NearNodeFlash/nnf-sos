@@ -304,6 +304,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					Type:             "raw",
 					ComputesTarget:   nnfv1alpha4.ComputesTargetAll,
 					MakeClientMounts: false,
+					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
@@ -363,6 +364,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					Type:             "raw",
 					ComputesTarget:   nnfv1alpha4.ComputesTargetEven,
 					MakeClientMounts: false,
+					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
@@ -423,6 +425,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					ComputesTarget:   nnfv1alpha4.ComputesTargetPattern,
 					ComputesPattern:  []int{0, 1, 2, 3, 4},
 					MakeClientMounts: false,
+					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
@@ -484,6 +487,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					ExcludeRabbits:   []string{nodeNames[0]},
 					ExcludeComputes:  []string{"1-4", "1-5", "1-6"},
 					MakeClientMounts: false,
+					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),

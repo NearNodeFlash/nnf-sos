@@ -494,8 +494,10 @@ func (src *NnfSystemStorage) ConvertTo(dstRaw conversion.Hub) error {
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 	if hasAnno {
 		dst.Spec.ExcludeDisabledRabbits = restored.Spec.ExcludeDisabledRabbits
+		dst.Spec.Shared = restored.Spec.Shared
 	} else {
 		dst.Spec.ExcludeDisabledRabbits = false
+		dst.Spec.Shared = true
 	}
 
 	return nil

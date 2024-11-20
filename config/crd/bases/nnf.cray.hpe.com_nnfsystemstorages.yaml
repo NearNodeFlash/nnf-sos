@@ -819,6 +819,12 @@ spec:
                   MakeClientMounts specifies whether to make ClientMount resources or just
                   make the devices available to the client
                 type: boolean
+              shared:
+                default: true
+                description: |-
+                  Shared will create one allocation per Rabbit rather than one allocation
+                  per compute node.
+                type: boolean
               storageProfile:
                 description: StorageProfile is an object reference to the storage
                   profile to use
@@ -921,6 +927,7 @@ spec:
             required:
             - capacity
             - makeClientMounts
+            - shared
             - storageProfile
             type: object
           status:
