@@ -51,7 +51,7 @@ func NewLogicalVolume(ctx context.Context, name string, vg *VolumeGroup, size in
 
 // Exists determines if the LV exists in the OS
 func (lv *LogicalVolume) Exists(ctx context.Context) (bool, error) {
-	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	existingLVs, err := LvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -98,7 +98,7 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	existingLVs, err := LvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -126,7 +126,7 @@ func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	existingLVs, err := LvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -166,7 +166,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 		return false, nil
 	}
 
-	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	existingLVs, err := LvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}
@@ -189,7 +189,7 @@ func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, 
 		return false, nil
 	}
 
-	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	existingLVs, err := LvsListVolumes(ctx, lv.Log)
 	if err != nil {
 		return false, err
 	}

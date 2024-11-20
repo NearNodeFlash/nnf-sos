@@ -174,11 +174,11 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	if exists == false {
+	if !exists {
 		return false, nil
 	}
 
-	lvs, err := lvsListVolumes(ctx, vg.Log)
+	lvs, err := LvsListVolumes(ctx, vg.Log)
 	for _, lv := range lvs {
 		if lv.VGName == vg.Name && lv.Attrs[4] == 'a' {
 			return false, nil
