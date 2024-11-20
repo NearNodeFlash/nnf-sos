@@ -50,7 +50,6 @@ import (
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
 	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
 	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
@@ -141,9 +140,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	err = lusv1beta1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = nnfv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nnfv1alpha2.AddToScheme(scheme.Scheme)
