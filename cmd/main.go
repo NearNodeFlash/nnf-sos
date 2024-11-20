@@ -50,8 +50,6 @@ import (
 
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 
-	nnfv1alpha1 "github.com/NearNodeFlash/nnf-sos/api/v1alpha1"
-
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
 	nnfv1alpha2 "github.com/NearNodeFlash/nnf-sos/api/v1alpha2"
@@ -76,7 +74,6 @@ const (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(nnfv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(lusv1beta1.AddToScheme(scheme))
 
