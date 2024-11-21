@@ -2017,15 +2017,12 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 func (r *NnfWorkflowReconciler) findMockDevicesForKind(ctx context.Context, workflow *dwsv1alpha2.Workflow) ([]nnfContainerVolume, error) {
 	volumes := []nnfContainerVolume{}
 
-	// If we're using the KIND mock storage then we also have to create a
-	// volume mount for the path that represents the device beneath the
-	// filesystem.
 	nodeStoragesList, err := r.getNnfNodeStorages(ctx, workflow)
 	if err != nil {
 		return nil, dwsv1alpha2.NewResourceError("could not find devices for KIND environment").WithError(err)
 	}
-	// On GFS2, the same device is visible on multiple rabbits. Track dups and
-	// add a mount for only one of them.
+	// On GFS2, the same device is visible on multiple rabbits. Track dupes
+	// and add a mount for only one of them.
 	devNames := make(map[string]struct{})
 	devCount := 0
 	for _, nodeStorage := range nodeStoragesList.Items {
