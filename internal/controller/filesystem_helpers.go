@@ -42,6 +42,21 @@ import (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages/finalizers,verbs=update
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 
+func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+
+	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
+	if err != nil {
+		return nil, nil, dwsv1alpha2.NewResourceError("could not create mock block device").WithError(err).WithMajor()
+	}
+
+	fileSystem, err := newMockFileSystem(nnfNodeStorage, index, log)
+	if err != nil {
+		return nil, nil, dwsv1alpha2.NewResourceError("could not create mock file system").WithError(err).WithMajor()
+	}
+
+	return blockDevice, fileSystem, nil
+}
+
 func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 
 	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
@@ -49,7 +64,7 @@ func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nn
 		return nil, nil, dwsv1alpha2.NewResourceError("could not create mock block device").WithError(err).WithMajor()
 	}
 
-	fileSystem, err := newMockFileSystem(ctx, c, nnfNodeStorage, blockDevice, index, log)
+	fileSystem, err := newKindFileSystem(nnfNodeStorage, index, log)
 	if err != nil {
 		return nil, nil, dwsv1alpha2.NewResourceError("could not create mock file system").WithError(err).WithMajor()
 	}
@@ -59,8 +74,11 @@ func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nn
 
 // getBlockDeviceAndFileSystem returns blockdevice and filesystem interfaces based on the allocation type and NnfStorageProfile.
 func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
-	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
-	if found || os.Getenv("ENVIRONMENT") == "kind" {
+	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
+		return getBlockDeviceAndFileSystemForMock(ctx, c, nnfNodeStorage, index, log)
+
+	}
+	if os.Getenv("ENVIRONMENT") == "kind" {
 		return getBlockDeviceAndFileSystemForKind(ctx, c, nnfNodeStorage, index, log)
 	}
 
@@ -444,7 +462,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	return &fs, nil
 }
 
-func newMockFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newMockFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
 	if len(path) == 0 {
 		path = "/mnt/filesystems"
@@ -454,8 +472,21 @@ func newMockFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		Log:  log,
 		Path: fmt.Sprintf("/%s/%s-%d", path, nnfNodeStorage.GetName(), index),
 	}
-
 	return &fs, nil
+}
+
+func newKindFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
+	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
+	if len(path) == 0 {
+		path = "/mnt/nnf"
+	}
+
+	fs := filesystem.KindFileSystem{
+		Log:  log,
+		Path: fmt.Sprintf("/%s/%s-%d", path, nnfNodeStorage.GetName(), index),
+	}
+	return &fs, nil
+
 }
 
 func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, targetType string, index int) (string, error) {

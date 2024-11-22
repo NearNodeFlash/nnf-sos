@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/go-logr/logr"
@@ -47,7 +48,7 @@ func (m *KindFileSystem) Create(ctx context.Context, complete bool) (bool, error
 		return false, fmt.Errorf("could not create mount directory %s: %w", m.Path, err)
 	}
 
-	m.Log.Info("Created mock file system", "path", m.Path)
+	m.Log.Info("Created mock file system in kind", "path", m.Path)
 	return true, nil
 }
 
@@ -55,7 +56,7 @@ func (m *KindFileSystem) Destroy(ctx context.Context) (bool, error) {
 	// Remove the directory. If it fails don't worry about it.
 	_ = os.RemoveAll(m.Path)
 
-	m.Log.Info("Destroyed mock file system")
+	m.Log.Info("Destroyed mock file system in kind")
 	return true, nil
 }
 
@@ -64,12 +65,12 @@ func (m *KindFileSystem) Activate(ctx context.Context, complete bool) (bool, err
 		return false, nil
 	}
 
-	m.Log.Info("Activated mock file system")
+	m.Log.Info("Activated mock file system in kind")
 	return true, nil
 }
 
 func (m *KindFileSystem) Deactivate(ctx context.Context) (bool, error) {
-	m.Log.Info("Deactivated mock file system")
+	m.Log.Info("Deactivated mock file system in kind")
 	return true, nil
 }
 
@@ -78,11 +79,16 @@ func (m *KindFileSystem) Mount(ctx context.Context, path string, complete bool) 
 		return false, nil
 	}
 
+	bn := filepath.Dir(path)
+	if err := os.MkdirAll(bn, 0755); err != nil {
+		return false, fmt.Errorf("could not create directory for symlink %s: %w", bn, err)
+	}
+
 	if err := os.Symlink(m.Path, path); err != nil {
 		return false, fmt.Errorf("could not create symlink mount %s: %w", path, err)
 	}
 
-	m.Log.Info("Mounted mock file system", "filesystem", m.Path, "mount", path)
+	m.Log.Info("Mounted mock file system in kind", "filesystem", m.Path, "mount", path)
 	return true, nil
 }
 
@@ -90,7 +96,7 @@ func (m *KindFileSystem) Unmount(ctx context.Context, path string) (bool, error)
 	// Remove the directory. If it fails don't worry about it.
 	_ = os.Remove(path)
 
-	m.Log.Info("Unmounted mock file system")
+	m.Log.Info("Unmounted mock file system in kind")
 	return true, nil
 }
 
@@ -99,13 +105,13 @@ func (m *KindFileSystem) PostActivate(ctx context.Context, complete bool) (bool,
 		return false, nil
 	}
 
-	m.Log.Info("Ran PostActivate")
+	m.Log.Info("Ran PostActivate in kind")
 
 	return true, nil
 }
 
 func (m *KindFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
-	m.Log.Info("Ran PreDeactivate")
+	m.Log.Info("Ran PreDeactivate in kind")
 
 	return true, nil
 }

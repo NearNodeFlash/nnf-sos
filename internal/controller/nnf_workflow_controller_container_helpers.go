@@ -538,10 +538,12 @@ func (c *nnfUserContainer) addNnfVolumes(spec *corev1.PodSpec) {
 				MountPath: vol.mountPath,
 			})
 
-			container.Env = append(container.Env, corev1.EnvVar{
-				Name:  vol.envVarName,
-				Value: vol.mountPath,
-			})
+			if vol.envVarName != "" {
+				container.Env = append(container.Env, corev1.EnvVar{
+					Name:  vol.envVarName,
+					Value: vol.mountPath,
+				})
+			}
 		}
 	}
 }

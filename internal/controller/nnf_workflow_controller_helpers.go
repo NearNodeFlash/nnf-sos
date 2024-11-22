@@ -1905,6 +1905,17 @@ func (r *NnfWorkflowReconciler) getContainerJobs(ctx context.Context, workflow *
 	return jobList, nil
 }
 
+func (r *NnfWorkflowReconciler) getNnfNodeStorages(ctx context.Context, workflow *dwsv1alpha2.Workflow) (*nnfv1alpha4.NnfNodeStorageList, error) {
+	matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
+
+	nodeStorages := &nnfv1alpha4.NnfNodeStorageList{}
+	if err := r.List(ctx, nodeStorages, matchLabels); err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not retrieve NnfNodeStorages").WithError(err).WithMajor()
+	}
+
+	return nodeStorages, nil
+}
+
 // Create a list of volumes to be mounted inside of the containers based on the DW_JOB/DW_PERSISTENT arguments
 func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflow *dwsv1alpha2.Workflow, dwArgs map[string]string, profile *nnfv1alpha4.NnfContainerProfile) ([]nnfContainerVolume, *result, error) {
 	volumes := []nnfContainerVolume{}
@@ -1991,7 +2002,43 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		volumes = append(volumes, vol)
 	}
 
+	if os.Getenv("ENVIRONMENT") == "kind" {
+		devVolumes, err := r.findMockDevicesForKind(ctx, workflow)
+		if err != nil {
+			return nil, nil, err
+		}
+		volumes = append(volumes, devVolumes...)
+	}
 	return volumes, nil, nil
+}
+
+// If we're using the KIND mock storage then we also have to create a volume
+// mount for the path that represents the device beneath the filesystem.
+func (r *NnfWorkflowReconciler) findMockDevicesForKind(ctx context.Context, workflow *dwsv1alpha2.Workflow) ([]nnfContainerVolume, error) {
+	volumes := []nnfContainerVolume{}
+
+	nodeStoragesList, err := r.getNnfNodeStorages(ctx, workflow)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not find devices for KIND environment").WithError(err)
+	}
+	// On GFS2, the same device is visible on multiple rabbits. Track dupes
+	// and add a mount for only one of them.
+	devNames := make(map[string]struct{})
+	devCount := 0
+	for _, nodeStorage := range nodeStoragesList.Items {
+		if _, found := devNames[nodeStorage.GetName()]; !found {
+			for idx := 0; idx < nodeStorage.Spec.Count; idx++ {
+				vol := nnfContainerVolume{
+					name:      fmt.Sprintf("kind-device-%d", devCount),
+					mountPath: fmt.Sprintf("/mnt/nnf/%s-%d", nodeStorage.GetName(), idx),
+				}
+				volumes = append(volumes, vol)
+				devCount += 1
+			}
+			devNames[nodeStorage.GetName()] = struct{}{}
+		}
+	}
+	return volumes, nil
 }
 
 // Use the container profile to determine how many ports are needed and request them from the default NnfPortManager
