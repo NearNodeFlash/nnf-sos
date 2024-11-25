@@ -870,6 +870,34 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		for allocationIndex, allocation := range nnfNodeBlockStorage.Spec.Allocations {
 			for _, nodeName := range allocation.Access {
 				blockAccess, exists := nnfNodeBlockStorage.Status.Allocations[allocationIndex].Accesses[nodeName]
+				if access.Spec.IgnoreOfflineComputes {
+					storage := &dwsv1alpha2.Storage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      nnfNodeBlockStorage.GetNamespace(),
+							Namespace: corev1.NamespaceDefault,
+						},
+					}
+
+					if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+						return false, err
+					}
+
+					computeOffline := false
+					for _, compute := range storage.Status.Access.Computes {
+						if compute.Name != nodeName {
+							continue
+						}
+
+						if compute.Status == dwsv1alpha2.OfflineStatus {
+							computeOffline = true
+						}
+					}
+
+					// If the compute is offline, don't check its status
+					if computeOffline {
+						continue
+					}
+				}
 
 				// if the map entry doesn't exist in the status section for this node yet, then keep waiting
 				if !exists {

@@ -565,6 +565,9 @@ spec:
                 items:
                   type: string
                 type: array
+              ignoreOfflineComputes:
+                default: false
+                type: boolean
               includeComputes:
                 description: |-
                   IncludeComputes is a list of computes nodes to use rather than getting the list of compute nodes
@@ -692,6 +695,7 @@ spec:
                 type: string
             required:
             - capacity
+            - ignoreOfflineComputes
             - makeClientMounts
             - shared
             - storageProfile
