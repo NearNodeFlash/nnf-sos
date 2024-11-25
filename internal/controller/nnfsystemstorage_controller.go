@@ -610,6 +610,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			} else {
 				nnfAccess.Spec.Target = "single"
 			}
+			nnfAccess.Spec.IgnoreOfflineComputes = nnfSystemStorage.Spec.IgnoreOfflineComputes
 			nnfAccess.Spec.MakeClientMounts = nnfSystemStorage.Spec.MakeClientMounts
 			nnfAccess.Spec.MountPath = nnfSystemStorage.Spec.ClientMountPath
 			nnfAccess.Spec.ClientReference = corev1.ObjectReference{

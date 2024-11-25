@@ -615,6 +615,9 @@ spec:
                 description: GroupID for the new mount. Currently only used for raw
                 format: int32
                 type: integer
+              ignoreOfflineComputes:
+                default: false
+                type: boolean
               makeClientMounts:
                 default: true
                 description: |-
@@ -706,6 +709,7 @@ spec:
             required:
             - desiredState
             - groupID
+            - ignoreOfflineComputes
             - makeClientMounts
             - storageReference
             - target

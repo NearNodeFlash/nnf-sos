@@ -91,6 +91,9 @@ type NnfSystemStorageSpec struct {
 	// StorageProfile is an object reference to the storage profile to use
 	StorageProfile corev1.ObjectReference `json:"storageProfile"`
 
+	// +kubebuilder:default:=false
+	IgnoreOfflineComputes bool `json:"ignoreOfflineComputes"`
+
 	// MakeClientMounts specifies whether to make ClientMount resources or just
 	// make the devices available to the client
 	// +kubebuilder:default:=false
