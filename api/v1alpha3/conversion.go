@@ -170,12 +170,17 @@ func (src *NnfDataMovementProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha4.NnfDataMovementProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Data.MkdirCommand = restored.Data.MkdirCommand
+	}
 
 	return nil
 }
@@ -661,4 +666,8 @@ func Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha3_NnfStorageProf
 
 func Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha3_NnfSystemStorageSpec(in *nnfv1alpha4.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s apiconversion.Scope) error {
 	return autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha3_NnfSystemStorageSpec(in, out, s)
+}
+
+func Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha3_NnfDataMovementProfileData(in *nnfv1alpha4.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha3_NnfDataMovementProfileData(in, out, s)
 }
