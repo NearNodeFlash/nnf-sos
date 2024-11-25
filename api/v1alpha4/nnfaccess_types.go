@@ -71,6 +71,9 @@ type NnfAccessSpec struct {
 
 	// StorageReference is the NnfStorage reference
 	StorageReference corev1.ObjectReference `json:"storageReference"`
+
+	// +kubebuilder:default=false
+	IgnoreOfflineComputes bool `json:"ignoreOfflineComputes"`
 }
 
 // NnfAccessStatus defines the observed state of NnfAccess
