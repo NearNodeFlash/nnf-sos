@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -566,7 +567,7 @@ func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
 			subdomain = worker
 
 			hosts = append(hosts, launcher)
-			for i, _ := range c.nnfNodes {
+			for i := range c.nnfNodes {
 				hosts = append(hosts, fmt.Sprintf("%s-%d", worker, i))
 			}
 		} else {
@@ -577,6 +578,16 @@ func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
 		container.Env = append(container.Env,
 			corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
 			corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},
-			corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, " ")})
+			corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, " ")},
+			corev1.EnvVar{Name: "ENVIRONMENT", Value: os.Getenv("ENVIRONMENT")},
+			corev1.EnvVar{
+				Name: "NNF_NODE_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						APIVersion: "v1",
+						FieldPath:  "spec.nodeName",
+					},
+				},
+			})
 	}
 }
