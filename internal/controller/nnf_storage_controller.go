@@ -192,6 +192,18 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	// Collect the lists of nodes for each lustre component used for the filesystem
+	if storage.Spec.FileSystemType == "lustre" {
+		components := getLustreMappingFromStorage(storage)
+		storage.Status.LustreComponents = nnfv1alpha4.NnfStorageLustreComponents{
+			MDTs:     components["mdt"],
+			MGTs:     components["mgt"],
+			MGTMDTs:  components["mgtmdt"],
+			OSTs:     components["ost"],
+			NNFNodes: components["nnfNode"],
+		}
+	}
+
 	// For each allocation, create the NnfNodeStorage resources to fan out to the Rabbit nodes
 	for i, allocationSet := range storage.Spec.AllocationSets {
 		// Add a reference to the external MGS PersistentStorageInstance if necessary
@@ -639,6 +651,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, storage *n
 					nnfNodeStorage.Spec.LustreStorage.TargetType = allocationSet.TargetType
 					nnfNodeStorage.Spec.LustreStorage.FileSystemName = storage.Status.FileSystemName
 					nnfNodeStorage.Spec.LustreStorage.MgsAddress = storage.Status.MgsAddress
+					nnfNodeStorage.Spec.LustreStorage.LustreComponents = storage.Status.LustreComponents
 
 					// If this isn't the first allocation, then change MGTMDT to MDT so that we only get a single MGT
 					if allocationSet.TargetType == "mgtmdt" && startIndex != 0 {
@@ -1270,6 +1283,42 @@ func (r *NnfStorageReconciler) getLustreOST0(ctx context.Context, storage *nnfv1
 	}
 
 	return nil, nil
+}
+
+// Go through the Storage's allocation sets to determine the number of Lustre components and rabbit
+// nodes. Returns a map with keys for each lustre component type and also the nnf nodes involved.
+// The list of nnf nodes is kept unique, but mdts, osts, etc can include a node multiple times.
+func getLustreMappingFromStorage(storage *nnfv1alpha4.NnfStorage) map[string][]string {
+	nnfNodeKey := "nnfNode"
+	componentMap := map[string][]string{
+		"mdt":      {},
+		"mgt":      {},
+		"mgtmdt":   {},
+		"ost":      {},
+		nnfNodeKey: {},
+	}
+	rabbitMap := make(map[string]bool) // use a map to keep the list unique
+
+	// Gather the info from the allocation set
+	for _, allocationSet := range storage.Spec.AllocationSets {
+		name := allocationSet.Name
+		for _, storage := range allocationSet.Nodes {
+			node := storage.Name
+
+			// add to the list for that lustre component for each Count
+			for i := 0; i < storage.Count; i++ {
+				componentMap[name] = append(componentMap[name], node)
+			}
+
+			// add to the unique list of rabbits
+			if _, found := rabbitMap[node]; !found {
+				rabbitMap[node] = true
+				componentMap[nnfNodeKey] = append(componentMap[nnfNodeKey], node)
+			}
+		}
+	}
+
+	return componentMap
 }
 
 // SetupWithManager sets up the controller with the Manager.

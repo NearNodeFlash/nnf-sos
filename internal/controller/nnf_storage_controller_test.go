@@ -23,40 +23,40 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 )
 
-var _ = Describe("Clientmount Controller Test", func() {
+var _ = Describe("NNFStorage Controller Test", func() {
 
-	It("It should correctly create a human-readable lustre mapping for Servers ", func() {
-		s := dwsv1alpha2.Servers{
-			Spec: dwsv1alpha2.ServersSpec{
-				AllocationSets: []dwsv1alpha2.ServersSpecAllocationSet{
-					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
-						{Name: "rabbit-node-1", AllocationCount: 2},
-						{Name: "rabbit-node-2", AllocationCount: 1}},
+	It("It should correctly create a human-readable lustre mapping for NnfStorage", func() {
+		s := nnfv1alpha4.NnfStorage{
+			Spec: nnfv1alpha4.NnfStorageSpec{
+				AllocationSets: []nnfv1alpha4.NnfStorageAllocationSetSpec{
+					{Name: "ost", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+						{Name: "rabbit-node-1", Count: 2},
+						{Name: "rabbit-node-2", Count: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
-						{Name: "rabbit-node-2", AllocationCount: 1}},
+					{Name: "ost", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+						{Name: "rabbit-node-2", Count: 1}},
 					},
-					{Label: "mdt", Storage: []dwsv1alpha2.ServersSpecStorage{
-						{Name: "rabbit-node-3", AllocationCount: 1},
-						{Name: "rabbit-node-4", AllocationCount: 1},
-						{Name: "rabbit-node-8", AllocationCount: 1}},
+					{Name: "mdt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+						{Name: "rabbit-node-3", Count: 1},
+						{Name: "rabbit-node-4", Count: 1},
+						{Name: "rabbit-node-8", Count: 1}},
 					},
-					{Label: "mgt", Storage: []dwsv1alpha2.ServersSpecStorage{
-						{Name: "rabbit-node-3", AllocationCount: 1}},
+					{Name: "mgt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+						{Name: "rabbit-node-3", Count: 1}},
 					},
-					{Label: "mgtmdt", Storage: []dwsv1alpha2.ServersSpecStorage{
-						{Name: "rabbit-node-4", AllocationCount: 1}},
+					{Name: "mgtmdt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+						{Name: "rabbit-node-4", Count: 1}},
 					},
 				},
 			},
 		}
 
 		Expect(s.Spec.AllocationSets).To(HaveLen(5))
-		m := getLustreMappingFromServer(&s)
+		m := getLustreMappingFromStorage(&s)
 		Expect(m).To(HaveLen(5)) // should have keys for 4 lustre components (i.e. ost, mdt, mgt, mgtmdt) + rabbits
 
 		Expect(m["ost"]).To(HaveLen(4))

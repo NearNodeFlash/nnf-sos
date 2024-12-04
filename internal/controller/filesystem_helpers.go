@@ -125,21 +125,17 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 		return blockDevice, fileSystem, nil
 	case "lustre":
-		commandLines := nnfv1alpha4.NnfStorageProfileLustreCmdLines{}
+		var commandLines nnfv1alpha4.NnfStorageProfileLustreCmdLines
 
 		switch nnfNodeStorage.Spec.LustreStorage.TargetType {
 		case "mgt":
 			commandLines = nnfStorageProfile.Data.LustreStorage.MgtCmdLines
-			break
 		case "mgtmdt":
 			commandLines = nnfStorageProfile.Data.LustreStorage.MgtMdtCmdLines
-			break
 		case "mdt":
 			commandLines = nnfStorageProfile.Data.LustreStorage.MdtCmdLines
-			break
 		case "ost":
 			commandLines = nnfStorageProfile.Data.LustreStorage.OstCmdLines
-			break
 		default:
 			return nil, nil, dwsv1alpha2.NewResourceError("invalid Lustre target type %s", nnfNodeStorage.Spec.LustreStorage.TargetType).WithFatal()
 		}
@@ -225,7 +221,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
-	if nnfNodeBlockStorage.Status.Ready == false {
+	if !nnfNodeBlockStorage.Status.Ready {
 		return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 	}
 
@@ -277,7 +273,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 			return nil, dwsv1alpha2.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 		}
 
-		if nnfNodeBlockStorage.Status.Ready == false {
+		if !nnfNodeBlockStorage.Status.Ready {
 			return nil, dwsv1alpha2.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 		}
 
@@ -454,9 +450,16 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
+	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents
+
 	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
+		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
+		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
+		"$NUM_MDTS":     fmt.Sprintf("%d", len(components.MDTs)),
+		"$NUM_MGTS":     fmt.Sprintf("%d", len(components.MGTs)),
+		"$NUM_MGTMDTS":  fmt.Sprintf("%d", len(components.MGTMDTs)),
+		"$NUM_OSTS":     fmt.Sprintf("%d", len(components.OSTs)),
+		"$NUM_NNFNODES": fmt.Sprintf("%d", len(components.NNFNodes)),
 	}
 
 	return &fs, nil
