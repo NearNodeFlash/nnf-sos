@@ -88,6 +88,11 @@ type LustreStorageSpec struct {
 	// BackFs is the type of backing filesystem to use.
 	// +kubebuilder:validation:Enum=ldiskfs;zfs
 	BackFs string `json:"backFs,omitempty"`
+
+	// LustreComponents defines that list of NNF Nodes that are used for the components (e.g. OSTs)
+	// in the lustre filesystem. This information is helpful when creating the lustre filesystem and
+	// using PostMount commands (e.g. to set the striping).
+	LustreComponents NnfStorageLustreComponents `json:"lustreComponents,omitempty"`
 }
 
 // NnfNodeStorageStatus defines the status for NnfNodeStorage
