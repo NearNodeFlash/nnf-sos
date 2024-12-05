@@ -60,6 +60,27 @@ type NnfStorageLustreSpec struct {
 	PersistentMgsReference corev1.ObjectReference `json:"persistentMgsReference,omitempty"`
 }
 
+// NnfStorageLustreComponents identifies which NNF nodes are used for each lustre component used by
+// the lustre filesystem. Each list can include an NNF node multiple times if that is how it is
+// being used (except for NNFNodes).
+type NnfStorageLustreComponents struct {
+	// MTDs is the list of NNF nodes being used as MDTs.
+	MDTs []string `json:"mdts,omitempty"`
+
+	// MGTs is the list of NNF nodes being used as MGTs.
+	MGTs []string `json:"mgts,omitempty"`
+
+	// MGTMDTs is the list of NNF nodes being used as combined MGTMDTs.
+	MGTMDTs []string `json:"mgtmdts,omitempty"`
+
+	// OSTs is the list of NNF nodes being used as OSTs.
+	OSTs []string `json:"osts,omitempty"`
+
+	// NNfNodes is the list of NNF nodes being used for this filesystem. This is a unique list of
+	// node names.
+	NNFNodes []string `json:"nnfNodes,omitempty"`
+}
+
 // NnfStorageAllocationSetSpec defines the details for an allocation set
 type NnfStorageAllocationSetSpec struct {
 	// Name is a human readable label for this set of allocations (e.g., xfs)
@@ -124,6 +145,10 @@ type NnfStorageLustreStatus struct {
 	// LustgreMgtReference is an object reference to the NnfLustreMGT resource used
 	// by the NnfStorage
 	LustreMgtReference corev1.ObjectReference `json:"lustreMgtReference,omitempty"`
+
+	// LustreComponents defines that list of NNF Nodes that are used for the components (e.g. OSTs)
+	// in the lustre filesystem.
+	LustreComponents NnfStorageLustreComponents `json:"lustreComponents,omitempty"`
 }
 
 // NnfStorageStatus defines the observed status of NNF Storage.

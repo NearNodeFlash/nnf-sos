@@ -841,6 +841,40 @@ spec:
                   filesystem.
                 maxLength: 8
                 type: string
+              lustreComponents:
+                description: |-
+                  LustreComponents defines that list of NNF Nodes that are used for the components (e.g. OSTs)
+                  in the lustre filesystem.
+                properties:
+                  mdts:
+                    description: MTDs is the list of NNF nodes being used as MDTs.
+                    items:
+                      type: string
+                    type: array
+                  mgtmdts:
+                    description: MGTMDTs is the list of NNF nodes being used as combined
+                      MGTMDTs.
+                    items:
+                      type: string
+                    type: array
+                  mgts:
+                    description: MGTs is the list of NNF nodes being used as MGTs.
+                    items:
+                      type: string
+                    type: array
+                  nnfNodes:
+                    description: |-
+                      NNfNodes is the list of NNF nodes being used for this filesystem. This is a unique list of
+                      node names.
+                    items:
+                      type: string
+                    type: array
+                  osts:
+                    description: OSTs is the list of NNF nodes being used as OSTs.
+                    items:
+                      type: string
+                    type: array
+                type: object
               lustreMgtReference:
                 description: |-
                   LustgreMgtReference is an object reference to the NnfLustreMGT resource used

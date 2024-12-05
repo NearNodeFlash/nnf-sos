@@ -343,12 +343,20 @@ func (src *NnfNodeStorage) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha4.NnfNodeStorage{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Spec.LustreStorage.LustreComponents.MDTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.MDTs...)
+		dst.Spec.LustreStorage.LustreComponents.MGTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.MGTs...)
+		dst.Spec.LustreStorage.LustreComponents.MGTMDTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.MGTMDTs...)
+		dst.Spec.LustreStorage.LustreComponents.OSTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.OSTs...)
+		dst.Spec.LustreStorage.LustreComponents.NNFNodes = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.NNFNodes...)
+	}
 
 	return nil
 }
@@ -407,12 +415,21 @@ func (src *NnfStorage) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha4.NnfStorage{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
+
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Status.LustreComponents.MDTs = append([]string(nil), restored.Status.LustreComponents.MDTs...)
+		dst.Status.LustreComponents.MGTs = append([]string(nil), restored.Status.LustreComponents.MGTs...)
+		dst.Status.LustreComponents.MGTMDTs = append([]string(nil), restored.Status.LustreComponents.MGTMDTs...)
+		dst.Status.LustreComponents.OSTs = append([]string(nil), restored.Status.LustreComponents.OSTs...)
+		dst.Status.LustreComponents.NNFNodes = append([]string(nil), restored.Status.LustreComponents.NNFNodes...)
+	}
 
 	return nil
 }
@@ -670,4 +687,12 @@ func Convert_v1alpha4_NnfAccessSpec_To_v1alpha2_NnfAccessSpec(in *nnfv1alpha4.Nn
 
 func Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha2_NnfDataMovementProfileData(in *nnfv1alpha4.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha2_NnfDataMovementProfileData(in, out, s)
+}
+
+func Convert_v1alpha4_LustreStorageSpec_To_v1alpha2_LustreStorageSpec(in *nnfv1alpha4.LustreStorageSpec, out *LustreStorageSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_LustreStorageSpec_To_v1alpha2_LustreStorageSpec(in, out, s)
+}
+
+func Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha2_NnfStorageLustreStatus(in *nnfv1alpha4.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageLustreStatus_To_v1alpha2_NnfStorageLustreStatus(in, out, s)
 }
