@@ -217,7 +217,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha4.Nnf
 	err = r.addBlockStorageAccess(ctx, access, storageMapping)
 	if err != nil {
 		if apierrors.IsConflict(err) {
-			return &ctrl.Result{}, nil
+			return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 		}
 
 		return nil, dwsv1alpha2.NewResourceError("unable to add endpoints to NnfNodeStorage").WithError(err)
