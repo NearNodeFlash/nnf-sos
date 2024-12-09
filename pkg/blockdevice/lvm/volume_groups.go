@@ -174,7 +174,7 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 		return false, err
 	}
 
-	if exists == false {
+	if !exists {
 		return false, nil
 	}
 
@@ -210,4 +210,20 @@ func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error)
 	}
 
 	return false, nil
+}
+
+func (vg *VolumeGroup) NumLVs(ctx context.Context) (int, error) {
+	count := 0
+
+	lvs, err := lvsListVolumes(ctx, vg.Log)
+	if err != nil {
+		return count, err
+	}
+	for _, lv := range lvs {
+		if lv.VGName == vg.Name {
+			count += 1
+		}
+	}
+
+	return count, nil
 }

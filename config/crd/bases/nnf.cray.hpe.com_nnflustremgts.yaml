@@ -14,277 +14,6 @@ spec:
     singular: nnflustremgt
   scope: Namespaced
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: NnfLustreMGT is the Schema for the nnfstorageprofiles API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: NnfLustreMGTSpec defines the desired state of NnfLustreMGT
-            properties:
-              addresses:
-                description: Addresses is the list of LNet addresses for the MGT
-                items:
-                  type: string
-                type: array
-              claimList:
-                description: ClaimList is the list of currently in use fsnames
-                items:
-                  description: |-
-                    ObjectReference contains enough information to let you inspect or modify the referred object.
-                    ---
-                    New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
-                     1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
-                     2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
-                        restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
-                        Those cannot be well described when embedded.
-                     3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
-                     4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
-                        during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
-                        and the version of the actual struct is irrelevant.
-                     5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
-                        will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
-
-
-                    Instead of using this type, create a locally provided and used type that is well-focused on your reference.
-                    For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
-                  properties:
-                    apiVersion:
-                      description: API version of the referent.
-                      type: string
-                    fieldPath:
-                      description: |-
-                        If referring to a piece of an object instead of an entire object, this string
-                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within a pod, this would take on a value like:
-                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]" (container with
-                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                        referencing a part of an object.
-                        TODO: this design is not final and this field is subject to change in the future.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind of the referent.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                      type: string
-                    name:
-                      description: |-
-                        Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                      type: string
-                    resourceVersion:
-                      description: |-
-                        Specific resourceVersion to which this reference is made, if any.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                      type: string
-                    uid:
-                      description: |-
-                        UID of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                      type: string
-                  type: object
-                  x-kubernetes-map-type: atomic
-                type: array
-              fsNameBlackList:
-                description: |-
-                  FsNameBlackList is a list of fsnames that can't be used. This may be
-                  necessary if the MGT hosts file systems external to Rabbit
-                items:
-                  type: string
-                type: array
-              fsNameStart:
-                description: FsNameStart is the starting fsname to be used
-                maxLength: 8
-                minLength: 8
-                type: string
-              fsNameStartReference:
-                description: |-
-                  FsNameStartReference can be used to add a configmap where the starting fsname is
-                  stored. If this reference is set, it takes precendence over FsNameStart. The configmap
-                  will be updated with the next available fsname anytime an fsname is used.
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  fieldPath:
-                    description: |-
-                      If referring to a piece of an object instead of an entire object, this string
-                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within a pod, this would take on a value like:
-                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]" (container with
-                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                      referencing a part of an object.
-                      TODO: this design is not final and this field is subject to change in the future.
-                    type: string
-                  kind:
-                    description: |-
-                      Kind of the referent.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                    type: string
-                  resourceVersion:
-                    description: |-
-                      Specific resourceVersion to which this reference is made, if any.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                    type: string
-                  uid:
-                    description: |-
-                      UID of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-            required:
-            - addresses
-            type: object
-          status:
-            description: NnfLustreMGTStatus defines the current state of NnfLustreMGT
-            properties:
-              claimList:
-                description: ClaimList is the list of currently in use fsnames
-                items:
-                  properties:
-                    fsname:
-                      type: string
-                    reference:
-                      description: |-
-                        ObjectReference contains enough information to let you inspect or modify the referred object.
-                        ---
-                        New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
-                         1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
-                         2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
-                            restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
-                            Those cannot be well described when embedded.
-                         3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
-                         4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
-                            during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
-                            and the version of the actual struct is irrelevant.
-                         5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
-                            will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
-
-
-                        Instead of using this type, create a locally provided and used type that is well-focused on your reference.
-                        For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
-                      properties:
-                        apiVersion:
-                          description: API version of the referent.
-                          type: string
-                        fieldPath:
-                          description: |-
-                            If referring to a piece of an object instead of an entire object, this string
-                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                            For example, if the object reference is to a container within a pod, this would take on a value like:
-                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                            the event) or if no container name is specified "spec.containers[2]" (container with
-                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                            referencing a part of an object.
-                            TODO: this design is not final and this field is subject to change in the future.
-                          type: string
-                        kind:
-                          description: |-
-                            Kind of the referent.
-                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                          type: string
-                        name:
-                          description: |-
-                            Name of the referent.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                          type: string
-                        namespace:
-                          description: |-
-                            Namespace of the referent.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                          type: string
-                        resourceVersion:
-                          description: |-
-                            Specific resourceVersion to which this reference is made, if any.
-                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                          type: string
-                        uid:
-                          description: |-
-                            UID of the referent.
-                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                          type: string
-                      type: object
-                      x-kubernetes-map-type: atomic
-                  type: object
-                type: array
-              error:
-                description: Error information
-                properties:
-                  debugMessage:
-                    description: Internal debug message for the error
-                    type: string
-                  severity:
-                    description: |-
-                      Indication of how severe the error is. Minor will likely succeed, Major may
-                      succeed, and Fatal will never succeed.
-                    enum:
-                    - Minor
-                    - Major
-                    - Fatal
-                    type: string
-                  type:
-                    description: Internal or user error
-                    enum:
-                    - Internal
-                    - User
-                    - WLM
-                    type: string
-                  userMessage:
-                    description: Optional user facing message if the error is relevant
-                      to an end user
-                    type: string
-                required:
-                - debugMessage
-                - severity
-                - type
-                type: object
-              fsNameNext:
-                description: FsNameNext is the next available fsname that hasn't been
-                  used
-                maxLength: 8
-                minLength: 8
-                type: string
-            type: object
-        type: object
-    served: false
-    storage: false
-    subresources:
-      status: {}
   - name: v1alpha2
     schema:
       openAPIV3Schema:
@@ -557,6 +286,277 @@ spec:
     subresources:
       status: {}
   - name: v1alpha3
+    schema:
+      openAPIV3Schema:
+        description: NnfLustreMGT is the Schema for the nnfstorageprofiles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NnfLustreMGTSpec defines the desired state of NnfLustreMGT
+            properties:
+              addresses:
+                description: Addresses is the list of LNet addresses for the MGT
+                items:
+                  type: string
+                type: array
+              claimList:
+                description: ClaimList is the list of currently in use fsnames
+                items:
+                  description: |-
+                    ObjectReference contains enough information to let you inspect or modify the referred object.
+                    ---
+                    New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+                     1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
+                     2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+                        restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+                        Those cannot be well described when embedded.
+                     3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+                     4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+                        during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+                        and the version of the actual struct is irrelevant.
+                     5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+                        will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+
+
+                    Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+                    For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
+                  properties:
+                    apiVersion:
+                      description: API version of the referent.
+                      type: string
+                    fieldPath:
+                      description: |-
+                        If referring to a piece of an object instead of an entire object, this string
+                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]" (container with
+                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                        referencing a part of an object.
+                        TODO: this design is not final and this field is subject to change in the future.
+                      type: string
+                    kind:
+                      description: |-
+                        Kind of the referent.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                      type: string
+                    name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                      type: string
+                    resourceVersion:
+                      description: |-
+                        Specific resourceVersion to which this reference is made, if any.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                      type: string
+                    uid:
+                      description: |-
+                        UID of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              fsNameBlackList:
+                description: |-
+                  FsNameBlackList is a list of fsnames that can't be used. This may be
+                  necessary if the MGT hosts file systems external to Rabbit
+                items:
+                  type: string
+                type: array
+              fsNameStart:
+                description: FsNameStart is the starting fsname to be used
+                maxLength: 8
+                minLength: 8
+                type: string
+              fsNameStartReference:
+                description: |-
+                  FsNameStartReference can be used to add a configmap where the starting fsname is
+                  stored. If this reference is set, it takes precendence over FsNameStart. The configmap
+                  will be updated with the next available fsname anytime an fsname is used.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+            required:
+            - addresses
+            type: object
+          status:
+            description: NnfLustreMGTStatus defines the current state of NnfLustreMGT
+            properties:
+              claimList:
+                description: ClaimList is the list of currently in use fsnames
+                items:
+                  properties:
+                    fsname:
+                      type: string
+                    reference:
+                      description: |-
+                        ObjectReference contains enough information to let you inspect or modify the referred object.
+                        ---
+                        New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+                         1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
+                         2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+                            restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+                            Those cannot be well described when embedded.
+                         3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+                         4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+                            during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+                            and the version of the actual struct is irrelevant.
+                         5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+                            will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+
+
+                        Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+                        For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: |-
+                            If referring to a piece of an object instead of an entire object, this string
+                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container within a pod, this would take on a value like:
+                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                            the event) or if no container name is specified "spec.containers[2]" (container with
+                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                            referencing a part of an object.
+                            TODO: this design is not final and this field is subject to change in the future.
+                          type: string
+                        kind:
+                          description: |-
+                            Kind of the referent.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                          type: string
+                        name:
+                          description: |-
+                            Name of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                          type: string
+                        resourceVersion:
+                          description: |-
+                            Specific resourceVersion to which this reference is made, if any.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                          type: string
+                        uid:
+                          description: |-
+                            UID of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  type: object
+                type: array
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              fsNameNext:
+                description: FsNameNext is the next available fsname that hasn't been
+                  used
+                maxLength: 8
+                minLength: 8
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v1alpha4
     schema:
       openAPIV3Schema:
         description: NnfLustreMGT is the Schema for the nnfstorageprofiles API

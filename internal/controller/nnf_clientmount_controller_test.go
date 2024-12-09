@@ -30,36 +30,48 @@ var _ = Describe("Clientmount Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for Servers ", func() {
 		s := dwsv1alpha2.Servers{
-			Status: dwsv1alpha2.ServersStatus{
-				AllocationSets: []dwsv1alpha2.ServersStatusAllocationSet{
-					{Label: "ost", Storage: map[string]dwsv1alpha2.ServersStatusStorage{
-						"rabbit-node-1": dwsv1alpha2.ServersStatusStorage{
-							AllocationSize: 123345,
-						},
-						"rabbit-node-2": dwsv1alpha2.ServersStatusStorage{
-							AllocationSize: 123345,
-						},
-					}},
-					{Label: "mdt", Storage: map[string]dwsv1alpha2.ServersStatusStorage{
-						"rabbit-node-3": dwsv1alpha2.ServersStatusStorage{
-							AllocationSize: 123345,
-						},
-						"rabbit-node-4": dwsv1alpha2.ServersStatusStorage{
-							AllocationSize: 123345,
-						},
-						"rabbit-node-8": dwsv1alpha2.ServersStatusStorage{
-							AllocationSize: 123345,
-						},
-					}},
+			Spec: dwsv1alpha2.ServersSpec{
+				AllocationSets: []dwsv1alpha2.ServersSpecAllocationSet{
+					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
+						{Name: "rabbit-node-1", AllocationCount: 2},
+						{Name: "rabbit-node-2", AllocationCount: 1}},
+					},
+					// throw another OST on rabbit-node-2
+					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
+						{Name: "rabbit-node-2", AllocationCount: 1}},
+					},
+					{Label: "mdt", Storage: []dwsv1alpha2.ServersSpecStorage{
+						{Name: "rabbit-node-3", AllocationCount: 1},
+						{Name: "rabbit-node-4", AllocationCount: 1},
+						{Name: "rabbit-node-8", AllocationCount: 1}},
+					},
+					{Label: "mgt", Storage: []dwsv1alpha2.ServersSpecStorage{
+						{Name: "rabbit-node-3", AllocationCount: 1}},
+					},
+					{Label: "mgtmdt", Storage: []dwsv1alpha2.ServersSpecStorage{
+						{Name: "rabbit-node-4", AllocationCount: 1}},
+					},
 				},
 			},
 		}
 
-		m := createLustreMapping(&s)
-		Expect(m).To(HaveLen(2))
-		Expect(m["ost"]).To(HaveLen(2))
-		Expect(m["ost"]).Should(ContainElements("rabbit-node-1", "rabbit-node-2"))
+		Expect(s.Spec.AllocationSets).To(HaveLen(5))
+		m := getLustreMappingFromServer(&s)
+		Expect(m).To(HaveLen(5)) // should have keys for 4 lustre components (i.e. ost, mdt, mgt, mgtmdt) + rabbits
+
+		Expect(m["ost"]).To(HaveLen(4))
+		Expect(m["ost"]).Should(ContainElements("rabbit-node-1", "rabbit-node-1", "rabbit-node-2", "rabbit-node-2"))
+
 		Expect(m["mdt"]).To(HaveLen(3))
 		Expect(m["mdt"]).Should(ContainElements("rabbit-node-3", "rabbit-node-4", "rabbit-node-8"))
+
+		Expect(m["mgt"]).To(HaveLen(1))
+		Expect(m["mgt"]).Should(ContainElements("rabbit-node-3"))
+
+		Expect(m["mgtmdt"]).To(HaveLen(1))
+		Expect(m["mgtmdt"]).Should(ContainElements("rabbit-node-4"))
+
+		Expect(m["nnfNode"]).To(HaveLen(5))
+		Expect(m["nnfNode"]).Should(ContainElements("rabbit-node-1", "rabbit-node-2", "rabbit-node-3", "rabbit-node-4", "rabbit-node-8"))
 	})
 })

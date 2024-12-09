@@ -53,7 +53,7 @@ IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-sos
 
 # The NNF-MFU container image to use in NNFContainerProfile resources.
 NNFMFU_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-mfu
-NNFMFU_VERSION ?= 0.1.3
+NNFMFU_VERSION ?= 0.1.4
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -303,8 +303,6 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 kind-push: VERSION ?= $(shell cat .version)
 kind-push: .version ## Push docker image to kind
 	kind load docker-image $(IMAGE_TAG_BASE):$(VERSION)
-	${CONTAINER_TOOL} pull gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
-	kind load docker-image gcr.io/kubebuilder/kube-rbac-proxy:v0.13.0
 
 ##@ Deployment
 
@@ -409,7 +407,7 @@ $(CONVERSION_GEN): $(LOCALBIN) # Build conversion-gen from tools folder.
 # The SRC_DIRS value is a space-separated list of paths to old versions.
 # The --input-dirs value is a single path item; specify multiple --input-dirs
 # parameters if you have multiple old versions.
-SRC_DIRS=./api/v1alpha1 ./api/v1alpha2
+SRC_DIRS=./api/v1alpha2 ./api/v1alpha3
 generate-go-conversions: $(CONVERSION_GEN) ## Generate conversions go code
 	$(MAKE) clean-generated-conversions SRC_DIRS="$(SRC_DIRS)"
 	$(CONVERSION_GEN) \

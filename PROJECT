@@ -263,6 +263,118 @@ resources:
   kind: NnfAccess
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
   version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfContainerProfile
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfDataMovement
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfDataMovementManager
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfDataMovementProfile
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfLustreMGT
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfNode
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfNodeBlockStorage
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfNodeECData
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfNodeStorage
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfPortManager
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfStorage
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfStorageProfile
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfSystemStorage
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
+  version: v1alpha3
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
+  kind: NnfAccess
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -272,8 +384,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfContainerProfile
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     validation: true
     webhookVersion: v1
@@ -283,8 +395,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovement
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -294,8 +406,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovementManager
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -305,8 +417,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfDataMovementProfile
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     validation: true
     webhookVersion: v1
@@ -316,8 +428,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfLustreMGT
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -327,8 +439,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNode
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -338,8 +450,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNodeBlockStorage
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -349,8 +461,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNodeECData
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -360,8 +472,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfNodeStorage
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -371,8 +483,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfPortManager
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -382,8 +494,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfStorage
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
@@ -393,8 +505,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfStorageProfile
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     validation: true
     webhookVersion: v1
@@ -404,8 +516,8 @@ resources:
   domain: cray.hpe.com
   group: nnf
   kind: NnfSystemStorage
-  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha3
-  version: v1alpha3
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha4
+  version: v1alpha4
   webhooks:
     conversion: true
     webhookVersion: v1
