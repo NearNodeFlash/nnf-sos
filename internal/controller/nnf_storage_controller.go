@@ -418,7 +418,22 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not list NnfNodeBlockStorages").WithError(err)
 	}
 
+	// make a map with empty data of the Rabbit names to allow easy searching
+	nodeNameMap := map[string]struct{}{}
+	for _, node := range nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes {
+		nodeNameMap[node.Name] = struct{}{}
+	}
+
+	// prune out any entries that aren't in the NnfStorage. This can happen if the NnfStorage was modified
+	// after it was created, as is the case with NnfStorages from an NnfSystemStorage
+	nnfNodeBlockStorages := []nnfv1alpha3.NnfNodeBlockStorage{}
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
+		if _, exists := nodeNameMap[nnfNodeBlockStorage.GetNamespace()]; exists {
+			nnfNodeBlockStorages = append(nnfNodeBlockStorages, nnfNodeBlockStorage)
+		}
+	}
+
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 		for _, nodeAllocation := range nnfNodeBlockStorage.Status.Allocations {
 			if nodeAllocation.CapacityAllocated > 0 {
 				allocationSet.AllocationCount++
@@ -426,7 +441,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		}
 	}
 
-	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 		if nnfNodeBlockStorage.Status.Error != nil {
 			return &ctrl.Result{}, dwsv1alpha2.NewResourceError("Node: %s", nnfNodeBlockStorage.GetNamespace()).WithError(nnfNodeBlockStorage.Status.Error)
 		}
@@ -440,7 +455,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 			childTimeout = 300
 		}
 
-		for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
+		for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 			// check if the finalizer has been added by the controller on the Rabbit
 			if len(nnfNodeBlockStorage.GetFinalizers()) > 0 {
 				continue
@@ -454,7 +469,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		}
 	}
 
-	for _, nnfNodeBlockStorage := range nnfNodeBlockStorageList.Items {
+	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 		if nnfNodeBlockStorage.Status.Ready == false {
 			return &ctrl.Result{}, nil
 		}
@@ -463,9 +478,9 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	// Ensure that we found all the NnfNodeBlockStorage resources we were expecting. This can be expected
 	// transiently as it takes time for the client cache to be updated. Log a message in case the count
 	// never reaches the expected value.
-	if len(nnfNodeBlockStorageList.Items) != len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes) {
+	if len(nnfNodeBlockStorages) != len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes) {
 		if nnfStorage.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of NnfNodeBlockStorages", "found", len(nnfNodeBlockStorageList.Items), "expected", len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes))
+			log.Info("unexpected number of NnfNodeBlockStorages", "found", len(nnfNodeBlockStorages), "expected", len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes))
 		}
 		return &ctrl.Result{}, nil
 	}
@@ -642,7 +657,22 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		return &ctrl.Result{}, dwsv1alpha2.NewResourceError("could not list NnfNodeStorages").WithError(err)
 	}
 
+	// make a map with empty data of the Rabbit names to allow easy searching
+	nodeNameMap := map[string]struct{}{}
+	for _, node := range storage.Spec.AllocationSets[allocationSetIndex].Nodes {
+		nodeNameMap[node.Name] = struct{}{}
+	}
+
+	// prune out any entries that aren't in the NnfStorage. This can happen if the NnfStorage was modified
+	// after it was created, as is the case with NnfStorages from an NnfSystemStorage
+	nnfNodeStorages := []nnfv1alpha3.NnfNodeStorage{}
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+		if _, exists := nodeNameMap[nnfNodeStorage.GetNamespace()]; exists {
+			nnfNodeStorages = append(nnfNodeStorages, nnfNodeStorage)
+		}
+	}
+
+	for _, nnfNodeStorage := range nnfNodeStorages {
 		// If we're in the delete path, only propagate errors for storages that are deleting. Errors
 		// from creation aren't interesting anymore
 		if deleting && nnfNodeStorage.GetDeletionTimestamp().IsZero() {
@@ -661,7 +691,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			childTimeout = 300
 		}
 
-		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+		for _, nnfNodeStorage := range nnfNodeStorages {
 			// check if the finalizer has been added by the controller on the Rabbit
 			if len(nnfNodeStorage.GetFinalizers()) > 0 {
 				continue
@@ -675,7 +705,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		}
 	}
 
-	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+	for _, nnfNodeStorage := range nnfNodeStorages {
 		if nnfNodeStorage.Status.Ready == false {
 			return &ctrl.Result{}, nil
 		}
@@ -684,9 +714,9 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	// Ensure that we found all the NnfNodeStorage resources we were expecting. This can be expected
 	// transiently as it takes time for the client cache to be updated. Log a message in case the count
 	// never reaches the expected value.
-	if len(nnfNodeStorageList.Items) != len(storage.Spec.AllocationSets[allocationSetIndex].Nodes) {
+	if len(nnfNodeStorages) != len(storage.Spec.AllocationSets[allocationSetIndex].Nodes) {
 		if storage.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of NnfNodeStorages", "found", len(nnfNodeStorageList.Items), "expected", len(storage.Spec.AllocationSets[allocationSetIndex].Nodes))
+			log.Info("unexpected number of NnfNodeStorages", "found", len(nnfNodeStorages), "expected", len(storage.Spec.AllocationSets[allocationSetIndex].Nodes))
 		}
 		return &ctrl.Result{}, nil
 	}
