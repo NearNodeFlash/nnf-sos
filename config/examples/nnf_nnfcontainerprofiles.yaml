@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-success
@@ -20,7 +20,7 @@ data:
       - -c
       - "sleep 10 && exit 0"
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-fail
@@ -34,7 +34,7 @@ data:
       - -c
       - "sleep 10 && exit 1"
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-randomly-fail
@@ -59,7 +59,7 @@ data:
         echo "exiting: $x"
         exit $x
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-forever
@@ -79,7 +79,7 @@ data:
       - -c
       - "while true; do date && sleep 5; done"
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-mpi
@@ -117,7 +117,7 @@ data:
               image: nnf-mfu:latest
 
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-mpi-fail
@@ -145,7 +145,7 @@ data:
             - name: example-mpi-fail
               image: nnf-mfu:latest
 ---
-apiVersion: nnf.cray.hpe.com/v1alpha3
+apiVersion: nnf.cray.hpe.com/v1alpha4
 kind: NnfContainerProfile
 metadata:
   name: example-mpi-webserver

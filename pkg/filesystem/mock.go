@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -37,7 +37,7 @@ type MockFileSystem struct {
 var _ FileSystem = &MockFileSystem{}
 
 func (m *MockFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -52,7 +52,7 @@ func (m *MockFileSystem) Destroy(ctx context.Context) (bool, error) {
 }
 
 func (m *MockFileSystem) Activate(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -67,7 +67,7 @@ func (m *MockFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (m *MockFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -82,7 +82,7 @@ func (m *MockFileSystem) Unmount(ctx context.Context, path string) (bool, error)
 }
 
 func (m *MockFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
-	if complete == true {
+	if complete {
 		return false, nil
 	}
 
@@ -93,6 +93,22 @@ func (m *MockFileSystem) PostActivate(ctx context.Context, complete bool) (bool,
 
 func (m *MockFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
 	m.Log.Info("Ran PreDeactivate")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+	m.Log.Info("Ran PreUnmount")
 
 	return true, nil
 }

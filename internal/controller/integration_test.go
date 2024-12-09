@@ -42,7 +42,7 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	dwparse "github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
+	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 )
 
 var _ = Describe("Integration Test", func() {
@@ -62,9 +62,9 @@ var _ = Describe("Integration Test", func() {
 		persistentInstance *dwsv1alpha2.PersistentStorageInstance
 		nodeNames          []string
 		setup              sync.Once
-		storageProfile     *nnfv1alpha3.NnfStorageProfile
-		dmProfile          *nnfv1alpha3.NnfDataMovementProfile
-		dmm                *nnfv1alpha3.NnfDataMovementManager
+		storageProfile     *nnfv1alpha4.NnfStorageProfile
+		dmProfile          *nnfv1alpha4.NnfDataMovementProfile
+		dmm                *nnfv1alpha4.NnfDataMovementManager
 	)
 
 	advanceState := func(state dwsv1alpha2.WorkflowState, w *dwsv1alpha2.Workflow, testStackOffset int) {
@@ -82,19 +82,22 @@ var _ = Describe("Integration Test", func() {
 		}).WithOffset(testStackOffset).Should(Equal(state), fmt.Sprintf("Waiting on state %s", state))
 	}
 
-	verifyNnfNodeStoragesHaveStorageProfileLabel := func(nnfStorage *nnfv1alpha3.NnfStorage) {
+	verifyNnfNodeStoragesHaveStorageProfileLabel := func(nnfStorage *nnfv1alpha4.NnfStorage) {
 		for allocationSetIndex := range nnfStorage.Spec.AllocationSets {
 			allocationSet := nnfStorage.Spec.AllocationSets[allocationSetIndex]
 			for i, node := range allocationSet.Nodes {
 				// Per Rabbit namespace.
-				nnfNodeStorage := &nnfv1alpha3.NnfNodeStorage{
+				nnfNodeStorage := &nnfv1alpha4.NnfNodeStorage{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      nnfNodeStorageName(nnfStorage, allocationSetIndex, i),
 						Namespace: node.Name,
 					},
 				}
 
-				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage)).To(Succeed())
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeStorage), nnfNodeStorage)
+				}).Should(Succeed())
+
 				By("Verify that the NnfNodeStorage has a label for the pinned profile")
 				_, err := getPinnedStorageProfileFromLabel(context.TODO(), k8sClient, nnfNodeStorage)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -138,14 +141,14 @@ var _ = Describe("Integration Test", func() {
 
 				if findDataMovementDirectiveIndex() >= 0 {
 
-					dms := &nnfv1alpha3.NnfDataMovementList{}
+					dms := &nnfv1alpha4.NnfDataMovementList{}
 					Expect(k8sClient.List(context.TODO(), dms)).To(Succeed())
 
 					for _, dm := range dms.Items {
 						dm := dm
 						g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(&dm), &dm)).To(Succeed())
-						dm.Status.State = nnfv1alpha3.DataMovementConditionTypeFinished
-						dm.Status.Status = nnfv1alpha3.DataMovementConditionReasonSuccess
+						dm.Status.State = nnfv1alpha4.DataMovementConditionTypeFinished
+						dm.Status.Status = nnfv1alpha4.DataMovementConditionReasonSuccess
 						g.Expect(k8sClient.Status().Update(context.TODO(), &dm)).To(Succeed())
 					}
 				}
@@ -164,7 +167,7 @@ var _ = Describe("Integration Test", func() {
 				}
 				By("Verify that the NnfStorage now owns the pinned profile")
 				commonName, commonNamespace := getStorageReferenceNameFromWorkflowActual(w, dwIndex)
-				nnfStorage := &nnfv1alpha3.NnfStorage{}
+				nnfStorage := &nnfv1alpha4.NnfStorage{}
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: commonName, Namespace: commonNamespace}, nnfStorage)).To(Succeed())
 				Expect(verifyPinnedProfile(context.TODO(), k8sClient, commonNamespace, commonName)).WithOffset(testStackOffset).To(Succeed())
 
@@ -257,7 +260,7 @@ var _ = Describe("Integration Test", func() {
 			BlockOwnerDeletion: &blockOwnerDeletion,
 		}
 
-		nnfStorage := &nnfv1alpha3.NnfStorage{}
+		nnfStorage := &nnfv1alpha4.NnfStorage{}
 		if nnfStoragePresent {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), nnfStorage)).To(Succeed(), "Fetch NnfStorage matching PersistentStorageInstance")
 			Expect(nnfStorage.ObjectMeta.OwnerReferences).To(ContainElement(persistentStorageOwnerRef), "NnfStorage owned by PersistentStorageInstance")
@@ -345,7 +348,7 @@ var _ = Describe("Integration Test", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeName,
 					Labels: map[string]string{
-						nnfv1alpha3.RabbitNodeSelectorLabel: "true",
+						nnfv1alpha4.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{
@@ -361,16 +364,16 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Create(context.TODO(), node)).To(Succeed())
 
 			// Create the NNF Node resource
-			nnfNode := &nnfv1alpha3.NnfNode{
+			nnfNode := &nnfv1alpha4.NnfNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",
 					Namespace: nodeName,
 				},
-				Spec: nnfv1alpha3.NnfNodeSpec{
+				Spec: nnfv1alpha4.NnfNodeSpec{
 					Name:  nodeName,
-					State: nnfv1alpha3.ResourceEnable,
+					State: nnfv1alpha4.ResourceEnable,
 				},
-				Status: nnfv1alpha3.NnfNodeStatus{},
+				Status: nnfv1alpha4.NnfNodeStatus{},
 			}
 
 			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
@@ -422,26 +425,26 @@ var _ = Describe("Integration Test", func() {
 		workflow = nil
 
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha3.NnfStorageProfile{}
+		profExpected := &nnfv1alpha4.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
 
 		Expect(k8sClient.Delete(context.TODO(), dmProfile)).To(Succeed())
-		dmProfExpected := &nnfv1alpha3.NnfDataMovementProfile{}
+		dmProfExpected := &nnfv1alpha4.NnfDataMovementProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
 		}).ShouldNot(Succeed())
 
 		for _, nodeName := range nodeNames {
-			nnfNode := &nnfv1alpha3.NnfNode{
+			nnfNode := &nnfv1alpha4.NnfNode{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",
 					Namespace: nodeName,
 				},
 			}
 			Expect(k8sClient.Delete(context.TODO(), nnfNode)).To(Succeed())
-			tempNnfNode := &nnfv1alpha3.NnfNode{}
+			tempNnfNode := &nnfv1alpha4.NnfNode{}
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNode), tempNnfNode)
 			}).ShouldNot(Succeed())
@@ -741,7 +744,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 					By("Check for an NNF Access describing the computes")
-					access := &nnfv1alpha3.NnfAccess{
+					access := &nnfv1alpha4.NnfAccess{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
 							Namespace: workflow.Namespace,
@@ -783,9 +786,9 @@ var _ = Describe("Integration Test", func() {
 					Expect(access.Spec.StorageReference).To(MatchFields(IgnoreExtras, Fields{
 						"Name":      Equal(storageName),
 						"Namespace": Equal(workflow.Namespace), // Namespace is the same as the workflow
-						"Kind":      Equal(reflect.TypeOf(nnfv1alpha3.NnfStorage{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(nnfv1alpha4.NnfStorage{}).Name()),
 					}))
-					storage := &nnfv1alpha3.NnfStorage{
+					storage := &nnfv1alpha4.NnfStorage{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      access.Spec.StorageReference.Name,
 							Namespace: access.Spec.StorageReference.Namespace,
@@ -811,7 +814,7 @@ var _ = Describe("Integration Test", func() {
 					// For shared file systems, there should also be a NNF Access for the Rabbit as well as corresponding Client Mounts per Rabbit
 					if fsType == "gfs2" {
 						By("Checking for an NNF Access describing the servers")
-						access := &nnfv1alpha3.NnfAccess{
+						access := &nnfv1alpha4.NnfAccess{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
 								Namespace: workflow.Namespace,
@@ -841,7 +844,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 					By("Check that NNF Access describing computes is not present")
-					access := &nnfv1alpha3.NnfAccess{
+					access := &nnfv1alpha4.NnfAccess{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", dbd.Name, "computes"),
 							Namespace: workflow.Namespace,
@@ -857,7 +860,7 @@ var _ = Describe("Integration Test", func() {
 
 					if fsType == "gfs2" {
 						By("Check that NNF Access describing computes is not present")
-						access := &nnfv1alpha3.NnfAccess{
+						access := &nnfv1alpha4.NnfAccess{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      fmt.Sprintf("%s-%s", dbd.Name, "servers"),
 								Namespace: workflow.Namespace,
@@ -901,7 +904,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
 					By("NNFStorages for persistentStorageInstance should NOT be deleted")
-					nnfStorage := &nnfv1alpha3.NnfStorage{}
+					nnfStorage := &nnfv1alpha4.NnfStorage{}
 					Consistently(func() error {
 						return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
 					}).Should(Succeed(), "NnfStorage should continue to exist")
@@ -916,7 +919,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
 					By("NNFStorages associated with jobdw should be deleted")
-					nnfStorage := &nnfv1alpha3.NnfStorage{}
+					nnfStorage := &nnfv1alpha4.NnfStorage{}
 					Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 						return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), nnfStorage)
 					}).ShouldNot(Succeed(), "NnfStorage should be deleted")
@@ -1009,7 +1012,7 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			ns := &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: nnfv1alpha3.DataMovementNamespace,
+					Name: nnfv1alpha4.DataMovementNamespace,
 				},
 			}
 
@@ -1028,12 +1031,12 @@ var _ = Describe("Integration Test", func() {
 				},
 			}
 
-			dmm = &nnfv1alpha3.NnfDataMovementManager{
+			dmm = &nnfv1alpha4.NnfDataMovementManager{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nnfv1alpha3.DataMovementManagerName,
-					Namespace: nnfv1alpha3.DataMovementNamespace,
+					Name:      nnfv1alpha4.DataMovementManagerName,
+					Namespace: nnfv1alpha4.DataMovementNamespace,
 				},
-				Spec: nnfv1alpha3.NnfDataMovementManagerSpec{
+				Spec: nnfv1alpha4.NnfDataMovementManagerSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{{
@@ -1043,7 +1046,7 @@ var _ = Describe("Integration Test", func() {
 						},
 					},
 				},
-				Status: nnfv1alpha3.NnfDataMovementManagerStatus{
+				Status: nnfv1alpha4.NnfDataMovementManagerStatus{
 					Ready: true,
 				},
 			}
@@ -1151,7 +1154,7 @@ var _ = Describe("Integration Test", func() {
 		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha2.WorkflowState) {
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
 
-			access := &nnfv1alpha3.NnfAccess{
+			access := &nnfv1alpha4.NnfAccess{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, 0, "servers"),
 					Namespace: workflow.Namespace,
@@ -1174,7 +1177,7 @@ var _ = Describe("Integration Test", func() {
 		validateNnfAccessIsNotFound := func() {
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
 
-			access := &nnfv1alpha3.NnfAccess{
+			access := &nnfv1alpha4.NnfAccess{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d-%s", workflow.Name, 0, "servers"),
 					Namespace: workflow.Namespace,
@@ -1278,15 +1281,15 @@ var _ = Describe("Integration Test", func() {
 
 				By("Injecting an error in the data movement resource")
 
-				dm := &nnfv1alpha3.NnfDataMovement{
+				dm := &nnfv1alpha4.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "failed-data-movement",
-						Namespace: nnfv1alpha3.DataMovementNamespace,
+						Namespace: nnfv1alpha4.DataMovementNamespace,
 					},
 				}
 				dwsv1alpha2.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha2.AddOwnerLabels(dm, workflow)
-				nnfv1alpha3.AddDataMovementTeardownStateLabel(dm, dwsv1alpha2.StatePostRun)
+				nnfv1alpha4.AddDataMovementTeardownStateLabel(dm, dwsv1alpha2.StatePostRun)
 
 				Expect(k8sClient.Create(context.TODO(), dm)).To(Succeed())
 
@@ -1294,8 +1297,8 @@ var _ = Describe("Integration Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dm), dm)
 				}).Should(Succeed())
 
-				dm.Status.State = nnfv1alpha3.DataMovementConditionTypeFinished
-				dm.Status.Status = nnfv1alpha3.DataMovementConditionReasonFailed
+				dm.Status.State = nnfv1alpha4.DataMovementConditionTypeFinished
+				dm.Status.Status = nnfv1alpha4.DataMovementConditionReasonFailed
 
 				Expect(k8sClient.Status().Update(context.TODO(), dm)).To(Succeed())
 
@@ -1324,7 +1327,7 @@ var _ = Describe("Integration Test", func() {
 
 	Describe("Test with container directives", func() {
 		var (
-			containerProfile *nnfv1alpha3.NnfContainerProfile
+			containerProfile *nnfv1alpha4.NnfContainerProfile
 		)
 
 		BeforeEach(func() {
@@ -1395,7 +1398,7 @@ var _ = Describe("Integration Test", func() {
 
 				By("verifying the number of targeted NNF nodes for the container jobs")
 				matchLabels := dwsv1alpha2.MatchingWorkflow(workflow)
-				matchLabels[nnfv1alpha3.DirectiveIndexLabel] = "0"
+				matchLabels[nnfv1alpha4.DirectiveIndexLabel] = "0"
 
 				jobList := &batchv1.JobList{}
 				Eventually(func() int {
@@ -1419,9 +1422,9 @@ var _ = Describe("Integration Test", func() {
 
 		var (
 			intendedDirective     string
-			profileExternalMGS    *nnfv1alpha3.NnfStorageProfile
-			profileCombinedMGTMDT *nnfv1alpha3.NnfStorageProfile
-			nnfLustreMgt          *nnfv1alpha3.NnfLustreMGT
+			profileExternalMGS    *nnfv1alpha4.NnfStorageProfile
+			profileCombinedMGTMDT *nnfv1alpha4.NnfStorageProfile
+			nnfLustreMgt          *nnfv1alpha4.NnfLustreMGT
 
 			profileMgsNid string
 
@@ -1452,13 +1455,13 @@ var _ = Describe("Integration Test", func() {
 			Expect(createNnfStorageProfile(profileExternalMGS, true)).ToNot(BeNil())
 			Expect(createNnfStorageProfile(profileCombinedMGTMDT, true)).ToNot(BeNil())
 
-			nnfLustreMgt = &nnfv1alpha3.NnfLustreMGT{
+			nnfLustreMgt = &nnfv1alpha4.NnfLustreMGT{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "profile-mgs",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha3.NnfLustreMGTSpec{
+				Spec: nnfv1alpha4.NnfLustreMGTSpec{
 					Addresses:   []string{profileMgsNid},
 					FsNameStart: "dddddddd",
 				},
@@ -1565,7 +1568,7 @@ var _ = Describe("Integration Test", func() {
 			By(fmt.Sprintf("Verify that the MGS NID %s is used by the filesystem", getNidVia))
 			advanceStateAndCheckReady(dwsv1alpha2.StateSetup, workflow)
 			// The NnfStorage's name matches the Server resource's name.
-			nnfstorage := &nnfv1alpha3.NnfStorage{}
+			nnfstorage := &nnfv1alpha4.NnfStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbdServer), nnfstorage)).To(Succeed())
 			for _, comp := range nnfstorage.Spec.AllocationSets {
 				Expect(comp.MgsAddress).To(Equal(desiredNid))

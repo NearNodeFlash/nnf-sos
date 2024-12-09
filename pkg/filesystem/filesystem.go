@@ -45,4 +45,10 @@ type FileSystem interface {
 
 	// Run any commands against the activated file system before it is deactivated
 	PreDeactivate(ctx context.Context) (bool, error)
+
+	// Run any commands against the file system after it has been mounted
+	PostMount(ctx context.Context, complete bool) (bool, error)
+
+	// Run any commands against the file system before it is unmounted
+	PreUnmount(ctx context.Context) (bool, error)
 }

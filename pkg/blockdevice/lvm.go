@@ -140,10 +140,16 @@ func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 	destroyed, err := l.LogicalVolume.Remove(ctx, l.CommandArgs.LvArgs.Remove)
 	if err != nil {
 		return false, err
-
 	}
 	if destroyed {
 		objectDestroyed = true
+	}
+
+	// Check to ensure the VG has no LVs before removing
+	if count, err := l.VolumeGroup.NumLVs(ctx); err != nil {
+		return false, err
+	} else if count != 0 {
+		return objectDestroyed, nil
 	}
 
 	destroyed, err = l.VolumeGroup.Remove(ctx, l.CommandArgs.VgArgs.Remove)
