@@ -172,10 +172,14 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow modification of Data in a pinned resource", func() {
+	It("Should allow modification of Data in a pinned resource", func() {
+		// WARNING: Our other profile types, such as NnfContainerProfile or
+		// NnfDataMovementProfile, do not allow this.
+
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
 		nnfProfile.Data.Pinned = true
+		nnfProfile.Data.RawStorage.CmdLines.LvRemove = "lvremove $VG_NAME"
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
@@ -184,8 +188,8 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Pinned).To(BeTrue())
-		newProfile.Data.Pinned = false
-		Expect(k8sClient.Update(context.TODO(), newProfile)).ToNot(Succeed())
+		newProfile.Data.RawStorage.CmdLines.LvRemove = "lvremove $VG_NAME/$LV_NAME"
+		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
 	})
 
 	It("Should allow modification of Meta in a pinned resource", func() {
