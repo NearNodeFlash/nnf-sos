@@ -22,7 +22,6 @@ package v1alpha4
 import (
 	"fmt"
 	"os"
-	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -76,17 +75,11 @@ func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnin
 		nnfstorageprofilelog.Error(err, "invalid")
 		return nil, err
 	}
-	if obj.Data.Pinned {
-		// Allow metadata to be updated, for things like finalizers,
-		// ownerReferences, and labels, but do not allow Data to be
-		// updated.
-		if !reflect.DeepEqual(r.Data, obj.Data) {
-			msg := "update on pinned resource not allowed"
-			err := fmt.Errorf(msg)
-			nnfstorageprofilelog.Error(err, "invalid")
-			return nil, err
-		}
-	}
+
+	// WARNING: NnfStorageProfile allows the obj.Data section to be modified.
+	// This is the place in the webhook where our other profile types, such as
+	// NnfContainerProfile or NnfDataMovementProfile, would verify that their
+	// obj.Data has not been modified.
 
 	if err := r.validateContent(); err != nil {
 		nnfstorageprofilelog.Error(err, "invalid NnfStorageProfile resource")
