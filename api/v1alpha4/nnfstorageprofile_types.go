@@ -267,7 +267,7 @@ type NnfStorageProfileData struct {
 	// +kubebuilder:default:=false
 	Default bool `json:"default,omitempty"`
 
-	// Pinned is true if this instance is an immutable copy
+	// Pinned is true if this instance is describing an active storage resource
 	// +kubebuilder:default:=false
 	Pinned bool `json:"pinned,omitempty"`
 
