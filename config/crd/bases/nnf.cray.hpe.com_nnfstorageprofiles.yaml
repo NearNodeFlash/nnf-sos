@@ -1784,7 +1784,8 @@ spec:
                 type: object
               pinned:
                 default: false
-                description: Pinned is true if this instance is an immutable copy
+                description: Pinned is true if this instance is describing an active
+                  storage resource
                 type: boolean
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
