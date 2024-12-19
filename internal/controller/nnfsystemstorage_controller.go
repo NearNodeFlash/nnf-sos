@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -524,6 +525,31 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 					node := nnfv1alpha4.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount}
 					nnfAllocationSet.Nodes = append(nnfAllocationSet.Nodes, node)
 				}
+
+				commandVariable := nnfv1alpha4.CommandVariablesSpec{}
+				commandVariable.Name = "$COMPUTE_HOSTNAME"
+				commandVariable.Indexed = true
+
+				computesPattern := []int{}
+				switch nnfSystemStorage.Spec.ComputesTarget {
+				case "all":
+					computesPattern = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+				case "odd":
+					computesPattern = []int{1, 3, 5, 7, 9, 11, 13, 15}
+				case "even":
+					computesPattern = []int{0, 2, 4, 6, 8, 10, 12, 14}
+				case "pattern":
+					computesPattern = make([]int, len(nnfSystemStorage.Spec.ComputesPattern))
+					copy(computesPattern, nnfSystemStorage.Spec.ComputesPattern)
+				}
+
+				// The COMPUTE_HOSTNAME variable can be used for multiple NnfNodeStorages (on multiple Rabbits). We can't specify an actual
+				// compute hostname here since it will differ between then Rabbits. Instead, put a variable that will expanded to the correct
+				// compute hostname by the NnfStorage controller when generating the NnfNodeStorages.
+				for _, computeIndex := range computesPattern {
+					commandVariable.IndexedValues = append(commandVariable.IndexedValues, fmt.Sprintf("$COMPUTE%d_HOSTNAME", computeIndex))
+				}
+				nnfAllocationSet.CommandVariables = append(nnfAllocationSet.CommandVariables, commandVariable)
 
 				nnfStorage.Spec.AllocationSets = append(nnfStorage.Spec.AllocationSets, nnfAllocationSet)
 			}

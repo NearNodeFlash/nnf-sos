@@ -36,6 +36,8 @@ type LogicalVolume struct {
 	PercentVG   int
 	VolumeGroup *VolumeGroup
 
+	Vars map[string]string
+
 	Log logr.Logger
 }
 
@@ -83,6 +85,10 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 
 	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {
 		return "", fmt.Errorf("invalid internal device list: %w", err)
+	}
+
+	for key, value := range lv.Vars {
+		varHandler.AddVar(key, value)
 	}
 
 	return varHandler.ReplaceAll(args), nil

@@ -37,6 +37,8 @@ type VolumeGroup struct {
 	PhysicalVolumes []*PhysicalVolume
 	Shared          bool
 
+	Vars map[string]string
+
 	Log logr.Logger
 }
 
@@ -113,6 +115,10 @@ func (vg *VolumeGroup) parseArgs(args string) (string, error) {
 
 	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {
 		return "", fmt.Errorf("invalid internal device list: %w", err)
+	}
+
+	for key, value := range vg.Vars {
+		varHandler.AddVar(key, value)
 	}
 
 	return varHandler.ReplaceAll(args), nil

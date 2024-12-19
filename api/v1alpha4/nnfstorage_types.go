@@ -81,6 +81,22 @@ type NnfStorageLustreComponents struct {
 	NNFNodes []string `json:"nnfNodes,omitempty"`
 }
 
+type CommandVariablesSpec struct {
+	// Indexed determines whether to use the same value for each allocation, or to use
+	// a different value based on the index of the allocation.
+	Indexed bool `json:"indexed,omitempty"`
+
+	// Name of the variable
+	Name string `json:"name,omitempty"`
+
+	// Value for the variable
+	Value string `json:"value,omitempty"`
+
+	// IndexedValues is a list of strings values for the variable. The list length should
+	// be the same as the allocation count in the NnfNodeStorageSpec.
+	IndexedValues []string `json:"indexedValues,omitempty"`
+}
+
 // NnfStorageAllocationSetSpec defines the details for an allocation set
 type NnfStorageAllocationSetSpec struct {
 	// Name is a human readable label for this set of allocations (e.g., xfs)
@@ -96,6 +112,8 @@ type NnfStorageAllocationSetSpec struct {
 	// SharedAllocation shares a single block storage allocation between multiple file system allocations
 	// (within the same workflow) on a Rabbit
 	SharedAllocation bool `json:"sharedAllocation"`
+
+	CommandVariables []CommandVariablesSpec `json:"commandVariables,omitempty"`
 
 	// Nodes is the list of Rabbit nodes to make allocations on
 	Nodes []NnfStorageAllocationNodes `json:"nodes"`

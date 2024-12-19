@@ -664,6 +664,29 @@ spec:
                         may split the storage among the available drives operating in the NNF Node.
                       format: int64
                       type: integer
+                    commandVariables:
+                      items:
+                        properties:
+                          indexed:
+                            description: |-
+                              Indexed determines whether to use the same value for each allocation, or to use
+                              a different value based on the index of the allocation.
+                            type: boolean
+                          indexedValues:
+                            description: |-
+                              IndexedValues is a list of strings values for the variable. The list length should
+                              be the same as the allocation count in the NnfNodeStorageSpec.
+                            items:
+                              type: string
+                            type: array
+                          name:
+                            description: Name of the variable
+                            type: string
+                          value:
+                            description: Value for the variable
+                            type: string
+                        type: object
+                      type: array
                     mgsAddress:
                       description: |-
                         MgsAddress is the NID of the MGS when a pre-existing MGS is
