@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -1226,9 +1225,8 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&dwsv1alpha2.DirectiveBreakdownList{},
 	}
 
-	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&dwsv1alpha2.Workflow{}).
 		Owns(&nnfv1alpha4.NnfAccess{}).
 		Owns(&dwsv1alpha2.DirectiveBreakdown{}).

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -1331,9 +1330,8 @@ func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&nnfv1alpha4.NnfStorageProfileList{},
 	}
 
-	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&nnfv1alpha4.NnfStorage{}).
 		Watches(&nnfv1alpha4.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		Watches(&nnfv1alpha4.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).

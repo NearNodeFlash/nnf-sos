@@ -22,7 +22,6 @@ package controller
 import (
 	"context"
 	"reflect"
-	"runtime"
 
 	"github.com/go-logr/logr"
 
@@ -266,9 +265,8 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		&nnfv1alpha4.NnfStorageProfileList{},
 	}
 
-	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&dwsv1alpha2.PersistentStorageInstance{}).
 		Owns(&dwsv1alpha2.Servers{}).
 		Owns(&nnfv1alpha4.NnfStorage{}).

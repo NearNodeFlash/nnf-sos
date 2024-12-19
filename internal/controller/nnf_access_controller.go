@@ -25,7 +25,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -1255,9 +1254,8 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	//
 	// Matt or Tony might be able to clean this up.
 
-	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&nnfv1alpha4.NnfAccess{}).
 		Watches(&dwsv1alpha2.Computes{}, handler.EnqueueRequestsFromMapFunc(r.ComputesEnqueueRequests)).
 		Watches(&dwsv1alpha2.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).

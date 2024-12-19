@@ -25,7 +25,6 @@ import (
 	"math"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -628,9 +627,8 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		&dwsv1alpha2.PersistentStorageInstanceList{},
 	}
 
-	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&dwsv1alpha2.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha2.Servers{}).
 		Owns(&dwsv1alpha2.PersistentStorageInstance{}).
