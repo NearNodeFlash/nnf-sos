@@ -62,9 +62,8 @@ const (
 // NnfWorkflowReconciler contains the pieces used by the reconciler
 type NnfWorkflowReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=workflows,verbs=get;list;watch;update;patch
@@ -141,7 +140,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1216,16 +1215,18 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	return nil, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *NnfWorkflowReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&nnfv1alpha4.NnfDataMovementList{},
 		&nnfv1alpha4.NnfAccessList{},
 		&nnfv1alpha4.NnfStorageList{},
 		&dwsv1alpha2.PersistentStorageInstanceList{},
 		&dwsv1alpha2.DirectiveBreakdownList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

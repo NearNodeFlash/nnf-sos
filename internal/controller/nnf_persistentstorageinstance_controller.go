@@ -50,9 +50,8 @@ const (
 // DirectiveBreakdownReconciler reconciles a DirectiveBreakdown object
 type PersistentStorageReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=persistentstorageinstances,verbs=get;list;watch;create;update;patch;delete
@@ -94,7 +93,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		// Delete all NnfStorage and Servers children that are owned by this PersistentStorage.
-		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, persistentStorage)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), persistentStorage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -258,14 +257,16 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 	return server, err
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *PersistentStorageReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&nnfv1alpha4.NnfStorageList{},
 		&dwsv1alpha2.ServersList{},
 		&nnfv1alpha4.NnfStorageProfileList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

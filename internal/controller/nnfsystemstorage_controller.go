@@ -46,9 +46,8 @@ import (
 // NnfSystemStorageReconciler reconciles a NnfSystemStorage object
 type NnfSystemStorageReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 const (
@@ -88,7 +87,7 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, nnfSystemStorage)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), nnfSystemStorage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -689,16 +688,17 @@ func (r *NnfSystemStorageReconciler) NnfSystemStorageEnqueueAll(ctx context.Cont
 
 	return requests
 }
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *NnfSystemStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *NnfSystemStorageReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&nnfv1alpha4.NnfAccessList{},
 		&nnfv1alpha4.NnfStorageList{},
 		&dwsv1alpha2.ComputesList{},
 		&dwsv1alpha2.ServersList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *NnfSystemStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha4.NnfSystemStorage{}).
 		Owns(&dwsv1alpha2.Computes{}).

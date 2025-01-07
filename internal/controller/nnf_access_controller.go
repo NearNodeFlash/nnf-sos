@@ -54,9 +54,8 @@ import (
 // NnfAccessReconciler reconciles a NnfAccess object
 type NnfAccessReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 const (
@@ -118,7 +117,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, access)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), access)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -1233,12 +1232,14 @@ func (r *NnfAccessReconciler) ComputesEnqueueRequests(ctx context.Context, o cli
 	return requests
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *NnfAccessReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&dwsv1alpha2.ClientMountList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// NOTE: NNF Access controller also depends on NNF Storage and NNF Node Storage status'
 	// as part of its reconcile sequence. But since there is not a very good way to translate
 	// from these resources to the associated NNF Access resource as one would typically do
