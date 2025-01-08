@@ -64,9 +64,8 @@ const (
 // DirectiveBreakdownReconciler reconciles a DirectiveBreakdown object
 type DirectiveBreakdownReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 type lustreComponentType struct {
@@ -111,7 +110,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 
 		// Delete all children that are owned by this DirectiveBreakdown.
-		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, dbd)
+		deleteStatus, err := dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), dbd)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -620,14 +619,16 @@ func populateStorageAllocationSet(a *dwsv1alpha2.StorageAllocationSet, strategy 
 	}
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *DirectiveBreakdownReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&dwsv1alpha2.ServersList{},
 		&nnfv1alpha4.NnfStorageProfileList{},
 		&dwsv1alpha2.PersistentStorageInstanceList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).

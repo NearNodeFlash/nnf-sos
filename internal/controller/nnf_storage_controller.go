@@ -51,9 +51,8 @@ import (
 // NnfStorageReconciler reconciles a Storage object
 type NnfStorageReconciler struct {
 	client.Client
-	Log          logr.Logger
-	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha2.ObjectList
+	Log    logr.Logger
+	Scheme *kruntime.Scheme
 }
 
 const (
@@ -1164,7 +1163,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 	}
 
 	// Delete any remaining child objects including the MGT allocation set for Lustre
-	deleteStatus, err = dwsv1alpha2.DeleteChildren(ctx, r.Client, r.ChildObjects, storage)
+	deleteStatus, err = dwsv1alpha2.DeleteChildren(ctx, r.Client, r.getChildObjects(), storage)
 	if err != nil {
 		return nodeStoragesExist, err
 	}
@@ -1321,16 +1320,18 @@ func getLustreMappingFromStorage(storage *nnfv1alpha4.NnfStorage) map[string][]s
 	return componentMap
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha2.ObjectList{
+func (r *NnfStorageReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
+	return []dwsv1alpha2.ObjectList{
 		&dwsv1alpha2.ClientMountList{},
 		&nnfv1alpha4.NnfNodeStorageList{},
 		&nnfv1alpha4.NnfNodeBlockStorageList{},
 		&nnfv1alpha4.NnfLustreMGTList{},
 		&nnfv1alpha4.NnfStorageProfileList{},
 	}
+}
 
+// SetupWithManager sets up the controller with the Manager.
+func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
