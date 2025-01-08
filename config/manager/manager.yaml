@@ -89,6 +89,20 @@ spec:
           periodSeconds: 10
         securityContext:
           privileged: true
+        volumeMounts:
+          - name: localtime
+            mountPath: /etc/localtime
+            readOnly: true
+          - name: tzdata
+            mountPath: /usr/share/zoneinfo
+            readOnly: true
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: tzdata
+          hostPath:
+            path: /usr/share/zoneinfo
       serviceAccountName: node-controller
       terminationGracePeriodSeconds: 10
 
@@ -148,5 +162,19 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+        volumeMounts:
+          - name: localtime
+            mountPath: /etc/localtime
+            readOnly: true
+          - name: tzdata
+            mountPath: /usr/share/zoneinfo
+            readOnly: true
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: tzdata
+          hostPath:
+            path: /usr/share/zoneinfo
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
