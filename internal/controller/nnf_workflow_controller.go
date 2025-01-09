@@ -938,7 +938,6 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 }
 
 func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha2.Workflow, index int) (*result, error) {
-
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	// Add an environment variable to the workflow status section for the location of the
@@ -947,19 +946,53 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		workflow.Status.Env = make(map[string]string)
 	}
 
-	envName := ""
+	uniqueEnvName := ""
+	commonEnvName := ""
+	listEnvName := ""
+
 	switch dwArgs["command"] {
 	case "jobdw":
-		envName = "DW_JOB_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
+		uniqueEnvName = "DW_JOB_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
+		commonEnvName = "DW_JOB_" + strings.ToUpper(dwArgs["type"])
+		listEnvName = "DW_JOBS"
 	case "persistentdw":
-		envName = "DW_PERSISTENT_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
+		uniqueEnvName = "DW_PERSISTENT_" + strings.ReplaceAll(dwArgs["name"], "-", "_")
+		commonEnvName = "DW_PERSISTENT_" + strings.ToUpper(dwArgs["type"])
+		listEnvName = "DW_PERSISTENTS"
 	case "container":
 		return r.waitForContainersToStart(ctx, workflow, index)
 	default:
 		return nil, dwsv1alpha2.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
 	}
 
-	workflow.Status.Env[envName] = buildComputeMountPath(workflow, index)
+	path := buildComputeMountPath(workflow, index)
+
+	// Add an environment variable with form "DW_JOB_myfs=/mnt/dw/path"
+	workflow.Status.Env[uniqueEnvName] = path
+
+	// Add an environment variable for the first file system of a given type with form "DW_XFS=/mnt/dw/path"
+	if _, exists := workflow.Status.Env[commonEnvName]; !exists {
+		workflow.Status.Env[commonEnvName] = path
+	}
+
+	// Add an environment variable with a list of allocations "DW_JOBS=firstfs:/mnt/dw/path1,secondfs:/mnt/dw/path2"
+	found := false
+	listEnvValue, exists := workflow.Status.Env[listEnvName]
+	nameAndPathList := []string{}
+
+	if exists {
+		nameAndPathList = strings.Split(listEnvValue, ",")
+		for _, nameAndPath := range nameAndPathList {
+			if nameAndPath == fmt.Sprintf("%s:%s", dwArgs["name"], path) {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		workflow.Status.Env[listEnvName] = strings.Join(append(nameAndPathList, fmt.Sprintf("%s:%s", dwArgs["name"], path)), ",")
+	}
 
 	// Containers do not have NNFAccesses, so only do this after r.waitForContainersToStart() would have returned
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
