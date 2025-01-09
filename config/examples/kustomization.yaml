@@ -4,6 +4,7 @@ resources:
 - nnf_nnfcontainerprofiles.yaml
 - nnf_nnfdatamovementprofile.yaml
 - nnf_nnfstorageprofile.yaml
+- copyoffload-datamovement-profile.yaml
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

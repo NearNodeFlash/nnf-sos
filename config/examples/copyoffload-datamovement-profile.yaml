@@ -1,0 +1,17 @@
+apiVersion: nnf.cray.hpe.com/v1alpha4
+data:
+  command: ulimit -n 2048 && mpirun --hostfile $HOSTFILE dcp --progress 1 $SRC $DEST
+  createDestDir: true
+  default: false
+  logStdout: true
+  maxSlots: 0
+  mkdirCommand: mpirun -np 1 --hostfile $HOSTFILE -- mkdir -p $PATH
+  pinned: false
+  progressIntervalSeconds: 5
+  slots: 8
+  statCommand: mpirun -np 1 --hostfile $HOSTFILE -- stat --cached never -c '%F' $PATH
+  storeStdout: true
+kind: NnfDataMovementProfile
+metadata:
+  name: copy-offload-nonmpi
+  namespace: nnf-system
