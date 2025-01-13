@@ -110,7 +110,7 @@ type Storage struct {
 	// the life of the object.
 	capacityBytes uint64
 
-	// Unallocated capacity in bytes. This value is updated for any namespaces create or
+	// Unallocated capacity in bytes. This value is updated for any namespace create or
 	// delete operation that might shrink or grow the byte count as expected.
 	unallocatedBytes uint64
 
@@ -217,8 +217,9 @@ func findStoragePool(storageId, storagePoolId string) (*Storage, *interface{}) {
 	return nil, nil
 }
 
+// CleanupVolumes - remove all volumes other than the list of providingVolumes
 func CleanupVolumes(providingVolumes []ProvidingVolume) {
-	for _, storage := range mgr.storage {
+	for _, storage := range GetStorage() {
 		if !storage.IsEnabled() {
 			continue
 		}
@@ -456,7 +457,7 @@ func (s *Storage) purge() error {
 	return nil
 }
 
-// Delete all the volumes on this storage device except for the volumes that we want to keep
+// Delete all the volumes on this storage device other than the ones specified
 func (s *Storage) purgeVolumes(volIdsToKeep []string) error {
 	if s.device == nil {
 		return fmt.Errorf("Storage %s has no device", s.id)
@@ -551,7 +552,7 @@ func (s *Storage) deleteVolume(volumeId string) error {
 				log.Error(err, "Delete namespace failed")
 				return err
 			}
-			log.V(1).Info("Deleted namespace")
+			log.V(1).Info("Deleted namespace", "capacity", volume.capacityBytes)
 
 			s.unallocatedBytes += volume.capacityBytes
 
