@@ -701,7 +701,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 		return ec.NewErrInternalServerError().WithResourceType(StorageServiceOdataType).WithError(err).WithCause("Failed to initialize storage policy")
 	}
 
-	if err := policy.CheckCapacity(); err != nil {
+	if err := policy.CheckAndAdjustCapacity(); err != nil {
 		log.Error(err, "Storage policy cannot support capacity", "capacityInBytes", capacityInBytes)
 		return ec.NewErrNotAcceptable().WithResourceType(StorageServiceOdataType).WithError(err).WithCause("Insufficient capacity available")
 	}

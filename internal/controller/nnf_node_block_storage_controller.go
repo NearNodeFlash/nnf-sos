@@ -541,7 +541,7 @@ func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceA
 		CapacityBytes: capacity,
 		Oem: openapi.MarshalOem(nnf.AllocationPolicyOem{
 			Policy:     nnf.SpareAllocationPolicyType,
-			Compliance: nnf.RelaxedAllocationComplianceType,
+			Compliance: nnf.StrictAllocationComplianceType,
 		}),
 	}
 
