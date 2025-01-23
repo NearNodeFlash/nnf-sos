@@ -169,7 +169,7 @@ data:
           spec:
             containers:
             - name: example-mpi-webserver
-              image: ghcr.io/nearnodeflash/nnf-container-example:latest
+              image: ghcr.io/nearnodeflash/nnf-container-example:master
               command:
               - mpirun
               - python3
@@ -181,4 +181,4 @@ data:
           spec:
             containers:
             - name: example-mpi-webserver
-              image: ghcr.io/nearnodeflash/nnf-container-example:latest
+              image: ghcr.io/nearnodeflash/nnf-container-example:master
