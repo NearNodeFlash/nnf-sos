@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -43,7 +43,7 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -622,7 +622,7 @@ func populateStorageAllocationSet(a *dwsv1alpha2.StorageAllocationSet, strategy 
 func (r *DirectiveBreakdownReconciler) getChildObjects() []dwsv1alpha2.ObjectList {
 	return []dwsv1alpha2.ObjectList{
 		&dwsv1alpha2.ServersList{},
-		&nnfv1alpha4.NnfStorageProfileList{},
+		&nnfv1alpha5.NnfStorageProfileList{},
 		&dwsv1alpha2.PersistentStorageInstanceList{},
 	}
 }
@@ -635,6 +635,6 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&dwsv1alpha2.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha2.Servers{}).
 		Owns(&dwsv1alpha2.PersistentStorageInstance{}).
-		Owns(&nnfv1alpha4.NnfStorageProfile{}).
+		Owns(&nnfv1alpha5.NnfStorageProfile{}).
 		Complete(r)
 }
