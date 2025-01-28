@@ -50,6 +50,9 @@ type NnfNodeStorageSpec struct {
 	// Group ID for file system
 	GroupID uint32 `json:"groupID"`
 
+	// Extra variable substitutions to make for commands
+	CommandVariables []CommandVariablesSpec `json:"commandVariables,omitempty"`
+
 	// FileSystemType defines the type of the desired filesystem, or raw
 	// block device.
 	// +kubebuilder:validation:Enum=raw;lvm;zfs;xfs;gfs2;lustre

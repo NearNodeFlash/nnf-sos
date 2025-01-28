@@ -21,6 +21,7 @@ package v1alpha4
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -329,12 +330,18 @@ func (src *NnfNodeStorage) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha5.NnfNodeStorage{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
+
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Spec.CommandVariables = make([]nnfv1alpha5.CommandVariablesSpec, len(restored.Spec.CommandVariables))
+		copy(dst.Spec.CommandVariables, restored.Spec.CommandVariables)
+	}
 
 	return nil
 }
@@ -393,12 +400,17 @@ func (src *NnfStorage) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha5.NnfStorage{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
-	// EDIT THIS FUNCTION! If the annotation is holding anything that is
-	// hub-specific then copy it into 'dst' from 'restored'.
-	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		for i := range restored.Spec.AllocationSets {
+			dst.Spec.AllocationSets[i].CommandVariables = make([]nnfv1alpha5.CommandVariablesSpec, len(restored.Spec.AllocationSets[i].CommandVariables))
+			copy(dst.Spec.AllocationSets[i].CommandVariables, restored.Spec.AllocationSets[i].CommandVariables)
+		}
+	}
 
 	return nil
 }
@@ -598,4 +610,14 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+func Convert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *nnfv1alpha5.NnfNodeStorageSpec, out *NnfNodeStorageSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in, out, s)
+}
+
+func Convert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in *nnfv1alpha5.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in, out, s)
 }

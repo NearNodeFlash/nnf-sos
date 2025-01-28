@@ -356,6 +356,8 @@ func (src *NnfNodeStorage) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.LustreStorage.LustreComponents.MGTMDTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.MGTMDTs...)
 		dst.Spec.LustreStorage.LustreComponents.OSTs = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.OSTs...)
 		dst.Spec.LustreStorage.LustreComponents.NNFNodes = append([]string(nil), restored.Spec.LustreStorage.LustreComponents.NNFNodes...)
+		dst.Spec.CommandVariables = make([]nnfv1alpha5.CommandVariablesSpec, len(restored.Spec.CommandVariables))
+		copy(dst.Spec.CommandVariables, restored.Spec.CommandVariables)
 	}
 
 	return nil
@@ -429,6 +431,10 @@ func (src *NnfStorage) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Status.LustreComponents.MGTMDTs = append([]string(nil), restored.Status.LustreComponents.MGTMDTs...)
 		dst.Status.LustreComponents.OSTs = append([]string(nil), restored.Status.LustreComponents.OSTs...)
 		dst.Status.LustreComponents.NNFNodes = append([]string(nil), restored.Status.LustreComponents.NNFNodes...)
+		for i := range restored.Spec.AllocationSets {
+			dst.Spec.AllocationSets[i].CommandVariables = make([]nnfv1alpha5.CommandVariablesSpec, len(restored.Spec.AllocationSets[i].CommandVariables))
+			copy(dst.Spec.AllocationSets[i].CommandVariables, restored.Spec.AllocationSets[i].CommandVariables)
+		}
 	}
 
 	return nil
@@ -695,4 +701,12 @@ func Convert_v1alpha5_LustreStorageSpec_To_v1alpha2_LustreStorageSpec(in *nnfv1a
 
 func Convert_v1alpha5_NnfStorageLustreStatus_To_v1alpha2_NnfStorageLustreStatus(in *nnfv1alpha5.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s apiconversion.Scope) error {
 	return autoConvert_v1alpha5_NnfStorageLustreStatus_To_v1alpha2_NnfStorageLustreStatus(in, out, s)
+}
+
+func Convert_v1alpha5_NnfNodeStorageSpec_To_v1alpha2_NnfNodeStorageSpec(in *nnfv1alpha5.NnfNodeStorageSpec, out *NnfNodeStorageSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfNodeStorageSpec_To_v1alpha2_NnfNodeStorageSpec(in, out, s)
+}
+
+func Convert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha2_NnfStorageAllocationSetSpec(in *nnfv1alpha5.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha2_NnfStorageAllocationSetSpec(in, out, s)
 }

@@ -247,6 +247,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
+	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
 	return &zpool, nil
 }
@@ -306,6 +307,8 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	for _, device := range devices {
 		pv := lvm.NewPhysicalVolume(ctx, device, log)
+		pv.Vars = unpackCommandVariables(nnfNodeStorage, index)
+
 		lvmDesc.PhysicalVolumes = append(lvmDesc.PhysicalVolumes, pv)
 	}
 
@@ -326,7 +329,10 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	lvmDesc.Log = log
 	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes, log)
+	lvmDesc.VolumeGroup.Vars = unpackCommandVariables(nnfNodeStorage, index)
+
 	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
+	lvmDesc.LogicalVolume.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
 	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
 	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
@@ -364,10 +370,10 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
@@ -389,13 +395,13 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
-	fs.CommandArgs.Vars = map[string]string{
-		"$CLUSTER_NAME": nnfNodeStorage.Namespace,
-		"$LOCK_SPACE":   fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5]),
-		"$PROTOCOL":     "lock_dlm",
-		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$CLUSTER_NAME"] = nnfNodeStorage.Namespace
+	fs.CommandArgs.Vars["$LOCK_SPACE"] = fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5])
+	fs.CommandArgs.Vars["$PROTOCOL"] = "lock_dlm"
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
@@ -417,10 +423,10 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
@@ -452,15 +458,14 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents
 
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-		"$NUM_MDTS":     fmt.Sprintf("%d", len(components.MDTs)),
-		"$NUM_MGTS":     fmt.Sprintf("%d", len(components.MGTs)),
-		"$NUM_MGTMDTS":  fmt.Sprintf("%d", len(components.MGTMDTs)),
-		"$NUM_OSTS":     fmt.Sprintf("%d", len(components.OSTs)),
-		"$NUM_NNFNODES": fmt.Sprintf("%d", len(components.NNFNodes)),
-	}
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
+	fs.CommandArgs.Vars["$NUM_MDTS"] = fmt.Sprintf("%d", len(components.MDTs))
+	fs.CommandArgs.Vars["$NUM_MGTS"] = fmt.Sprintf("%d", len(components.MGTs))
+	fs.CommandArgs.Vars["$NUM_MGTMDTS"] = fmt.Sprintf("%d", len(components.MGTMDTs))
+	fs.CommandArgs.Vars["$NUM_OSTS"] = fmt.Sprintf("%d", len(components.OSTs))
+	fs.CommandArgs.Vars["$NUM_NNFNODES"] = fmt.Sprintf("%d", len(components.NNFNodes))
 
 	return &fs, nil
 }
@@ -546,4 +551,18 @@ func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	return "lv", nil
+}
+
+func unpackCommandVariables(nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int) map[string]string {
+	variables := map[string]string{}
+
+	for _, commandVariable := range nnfNodeStorage.Spec.CommandVariables {
+		if !commandVariable.Indexed {
+			variables[commandVariable.Name] = commandVariable.Value
+		} else {
+			variables[commandVariable.Name] = commandVariable.IndexedValues[index]
+		}
+	}
+
+	return variables
 }
