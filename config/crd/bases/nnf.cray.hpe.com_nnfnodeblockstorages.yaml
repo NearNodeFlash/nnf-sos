@@ -500,6 +500,169 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: READY
+      type: string
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha5
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NnfNodeBlockStorageSpec defines the desired storage attributes on a NNF Node.
+              Storage spec are created on request of the user and fullfilled by the NNF Node Controller.
+            properties:
+              allocations:
+                description: Allocations is the list of storage allocations to make
+                items:
+                  properties:
+                    access:
+                      description: List of nodes where /dev devices should be created
+                      items:
+                        type: string
+                      type: array
+                    capacity:
+                      description: Aggregate capacity of the block devices for each
+                        allocation
+                      format: int64
+                      type: integer
+                  type: object
+                type: array
+              sharedAllocation:
+                description: SharedAllocation is used when a single NnfNodeBlockStorage
+                  allocation is used by multiple NnfNodeStorage allocations
+                type: boolean
+            required:
+            - sharedAllocation
+            type: object
+          status:
+            properties:
+              allocations:
+                description: Allocations is the list of storage allocations that were
+                  made
+                items:
+                  properties:
+                    accesses:
+                      additionalProperties:
+                        properties:
+                          devicePaths:
+                            description: /dev paths for each of the block devices
+                            items:
+                              type: string
+                            type: array
+                          storageGroupId:
+                            description: Redfish ID for the storage group
+                            type: string
+                        type: object
+                      description: Accesses is a map of node name to the access status
+                      type: object
+                    capacityAllocated:
+                      description: |-
+                        Total capacity allocated for the storage. This may differ from the requested storage
+                        capacity as the system may round up to the requested capacity to satisify underlying
+                        storage requirements (i.e. block size / stripe size).
+                      format: int64
+                      type: integer
+                    devices:
+                      description: List of NVMe namespaces used by this allocation
+                      items:
+                        properties:
+                          NQN:
+                            description: NQN of the base NVMe device
+                            type: string
+                          capacityAllocated:
+                            description: |-
+                              Total capacity allocated for the storage. This may differ from the requested storage
+                              capacity as the system may round up to the requested capacity to satisify underlying
+                              storage requirements (i.e. block size / stripe size).
+                            format: int64
+                            type: integer
+                          namespaceId:
+                            description: Id of the Namespace on the NVMe device (e.g.,
+                              "2")
+                            type: string
+                        required:
+                        - NQN
+                        - namespaceId
+                        type: object
+                      type: array
+                    storagePoolId:
+                      description: Redfish ID for the storage pool
+                      type: string
+                  type: object
+                type: array
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              podStartTime:
+                description: |-
+                  PodStartTime is the value of pod.status.containerStatuses[].state.running.startedAt from the pod that did
+                  last successful full reconcile of the NnfNodeBlockStorage. This is used to tell whether the /dev paths
+                  listed in the status section are from the current boot of the node.
+                format: date-time
+                type: string
+              ready:
+                type: boolean
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

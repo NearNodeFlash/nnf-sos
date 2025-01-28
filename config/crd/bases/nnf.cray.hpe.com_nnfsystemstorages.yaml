@@ -742,6 +742,257 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - name: v1alpha5
+    schema:
+      openAPIV3Schema:
+        description: NnfSystemStorage is the Schema for the nnfsystemstorages API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NnfSystemStorageSpec defines the desired state of NnfSystemStorage
+            properties:
+              capacity:
+                default: 1073741824
+                description: Capacity is the allocation size on each Rabbit
+                format: int64
+                type: integer
+              clientMountPath:
+                description: ClientMountPath is an optional path for where to mount
+                  the file system on the computes
+                type: string
+              computesPattern:
+                description: |-
+                  ComputesPattern is a list of compute node indexes (0-15) to make the storage accessible to. This
+                  is only used if ComputesTarget is "pattern"
+                items:
+                  type: integer
+                maxItems: 16
+                type: array
+              computesTarget:
+                default: all
+                description: ComputesTarget specifies which computes to make the storage
+                  accessible to
+                enum:
+                - all
+                - even
+                - odd
+                - pattern
+                type: string
+              excludeComputes:
+                description: |-
+                  ExcludeComputes is a list of compute nodes to exclude from the the compute nodes listed in the
+                  SystemConfiguration
+                items:
+                  type: string
+                type: array
+              excludeDisabledRabbits:
+                default: false
+                description: |-
+                  ExcludeDisabledRabbits looks at the Storage resource for a Rabbit and does not use it if it's
+                  marked as "disabled"
+                type: boolean
+              excludeRabbits:
+                description: ExludeRabbits is a list of Rabbits to exclude from the
+                  Rabbits in the SystemConfiguration
+                items:
+                  type: string
+                type: array
+              ignoreOfflineComputes:
+                default: false
+                type: boolean
+              includeComputes:
+                description: |-
+                  IncludeComputes is a list of computes nodes to use rather than getting the list of compute nodes
+                  from the SystemConfiguration
+                items:
+                  type: string
+                type: array
+              includeRabbits:
+                description: |-
+                  IncludeRabbits is a list of Rabbits to use rather than getting the list of Rabbits from the
+                  SystemConfiguration
+                items:
+                  type: string
+                type: array
+              makeClientMounts:
+                default: false
+                description: |-
+                  MakeClientMounts specifies whether to make ClientMount resources or just
+                  make the devices available to the client
+                type: boolean
+              shared:
+                default: true
+                description: |-
+                  Shared will create one allocation per Rabbit rather than one allocation
+                  per compute node.
+                type: boolean
+              storageProfile:
+                description: StorageProfile is an object reference to the storage
+                  profile to use
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              systemConfiguration:
+                description: |-
+                  SystemConfiguration is an object reference to the SystemConfiguration resource to use. If this
+                  field is empty, name: default namespace: default is used.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                      TODO: this design is not final and this field is subject to change in the future.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              type:
+                default: raw
+                description: Type is the file system type to use for the storage allocation
+                enum:
+                - raw
+                - xfs
+                - gfs2
+                type: string
+            required:
+            - capacity
+            - ignoreOfflineComputes
+            - makeClientMounts
+            - shared
+            - storageProfile
+            type: object
+          status:
+            description: NnfSystemStorageStatus defines the observed state of NnfSystemStorage
+            properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              ready:
+                description: Ready signifies whether all work has been completed
+                type: boolean
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}
