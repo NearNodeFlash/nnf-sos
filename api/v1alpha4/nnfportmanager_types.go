@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -113,7 +113,6 @@ type NnfPortManagerStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:storageversion
 
 // NnfPortManager is the Schema for the nnfportmanagers API
 type NnfPortManager struct {
