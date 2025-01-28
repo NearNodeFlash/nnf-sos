@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -56,6 +56,8 @@ import (
 	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
 
 	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+
 	//+kubebuilder:scaffold:imports
 
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
@@ -81,6 +83,7 @@ func init() {
 	utilruntime.Must(nnfv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha3.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha4.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha5.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
