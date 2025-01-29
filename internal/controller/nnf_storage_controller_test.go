@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,32 +23,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 )
 
 var _ = Describe("NNFStorage Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for NnfStorage", func() {
-		s := nnfv1alpha4.NnfStorage{
-			Spec: nnfv1alpha4.NnfStorageSpec{
-				AllocationSets: []nnfv1alpha4.NnfStorageAllocationSetSpec{
-					{Name: "ost", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+		s := nnfv1alpha5.NnfStorage{
+			Spec: nnfv1alpha5.NnfStorageSpec{
+				AllocationSets: []nnfv1alpha5.NnfStorageAllocationSetSpec{
+					{Name: "ost", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-1", Count: 2},
 						{Name: "rabbit-node-2", Count: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Name: "ost", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+					{Name: "ost", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-2", Count: 1}},
 					},
-					{Name: "mdt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+					{Name: "mdt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1},
 						{Name: "rabbit-node-4", Count: 1},
 						{Name: "rabbit-node-8", Count: 1}},
 					},
-					{Name: "mgt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+					{Name: "mgt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1}},
 					},
-					{Name: "mgtmdt", Nodes: []nnfv1alpha4.NnfStorageAllocationNodes{
+					{Name: "mgtmdt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-4", Count: 1}},
 					},
 				},

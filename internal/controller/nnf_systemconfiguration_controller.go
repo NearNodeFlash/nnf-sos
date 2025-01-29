@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -220,12 +220,12 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			taint := &corev1.Taint{
-				Key:   nnfv1alpha4.RabbitNodeTaintKey,
+				Key:   nnfv1alpha5.RabbitNodeTaintKey,
 				Value: "true",
 			}
 
 			staleLabel := false
-			_, hasCompletedLabel := labels[nnfv1alpha4.TaintsAndLabelsCompletedLabel]
+			_, hasCompletedLabel := labels[nnfv1alpha5.TaintsAndLabelsCompletedLabel]
 			if effect == corev1.TaintEffectNoSchedule && hasCompletedLabel {
 				// We're in pass 1.
 				// The presence of the label means that the taint state has been
@@ -251,7 +251,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					continue
 				}
 				// Clear the label and continue working on this node.
-				delete(labels, nnfv1alpha4.TaintsAndLabelsCompletedLabel)
+				delete(labels, nnfv1alpha5.TaintsAndLabelsCompletedLabel)
 				node.SetLabels(labels)
 			} else if hasCompletedLabel {
 				// All other passes honor the label.
@@ -267,7 +267,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels[nnfv1alpha4.TaintsAndLabelsCompletedLabel] = "true"
+				labels[nnfv1alpha5.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
@@ -281,8 +281,8 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels[nnfv1alpha4.RabbitNodeSelectorLabel]; !present {
-				labels[nnfv1alpha4.RabbitNodeSelectorLabel] = "true"
+			if _, present := labels[nnfv1alpha5.RabbitNodeSelectorLabel]; !present {
+				labels[nnfv1alpha5.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}

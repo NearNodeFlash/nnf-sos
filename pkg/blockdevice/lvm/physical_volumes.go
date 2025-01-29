@@ -31,6 +31,8 @@ import (
 type PhysicalVolume struct {
 	Device string
 
+	Vars map[string]string
+
 	Log logr.Logger
 }
 
@@ -47,6 +49,10 @@ func (pv *PhysicalVolume) parseArgs(args string, device string) (string, error) 
 	varHandler := var_handler.NewVarHandler(map[string]string{
 		"$DEVICE": device,
 	})
+
+	for key, value := range pv.Vars {
+		varHandler.AddVar(key, value)
+	}
 
 	return varHandler.ReplaceAll(args), nil
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -109,7 +109,6 @@ type NnfDataMovementProfileData struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="DEFAULT",type="boolean",JSONPath=".data.default",description="True if this is the default instance"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -122,7 +121,6 @@ type NnfDataMovementProfile struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
 
 // NnfDataMovementProfileList contains a list of NnfDataMovementProfile
 type NnfDataMovementProfileList struct {

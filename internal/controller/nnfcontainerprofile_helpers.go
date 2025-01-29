@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -32,11 +32,11 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/go-logr/logr"
 )
 
-func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha4.NnfContainerProfile, error) {
+func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha5.NnfContainerProfile, error) {
 	profile, err := findPinnedContainerProfile(ctx, clnt, workflow, index)
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv
 	return profile, nil
 }
 
-func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha4.NnfContainerProfile, error) {
-	profile := &nnfv1alpha4.NnfContainerProfile{
+func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha5.NnfContainerProfile, error) {
+	profile := &nnfv1alpha5.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
 			Namespace: workflow.Namespace,
@@ -68,7 +68,7 @@ func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflo
 	return profile, nil
 }
 
-func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha4.NnfContainerProfile, error) {
+func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) (*nnfv1alpha5.NnfContainerProfile, error) {
 	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 		return nil, fmt.Errorf("container directive '%s' has no profile key", workflow.Spec.DWDirectives[index])
 	}
 
-	profile := &nnfv1alpha4.NnfContainerProfile{
+	profile := &nnfv1alpha5.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: os.Getenv("NNF_CONTAINER_PROFILE_NAMESPACE"),
@@ -121,7 +121,7 @@ func createPinnedContainerProfileIfNecessary(ctx context.Context, clnt client.Cl
 		return err
 	}
 
-	pinnedProfile := &nnfv1alpha4.NnfContainerProfile{
+	pinnedProfile := &nnfv1alpha5.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
 			Namespace: workflow.Namespace,
