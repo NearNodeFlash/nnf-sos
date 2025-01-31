@@ -27,6 +27,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type NnfLustreMGTSpecCommand struct {
+	Reference corev1.ObjectReference `json:"reference,omitempty"`
+
+	Commands []string `json:"commands,omitempty"`
+}
+
+type NnfLustreMGTStatusCommand struct {
+	Reference corev1.ObjectReference `json:"reference,omitempty"`
+
+	Ready bool `json:"ready"`
+
+	dwsv1alpha2.ResourceError `json:",inline"`
+}
+
 // NnfLustreMGTSpec defines the desired state of NnfLustreMGT
 type NnfLustreMGTSpec struct {
 	// Addresses is the list of LNet addresses for the MGT
@@ -48,6 +62,8 @@ type NnfLustreMGTSpec struct {
 
 	// ClaimList is the list of currently in use fsnames
 	ClaimList []corev1.ObjectReference `json:"claimList,omitempty"`
+
+	CommandList []NnfLustreMGTSpecCommand `json:"commandList,omitempty"`
 }
 
 // NnfLustreMGTStatus defines the current state of NnfLustreMGT
@@ -59,6 +75,8 @@ type NnfLustreMGTStatus struct {
 
 	// ClaimList is the list of currently in use fsnames
 	ClaimList []NnfLustreMGTStatusClaim `json:"claimList,omitempty"`
+
+	CommandList []NnfLustreMGTStatusCommand `json:"commandList,omitempty"`
 
 	dwsv1alpha2.ResourceError `json:",inline"`
 }

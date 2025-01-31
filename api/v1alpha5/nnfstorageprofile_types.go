@@ -24,6 +24,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+/*
+type NnfStorageProfileLustreClientCmdLines struct {
+	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+	// it afterward.
+	RabbitPostMount []string `json:"rabbitPostMount,omitempty"`
+
+	// PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+	// unmounting it afterward.
+	RabbitPreUnmount []string `json:"rabbitPreUnmount,omitempty"`
+
+	// MountRabbit specifies mount options for making the Lustre client mount on the Rabbit.
+	MountRabbit string `json:"mountRabbit,omitempty"`
+
+	// MountCompute specifies mount options for making the Lustre client mount on the Compute.
+	MountCompute string `json:"mountCompute,omitempty"`
+}*/
+
 // NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities
 // for Lustre allocations.
 type NnfStorageProfileLustreCmdLines struct {
@@ -46,6 +65,10 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target has been activated
 	PostActivate []string `json:"postActivate,omitempty"`
 
+	// PreDeactivate specifies a list of commands to run on the Rabbit before the
+	// Lustre target is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
 	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
 	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
 	// it afterward.
@@ -55,10 +78,6 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
 	// unmounting it afterward.
 	PreUnmount []string `json:"preUnmount,omitempty"`
-
-	// PreDeactivate specifies a list of commands to run on the Rabbit before the
-	// Lustre target is deactivated
-	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
@@ -142,6 +161,11 @@ type NnfStorageProfileLustreData struct {
 
 	// OstOptions contains options to use for libraries used for an OST target.
 	OstOptions NnfStorageProfileLustreMiscOptions `json:"ostOptions,omitempty"`
+
+	// ClientCmdLines contains commands to mount a Lustre client
+	//ClientCmdLines NnfStorageProfileLustreClientCmdLines `json:"clientCommandLines,omitempty"`
+
+	//PreMountMGTCmds []string `json:"preMountMGTCommands"`
 
 	// MountRabbit specifies mount options for making the Lustre client mount on the Rabbit.
 	MountRabbit string `json:"mountRabbit,omitempty"`

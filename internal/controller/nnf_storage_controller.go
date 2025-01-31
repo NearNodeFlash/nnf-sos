@@ -248,7 +248,16 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if storage.Spec.FileSystemType == "lustre" && !storage.Status.Ready {
-		res, err := r.setLustreOwnerGroup(ctx, storage)
+		res, err := r.runSharedMGTCommands(ctx, storage)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if res != nil {
+			return *res, nil
+		}
+
+		res, err = r.setLustreOwnerGroup(ctx, storage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -503,6 +512,20 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: nnfStorage.Name, Namespace: nnfStorage.Namespace})
 
 	if nnfStorage.Spec.FileSystemType == "lustre" {
+		// The OSTs should be the last Lustre target to be created. Wait until the MGT, MGT/MDT and MDT targets
+		// are ready before creating the OSTs.
+		if nnfStorage.Spec.AllocationSets[allocationSetIndex].TargetType == "ost" {
+			for i, allocationSet := range nnfStorage.Status.AllocationSets {
+				if i == allocationSetIndex {
+					continue
+				}
+
+				if !allocationSet.Ready {
+					return nil, nil
+				}
+			}
+		}
+
 		mgsAddress := nnfStorage.Spec.AllocationSets[allocationSetIndex].MgsAddress
 
 		mgsNode := ""
@@ -913,6 +936,84 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 
 }
 
+func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStorage *nnfv1alpha5.NnfStorage) (*ctrl.Result, error) {
+	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
+
+	/*nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfStorage)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
+	}*/
+
+	// If an MGS address is specified in the Spec, that means we're using an external MGS.
+
+	if len(nnfStorage.Spec.AllocationSets) == 0 || nnfStorage.Spec.AllocationSets[0].MgsAddress != "" {
+		return nil, nil
+	}
+
+	log.Info("getting lustre mgt")
+	nnfLustreMgt, err := r.getLustreMgt(ctx, nnfStorage)
+	if err != nil {
+		return nil, dwsv1alpha2.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
+	}
+
+	reference := corev1.ObjectReference{
+		Name:      nnfStorage.Name,
+		Namespace: nnfStorage.Namespace,
+		Kind:      reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name(),
+	}
+
+	// Check if the command has already been run. If a command exists with the correct
+	// reference, then wait for it to be ready.
+	log.Info("check mgt status")
+	for _, command := range nnfLustreMgt.Status.CommandList {
+		if command.Reference == reference {
+			if command.Ready {
+				return nil, nil
+			}
+
+			if command.Error != nil {
+				return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("shared MGT could not run command").WithError(command.Error)
+			}
+			// Commands haven't run yet. Keep waiting
+			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
+	}
+
+	log.Info("checking mgt spec")
+	// Check if the command has already been requested in the Spec.
+	for _, command := range nnfLustreMgt.Spec.CommandList {
+		if command.Reference == reference {
+			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
+	}
+
+	log.Info("adding commands to spec.")
+	// The command has not been requested, so add it
+	command := nnfv1alpha5.NnfLustreMGTSpecCommand{
+		Reference: corev1.ObjectReference{
+			Name:      nnfStorage.Name,
+			Namespace: nnfStorage.Namespace,
+			Kind:      reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name(),
+		},
+		//Commands: append([]string(nil), nnfStorageProfile.Data.LustreStorage.PreMountMGTCmds...),
+		Commands: []string{
+			"command 1",
+			"command 2",
+		},
+	}
+
+	nnfLustreMgt.Spec.CommandList = append(nnfLustreMgt.Spec.CommandList, command)
+	if err := r.Update(ctx, nnfLustreMgt); err != nil {
+		if apierrors.IsConflict(err) {
+			return &ctrl.Result{}, nil
+		}
+
+		return nil, dwsv1alpha2.NewResourceError("could not update NnfLustreMGT with commands").WithError(err).WithMajor()
+	}
+
+	return nil, nil
+}
+
 func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStorage *nnfv1alpha5.NnfStorage) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
 
@@ -1156,6 +1257,19 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			return nodeStoragesExist, err
 		}
 
+		// Collect status information from the NnfNodeStorage resources and aggregate it into the
+		// NnfStorage
+		for i := range storage.Status.AllocationSets {
+			_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
+			if err != nil {
+				return nodeStoragesExist, err
+			}
+		}
+
+		if !ostDeleteStatus.Complete() {
+			return nodeStoragesExist, nil
+		}
+
 		mdtDeleteStatus, err := dwsv1alpha2.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha5.AllocationSetLabel: "mdt"})
 		if err != nil {
 			return nodeStoragesExist, err
@@ -1170,7 +1284,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			}
 		}
 
-		if !ostDeleteStatus.Complete() || !mdtDeleteStatus.Complete() {
+		if !mdtDeleteStatus.Complete() {
 			return nodeStoragesExist, nil
 		}
 

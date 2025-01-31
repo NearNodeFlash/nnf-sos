@@ -202,12 +202,17 @@ func (src *NnfLustreMGT) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha5.NnfLustreMGT{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Status.CommandList = append([]nnfv1alpha5.NnfLustreMGTStatusCommand(nil), restored.Status.CommandList...)
+		dst.Spec.CommandList = append([]nnfv1alpha5.NnfLustreMGTSpecCommand(nil), restored.Spec.CommandList...)
+	}
 
 	return nil
 }
@@ -620,4 +625,12 @@ func Convert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *nnfv
 
 func Convert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in *nnfv1alpha5.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s apiconversion.Scope) error {
 	return autoConvert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in, out, s)
+}
+
+func Convert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in *nnfv1alpha5.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in, out, s)
+}
+
+func Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in *nnfv1alpha5.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in, out, s)
 }
