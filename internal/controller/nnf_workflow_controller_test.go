@@ -203,6 +203,15 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				AllocationSets: []nnfv1alpha6.NnfStorageAllocationSetSpec{},
 			},
 		}
+
+		nnfStorageProfile := &nnfv1alpha6.NnfStorageProfile{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: workflow.Namespace,
+			},
+		}
+
+		addPinnedStorageProfileLabel(nnfStorage, nnfStorageProfile)
 		Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
 	}
 

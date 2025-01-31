@@ -46,6 +46,10 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target has been activated
 	PostActivate []string `json:"postActivate,omitempty"`
 
+	// PreDeactivate specifies a list of commands to run on the Rabbit before the
+	// Lustre target is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
 	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
 	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
 	// it afterward.
@@ -55,10 +59,6 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
 	// unmounting it afterward.
 	PreUnmount []string `json:"preUnmount,omitempty"`
-
-	// PreDeactivate specifies a list of commands to run on the Rabbit before the
-	// Lustre target is deactivated
-	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.

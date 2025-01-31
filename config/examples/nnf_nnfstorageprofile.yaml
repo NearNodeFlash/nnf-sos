@@ -23,8 +23,6 @@ data:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
       mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
       mountTarget: $ZVOL_NAME $MOUNT_PATH
-      postMount:
-        - 'lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH'
     ostOptions:
       scale: 5
       colocateComputes: true
@@ -34,8 +32,11 @@ data:
       count: 1
     mgtOptions:
       count: 1
-    mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
-    mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
+    clientCommandLines:
+      mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+      mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
+      rabbitPostMount:
+        - 'lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH'
   gfs2Storage:
     commandlines:
       sharedVg: true

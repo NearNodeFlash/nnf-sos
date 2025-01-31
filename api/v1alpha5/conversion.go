@@ -21,6 +21,7 @@ package v1alpha5
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -201,12 +202,17 @@ func (src *NnfLustreMGT) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha6.NnfLustreMGT{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Status.CommandList = append([]nnfv1alpha6.NnfLustreMGTStatusCommand(nil), restored.Status.CommandList...)
+		dst.Spec.CommandList = append([]nnfv1alpha6.NnfLustreMGTSpecCommand(nil), restored.Spec.CommandList...)
+	}
 
 	return nil
 }
@@ -425,12 +431,26 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha6.NnfStorageProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
+
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Data.LustreStorage.PreMountMGTCmds = append([]string(nil), restored.Data.LustreStorage.PreMountMGTCmds...)
+		dst.Data.LustreStorage.ClientCmdLines.RabbitPostMount = restored.Data.LustreStorage.ClientCmdLines.RabbitPostMount
+		dst.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount = restored.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount
+		dst.Data.LustreStorage.ClientCmdLines.MountRabbit = restored.Data.LustreStorage.ClientCmdLines.MountRabbit
+		dst.Data.LustreStorage.ClientCmdLines.MountCompute = restored.Data.LustreStorage.ClientCmdLines.MountCompute
+	} else {
+		dst.Data.LustreStorage.ClientCmdLines.RabbitPostMount = src.Data.LustreStorage.OstCmdLines.PostMount
+		dst.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount = src.Data.LustreStorage.OstCmdLines.PreUnmount
+		dst.Data.LustreStorage.ClientCmdLines.MountRabbit = src.Data.LustreStorage.MountRabbit
+		dst.Data.LustreStorage.ClientCmdLines.MountCompute = src.Data.LustreStorage.MountCompute
+	}
 
 	return nil
 }
@@ -442,6 +462,11 @@ func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1alpha6_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(src, dst, nil); err != nil {
 		return err
 	}
+
+	dst.Data.LustreStorage.MountRabbit = src.Data.LustreStorage.ClientCmdLines.MountRabbit
+	dst.Data.LustreStorage.MountCompute = src.Data.LustreStorage.ClientCmdLines.MountCompute
+	dst.Data.LustreStorage.OstCmdLines.PostMount = src.Data.LustreStorage.ClientCmdLines.RabbitPostMount
+	dst.Data.LustreStorage.OstCmdLines.PreUnmount = src.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount
 
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
@@ -598,4 +623,24 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+func Convert_v1alpha6_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *nnfv1alpha6.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in, out, s)
+}
+
+func Convert_v1alpha6_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *nnfv1alpha6.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in, out, s)
+}
+
+func Convert_v1alpha6_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in *nnfv1alpha6.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in, out, s)
+}
+
+func Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha6_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *nnfv1alpha6.NnfStorageProfileLustreData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha6_NnfStorageProfileLustreData(in, out, s)
+}
+
+func Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *nnfv1alpha6.NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(in, out, s)
 }
