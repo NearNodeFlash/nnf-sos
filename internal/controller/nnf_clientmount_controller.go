@@ -46,6 +46,7 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 )
 
 type ClientType string
@@ -243,6 +244,12 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	if shouldMount {
 		activated, err := blockDevice.Activate(ctx)
 		if err != nil {
+			// If we weren't able to activate the block device, then rescan for the NVMe namespaces. If the rescan is
+			// successful the block device will be activated on the next reconcile
+			if err := nvme.NvmeRescanDevices(log); err != nil {
+				return dwsv1alpha2.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+			}
+
 			return dwsv1alpha2.NewResourceError("unable to activate block device").WithError(err).WithMajor()
 		}
 		if activated {
