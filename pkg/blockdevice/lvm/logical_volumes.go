@@ -59,7 +59,7 @@ func (lv *LogicalVolume) Exists(ctx context.Context) (bool, error) {
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			return true, nil
 		}
 	}
@@ -187,7 +187,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 		}
 	}
 
-	return false, fmt.Errorf("could not find logical volume %s: %w", lv.Name, err)
+	return false, fmt.Errorf("could not find logical volume %s", lv.Name)
 }
 
 func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, error) {
