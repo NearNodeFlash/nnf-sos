@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 )
 
 var _ = Describe("NnfSystemconfigurationController", func() {
@@ -80,12 +80,12 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 	var sysCfg *dwsv1alpha2.SystemConfiguration
 
 	taintNoSchedule := &corev1.Taint{
-		Key:    nnfv1alpha4.RabbitNodeTaintKey,
+		Key:    nnfv1alpha5.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoSchedule,
 	}
 	taintNoExecute := &corev1.Taint{
-		Key:    nnfv1alpha4.RabbitNodeTaintKey,
+		Key:    nnfv1alpha5.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoExecute,
 	}
@@ -147,8 +147,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node), tnode))
 			labels := tnode.GetLabels()
-			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha4.RabbitNodeSelectorLabel, "true"))
-			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha4.TaintsAndLabelsCompletedLabel, "true"))
+			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha5.RabbitNodeSelectorLabel, "true"))
+			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha5.TaintsAndLabelsCompletedLabel, "true"))
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeTrue())
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 		}).Should(Succeed(), "verify failed for node %s", node.Name)
@@ -167,7 +167,7 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 			// Remove the "cleared" label from node1.
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
 			labels := node1.GetLabels()
-			delete(labels, nnfv1alpha4.TaintsAndLabelsCompletedLabel)
+			delete(labels, nnfv1alpha5.TaintsAndLabelsCompletedLabel)
 			node1.SetLabels(labels)
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
 			By("verifying node1 is repaired")
@@ -227,8 +227,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 				tnode := &corev1.Node{}
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node4), tnode))
 				labels := tnode.GetLabels()
-				g.Expect(labels).ToNot(HaveKey(nnfv1alpha4.RabbitNodeSelectorLabel))
-				g.Expect(labels).ToNot(HaveKey(nnfv1alpha4.TaintsAndLabelsCompletedLabel))
+				g.Expect(labels).ToNot(HaveKey(nnfv1alpha5.RabbitNodeSelectorLabel))
+				g.Expect(labels).ToNot(HaveKey(nnfv1alpha5.TaintsAndLabelsCompletedLabel))
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeFalse())
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 			}).Should(Succeed(), "verify failed for node %s", node4.Name)

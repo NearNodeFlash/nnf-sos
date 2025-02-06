@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -35,14 +35,14 @@ import (
 	"github.com/go-logr/logr"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 )
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages/finalizers,verbs=update
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 
-func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 
 	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	if err != nil {
@@ -57,7 +57,7 @@ func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nn
 	return blockDevice, fileSystem, nil
 }
 
-func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 
 	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	if err != nil {
@@ -73,7 +73,7 @@ func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nn
 }
 
 // getBlockDeviceAndFileSystem returns blockdevice and filesystem interfaces based on the allocation type and NnfStorageProfile.
-func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		return getBlockDeviceAndFileSystemForMock(ctx, c, nnfNodeStorage, index, log)
 
@@ -125,7 +125,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 		return blockDevice, fileSystem, nil
 	case "lustre":
-		var commandLines nnfv1alpha4.NnfStorageProfileLustreCmdLines
+		var commandLines nnfv1alpha5.NnfStorageProfileLustreCmdLines
 
 		switch nnfNodeStorage.Spec.LustreStorage.TargetType {
 		case "mgt":
@@ -165,7 +165,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 	return nil, nil, dwsv1alpha2.NewResourceError("unsupported file system type %s", nnfNodeStorage.Spec.FileSystemType).WithMajor()
 }
 
-func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha4.NnfNodeBlockStorage) (bool, error) {
+func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha5.NnfNodeBlockStorage) (bool, error) {
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		return true, nil
 	}
@@ -202,15 +202,15 @@ func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBloc
 	return false, nil
 }
 
-func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
 	// This is for the fake NnfNodeStorage case. We don't need to create the zpool BlockDevice
-	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha4.NnfNodeBlockStorage{}).Name() {
+	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfNodeBlockStorage{}).Name() {
 		return newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	}
 
-	nnfNodeBlockStorage := &nnfv1alpha4.NnfNodeBlockStorage{
+	nnfNodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfNodeStorage.GetName(),
 			Namespace: nnfNodeStorage.GetNamespace(),
@@ -247,11 +247,12 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
+	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
 	return &zpool, nil
 }
 
-func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	lvmDesc := blockdevice.Lvm{}
 	devices := []string{}
 
@@ -260,8 +261,8 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		blockIndex = 0
 	}
 
-	if nnfNodeStorage.Spec.BlockReference.Kind == reflect.TypeOf(nnfv1alpha4.NnfNodeBlockStorage{}).Name() {
-		nnfNodeBlockStorage := &nnfv1alpha4.NnfNodeBlockStorage{
+	if nnfNodeStorage.Spec.BlockReference.Kind == reflect.TypeOf(nnfv1alpha5.NnfNodeBlockStorage{}).Name() {
+		nnfNodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.GetName(),
 				Namespace: nnfNodeStorage.GetNamespace(),
@@ -306,6 +307,8 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	for _, device := range devices {
 		pv := lvm.NewPhysicalVolume(ctx, device, log)
+		pv.Vars = unpackCommandVariables(nnfNodeStorage, index)
+
 		lvmDesc.PhysicalVolumes = append(lvmDesc.PhysicalVolumes, pv)
 	}
 
@@ -326,7 +329,10 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	lvmDesc.Log = log
 	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes, log)
+	lvmDesc.VolumeGroup.Vars = unpackCommandVariables(nnfNodeStorage, index)
+
 	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
+	lvmDesc.LogicalVolume.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
 	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
 	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
@@ -344,7 +350,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return &lvmDesc, nil
 }
 
-func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	blockDevice := blockdevice.MockBlockDevice{
 		Log: log,
 	}
@@ -352,7 +358,7 @@ func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nn
 	return &blockDevice, nil
 }
 
-func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -364,15 +370,15 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
 
-func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -389,18 +395,18 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
-	fs.CommandArgs.Vars = map[string]string{
-		"$CLUSTER_NAME": nnfNodeStorage.Namespace,
-		"$LOCK_SPACE":   fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5]),
-		"$PROTOCOL":     "lock_dlm",
-		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$CLUSTER_NAME"] = nnfNodeStorage.Namespace
+	fs.CommandArgs.Vars["$LOCK_SPACE"] = fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5])
+	fs.CommandArgs.Vars["$PROTOCOL"] = "lock_dlm"
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
 
-func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -417,15 +423,15 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	fs.CommandArgs.PostMount = cmdLines.PostMount
 	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
 	fs.CommandArgs.Mkfs = cmdLines.Mkfs
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":  fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID": fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-	}
+
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
 	return &fs, nil
 }
 
-func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, cmdLines nnfv1alpha4.NnfStorageProfileLustreCmdLines, mountCommand string, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, cmdLines nnfv1alpha5.NnfStorageProfileLustreCmdLines, mountCommand string, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
 	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
@@ -452,20 +458,19 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents
 
-	fs.CommandArgs.Vars = map[string]string{
-		"$USERID":       fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID),
-		"$GROUPID":      fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID),
-		"$NUM_MDTS":     fmt.Sprintf("%d", len(components.MDTs)),
-		"$NUM_MGTS":     fmt.Sprintf("%d", len(components.MGTs)),
-		"$NUM_MGTMDTS":  fmt.Sprintf("%d", len(components.MGTMDTs)),
-		"$NUM_OSTS":     fmt.Sprintf("%d", len(components.OSTs)),
-		"$NUM_NNFNODES": fmt.Sprintf("%d", len(components.NNFNodes)),
-	}
+	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
+	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
+	fs.CommandArgs.Vars["$NUM_MDTS"] = fmt.Sprintf("%d", len(components.MDTs))
+	fs.CommandArgs.Vars["$NUM_MGTS"] = fmt.Sprintf("%d", len(components.MGTs))
+	fs.CommandArgs.Vars["$NUM_MGTMDTS"] = fmt.Sprintf("%d", len(components.MGTMDTs))
+	fs.CommandArgs.Vars["$NUM_OSTS"] = fmt.Sprintf("%d", len(components.OSTs))
+	fs.CommandArgs.Vars["$NUM_NNFNODES"] = fmt.Sprintf("%d", len(components.NNFNodes))
 
 	return &fs, nil
 }
 
-func newMockFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newMockFileSystem(nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
 	if len(path) == 0 {
 		path = "/mnt/filesystems"
@@ -478,7 +483,7 @@ func newMockFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, lo
 	return &fs, nil
 }
 
-func newKindFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newKindFileSystem(nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
 	if len(path) == 0 {
 		path = "/mnt/nnf"
@@ -492,7 +497,7 @@ func newKindFileSystem(nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int, lo
 
 }
 
-func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, targetType string, index int) (string, error) {
+func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, targetType string, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
@@ -505,7 +510,7 @@ func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	return fmt.Sprintf("/mnt/nnf/%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
-func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, targetType string, index int) (string, error) {
+func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, targetType string, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
@@ -518,7 +523,7 @@ func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4
 	return fmt.Sprintf("pool-%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
-func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int) (string, error) {
+func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
@@ -527,7 +532,7 @@ func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1
 	if !ok {
 		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
 	}
-	directiveIndex, ok := labels[nnfv1alpha4.DirectiveIndexLabel]
+	directiveIndex, ok := labels[nnfv1alpha5.DirectiveIndexLabel]
 	if !ok {
 		return "", fmt.Errorf("missing directive index label on NnfNodeStorage")
 	}
@@ -539,11 +544,25 @@ func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1
 	return fmt.Sprintf("%s_%s_%d", nnfStorageUid, directiveIndex, index), nil
 }
 
-func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha4.NnfNodeStorage, index int) (string, error) {
+func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int) (string, error) {
 	if nnfNodeStorage.Spec.SharedAllocation {
 		// For a shared VG, the LV name must be unique in the VG
 		return fmt.Sprintf("lv-%d", index), nil
 	}
 
 	return "lv", nil
+}
+
+func unpackCommandVariables(nnfNodeStorage *nnfv1alpha5.NnfNodeStorage, index int) map[string]string {
+	variables := map[string]string{}
+
+	for _, commandVariable := range nnfNodeStorage.Spec.CommandVariables {
+		if !commandVariable.Indexed {
+			variables[commandVariable.Name] = commandVariable.Value
+		} else {
+			variables[commandVariable.Name] = commandVariable.IndexedValues[index]
+		}
+	}
+
+	return variables
 }

@@ -36,6 +36,8 @@ type LogicalVolume struct {
 	PercentVG   int
 	VolumeGroup *VolumeGroup
 
+	Vars map[string]string
+
 	Log logr.Logger
 }
 
@@ -57,7 +59,7 @@ func (lv *LogicalVolume) Exists(ctx context.Context) (bool, error) {
 	}
 
 	for _, existingLV := range existingLVs {
-		if existingLV.Name == lv.Name {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
 			return true, nil
 		}
 	}
@@ -83,6 +85,10 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 
 	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {
 		return "", fmt.Errorf("invalid internal device list: %w", err)
+	}
+
+	for key, value := range lv.Vars {
+		varHandler.AddVar(key, value)
 	}
 
 	return varHandler.ReplaceAll(args), nil
@@ -181,7 +187,7 @@ func (lv *LogicalVolume) Activate(ctx context.Context, rawArgs string) (bool, er
 		}
 	}
 
-	return false, fmt.Errorf("could not find logical volume %s: %w", lv.Name, err)
+	return false, fmt.Errorf("could not find logical volume %s", lv.Name)
 }
 
 func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, error) {

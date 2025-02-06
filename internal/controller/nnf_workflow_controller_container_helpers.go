@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -43,7 +43,7 @@ import (
 
 type nnfUserContainer struct {
 	workflow *dwsv1alpha2.Workflow
-	profile  *nnfv1alpha4.NnfContainerProfile
+	profile  *nnfv1alpha5.NnfContainerProfile
 	nnfNodes []string
 	volumes  []nnfContainerVolume
 	username string
@@ -78,7 +78,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	}
 
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
-	c.username = nnfv1alpha4.ContainerMPIUser
+	c.username = nnfv1alpha5.ContainerMPIUser
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta); err != nil {
 		return err
@@ -251,10 +251,10 @@ func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 	dwsv1alpha2.AddWorkflowLabels(job, c.workflow)
 
 	labels := job.GetLabels()
-	labels[nnfv1alpha4.ContainerLabel] = c.workflow.Name
-	labels[nnfv1alpha4.PinnedContainerProfileLabelName] = c.profile.GetName()
-	labels[nnfv1alpha4.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
-	labels[nnfv1alpha4.DirectiveIndexLabel] = strconv.Itoa(c.index)
+	labels[nnfv1alpha5.ContainerLabel] = c.workflow.Name
+	labels[nnfv1alpha5.PinnedContainerProfileLabelName] = c.profile.GetName()
+	labels[nnfv1alpha5.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
+	labels[nnfv1alpha5.DirectiveIndexLabel] = strconv.Itoa(c.index)
 	job.SetLabels(labels)
 
 	if err := ctrl.SetControllerReference(c.workflow, job, c.scheme); err != nil {
@@ -267,7 +267,7 @@ func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
 		Effect:   corev1.TaintEffectNoSchedule,
-		Key:      nnfv1alpha4.RabbitNodeTaintKey,
+		Key:      nnfv1alpha5.RabbitNodeTaintKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    "true",
 	})
@@ -441,7 +441,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Get the ports from the port manager for this workflow
 	for _, alloc := range pm.Status.Allocations {
-		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha4.NnfPortManagerAllocationStatusInUse {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha5.NnfPortManagerAllocationStatusInUse {
 			ports = append(ports, alloc.Ports...)
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -50,13 +50,13 @@ var _ = Describe("NnfWorkflowControllerHelpers", func() {
 		DescribeTable("Test NNF filesystems (NnfAccess)",
 			func(fsType, path, output string) {
 				// We can hardwire these fields and assume the same mountpath/mountpathprefix, index, namespace, etc
-				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha4.NnfStorage{}).Name()}
+				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name()}
 				mntPath := "/mnt/nnf/123456-0/"
 				idx := 0
 				ns := "slushy44"
 
-				access := nnfv1alpha4.NnfAccess{
-					Spec: nnfv1alpha4.NnfAccessSpec{
+				access := nnfv1alpha5.NnfAccess{
+					Spec: nnfv1alpha5.NnfAccessSpec{
 						MountPath:       mntPath,
 						MountPathPrefix: mntPath,
 					},
