@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -44,8 +44,9 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 )
 
 type ClientType string
@@ -243,6 +244,12 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	if shouldMount {
 		activated, err := blockDevice.Activate(ctx)
 		if err != nil {
+			// If we weren't able to activate the block device, then rescan for the NVMe namespaces. If the rescan is
+			// successful the block device will be activated on the next reconcile
+			if err := nvme.NvmeRescanDevices(log); err != nil {
+				return dwsv1alpha2.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+			}
+
 			return dwsv1alpha2.NewResourceError("unable to activate block device").WithError(err).WithMajor()
 		}
 		if activated {
@@ -350,7 +357,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha2.OwnerKindLabel]
 	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha2.OwnerNameLabel]
 	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha2.OwnerNamespaceLabel]
-	_, idxExists := clientMount.Labels[nnfv1alpha4.DirectiveIndexLabel]
+	_, idxExists := clientMount.Labels[nnfv1alpha5.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
@@ -358,7 +365,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	}
 
 	// Retrieve the NnfStorage resource
-	storage := &nnfv1alpha4.NnfStorage{
+	storage := &nnfv1alpha5.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ownerName,
 			Namespace: ownerNS,
@@ -372,7 +379,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists = storage.Labels[dwsv1alpha2.OwnerKindLabel]
 	ownerName, ownerNameExists = storage.Labels[dwsv1alpha2.OwnerNameLabel]
 	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha2.OwnerNamespaceLabel]
-	idx, idxExists := storage.Labels[nnfv1alpha4.DirectiveIndexLabel]
+	idx, idxExists := storage.Labels[nnfv1alpha5.DirectiveIndexLabel]
 
 	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
 	// have the expected labels
@@ -388,7 +395,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 			client.MatchingLabels(map[string]string{
 				dwsv1alpha2.WorkflowNameLabel:      ownerName,
 				dwsv1alpha2.WorkflowNamespaceLabel: ownerNS,
-				nnfv1alpha4.DirectiveIndexLabel:    idx,
+				nnfv1alpha5.DirectiveIndexLabel:    idx,
 			}),
 		}
 	} else {
@@ -455,8 +462,8 @@ func getLustreMappingFromServer(server *dwsv1alpha2.Servers) map[string][]string
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int) (*nnfv1alpha4.NnfNodeStorage, error) {
-	nnfNodeStorage := &nnfv1alpha4.NnfNodeStorage{
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha2.ClientMount, index int) (*nnfv1alpha5.NnfNodeStorage, error) {
+	nnfNodeStorage := &nnfv1alpha5.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
 			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
@@ -468,7 +475,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha2.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha4.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[nnfv1alpha5.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	labels[dwsv1alpha2.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 

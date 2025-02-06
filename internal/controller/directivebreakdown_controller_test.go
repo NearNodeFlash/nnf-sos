@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -30,12 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
+	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 )
 
 var _ = Describe("DirectiveBreakdown test", func() {
 	var (
-		storageProfile *nnfv1alpha4.NnfStorageProfile
+		storageProfile *nnfv1alpha5.NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha4.NnfStorageProfile{}
+		profExpected := &nnfv1alpha5.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
@@ -81,7 +81,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
 		}).Should(Succeed(), "Create the DWS Servers Resource")
 
-		pinnedStorageProfile := &nnfv1alpha4.NnfStorageProfile{
+		pinnedStorageProfile := &nnfv1alpha5.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      directiveBreakdown.GetName(),
 				Namespace: directiveBreakdown.GetNamespace(),

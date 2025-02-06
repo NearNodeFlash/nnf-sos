@@ -33,7 +33,7 @@ import (
 // AllocationPolicy -
 type AllocationPolicy interface {
 	Initialize(capacityBytes uint64) error
-	CheckCapacity() error
+	CheckAndAdjustCapacity() error
 	Allocate(guid uuid.UUID) ([]nvme.ProvidingVolume, error)
 }
 
@@ -124,6 +124,7 @@ type SpareAllocationPolicy struct {
 	allocatedBytes uint64
 }
 
+// Initialize the policy
 func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 
 	storage := []*nvme.Storage{}
@@ -149,7 +150,8 @@ func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 	return nil
 }
 
-func (p *SpareAllocationPolicy) CheckCapacity() error {
+// CheckAndAdjustCapacity - check the policy and adjust capacity to match policy if possible
+func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 	if p.capacityBytes == 0 {
 		return fmt.Errorf("Requested capacity must be non-zero")
 	}
@@ -157,10 +159,6 @@ func (p *SpareAllocationPolicy) CheckCapacity() error {
 	var availableBytes = uint64(0)
 	for _, s := range p.storage {
 		availableBytes += s.UnallocatedBytes()
-	}
-
-	if availableBytes < p.capacityBytes {
-		return fmt.Errorf("Insufficient capacity available. Requested: %d Available: %d", p.capacityBytes, availableBytes)
 	}
 
 	if p.compliance != RelaxedAllocationComplianceType {
@@ -182,11 +180,19 @@ func (p *SpareAllocationPolicy) CheckCapacity() error {
 				return fmt.Errorf("Insufficient drive capacity available. Requested: %d Available: %d", driveCapacityBytes, s.UnallocatedBytes())
 			}
 		}
+
+		// Adjust the pool's capacity such that it is a multiple of the number drives.
+		p.capacityBytes = driveCapacityBytes * uint64(len(p.storage))
+	}
+
+	if availableBytes < p.capacityBytes {
+		return fmt.Errorf("Insufficient capacity available. Requested: %d Available: %d", p.capacityBytes, availableBytes)
 	}
 
 	return nil
 }
 
+// Allocate - allocate the storage
 func (p *SpareAllocationPolicy) Allocate(pid uuid.UUID) ([]nvme.ProvidingVolume, error) {
 
 	perStorageCapacityBytes := p.capacityBytes / uint64(len(p.storage))

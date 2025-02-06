@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -275,6 +275,7 @@ type NnfStorageProfileData struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="DEFAULT",type="boolean",JSONPath=".data.default",description="True if this is the default instance"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -287,6 +288,7 @@ type NnfStorageProfile struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // NnfStorageProfileList contains a list of NnfStorageProfile
 type NnfStorageProfileList struct {
