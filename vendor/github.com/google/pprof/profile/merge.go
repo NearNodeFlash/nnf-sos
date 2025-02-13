@@ -326,12 +326,13 @@ func (l *Location) key() locationKey {
 		key.addr -= l.Mapping.Start
 		key.mappingID = l.Mapping.ID
 	}
-	lines := make([]string, len(l.Line)*2)
+	lines := make([]string, len(l.Line)*3)
 	for i, line := range l.Line {
 		if line.Function != nil {
 			lines[i*2] = strconv.FormatUint(line.Function.ID, 16)
 		}
 		lines[i*2+1] = strconv.FormatInt(line.Line, 16)
+		lines[i*2+2] = strconv.FormatInt(line.Column, 16)
 	}
 	key.lines = strings.Join(lines, "|")
 	return key
@@ -418,6 +419,7 @@ func (pm *profileMerger) mapLine(src Line) Line {
 	ln := Line{
 		Function: pm.mapFunction(src.Function),
 		Line:     src.Line,
+		Column:   src.Column,
 	}
 	return ln
 }
@@ -474,6 +476,7 @@ func combineHeaders(srcs []*Profile) (*Profile, error) {
 	var timeNanos, durationNanos, period int64
 	var comments []string
 	seenComments := map[string]bool{}
+	var docURL string
 	var defaultSampleType string
 	for _, s := range srcs {
 		if timeNanos == 0 || s.TimeNanos < timeNanos {
@@ -492,6 +495,9 @@ func combineHeaders(srcs []*Profile) (*Profile, error) {
 		if defaultSampleType == "" {
 			defaultSampleType = s.DefaultSampleType
 		}
+		if docURL == "" {
+			docURL = s.DocURL
+		}
 	}
 
 	p := &Profile{
@@ -507,6 +513,7 @@ func combineHeaders(srcs []*Profile) (*Profile, error) {
 
 		Comments:          comments,
 		DefaultSampleType: defaultSampleType,
+		DocURL:            docURL,
 	}
 	copy(p.SampleType, srcs[0].SampleType)
 	return p, nil
@@ -565,4 +572,103 @@ func (lm locationIDMap) set(id uint64, loc *Location) {
 		return
 	}
 	lm.sparse[id] = loc
+}
+
+// CompatibilizeSampleTypes makes profiles compatible to be compared/merged. It
+// keeps sample types that appear in all profiles only and drops/reorders the
+// sample types as necessary.
+//
+// In the case of sample types order is not the same for given profiles the
+// order is derived from the first profile.
+//
+// Profiles are modified in-place.
+//
+// It returns an error if the sample type's intersection is empty.
+func CompatibilizeSampleTypes(ps []*Profile) error {
+	sTypes := commonSampleTypes(ps)
+	if len(sTypes) == 0 {
+		return fmt.Errorf("profiles have empty common sample type list")
+	}
+	for _, p := range ps {
+		if err := compatibilizeSampleTypes(p, sTypes); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// commonSampleTypes returns sample types that appear in all profiles in the
+// order how they ordered in the first profile.
+func commonSampleTypes(ps []*Profile) []string {
+	if len(ps) == 0 {
+		return nil
+	}
+	sTypes := map[string]int{}
+	for _, p := range ps {
+		for _, st := range p.SampleType {
+			sTypes[st.Type]++
+		}
+	}
+	var res []string
+	for _, st := range ps[0].SampleType {
+		if sTypes[st.Type] == len(ps) {
+			res = append(res, st.Type)
+		}
+	}
+	return res
+}
+
+// compatibilizeSampleTypes drops sample types that are not present in sTypes
+// list and reorder them if needed.
+//
+// It sets DefaultSampleType to sType[0] if it is not in sType list.
+//
+// It assumes that all sample types from the sTypes list are present in the
+// given profile otherwise it returns an error.
+func compatibilizeSampleTypes(p *Profile, sTypes []string) error {
+	if len(sTypes) == 0 {
+		return fmt.Errorf("sample type list is empty")
+	}
+	defaultSampleType := sTypes[0]
+	reMap, needToModify := make([]int, len(sTypes)), false
+	for i, st := range sTypes {
+		if st == p.DefaultSampleType {
+			defaultSampleType = p.DefaultSampleType
+		}
+		idx := searchValueType(p.SampleType, st)
+		if idx < 0 {
+			return fmt.Errorf("%q sample type is not found in profile", st)
+		}
+		reMap[i] = idx
+		if idx != i {
+			needToModify = true
+		}
+	}
+	if !needToModify && len(sTypes) == len(p.SampleType) {
+		return nil
+	}
+	p.DefaultSampleType = defaultSampleType
+	oldSampleTypes := p.SampleType
+	p.SampleType = make([]*ValueType, len(sTypes))
+	for i, idx := range reMap {
+		p.SampleType[i] = oldSampleTypes[idx]
+	}
+	values := make([]int64, len(sTypes))
+	for _, s := range p.Sample {
+		for i, idx := range reMap {
+			values[i] = s.Value[idx]
+		}
+		s.Value = s.Value[:len(values)]
+		copy(s.Value, values)
+	}
+	return nil
+}
+
+func searchValueType(vts []*ValueType, s string) int {
+	for i, vt := range vts {
+		if vt.Type == s {
+			return i
+		}
+	}
+	return -1
 }
