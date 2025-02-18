@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,31 +20,87 @@
 package v1alpha6
 
 import (
+	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	"github.com/DataWorkflowServices/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type NnfNodeBlockStorageAllocationSpec struct {
+	// Aggregate capacity of the block devices for each allocation
+	Capacity int64 `json:"capacity,omitempty"`
 
-// NnfNodeBlockStorageSpec defines the desired state of NnfNodeBlockStorage
-type NnfNodeBlockStorageSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of NnfNodeBlockStorage. Edit nnfnodeblockstorage_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// List of nodes where /dev devices should be created
+	Access []string `json:"access,omitempty"`
 }
 
-// NnfNodeBlockStorageStatus defines the observed state of NnfNodeBlockStorage
+// NnfNodeBlockStorageSpec defines the desired storage attributes on a NNF Node.
+// Storage spec are created on request of the user and fullfilled by the NNF Node Controller.
+type NnfNodeBlockStorageSpec struct {
+	// SharedAllocation is used when a single NnfNodeBlockStorage allocation is used by multiple NnfNodeStorage allocations
+	SharedAllocation bool `json:"sharedAllocation"`
+
+	// Allocations is the list of storage allocations to make
+	Allocations []NnfNodeBlockStorageAllocationSpec `json:"allocations,omitempty"`
+}
+
 type NnfNodeBlockStorageStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Allocations is the list of storage allocations that were made
+	Allocations []NnfNodeBlockStorageAllocationStatus `json:"allocations,omitempty"`
+
+	dwsv1alpha2.ResourceError `json:",inline"`
+
+	// PodStartTime is the value of pod.status.containerStatuses[].state.running.startedAt from the pod that did
+	// last successful full reconcile of the NnfNodeBlockStorage. This is used to tell whether the /dev paths
+	// listed in the status section are from the current boot of the node.
+	PodStartTime metav1.Time `json:"podStartTime,omitempty"`
+
+	Ready bool `json:"ready"`
+}
+
+type NnfNodeBlockStorageDeviceStatus struct {
+	// NQN of the base NVMe device
+	NQN string `json:"NQN"`
+
+	// Id of the Namespace on the NVMe device (e.g., "2")
+	NamespaceId string `json:"namespaceId"`
+
+	// Total capacity allocated for the storage. This may differ from the requested storage
+	// capacity as the system may round up to the requested capacity to satisify underlying
+	// storage requirements (i.e. block size / stripe size).
+	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
+}
+
+type NnfNodeBlockStorageAccessStatus struct {
+	// /dev paths for each of the block devices
+	DevicePaths []string `json:"devicePaths,omitempty"`
+
+	// Redfish ID for the storage group
+	StorageGroupId string `json:"storageGroupId,omitempty"`
+}
+
+type NnfNodeBlockStorageAllocationStatus struct {
+	// Accesses is a map of node name to the access status
+	Accesses map[string]NnfNodeBlockStorageAccessStatus `json:"accesses,omitempty"`
+
+	// List of NVMe namespaces used by this allocation
+	Devices []NnfNodeBlockStorageDeviceStatus `json:"devices,omitempty"`
+
+	// Total capacity allocated for the storage. This may differ from the requested storage
+	// capacity as the system may round up to the requested capacity to satisify underlying
+	// storage requirements (i.e. block size / stripe size).
+	CapacityAllocated int64 `json:"capacityAllocated,omitempty"`
+
+	// Redfish ID for the storage pool
+	StoragePoolId string `json:"storagePoolId,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
-// NnfNodeBlockStorage is the Schema for the nnfnodeblockstorages API
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.ready"
+// +kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 type NnfNodeBlockStorage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,13 +109,27 @@ type NnfNodeBlockStorage struct {
 	Status NnfNodeBlockStorageStatus `json:"status,omitempty"`
 }
 
+func (ns *NnfNodeBlockStorage) GetStatus() updater.Status[*NnfNodeBlockStorageStatus] {
+	return &ns.Status
+}
+
 // +kubebuilder:object:root=true
 
-// NnfNodeBlockStorageList contains a list of NnfNodeBlockStorage
+// NnfNodeBlockStorageList contains a list of NNF Nodes
 type NnfNodeBlockStorageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NnfNodeBlockStorage `json:"items"`
+}
+
+func (n *NnfNodeBlockStorageList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range n.Items {
+		objectList = append(objectList, &n.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {
