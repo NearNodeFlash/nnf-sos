@@ -24,79 +24,79 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 )
 
 func TestFuzzyConversion(t *testing.T) {
 
 	t.Run("for NnfAccess", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfAccess{},
+		Hub:   &nnfv1alpha6.NnfAccess{},
 		Spoke: &NnfAccess{},
 	}))
 
 	t.Run("for NnfContainerProfile", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfContainerProfile{},
+		Hub:   &nnfv1alpha6.NnfContainerProfile{},
 		Spoke: &NnfContainerProfile{},
 	}))
 
 	t.Run("for NnfDataMovement", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfDataMovement{},
+		Hub:   &nnfv1alpha6.NnfDataMovement{},
 		Spoke: &NnfDataMovement{},
 	}))
 
 	t.Run("for NnfDataMovementManager", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfDataMovementManager{},
+		Hub:   &nnfv1alpha6.NnfDataMovementManager{},
 		Spoke: &NnfDataMovementManager{},
 	}))
 
 	t.Run("for NnfDataMovementProfile", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfDataMovementProfile{},
+		Hub:   &nnfv1alpha6.NnfDataMovementProfile{},
 		Spoke: &NnfDataMovementProfile{},
 	}))
 
 	t.Run("for NnfLustreMGT", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfLustreMGT{},
+		Hub:   &nnfv1alpha6.NnfLustreMGT{},
 		Spoke: &NnfLustreMGT{},
 	}))
 
 	t.Run("for NnfNode", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfNode{},
+		Hub:   &nnfv1alpha6.NnfNode{},
 		Spoke: &NnfNode{},
 	}))
 
 	t.Run("for NnfNodeBlockStorage", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfNodeBlockStorage{},
+		Hub:   &nnfv1alpha6.NnfNodeBlockStorage{},
 		Spoke: &NnfNodeBlockStorage{},
 	}))
 
 	t.Run("for NnfNodeECData", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfNodeECData{},
+		Hub:   &nnfv1alpha6.NnfNodeECData{},
 		Spoke: &NnfNodeECData{},
 	}))
 
 	t.Run("for NnfNodeStorage", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfNodeStorage{},
+		Hub:   &nnfv1alpha6.NnfNodeStorage{},
 		Spoke: &NnfNodeStorage{},
 	}))
 
 	t.Run("for NnfPortManager", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfPortManager{},
+		Hub:   &nnfv1alpha6.NnfPortManager{},
 		Spoke: &NnfPortManager{},
 	}))
 
 	t.Run("for NnfStorage", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfStorage{},
+		Hub:   &nnfv1alpha6.NnfStorage{},
 		Spoke: &NnfStorage{},
 	}))
 
 	t.Run("for NnfStorageProfile", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfStorageProfile{},
+		Hub:   &nnfv1alpha6.NnfStorageProfile{},
 		Spoke: &NnfStorageProfile{},
 	}))
 
 	t.Run("for NnfSystemStorage", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha5.NnfSystemStorage{},
+		Hub:   &nnfv1alpha6.NnfSystemStorage{},
 		Spoke: &NnfSystemStorage{},
 	}))
 
