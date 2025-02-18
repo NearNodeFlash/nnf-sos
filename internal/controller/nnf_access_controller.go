@@ -47,7 +47,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -82,7 +82,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	metrics.NnfAccessReconcilesTotal.Inc()
 
-	access := &nnfv1alpha5.NnfAccess{}
+	access := &nnfv1alpha6.NnfAccess{}
 	if err := r.Get(ctx, req.NamespacedName, access); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -90,7 +90,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha5.NnfAccessStatus](access)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha6.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -199,7 +199,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha5.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
+func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha6.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
 	// Lock the NnfStorage by adding an annotation with the name/namespace for this
 	// NnfAccess. This is used for non-clustered file systems that can only be mounted
 	// from a single host.
@@ -256,7 +256,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha5.Nnf
 	return nil, nil
 }
 
-func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha5.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
+func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha6.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (*ctrl.Result, error) {
 	// Update client mounts to trigger unmount operation
 	err := r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
@@ -290,9 +290,9 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha5.N
 // lockStorage applies an annotation to the NnfStorage resource with the name and namespace of the NnfAccess resource.
 // This acts as a lock to prevent multiple NnfAccess resources from mounting the same file system. This is only necessary
 // for non-clustered file systems
-func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alpha5.NnfAccess) (bool, error) {
+func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alpha6.NnfAccess) (bool, error) {
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name() {
 		return false, fmt.Errorf("invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -301,7 +301,7 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
-	nnfStorage := &nnfv1alpha5.NnfStorage{}
+	nnfStorage := &nnfv1alpha6.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return false, err
 	}
@@ -344,10 +344,10 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 }
 
 // unlockStorage removes the NnfAccess annotation from an NnfStorage resource if it was added from lockStorage()
-func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1alpha5.NnfAccess) error {
-	nnfStorage := &nnfv1alpha5.NnfStorage{}
+func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1alpha6.NnfAccess) error {
+	nnfStorage := &nnfv1alpha6.NnfStorage{}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name() {
 		return nil
 	}
 
@@ -394,7 +394,7 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 }
 
 // getClientList returns the list of client node names from either the Computes resource of the NnfStorage resource
-func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1alpha5.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1alpha6.NnfAccess) ([]string, error) {
 	if access.Spec.ClientReference != (corev1.ObjectReference{}) {
 		return r.getClientListFromClientReference(ctx, access)
 	}
@@ -403,7 +403,7 @@ func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1al
 }
 
 // getClientListFromClientReference returns a list of client nodes names from the Computes resource
-func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Context, access *nnfv1alpha5.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Context, access *nnfv1alpha6.NnfAccess) ([]string, error) {
 	computes := &dwsv1alpha2.Computes{}
 
 	if access.Spec.ClientReference.Kind != reflect.TypeOf(dwsv1alpha2.Computes{}).Name() {
@@ -429,9 +429,9 @@ func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Conte
 
 // getClientListFromStorageReference returns a list of client node names from the NnfStorage resource. This is the list of Rabbit
 // nodes that host the storage
-func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Context, access *nnfv1alpha5.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Context, access *nnfv1alpha6.NnfAccess) ([]string, error) {
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name() {
 		return nil, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -440,7 +440,7 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
-	nnfStorage := &nnfv1alpha5.NnfStorage{}
+	nnfStorage := &nnfv1alpha6.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return nil, err
 	}
@@ -462,10 +462,10 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 }
 
 // mapClientStorage returns a map of the clients with a list of mounts to make. This picks a device for each client
-func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv1alpha5.NnfAccess, clients []string) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
-	nnfStorage := &nnfv1alpha5.NnfStorage{}
+func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv1alpha6.NnfAccess, clients []string) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
+	nnfStorage := &nnfv1alpha6.NnfStorage{}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name() {
 		return nil, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -503,7 +503,7 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 
 // mapClientNetworkStorage provides the Lustre MGS address information for the clients. All clients get the same
 // mount information
-func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha5.NnfAccess, clients []string, nnfStorage *nnfv1alpha5.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
+func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha6.NnfAccess, clients []string, nnfStorage *nnfv1alpha6.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
 	storageMapping := make(map[string][]dwsv1alpha2.ClientMountInfo)
 
 	for _, client := range clients {
@@ -534,7 +534,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 
 // mapClientLocalStorage picks storage device(s) for each client to access based on locality information
 // from the (DWS) Storage resources.
-func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access *nnfv1alpha5.NnfAccess, clients []string, nnfStorage *nnfv1alpha5.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
+func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access *nnfv1alpha6.NnfAccess, clients []string, nnfStorage *nnfv1alpha6.NnfStorage, setIndex int) (map[string][]dwsv1alpha2.ClientMountInfo, error) {
 	allocationSetSpec := nnfStorage.Spec.AllocationSets[setIndex]
 
 	// Use information from the NnfStorage resource to determine how many allocations
@@ -566,14 +566,14 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 	// allocation.
 	for nodeName, storageCount := range storageCountMap {
 		matchLabels := dwsv1alpha2.MatchingOwner(nnfStorage)
-		matchLabels[nnfv1alpha5.AllocationSetLabel] = allocationSetSpec.Name
+		matchLabels[nnfv1alpha6.AllocationSetLabel] = allocationSetSpec.Name
 
 		listOptions := []client.ListOption{
 			matchLabels,
 			client.InNamespace(nodeName),
 		}
 
-		nnfNodeStorageList := &nnfv1alpha5.NnfNodeStorageList{}
+		nnfNodeStorageList := &nnfv1alpha6.NnfNodeStorageList{}
 		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
 			return nil, err
 		}
@@ -596,7 +596,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 				// so clientmountd will not look at the DeviceReference struct. The DeviceReference information is used by
 				// the data movement code to match up mounts between the Rabbit and compute node.
 				mountInfo.Device.DeviceReference = &dwsv1alpha2.ClientMountDeviceReference{}
-				mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha5.NnfNodeStorage{}).Name()
+				mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha6.NnfNodeStorage{}).Name()
 				mountInfo.Device.DeviceReference.ObjectReference.Name = nnfNodeStorage.Name
 				mountInfo.Device.DeviceReference.ObjectReference.Namespace = nnfNodeStorage.Namespace
 				mountInfo.Device.DeviceReference.Data = i
@@ -710,7 +710,7 @@ type mountReference struct {
 // addNodeStorageEndpoints adds the compute node information to the NnfNodeStorage resource
 // so it can make the NVMe namespaces accessible on the compute node. This is done on the rabbit
 // by creating StorageGroup resources through swordfish for the correct endpoint.
-func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access *nnfv1alpha5.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access *nnfv1alpha6.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be added for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -727,7 +727,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -743,7 +743,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 	// Loop through the NnfNodeBlockStorages and add client access information for each of the
 	// computes that need access to an allocation.
 	for nodeStorageReference, mountRefList := range nodeStorageMap {
-		nnfNodeStorage := &nnfv1alpha5.NnfNodeStorage{
+		nnfNodeStorage := &nnfv1alpha6.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nodeStorageReference.Name,
 				Namespace: nodeStorageReference.Namespace,
@@ -754,7 +754,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 			return err
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{
+		nnfNodeBlockStorage := &nnfv1alpha6.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
 				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -800,7 +800,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 	return nil
 }
 
-func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, access *nnfv1alpha5.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (bool, error) {
+func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, access *nnfv1alpha6.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) (bool, error) {
 	// NnfNodeStorage clientReferences only need to be checked for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -817,7 +817,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -831,10 +831,10 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		}
 	}
 
-	nnfNodeBlockStorages := []nnfv1alpha5.NnfNodeBlockStorage{}
+	nnfNodeBlockStorages := []nnfv1alpha6.NnfNodeBlockStorage{}
 
 	for nodeStorageReference := range nodeStorageMap {
-		nnfNodeStorage := &nnfv1alpha5.NnfNodeStorage{
+		nnfNodeStorage := &nnfv1alpha6.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nodeStorageReference.Name,
 				Namespace: nodeStorageReference.Namespace,
@@ -845,7 +845,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 			return false, err
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{
+		nnfNodeBlockStorage := &nnfv1alpha6.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
 				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -917,7 +917,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 // removeNodeStorageEndpoints modifies the NnfNodeStorage resources to remove the client endpoints for the
 // compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
 // those compute nodes and remove access to the NVMe namespaces from the computes.
-func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, access *nnfv1alpha5.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, access *nnfv1alpha6.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be removed for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -934,7 +934,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -951,7 +951,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 			Namespace: nodeBlockStorageReference.Namespace,
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{}
+		nnfNodeBlockStorage := &nnfv1alpha6.NnfNodeBlockStorage{}
 		err := r.Get(ctx, namespacedName, nnfNodeBlockStorage)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -979,18 +979,18 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 }
 
 // manageClientMounts creates or updates the ClientMount resources based on the information in the storageMapping map.
-func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha5.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
+func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha6.NnfAccess, storageMapping map[string][]dwsv1alpha2.ClientMountInfo) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
 	if !access.Spec.MakeClientMounts {
 		return nil
 	}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name() {
 		return dwsv1alpha2.NewResourceError("invalid StorageReference kind %s", access.Spec.StorageReference.Kind).WithFatal()
 	}
 
-	nnfStorage := &nnfv1alpha5.NnfStorage{
+	nnfStorage := &nnfv1alpha6.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      access.Spec.StorageReference.Name,
 			Namespace: access.Spec.StorageReference.Namespace,
@@ -1059,7 +1059,7 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 }
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
-func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha5.NnfAccess, clientList []string) (bool, error) {
+func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha6.NnfAccess, clientList []string) (bool, error) {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
 	if !access.Spec.MakeClientMounts {
@@ -1145,7 +1145,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	return true, nil
 }
 
-func clientMountName(access *nnfv1alpha5.NnfAccess) string {
+func clientMountName(access *nnfv1alpha6.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
 }
 
@@ -1219,7 +1219,7 @@ func (r *NnfAccessReconciler) ComputesEnqueueRequests(ctx context.Context, o cli
 		}),
 	}
 
-	nnfAccessList := &nnfv1alpha5.NnfAccessList{}
+	nnfAccessList := &nnfv1alpha6.NnfAccessList{}
 	if err := r.List(context.TODO(), nnfAccessList, listOptions...); err != nil {
 		log.Info("Could not list NnfAccesses", "error", err)
 		return requests
@@ -1259,7 +1259,7 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&nnfv1alpha5.NnfAccess{}).
+		For(&nnfv1alpha6.NnfAccess{}).
 		Watches(&dwsv1alpha2.Computes{}, handler.EnqueueRequestsFromMapFunc(r.ComputesEnqueueRequests)).
 		Watches(&dwsv1alpha2.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
 		Complete(r)

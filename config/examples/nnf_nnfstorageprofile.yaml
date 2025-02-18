@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha5
+apiVersion: nnf.cray.hpe.com/v1alpha6
 kind: NnfStorageProfile
 metadata:
   name: template
