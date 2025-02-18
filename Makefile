@@ -218,7 +218,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
 EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
-TESTDIRS ?= internal api github/cluster-api
+TESTDIRS ?= internal api pkg github/cluster-api
 FAILFAST ?= no
 test: manifests generate fmt vet envtest ## Run tests.
 	find internal -name "*.db" -type d -exec rm -rf {} +
