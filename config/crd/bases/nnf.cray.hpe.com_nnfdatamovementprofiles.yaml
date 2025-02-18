@@ -546,5 +546,146 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources: {}
+  - additionalPrinterColumns:
+    - description: True if this is the default instance
+      jsonPath: .data.default
+      name: DEFAULT
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha6
+    schema:
+      openAPIV3Schema:
+        description: NnfDataMovementProfile is the Schema for the nnfdatamovementprofiles
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          data:
+            description: NnfDataMovementProfileData defines the desired state of NnfDataMovementProfile
+            properties:
+              command:
+                default: ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE
+                  dcp --progress 1 --uid $UID --gid $GID $SRC $DEST
+                description: |-
+                  Command to execute to perform data movement. $VARS are replaced by the nnf software and must
+                  be present in the command.
+                  Available $VARS:
+                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+                              slots/max_slots for each host. This hostfile is created at `/tmp/<dm-name>/hostfile`
+                    UID: User ID that is inherited from the Workflow
+                    GID: Group ID that is inherited from the Workflow
+                    SRC: source for the data movement
+                    DEST destination for the data movement
+                type: string
+              createDestDir:
+                default: true
+                description: |-
+                  CreateDestDir will ensure that the destination directory exists before performing data
+                  movement. This will cause a number of stat commands to determine the source and destination
+                  file types, so that the correct pathing for the destination can be determined. Then, a mkdir
+                  is issued.
+                type: boolean
+              default:
+                default: false
+                description: Default is true if this instance is the default resource
+                  to use
+                type: boolean
+              logStdout:
+                default: false
+                description: |-
+                  If true, enable the command's stdout to be saved in the log when the command completes
+                  successfully. On failure, the output is always logged.
+                type: boolean
+              maxSlots:
+                default: 0
+                description: |-
+                  MaxSlots is the number of max_slots specified in the MPI hostfile. A value of 0 disables the
+                  use of max_slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
+                minimum: 0
+                type: integer
+              mkdirCommand:
+                default: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE --
+                  setpriv --euid $UID --egid $GID --clear-groups mkdir -p $PATH
+                description: |-
+                  If CreateDestDir is true, then use MkdirCommand to perform the mkdir commands.
+                  Use setpriv to execute with the specified UID/GID.
+                  Available $VARS:
+                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+                              slots/max_slots for each host. This hostfile is created at
+                              `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
+                    UID: User ID that is inherited from the Workflow
+                    GID: Group ID that is inherited from the Workflow
+                    PATH: Path to stat
+                type: string
+              pinned:
+                default: false
+                description: Pinned is true if this instance is an immutable copy
+                type: boolean
+              progressIntervalSeconds:
+                default: 5
+                description: |-
+                  NnfDataMovement resources have the ability to collect and store the progress percentage and the
+                  last few lines of output in the CommandStatus field. This number is used for the interval to collect
+                  the progress data. `dcp --progress N` must be included in the data movement command in order for
+                  progress to be collected. A value of 0 disables this functionality.
+                minimum: 0
+                type: integer
+              slots:
+                default: 8
+                description: |-
+                  Slots is the number of slots specified in the MPI hostfile. A value of 0 disables the use of
+                  slots in the hostfile. The hostfile is used for both `statCommand` and `Command`.
+                minimum: 0
+                type: integer
+              statCommand:
+                default: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE --
+                  setpriv --euid $UID --egid $GID --clear-groups stat --cached never
+                  -c '%F' $PATH
+                description: |-
+                  If CreateDestDir is true, then use StatCommand to perform the stat commands.
+                  Use setpriv to execute with the specified UID/GID.
+                  Available $VARS:
+                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+                              slots/max_slots for each host. This hostfile is created at
+                              `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
+                    UID: User ID that is inherited from the Workflow
+                    GID: Group ID that is inherited from the Workflow
+                    PATH: Path to stat
+                type: string
+              storeStdout:
+                default: false
+                description: |-
+                  Similar to logStdout, store the command's stdout in Status.Message when the command completes
+                  successfully. On failure, the output is always stored.
+                type: boolean
+            required:
+            - command
+            - createDestDir
+            - maxSlots
+            - mkdirCommand
+            - slots
+            - statCommand
+            type: object
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
     storage: true
     subresources: {}
