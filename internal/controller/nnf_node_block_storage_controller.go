@@ -551,7 +551,7 @@ func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceA
 		if ok {
 			switch ecErr.Cause() {
 			case "Insufficient capacity available":
-				return nil, resourceErr.WithUserMessage("insufficient capacity available").WithWLM().WithFatal()
+				return nil, resourceErr.WithUserMessage("%s: insufficient capacity available", os.Getenv("NNF_NODE_NAME")).WithWLM().WithFatal()
 			default:
 				return nil, resourceErr
 			}
