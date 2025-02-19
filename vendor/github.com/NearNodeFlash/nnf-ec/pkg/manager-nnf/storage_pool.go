@@ -344,9 +344,9 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 
 	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
 		// Case 1. Create Complete: In this case, we've fully created the storage pool and it should be
-		// fully recoverable and place back in use.
+		// fully recoverable and placed back in use.
 
-		// Case 2. Delete Start: We started a delete but it did not finish. This means the storage pool
+		// Case 2. Delete Start: We started a delete, but it did not finish. This means the storage pool
 		// still exists, and its volumes are unknown. Here we try to recover the volumes, but ignore any
 		// errors as the volume might be deleted. The client should retry the delete, at which point we
 		// will delete any remaining volumes

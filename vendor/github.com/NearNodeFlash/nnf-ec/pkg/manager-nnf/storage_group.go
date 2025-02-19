@@ -187,7 +187,13 @@ func (rh *storageGroupRecoveryReplyHandler) Metadata(data []byte) error {
 	}
 
 	storagePool := rh.storageService.findStoragePool(metadata.StoragePoolId)
+	if storagePool == nil {
+		return fmt.Errorf("storagePool %s not found", metadata.StoragePoolId)
+	}
 	endpoint := rh.storageService.findEndpoint(metadata.EndpointId)
+	if endpoint == nil {
+		return fmt.Errorf("endpoint %s not found", metadata.EndpointId)
+	}
 
 	rh.storageService.createStorageGroup(rh.id, storagePool, endpoint)
 

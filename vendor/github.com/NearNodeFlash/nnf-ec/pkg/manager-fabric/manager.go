@@ -1039,12 +1039,12 @@ func Initialize(log ec.Logger, ctrl SwitchtecControllerInterface) error {
 
 	// create the endpoint groups & connections
 
-	// An Endpoint Groups is created for each managment and upstream endpoints, with
+	// An Endpoint Group is created for each managment and upstream endpoint, with
 	// the associated target endpoints linked to form the group. This is conceptually
 	// equivalent to the Host Virtualization Domains that exist in the PAX Switch.
 
-	// A Connection is made for every endpoint (also representing the HVD). Connections
-	// contain the attached volumes. The two are linked.
+	// A Connection is made for every endpoint (also representing the HVD).
+	// Connections contain the attached volumes. The two are linked.
 	m.endpointGroups = make([]EndpointGroup, mangementAndUpstreamEndpointCount)
 	m.connections = make([]Connection, mangementAndUpstreamEndpointCount)
 	for endpointGroupIdx := range m.endpointGroups {
@@ -1075,7 +1075,7 @@ func Initialize(log ec.Logger, ctrl SwitchtecControllerInterface) error {
 	}
 
 	// Fabric Manager must wait for NVMe drives to be enabled prior to running the bind
-	// operation that will route drives to upstream ports. By subscribing to the event
+	// operation that routes drives to upstream ports. By subscribing to the event
 	// manager, we can receive the desired "PortAutomaticallyEnabledFabric" event and
 	// act accordingly.
 	event.EventManager.Subscribe(m)

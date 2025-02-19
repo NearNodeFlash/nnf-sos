@@ -5,19 +5,6 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - batch
-  resources:
-  - jobs
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - ""
   resources:
   - configmaps
@@ -42,14 +29,6 @@ rules:
   - ""
   resources:
   - nodes
-  verbs:
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - pods
   verbs:
   - get
@@ -69,9 +48,26 @@ rules:
   - patch
   - update
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - dataworkflowservices.github.io
   resources:
   - clientmounts
+  - computes
+  - directivebreakdowns
+  - persistentstorageinstances
+  - servers
   verbs:
   - create
   - delete
@@ -85,52 +81,26 @@ rules:
   - dataworkflowservices.github.io
   resources:
   - clientmounts/finalizers
+  - directivebreakdowns/finalizers
+  - systemconfigurations/finalizers
+  - workflows/finalizers
   verbs:
   - update
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
   - clientmounts/status
+  - storages/status
+  - systemconfigurations/status
   verbs:
   - get
   - patch
-  - update
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - computes
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - directivebreakdowns
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - directivebreakdowns/finalizers
-  verbs:
   - update
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
   - directivebreakdowns/status
+  - persistentstorageinstances/status
   verbs:
   - create
   - get
@@ -152,67 +122,8 @@ rules:
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
-  - persistentstorageinstances
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - persistentstorageinstances/status
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - servers
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
   - servers/finalizers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
   - servers/status
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
   - storages
   verbs:
   - create
@@ -225,34 +136,12 @@ rules:
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
-  - storages/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
   - systemconfigurations
   verbs:
   - get
   - list
   - update
   - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - systemconfigurations/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - systemconfigurations/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
@@ -263,12 +152,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - dataworkflowservices.github.io
-  resources:
-  - workflows/finalizers
-  verbs:
-  - update
 - apiGroups:
   - kubeflow.org
   resources:
@@ -294,61 +177,7 @@ rules:
   - nnf.cray.hpe.com
   resources:
   - directivebreakdowns/status
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfaccesses
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfaccesses/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfaccesses/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfcontainerprofiles
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfdatamovementmanagers
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfdatamovementmanagers/status
   verbs:
   - get
@@ -357,204 +186,14 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfaccesses
+  - nnfcontainerprofiles
   - nnfdatamovementprofiles
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfdatamovements
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnflustremgts
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnflustremgts/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnflustremgts/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfnodeblockstorages
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodeblockstorages/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodeblockstorages/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodeecdata
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodeecdata/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodeecdata/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodes
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodes/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodes/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfnodestorages
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodestorages/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfnodestorages/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfportmanagers
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfportmanagers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfportmanagers/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfstorageprofiles
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
   - nnfstorages
   verbs:
   - create
@@ -568,22 +207,38 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfaccesses/finalizers
+  - nnflustremgts/finalizers
+  - nnfnodeblockstorages/finalizers
+  - nnfnodeecdata/finalizers
+  - nnfnodes/finalizers
+  - nnfnodestorages/finalizers
+  - nnfportmanagers/finalizers
   - nnfstorages/finalizers
+  - nnfsystemstorages/finalizers
   verbs:
   - update
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
-  - nnfstorages/status
+  - nnfaccesses/status
+  - nnflustremgts/status
+  - nnfnodeblockstorages/status
+  - nnfnodeecdata/status
+  - nnfnodes/status
+  - nnfnodestorages/status
+  - nnfportmanagers/status
+  - nnfsystemstorages/status
   verbs:
   - get
-  - list
   - patch
   - update
-  - watch
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
+  - nnfnodeecdata
+  - nnfnodes
+  - nnfportmanagers
   - nnfsystemstorages
   verbs:
   - create
@@ -596,14 +251,10 @@ rules:
 - apiGroups:
   - nnf.cray.hpe.com
   resources:
-  - nnfsystemstorages/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - nnf.cray.hpe.com
-  resources:
-  - nnfsystemstorages/status
+  - nnfstorages/status
   verbs:
   - get
+  - list
   - patch
   - update
+  - watch
