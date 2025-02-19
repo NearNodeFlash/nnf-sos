@@ -52,8 +52,6 @@ import (
 
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 
-	nnfv1alpha3 "github.com/NearNodeFlash/nnf-sos/api/v1alpha3"
-
 	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 
@@ -80,7 +78,6 @@ func init() {
 	utilruntime.Must(lusv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha3.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha4.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha5.AddToScheme(scheme))
 	utilruntime.Must(nnfv1alpha6.AddToScheme(scheme))
