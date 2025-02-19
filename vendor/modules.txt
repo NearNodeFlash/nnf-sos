@@ -1,4 +1,4 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20250123184816-8c112709f939 => ../dws
+# github.com/DataWorkflowServices/dws v0.0.1-0.20250219193729-7e8e8fb274cc
 ## explicit; go 1.22.0
 github.com/DataWorkflowServices/dws/api/v1alpha2
 github.com/DataWorkflowServices/dws/config/crd/bases
@@ -11,12 +11,12 @@ github.com/DataWorkflowServices/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250205180945-2d1cc3da204e => ../lustre-fs-operator
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250219194350-45aad5cbbe17
 ## explicit; go 1.22.0
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
 github.com/NearNodeFlash/lustre-fs-operator/config/webhook
-# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250130195025-8ce00255cc9e => ../../nnf-ec-1.git
+# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250219193635-3e6c6b39d0e0
 ## explicit; go 1.22.0
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
@@ -800,6 +800,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
-# github.com/DataWorkflowServices/dws => ../dws
-# github.com/NearNodeFlash/lustre-fs-operator => ../lustre-fs-operator
-# github.com/NearNodeFlash/nnf-ec => ../../nnf-ec-1.git
