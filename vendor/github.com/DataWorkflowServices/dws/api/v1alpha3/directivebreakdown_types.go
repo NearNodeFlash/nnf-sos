@@ -182,8 +182,8 @@ type DirectiveBreakdownStatus struct {
 	// Ready indicates whether AllocationSets have been generated (true) or not (false)
 	Ready bool `json:"ready"`
 
-	// RequiredDeamons tells the WLM about any driver-specific daemons it must enable for the job; it is assumed that the WLM knows about the driver-specific daemons and that if the users are specifying these then the WLM knows how to start them
-	RequiredDaemons []string `json:"requiredDaemons,omitempty"`
+	// Requires tells the WLM about any driver-specific features it must enable for the job; it is assumed that the WLM knows about the driver-specific features and that if the users are specifying these then the WLM knows how to enable them
+	Requires []string `json:"requires,omitempty"`
 
 	// Error information
 	ResourceError `json:",inline"`

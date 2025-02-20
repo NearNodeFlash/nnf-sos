@@ -21,6 +21,7 @@ package v1alpha2
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -137,12 +138,20 @@ func (src *DirectiveBreakdown) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &dwsv1alpha3.DirectiveBreakdown{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Status.Requires = restored.Status.Requires
+	} else {
+		// v1alpha3 renamed RequiredDaemons to Requires.
+		dst.Status.Requires = src.Status.RequiredDaemons
+	}
 
 	return nil
 }
@@ -154,6 +163,9 @@ func (dst *DirectiveBreakdown) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(src, dst, nil); err != nil {
 		return err
 	}
+
+	// v1alpha3 renamed RequiredDaemons to Requires.
+	dst.Status.RequiredDaemons = src.Status.Requires
 
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
@@ -297,12 +309,18 @@ func (src *Workflow) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &dwsv1alpha3.Workflow{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Status.Requires = restored.Status.Requires
+		dst.Status.WorkflowToken = restored.Status.WorkflowToken
+	}
 
 	return nil
 }
@@ -398,4 +416,19 @@ func (src *WorkflowList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *WorkflowList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("WorkflowList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
+func Convert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha3_DirectiveBreakdownStatus(in *DirectiveBreakdownStatus, out *dwsv1alpha3.DirectiveBreakdownStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha3_DirectiveBreakdownStatus(in, out, s)
+}
+
+func Convert_v1alpha3_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(in *dwsv1alpha3.DirectiveBreakdownStatus, out *DirectiveBreakdownStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha3_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(in, out, s)
+}
+
+func Convert_v1alpha3_WorkflowStatus_To_v1alpha2_WorkflowStatus(in *dwsv1alpha3.WorkflowStatus, out *WorkflowStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha3_WorkflowStatus_To_v1alpha2_WorkflowStatus(in, out, s)
 }
