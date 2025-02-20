@@ -51,7 +51,7 @@ import (
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -282,7 +282,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	systemConfig := &dwsv1alpha2.SystemConfiguration{}
+	systemConfig := &dwsv1alpha3.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
 		log.Info("Could not get system configuration")
 		return ctrl.Result{}, nil
@@ -501,7 +501,7 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha6.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Watches(&dwsv1alpha2.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
+		Watches(&dwsv1alpha3.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		WatchesRawSource(&source.Channel{Source: r.Events}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

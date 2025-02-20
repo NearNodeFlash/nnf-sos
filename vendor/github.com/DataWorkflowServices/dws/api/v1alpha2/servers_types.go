@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -87,7 +87,6 @@ type ServersStatus struct {
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if allocation sets have been generated"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"

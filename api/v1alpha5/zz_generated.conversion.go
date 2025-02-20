@@ -28,6 +28,7 @@ import (
 	unsafe "unsafe"
 
 	v1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	v1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	v1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	v2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	v1 "k8s.io/api/core/v1"
@@ -1012,7 +1013,7 @@ func Convert_v1alpha6_NnfAccessList_To_v1alpha5_NnfAccessList(in *v1alpha6.NnfAc
 
 func autoConvert_v1alpha5_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha6.NnfAccessSpec, s conversion.Scope) error {
 	out.DesiredState = in.DesiredState
-	out.TeardownState = v1alpha2.WorkflowState(in.TeardownState)
+	out.TeardownState = v1alpha3.WorkflowState(in.TeardownState)
 	out.Target = in.Target
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
@@ -1053,7 +1054,8 @@ func Convert_v1alpha6_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in *v1alpha6.NnfAc
 func autoConvert_v1alpha5_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha6.NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1065,7 +1067,8 @@ func Convert_v1alpha5_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(in *NnfAccessS
 func autoConvert_v1alpha6_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(in *v1alpha6.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1564,7 +1567,8 @@ func autoConvert_v1alpha5_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*v1alpha6.NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1581,7 +1585,8 @@ func autoConvert_v1alpha6_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1711,7 +1716,8 @@ func Convert_v1alpha6_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *v1alpha6
 func autoConvert_v1alpha5_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha6.NnfLustreMGTStatus, s conversion.Scope) error {
 	out.FsNameNext = in.FsNameNext
 	out.ClaimList = *(*[]v1alpha6.NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1723,7 +1729,8 @@ func Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(in *NnfL
 func autoConvert_v1alpha6_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *v1alpha6.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s conversion.Scope) error {
 	out.FsNameNext = in.FsNameNext
 	out.ClaimList = *(*[]NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -1958,7 +1965,8 @@ func Convert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpe
 
 func autoConvert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha6.NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]v1alpha6.NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
@@ -1971,7 +1979,8 @@ func Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageS
 
 func autoConvert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(in *v1alpha6.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
@@ -2275,7 +2284,8 @@ func Convert_v1alpha6_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(in *v1al
 func autoConvert_v1alpha5_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha6.NnfNodeStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]v1alpha6.NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -2287,7 +2297,8 @@ func Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *
 func autoConvert_v1alpha6_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(in *v1alpha6.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -3159,7 +3170,8 @@ func autoConvert_v1alpha5_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in *NnfS
 		return err
 	}
 	out.AllocationSets = *(*[]v1alpha6.NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	out.Ready = in.Ready
 	return nil
 }
@@ -3174,7 +3186,8 @@ func autoConvert_v1alpha6_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(in *v1al
 		return err
 	}
 	out.AllocationSets = *(*[]NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	out.Ready = in.Ready
 	return nil
 }
@@ -3288,7 +3301,8 @@ func Convert_v1alpha6_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(in *
 
 func autoConvert_v1alpha5_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha6.NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 
@@ -3299,7 +3313,8 @@ func Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(
 
 func autoConvert_v1alpha6_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(in *v1alpha6.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
+	compileErrorOnMissingConversion()
 	return nil
 }
 

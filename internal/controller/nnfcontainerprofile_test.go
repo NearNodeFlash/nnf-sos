@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
 
@@ -97,7 +97,7 @@ func createBasicNnfContainerProfile(storages []nnfv1alpha6.NnfContainerProfileSt
 	return createNnfContainerProfile(containerProfile, true)
 }
 
-func verifyPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha2.Workflow, index int) error {
+func verifyPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha3.Workflow, index int) error {
 
 	nnfContainerProfile, err := findPinnedContainerProfile(ctx, clnt, workflow, index)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred())

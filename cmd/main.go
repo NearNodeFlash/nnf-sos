@@ -45,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -74,7 +74,7 @@ const (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(dwsv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(dwsv1alpha3.AddToScheme(scheme))
 	utilruntime.Must(lusv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))

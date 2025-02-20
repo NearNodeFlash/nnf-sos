@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
 
@@ -60,18 +60,18 @@ func findDMProfileToUse(ctx context.Context, clnt client.Client, args map[string
 		}
 		// Require that there be one and only one default.
 		if len(profilesFound) == 0 {
-			return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find a default NnfDataMovementProfile to use").WithFatal()
+			return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("Unable to find a default NnfDataMovementProfile to use").WithFatal()
 		} else if len(profilesFound) > 1 {
-			return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("More than one default NnfDataMovementProfile found; unable to pick one: %v", profilesFound).WithFatal()
+			return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("More than one default NnfDataMovementProfile found; unable to pick one: %v", profilesFound).WithFatal()
 		}
 		profileName = profilesFound[0]
 	}
 	if len(profileName) == 0 {
-		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find an NnfDataMovementProfile name").WithUser().WithFatal()
+		return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("Unable to find an NnfDataMovementProfile name").WithUser().WithFatal()
 	}
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, NnfDataMovementProfile)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("").WithUserMessage("Unable to find NnfDataMovementProfile: %s", profileName).WithUser().WithFatal()
+		return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("Unable to find NnfDataMovementProfile: %s", profileName).WithUser().WithFatal()
 	}
 
 	return NnfDataMovementProfile, nil
@@ -86,7 +86,7 @@ func findPinnedDMProfile(ctx context.Context, clnt client.Client, namespace stri
 		return nil, err
 	}
 	if !NnfDataMovementProfile.Data.Pinned {
-		return nil, dwsv1alpha2.NewResourceError("Expected pinned NnfDataMovementProfile, but it was not pinned: %s", pinnedName).WithFatal()
+		return nil, dwsv1alpha3.NewResourceError("Expected pinned NnfDataMovementProfile, but it was not pinned: %s", pinnedName).WithFatal()
 	}
 	return NnfDataMovementProfile, nil
 }
@@ -121,7 +121,7 @@ func createPinnedDMProfile(ctx context.Context, clnt client.Client, clntScheme *
 	newProfile.Data.Default = false
 	controllerutil.SetControllerReference(owner, newProfile, clntScheme)
 
-	dwsv1alpha2.AddOwnerLabels(newProfile, owner)
+	dwsv1alpha3.AddOwnerLabels(newProfile, owner)
 	err = clnt.Create(ctx, newProfile)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {

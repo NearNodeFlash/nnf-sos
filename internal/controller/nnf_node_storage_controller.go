@@ -37,7 +37,7 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -60,7 +60,7 @@ type NnfNodeStorageReconciler struct {
 	SemaphoreForDone  chan struct{}
 
 	types.NamespacedName
-	ChildObjects []dwsv1alpha2.ObjectList
+	ChildObjects []dwsv1alpha3.ObjectList
 
 	sync.Mutex
 	started         bool
@@ -207,7 +207,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	result, err := r.createAllocations(ctx, nnfNodeStorage, blockDevices, fileSystems)
 	if err != nil {
-		return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to create storage allocation").WithError(err).WithMajor()
+		return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to create storage allocation").WithError(err).WithMajor()
 	}
 	if result != nil {
 		return *result, nil
@@ -237,13 +237,13 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 	// If we never successfully completed creating the allocation or if it's already gone, then don't try to run PreDeactivate
 	blockDeviceExists, err := blockDevice.CheckExists(ctx)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not check if block device exists").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not check if block device exists").WithError(err).WithMajor()
 	}
 
 	if blockDeviceExists && nnfNodeStorage.Status.Allocations[index].Ready {
 		ran, err := blockDevice.Activate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated block device", "allocation", index)
@@ -251,7 +251,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 		ran, err = fileSystem.Activate(ctx, false)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated file system", "allocation", index)
@@ -261,7 +261,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
 			ran, err = fileSystem.PreUnmount(ctx)
 			if err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
+				return nil, dwsv1alpha3.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
 			}
 			if ran {
 				log.Info("Pre unmount file system", "allocation", index)
@@ -270,7 +270,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 		ran, err = fileSystem.PreDeactivate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Pre deactivate file system", "allocation", index)
@@ -279,7 +279,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err := fileSystem.Deactivate(ctx)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Deactivated file system", "allocation", index)
@@ -287,7 +287,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = fileSystem.Destroy(ctx)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not destroy file system").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not destroy file system").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Destroyed file system", "allocation", index)
@@ -295,7 +295,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = blockDevice.Deactivate(ctx, false)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Deactivated block device", "allocation", index)
@@ -303,7 +303,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = blockDevice.Destroy(ctx)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not destroy block devices").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not destroy block devices").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Destroyed block device", "allocation", index)
@@ -325,7 +325,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not create block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not create block devices").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Created block device", "allocation", index)
@@ -333,7 +333,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		_, err = blockDevice.Activate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 
 		deferIndex := index
@@ -350,7 +350,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err := fileSystem.Create(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not create file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not create file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Created file system", "allocation", index)
@@ -358,7 +358,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not activate file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated file system", "allocation", index)
@@ -366,7 +366,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err = fileSystem.PostActivate(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha2.NewResourceError("could not run post activate").WithError(err).WithMajor()
+			return nil, dwsv1alpha3.NewResourceError("could not run post activate").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Post activate file system", "allocation", index)
@@ -378,7 +378,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
 			ran, err = fileSystem.PostMount(ctx, allocationStatus.Ready)
 			if err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not run post mount").WithError(err).WithMajor()
+				return nil, dwsv1alpha3.NewResourceError("could not run post mount").WithError(err).WithMajor()
 			}
 			if ran {
 				log.Info("Post mount file system", "allocation", index)
