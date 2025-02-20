@@ -21,6 +21,7 @@ package v1alpha3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -88,7 +89,7 @@ func (w *Workflow) ValidateCreate() (admission.Warnings, error) {
 		s := fmt.Sprintf("desired state must start in %s", StateProposal)
 		return nil, field.Invalid(specPath.Child("DesiredState"), w.Spec.DesiredState, s)
 	}
-	if w.Spec.Hurry == true {
+	if w.Spec.Hurry {
 		return nil, field.Forbidden(specPath.Child("Hurry"), "the hurry flag may not be set on creation")
 	}
 	if w.Status.State != "" {
@@ -109,7 +110,7 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error
 		return nil, err
 	}
 
-	if w.Spec.Hurry == true && w.Spec.DesiredState != StateTeardown {
+	if w.Spec.Hurry && w.Spec.DesiredState != StateTeardown {
 		s := fmt.Sprintf("the hurry flag may be set only in %s", StateTeardown)
 		return nil, field.Invalid(field.NewPath("Spec").Child("Hurry"), w.Spec.Hurry, s)
 	}
@@ -130,7 +131,7 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error
 	for i, driverStatus := range w.Status.Drivers {
 
 		driverError := func(errString string) error {
-			return field.InternalError(field.NewPath("Status").Child("Drivers").Index(i), fmt.Errorf(errString))
+			return field.InternalError(field.NewPath("Status").Child("Drivers").Index(i), errors.New(errString))
 		}
 
 		// Elements with watchStates not equal to the current state should not change
@@ -141,7 +142,7 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error
 			continue
 		}
 
-		if driverStatus.Completed == true {
+		if driverStatus.Completed {
 			if driverStatus.Status != StatusCompleted {
 				return nil, driverError("driver cannot be completed without status=Completed")
 			}
@@ -150,7 +151,7 @@ func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error
 				return nil, driverError("driver cannot be completed when error is present")
 			}
 		} else {
-			if oldWorkflow.Status.Drivers[i].Completed == true {
+			if oldWorkflow.Status.Drivers[i].Completed {
 				return nil, driverError("driver cannot change from completed state")
 			}
 		}

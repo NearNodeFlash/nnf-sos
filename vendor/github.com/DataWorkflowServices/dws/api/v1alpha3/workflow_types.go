@@ -236,6 +236,15 @@ type WorkflowStatus struct {
 	// 1 DirectiveBreakdown per #DW Directive that requires storage
 	DirectiveBreakdowns []corev1.ObjectReference `json:"directiveBreakdowns,omitempty"`
 
+	// Requires contains a list of features that the controller has determined must be enabled for this Workflow.
+	// This list is an internal interpretation of the corresponding list in the DirectiveBreakdown.Status and will not necessarily represent everything found there.
+	// External users must refer to the list in DirectiveBreakdown.Status.
+	Requires []string `json:"requires,omitempty"`
+
+	// WorkflowToken is the Secret that contains the per-Workflow token, when one
+	// is being used.
+	WorkflowToken *WorkflowTokenSecret `json:"workflowToken,omitempty"`
+
 	// Reference to Computes
 	Computes corev1.ObjectReference `json:"computes,omitempty"`
 
@@ -247,6 +256,13 @@ type WorkflowStatus struct {
 
 	// Duration of the last state change
 	ElapsedTimeLastState string `json:"elapsedTimeLastState,omitempty"`
+}
+
+// WorkflowTokenSecret contains a pointer to the Secret that has a per-Workflow
+// token.
+type WorkflowTokenSecret struct {
+	SecretName      string `json:"secretName"`
+	SecretNamespace string `json:"secretNamespace"`
 }
 
 //+kubebuilder:object:root=true

@@ -611,9 +611,9 @@ var _ = Describe("Integration Test", func() {
 
 				if requiresList, requiresDaemons := dwArgs["requires"]; requiresDaemons {
 					requires := strings.Split(requiresList, ",")
-					Expect(dbd.Status.RequiredDaemons).Should(ConsistOf(requires), directive)
+					Expect(dbd.Status.Requires).Should(ConsistOf(requires), directive)
 				} else {
-					Expect(dbd.Status.RequiredDaemons).Should(BeEmpty(), directive)
+					Expect(dbd.Status.Requires).Should(BeEmpty(), directive)
 				}
 
 				if wfTests[idx].hasComputeBreakdown {

@@ -1015,6 +1015,14 @@ spec:
                   status
                 format: date-time
                 type: string
+              requires:
+                description: |-
+                  Requires contains a list of features that the controller has determined must be enabled for this Workflow.
+                  This list is an internal interpretation of the corresponding list in the DirectiveBreakdown.Status and will not necessarily represent everything found there.
+                  External users must refer to the list in DirectiveBreakdown.Status.
+                items:
+                  type: string
+                type: array
               state:
                 description: |-
                   The state the resource is currently transitioning to.
@@ -1041,6 +1049,19 @@ spec:
                 - TransientCondition
                 - Error
                 type: string
+              workflowToken:
+                description: |-
+                  WorkflowToken is the Secret that contains the per-Workflow token, when one
+                  is being used.
+                properties:
+                  secretName:
+                    type: string
+                  secretNamespace:
+                    type: string
+                required:
+                - secretName
+                - secretNamespace
+                type: object
             required:
             - ready
             type: object

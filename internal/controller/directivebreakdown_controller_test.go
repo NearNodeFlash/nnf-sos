@@ -69,7 +69,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
 			return directiveBreakdown.Status.Ready
 		}).Should(BeTrue())
-		Expect(directiveBreakdown.Status.RequiredDaemons).Should(BeEmpty())
+		Expect(directiveBreakdown.Status.Requires).Should(BeEmpty())
 
 		servers := &dwsv1alpha3.Servers{
 			ObjectMeta: metav1.ObjectMeta{
@@ -117,13 +117,13 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		Expect(k8sClient.Create(context.TODO(), directiveBreakdown)).To(Succeed())
 
 		// All other steps in DirectiveBreakdown creation are covered in an
-		// earlier spec, so this one can focus on Status.RequiredDaemons.
+		// earlier spec, so this one can focus on Status.Requires.
 
 		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
 			return directiveBreakdown.Status.Ready
 		}).Should(BeTrue())
-		Expect(directiveBreakdown.Status.RequiredDaemons).Should(ConsistOf([]string{"copy-offload"}))
+		Expect(directiveBreakdown.Status.Requires).Should(ConsistOf([]string{"copy-offload"}))
 
 		By("Deleting the DirectiveBreakdown")
 		Expect(k8sClient.Delete(context.TODO(), directiveBreakdown)).To(Succeed())
