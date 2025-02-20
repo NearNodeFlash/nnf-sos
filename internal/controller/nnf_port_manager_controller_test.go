@@ -33,7 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
 
@@ -46,17 +46,17 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 	portTotal := portEnd - portStart + 1
 
 	Describe("NNF Port Manager Controller Test", func() {
-		var cfg *dwsv1alpha2.SystemConfiguration
+		var cfg *dwsv1alpha3.SystemConfiguration
 		var mgr *nnfv1alpha6.NnfPortManager
 		portCooldown := 1
 
 		JustBeforeEach(func() {
-			cfg = &dwsv1alpha2.SystemConfiguration{
+			cfg = &dwsv1alpha3.SystemConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "default",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha2.SystemConfigurationSpec{
+				Spec: dwsv1alpha3.SystemConfigurationSpec{
 					Ports: []intstr.IntOrString{
 						intstr.FromString(fmt.Sprintf("%d-%d", portStart, portEnd)),
 					},

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha2
+package v1alpha3
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,10 +25,10 @@ import (
 )
 
 // log is for logging in this package.
-var serverslog = logf.Log.WithName("servers-resource")
+var persistentstorageinstancelog = logf.Log.WithName("persistentstorageinstance-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *Servers) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *PersistentStorageInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()

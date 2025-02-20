@@ -30,12 +30,12 @@ import (
 	"k8s.io/kubernetes/pkg/util/taints"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
 
 var _ = Describe("NnfSystemconfigurationController", func() {
-	var sysCfg *dwsv1alpha2.SystemConfiguration
+	var sysCfg *dwsv1alpha3.SystemConfiguration
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), sysCfg)).To(Succeed())
@@ -45,17 +45,17 @@ var _ = Describe("NnfSystemconfigurationController", func() {
 	})
 
 	When("creating a SystemConfiguration", func() {
-		sysCfg = &dwsv1alpha2.SystemConfiguration{
+		sysCfg = &dwsv1alpha3.SystemConfiguration{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha3.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha3.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: "rabbit1",
-						ComputesAccess: []dwsv1alpha2.SystemConfigurationComputeNodeReference{
+						ComputesAccess: []dwsv1alpha3.SystemConfigurationComputeNodeReference{
 							{
 								Name:  "test-compute-0",
 								Index: 0,
@@ -77,7 +77,7 @@ var _ = Describe("NnfSystemconfigurationController", func() {
 })
 
 var _ = Describe("Adding taints and labels to nodes", func() {
-	var sysCfg *dwsv1alpha2.SystemConfiguration
+	var sysCfg *dwsv1alpha3.SystemConfiguration
 
 	taintNoSchedule := &corev1.Taint{
 		Key:    nnfv1alpha6.RabbitNodeTaintKey,
@@ -108,13 +108,13 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 	}
 
 	BeforeEach(func() {
-		sysCfg = &dwsv1alpha2.SystemConfiguration{
+		sysCfg = &dwsv1alpha3.SystemConfiguration{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha2.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha2.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha3.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha3.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: "rabbit1",

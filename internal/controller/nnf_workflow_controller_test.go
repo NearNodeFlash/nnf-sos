@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
@@ -56,7 +56,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	var (
 		key                   types.NamespacedName
-		workflow              *dwsv1alpha2.Workflow
+		workflow              *dwsv1alpha3.Workflow
 		setup                 sync.Once
 		storageProfile        *nnfv1alpha6.NnfStorageProfile
 		dmProfile             *nnfv1alpha6.NnfDataMovementProfile
@@ -99,13 +99,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Namespace: corev1.NamespaceDefault,
 		}
 
-		workflow = &dwsv1alpha2.Workflow{
+		workflow = &dwsv1alpha3.Workflow{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      key.Name,
 				Namespace: key.Namespace,
 			},
-			Spec: dwsv1alpha2.WorkflowSpec{
-				DesiredState: dwsv1alpha2.StateProposal,
+			Spec: dwsv1alpha3.WorkflowSpec{
+				DesiredState: dwsv1alpha3.StateProposal,
 				JobID:        intstr.FromString("job 1244"),
 				WLMID:        uuid.NewString(),
 				UserID:       baseWorkflowUserID,
@@ -113,7 +113,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			},
 		}
 
-		expected := &dwsv1alpha2.Workflow{}
+		expected := &dwsv1alpha3.Workflow{}
 		Expect(k8sClient.Get(context.TODO(), key, expected)).ToNot(Succeed())
 
 		// Create a default NnfStorageProfile for the unit tests.
@@ -128,19 +128,19 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 	AfterEach(func() {
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-			workflow.Spec.DesiredState = dwsv1alpha2.StateTeardown
+			workflow.Spec.DesiredState = dwsv1alpha3.StateTeardown
 			return k8sClient.Update(context.TODO(), workflow)
 		}).Should(Succeed(), "teardown")
 
 		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-			return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateTeardown
+			return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateTeardown
 		}).Should(BeTrue(), "reach desired teardown state")
 
 		Expect(k8sClient.Delete(context.TODO(), workflow)).To(Succeed())
 
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
-			expected := &dwsv1alpha2.Workflow{}
+			expected := &dwsv1alpha3.Workflow{}
 			return k8sClient.Get(context.TODO(), key, expected)
 		}).ShouldNot(Succeed())
 
@@ -157,11 +157,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		}).ShouldNot(Succeed())
 	})
 
-	getErroredDriverStatus := func(workflow *dwsv1alpha2.Workflow) *dwsv1alpha2.WorkflowDriverStatus {
+	getErroredDriverStatus := func(workflow *dwsv1alpha3.Workflow) *dwsv1alpha3.WorkflowDriverStatus {
 		driverID := os.Getenv("DWS_DRIVER_ID")
 		for _, driver := range workflow.Status.Drivers {
 			if driver.DriverID == driverID {
-				if driver.Status == dwsv1alpha2.StatusError {
+				if driver.Status == dwsv1alpha3.StatusError {
 					return &driver
 				}
 			}
@@ -173,15 +173,15 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		By("Fabricate the persistent storage instance")
 
 		// Create a persistent storage instance to be found
-		psi := &dwsv1alpha2.PersistentStorageInstance{
+		psi := &dwsv1alpha3.PersistentStorageInstance{
 			TypeMeta:   metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
-			Spec: dwsv1alpha2.PersistentStorageInstanceSpec{
+			Spec: dwsv1alpha3.PersistentStorageInstanceSpec{
 				Name:   name,
 				FsType: fsType,
 				// DWDirective: workflow.Spec.DWDirectives[0],
 				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
-				State:       dwsv1alpha2.PSIStateActive,
+				State:       dwsv1alpha3.PSIStateActive,
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
@@ -208,7 +208,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	deletePersistentStorageInstance := func(name string) {
 		By("delete persistent storage instance")
-		psi := &dwsv1alpha2.PersistentStorageInstance{
+		psi := &dwsv1alpha3.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: workflow.Namespace},
 		}
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(psi), psi)).To(Succeed())
@@ -232,8 +232,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			// We need to be able to pass errors through the PersistentStorageInstance and DirectiveBreakdown
 			// before we can test this
 			/*
-				Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-					expected := &dwsv1alpha2.Workflow{}
+				Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+					expected := &dwsv1alpha3.Workflow{}
 					k8sClient.Get(context.TODO(), key, expected)
 					return getErroredDriverStatus(expected)
 				}).ShouldNot(BeNil(), "have an error present")
@@ -253,8 +253,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			// We need to be able to pass errors through the PersistentStorageInstance and DirectiveBreakdown
 			// before we can test this
 			/*
-				Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-					expected := &dwsv1alpha2.Workflow{}
+				Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+					expected := &dwsv1alpha3.Workflow{}
 					k8sClient.Get(context.TODO(), key, expected)
 					return getErroredDriverStatus(expected)
 				}).ShouldNot(BeNil(), "have an error present")
@@ -289,8 +289,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				// We need to be able to pass errors through the PersistentStorageInstance and DirectiveBreakdown
 				// before we can test this
 				/*
-					Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-						expected := &dwsv1alpha2.Workflow{}
+					Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+						expected := &dwsv1alpha3.Workflow{}
 						k8sClient.Get(context.TODO(), key, expected)
 						return getErroredDriverStatus(expected)
 					}).ShouldNot(BeNil(), "have an error present")
@@ -336,10 +336,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			workflowAfter := &dwsv1alpha2.Workflow{}
+			workflowAfter := &dwsv1alpha3.Workflow{}
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
-				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) == nil) {
+				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha3.StateProposal) && (getErroredDriverStatus(workflowAfter) == nil) {
 					return nil
 				}
 				return fmt.Errorf("ready state not achieved")
@@ -403,10 +403,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			workflowAfter := &dwsv1alpha2.Workflow{}
+			workflowAfter := &dwsv1alpha3.Workflow{}
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
-				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha3.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
 					return nil
 				}
 				return fmt.Errorf("error state not achieved")
@@ -424,10 +424,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			workflowAfter := &dwsv1alpha2.Workflow{}
+			workflowAfter := &dwsv1alpha3.Workflow{}
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
-				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+				if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha3.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
 					return nil
 				}
 				return fmt.Errorf("error state not achieved")
@@ -460,10 +460,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-				workflowAfter := &dwsv1alpha2.Workflow{}
+				workflowAfter := &dwsv1alpha3.Workflow{}
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
-					if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
+					if (workflowAfter.Status.Ready == false) && (workflowAfter.Status.State == dwsv1alpha3.StateProposal) && (getErroredDriverStatus(workflowAfter) != nil) {
 						return nil
 					}
 					return fmt.Errorf("error state not achieved")
@@ -526,10 +526,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			workflowAfter := &dwsv1alpha2.Workflow{}
+			workflowAfter := &dwsv1alpha3.Workflow{}
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), key, workflowAfter)).To(Succeed())
-				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha2.StateProposal) && (getErroredDriverStatus(workflowAfter) == nil) {
+				if (workflowAfter.Status.Ready == true) && (workflowAfter.Status.State == dwsv1alpha3.StateProposal) && (getErroredDriverStatus(workflowAfter) == nil) {
 					return nil
 				}
 				return fmt.Errorf("ready state not achieved")
@@ -575,8 +575,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -591,8 +591,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -606,8 +606,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -624,8 +624,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -640,8 +640,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -655,8 +655,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
 
-			Eventually(func() *dwsv1alpha2.WorkflowDriverStatus {
-				expected := &dwsv1alpha2.Workflow{}
+			Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				expected := &dwsv1alpha3.Workflow{}
 				k8sClient.Get(context.TODO(), key, expected)
 				return getErroredDriverStatus(expected)
 			}).ShouldNot(BeNil(), "have an error present")
@@ -676,12 +676,12 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				return workflow.Status.Ready
 			}).Should(BeTrue(), "waiting for ready after create")
 
-			workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+			workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 			Expect(k8sClient.Update(context.TODO(), workflow)).To(Succeed())
 
 			Eventually(func(g Gomega) bool {
 				g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-				return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+				return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 			}).Should(BeTrue(), "transition through setup")
 		})
 
@@ -761,7 +761,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				By("transition to data in state")
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateDataIn
+					workflow.Spec.DesiredState = dwsv1alpha3.StateDataIn
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to DataIn")
 
@@ -842,7 +842,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateDataIn
+					workflow.Spec.DesiredState = dwsv1alpha3.StateDataIn
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "transition desired state to DataIn")
 
@@ -891,9 +891,9 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		const nodeName = "rabbit-node"
 
 		var (
-			storage            *dwsv1alpha2.Storage
-			directiveBreakdown *dwsv1alpha2.DirectiveBreakdown
-			servers            *dwsv1alpha2.Servers
+			storage            *dwsv1alpha3.Storage
+			directiveBreakdown *dwsv1alpha3.DirectiveBreakdown
+			servers            *dwsv1alpha3.Servers
 		)
 
 		JustBeforeEach(func() {
@@ -906,7 +906,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				return workflow.Status.Ready
 			}).Should(BeTrue(), "waiting for ready after create")
 
-			directiveBreakdown = &dwsv1alpha2.DirectiveBreakdown{
+			directiveBreakdown = &dwsv1alpha3.DirectiveBreakdown{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workflow.Status.DirectiveBreakdowns[0].Name,
 					Namespace: workflow.Status.DirectiveBreakdowns[0].Namespace,
@@ -914,7 +914,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
 
-			servers = &dwsv1alpha2.Servers{
+			servers = &dwsv1alpha3.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      directiveBreakdown.Status.Storage.Reference.Name,
 					Namespace: directiveBreakdown.Status.Storage.Reference.Namespace,
@@ -923,10 +923,10 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
 
 			for _, directiveAllocationSet := range directiveBreakdown.Status.Storage.AllocationSets {
-				allocationSet := dwsv1alpha2.ServersSpecAllocationSet{
+				allocationSet := dwsv1alpha3.ServersSpecAllocationSet{
 					Label:          directiveAllocationSet.Label,
 					AllocationSize: directiveAllocationSet.MinimumCapacity,
-					Storage: []dwsv1alpha2.ServersSpecStorage{
+					Storage: []dwsv1alpha3.ServersSpecStorage{
 						{
 							Name:            nodeName,
 							AllocationCount: 1,
@@ -953,7 +953,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 		})
 
 		BeforeEach(func() {
-			storage = &dwsv1alpha2.Storage{
+			storage = &dwsv1alpha3.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
@@ -965,14 +965,14 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
 
-				storage.Status = dwsv1alpha2.StorageStatus{
+				storage.Status = dwsv1alpha3.StorageStatus{
 					Capacity: 100000000000,
-					Access: dwsv1alpha2.StorageAccess{
-						Protocol: dwsv1alpha2.PCIe,
-						Servers: []dwsv1alpha2.Node{
+					Access: dwsv1alpha3.StorageAccess{
+						Protocol: dwsv1alpha3.PCIe,
+						Servers: []dwsv1alpha3.Node{
 							{
 								Name:   nodeName,
-								Status: dwsv1alpha2.ReadyStatus,
+								Status: dwsv1alpha3.ReadyStatus,
 							},
 						},
 					},
@@ -997,13 +997,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			It("Succeeds with one allocation per allocation set", func() {
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 			})
 
@@ -1028,13 +1028,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 			})
 
@@ -1059,13 +1059,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 			})
 
@@ -1081,13 +1081,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1103,13 +1103,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1125,13 +1125,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1147,13 +1147,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1178,13 +1178,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1206,13 +1206,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1231,13 +1231,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1274,13 +1274,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 
 				nnfStorage := &nnfv1alpha6.NnfStorage{
@@ -1317,13 +1317,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			It("Succeeds with one allocation per allocation set", func() {
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateSetup
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateSetup
 				}).Should(BeTrue(), "waiting for ready after setup")
 			})
 
@@ -1342,13 +1342,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) error {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					workflow.Spec.DesiredState = dwsv1alpha2.StateSetup
+					workflow.Spec.DesiredState = dwsv1alpha3.StateSetup
 					return k8sClient.Update(context.TODO(), workflow)
 				}).Should(Succeed(), "update to Setup")
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.State == dwsv1alpha2.StateSetup && workflow.Status.Status == dwsv1alpha2.StatusError
+					return workflow.Status.State == dwsv1alpha3.StateSetup && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "waiting for setup state to fail")
 			})
 
@@ -1476,7 +1476,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					buildWorkflowWithCorrectDirectives()
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-						return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
+						return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateProposal
 					}).Should(BeTrue(), "reach desired Proposal state")
 					Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 2)).To(Succeed())
 				},
@@ -1492,7 +1492,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					buildWorkflowWithCorrectDirectives()
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-						return workflow.Status.Status == dwsv1alpha2.StatusError && strings.Contains(workflow.Status.Message, "container profile") && strings.Contains(workflow.Status.Message, "is restricted to")
+						return workflow.Status.Status == dwsv1alpha3.StatusError && strings.Contains(workflow.Status.Message, "container profile") && strings.Contains(workflow.Status.Message, "is restricted to")
 					}).Should(BeTrue(), "does not reach desired Proposal state")
 				},
 				Entry("when restricted to non-matching user ID", &altWorkflowUserID, nil),
@@ -1521,7 +1521,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha2.StateProposal
+					return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateProposal
 				}).Should(BeTrue(), "reach desired Proposal state")
 				Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 1)).To(Succeed())
 			})
@@ -1541,7 +1541,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha2.StatusError
+					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "be in error state")
 			})
 		})
@@ -1566,7 +1566,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 				Eventually(func(g Gomega) bool {
 					g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha2.StatusError
+					return !workflow.Status.Ready && workflow.Status.Status == dwsv1alpha3.StatusError
 				}).Should(BeTrue(), "be in error state")
 			})
 		})
@@ -1614,7 +1614,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					buildContainerWorkflowWithArgs(storageArgsList[argIdx])
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
-						return workflow.Status.Status == dwsv1alpha2.StatusError &&
+						return workflow.Status.Status == dwsv1alpha3.StatusError &&
 							strings.Contains(workflow.Status.Message, "not found in container profile")
 					}).Should(BeTrue(), "does not reach desired Proposal state")
 				},
@@ -1659,7 +1659,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						if shouldError {
-							return workflow.Status.Status == dwsv1alpha2.StatusError &&
+							return workflow.Status.Status == dwsv1alpha3.StatusError &&
 								strings.Contains(workflow.Status.Message, "unsupported container filesystem")
 						} else {
 							return workflow.Status.Ready == true
@@ -1697,7 +1697,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						if shouldError {
-							return workflow.Status.Status == dwsv1alpha2.StatusError &&
+							return workflow.Status.Status == dwsv1alpha3.StatusError &&
 								strings.Contains(workflow.Status.Message, "unsupported container filesystem: "+fsType)
 						} else {
 							return workflow.Status.Ready == true

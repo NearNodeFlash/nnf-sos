@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -42,7 +42,7 @@ import (
 )
 
 type nnfUserContainer struct {
-	workflow *dwsv1alpha2.Workflow
+	workflow *dwsv1alpha3.Workflow
 	profile  *nnfv1alpha6.NnfContainerProfile
 	nnfNodes []string
 	volumes  []nnfContainerVolume
@@ -246,9 +246,9 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 
 func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
 	// Apply Job Labels/Owners
-	dwsv1alpha2.InheritParentLabels(job, c.workflow)
-	dwsv1alpha2.AddOwnerLabels(job, c.workflow)
-	dwsv1alpha2.AddWorkflowLabels(job, c.workflow)
+	dwsv1alpha3.InheritParentLabels(job, c.workflow)
+	dwsv1alpha3.AddOwnerLabels(job, c.workflow)
+	dwsv1alpha3.AddWorkflowLabels(job, c.workflow)
 
 	labels := job.GetLabels()
 	labels[nnfv1alpha6.ContainerLabel] = c.workflow.Name
@@ -448,7 +448,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Make sure we found the number of ports in the port manager that we expect
 	if len(ports) != expectedPorts {
-		return nil, dwsv1alpha2.NewResourceError(
+		return nil, dwsv1alpha3.NewResourceError(
 			"number of ports found in NnfPortManager's allocation (%d) does not equal the profile's requested ports (%d)",
 			len(ports), expectedPorts).
 			WithUserMessage("requested ports do not meet the number of allocated ports").WithFatal()

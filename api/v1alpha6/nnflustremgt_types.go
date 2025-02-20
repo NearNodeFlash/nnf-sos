@@ -20,7 +20,7 @@
 package v1alpha6
 
 import (
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +60,7 @@ type NnfLustreMGTStatus struct {
 	// ClaimList is the list of currently in use fsnames
 	ClaimList []NnfLustreMGTStatusClaim `json:"claimList,omitempty"`
 
-	dwsv1alpha2.ResourceError `json:",inline"`
+	dwsv1alpha3.ResourceError `json:",inline"`
 }
 
 type NnfLustreMGTStatusClaim struct {

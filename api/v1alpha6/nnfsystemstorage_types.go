@@ -20,7 +20,7 @@
 package v1alpha6
 
 import (
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -108,7 +108,7 @@ type NnfSystemStorageStatus struct {
 	// Ready signifies whether all work has been completed
 	Ready bool `json:"ready"`
 
-	dwsv1alpha2.ResourceError `json:",inline"`
+	dwsv1alpha3.ResourceError `json:",inline"`
 }
 
 // +kubebuilder:object:root=true
