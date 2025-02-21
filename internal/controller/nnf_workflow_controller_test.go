@@ -347,6 +347,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			By("Verify that one DirectiveBreakdown was created")
 			Expect(workflowAfter.Status.DirectiveBreakdowns).To(HaveLen(1))
+			By("Verify empty requires in Workflow")
+			Expect(workflowAfter.Status.Requires).To(HaveLen(0))
 			By("Verify its pinned profile")
 			pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflowAfter, 0)
 			// The profile begins life with the workflow as the owner.
@@ -537,6 +539,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 
 			By("Verify that one DirectiveBreakdowns was created")
 			Expect(workflowAfter.Status.DirectiveBreakdowns).To(HaveLen(1))
+			By("Verify empty requires in Workflow")
+			Expect(workflowAfter.Status.Requires).To(HaveLen(0))
 			By("Verify its pinned dm profile")
 			pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflowAfter, 1)
 			// The profile begins life with the workflow as the owner.
@@ -1456,10 +1460,14 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				containerProfile = createNnfContainerProfile(tempProfile, true)
 			}
 
-			buildWorkflowWithCorrectDirectives := func() {
+			buildWorkflowWithCorrectDirectives := func(requiresList string) {
 				By("creating the workflow")
+				jobdw := "#DW jobdw name=container-storage type=gfs2 capacity=1GB"
+				if len(requiresList) > 0 {
+					jobdw = fmt.Sprintf("%s requires=%s", jobdw, requiresList)
+				}
 				workflow.Spec.DWDirectives = []string{
-					"#DW jobdw name=container-storage type=gfs2 capacity=1GB",
+					jobdw,
 					"#DW persistentdw name=" + persistentStorageName,
 					fmt.Sprintf("#DW container name=container profile=%s "+
 						"DW_JOB_foo_local_storage=container-storage "+
@@ -1473,12 +1481,13 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			DescribeTable("should go to Proposal Ready when everything is in order",
 				func(containerUserID *uint32, containerGroupID *uint32) {
 					buildRestrictedContainerProfile(containerUserID, containerGroupID)
-					buildWorkflowWithCorrectDirectives()
+					buildWorkflowWithCorrectDirectives("")
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateProposal
 					}).Should(BeTrue(), "reach desired Proposal state")
 					Expect(verifyPinnedContainerProfile(context.TODO(), k8sClient, workflow, 2)).To(Succeed())
+					Expect(workflow.Status.Requires).To(HaveLen(0))
 				},
 				Entry("when not restricted to a user ID or group ID", nil, nil),
 				Entry("when restricted to a matching user ID", &baseWorkflowUserID, nil),
@@ -1489,7 +1498,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			DescribeTable("should not go to Proposal Ready when profile restriction is not satisfied",
 				func(containerUserID *uint32, containerGroupID *uint32) {
 					buildRestrictedContainerProfile(containerUserID, containerGroupID)
-					buildWorkflowWithCorrectDirectives()
+					buildWorkflowWithCorrectDirectives("")
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						return workflow.Status.Status == dwsv1alpha3.StatusError && strings.Contains(workflow.Status.Message, "container profile") && strings.Contains(workflow.Status.Message, "is restricted to")
@@ -1498,6 +1507,29 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Entry("when restricted to non-matching user ID", &altWorkflowUserID, nil),
 				Entry("when restricted to non-matching group ID", nil, &altWorkflowGroupID),
 				Entry("when restricted to non-matching user ID and group ID", &altWorkflowUserID, &altWorkflowGroupID),
+			)
+
+			DescribeTable("should go to Proposal Ready with interpreted Requires in the workflow",
+				func(requiresList string, wantList string) {
+					buildRestrictedContainerProfile(nil, nil)
+					buildWorkflowWithCorrectDirectives(requiresList)
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						return workflow.Status.Ready && workflow.Status.State == dwsv1alpha3.StateProposal
+					}).Should(BeTrue(), "reach desired Proposal state")
+					if len(wantList) == 0 {
+						Expect(workflow.Status.Requires).To(HaveLen(0))
+					} else {
+						words := strings.Split(wantList, ",")
+						Expect(workflow.Status.Requires).Should(ContainElements(words))
+						Expect(workflow.Status.Requires).To(HaveLen(len(words)))
+					}
+				},
+				// The 'requiresList' content is constrained by the nnf-ruleset,
+				// while the 'wantList' content is not.
+				Entry("when requires list is empty", "", ""),
+				Entry("when requires list has one", "copy-offload", requiresContainerAuth),
+				Entry("when requires list has multiple matches", "copy-offload,user-container-auth", requiresContainerAuth),
 			)
 		})
 

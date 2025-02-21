@@ -21,7 +21,6 @@ package controller
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,7 +97,7 @@ var envVars = []envSetting{
 func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha3.DWDirectiveRule, error) {
 	ruleset := dwsv1alpha3.DWDirectiveRule{}
 
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return ruleset, err
 	}

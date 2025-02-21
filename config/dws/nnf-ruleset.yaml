@@ -33,6 +33,7 @@ spec:
         type: "list-of-string"
         patterns:
         - "^copy-offload$"
+        - "^user-container-auth$"
         isRequired: false
         isValueRequired: true
   - command: "create_persistent"
@@ -80,6 +81,7 @@ spec:
         type: "list-of-string"
         patterns:
         - "^copy-offload$"
+        - "^user-container-auth$"
         isRequired: false
         isValueRequired: true
   - command: "copy_in"

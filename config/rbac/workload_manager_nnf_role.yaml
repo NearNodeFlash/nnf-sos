@@ -129,3 +129,11 @@ rules:
     - nnfdatamovements/status
   verbs:
     - get
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
