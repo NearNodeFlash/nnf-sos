@@ -11,16 +11,6 @@ plugins:
 projectName: nnf-sos
 repo: github.com/NearNodeFlash/nnf-sos
 resources:
-- controller: true
-  domain: github.io
-  group: dataworkflowservices
-  kind: Workflow
-  version: v1alpha2
-- controller: true
-  domain: github.io
-  group: dataworkflowservices
-  kind: DirectiveBreakdown
-  version: v1alpha2
 - api:
     crdVersion: v1
     namespaced: true
