@@ -1349,7 +1349,7 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 		return nil, dwsv1alpha3.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err)
 	}
 
-	// Get the NNF volumes to mount into the containers
+	// Get the NNF volumes and secrets to mount into the containers
 	volumes, result, err := r.getContainerVolumes(ctx, workflow, dwArgs, profile)
 	if err != nil {
 		return nil, dwsv1alpha3.NewResourceError("could not determine the list of volumes needed to create container job for workflow: %s", workflow.Name).WithError(err)
@@ -1357,12 +1357,17 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	if result != nil { // a requeue can be returned, so make sure that happens
 		return result, nil
 	}
+	secrets, err := r.getContainerSecrets(workflow)
+	if err != nil {
+		return nil, dwsv1alpha3.NewResourceError("could not determine the list of secrets needed to create container job for workflow: %s", workflow.Name).WithError(err)
+	}
 
 	c := nnfUserContainer{
 		workflow: workflow,
 		profile:  profile,
 		nnfNodes: nnfNodes,
 		volumes:  volumes,
+		secrets:  secrets,
 		username: nnfv1alpha6.ContainerUser,
 		uid:      int64(workflow.Spec.UserID),
 		gid:      int64(workflow.Spec.GroupID),
@@ -2010,6 +2015,36 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		volumes = append(volumes, devVolumes...)
 	}
 	return volumes, nil, nil
+}
+
+// Create a list of secrets to be mounted inside the containers
+func (r *NnfWorkflowReconciler) getContainerSecrets(workflow *dwsv1alpha3.Workflow) ([]nnfContainerSecret, error) {
+	secrets := []nnfContainerSecret{}
+
+	for _, value := range workflow.Status.Requires {
+		if value == requiresContainerAuth {
+			vol1 := nnfContainerSecret{
+				name:       "usercontainer-tls",
+				mountPath:  "/etc/usercontainer-tls",
+				secretName: "nnf-dm-usercontainer-server-tls",
+				envVarsToFileNames: map[string]string{
+					"TLS_CERT_PATH": "tls.crt",
+					"TLS_KEY_PATH":  "tls.key",
+				},
+			}
+			_, serversSecretName := makeWorkflowTokenName(workflow)
+			vol2 := nnfContainerSecret{
+				name:       "usercontainer-token",
+				mountPath:  "/etc/usercontainer-token",
+				secretName: serversSecretName,
+				envVarsToFileNames: map[string]string{
+					"TOKEN_KEY_PATH": "token.key",
+				},
+			}
+			secrets = append(secrets, vol1, vol2)
+		}
+	}
+	return secrets, nil
 }
 
 // If we're using the KIND mock storage then we also have to create a volume

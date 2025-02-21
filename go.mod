@@ -10,6 +10,7 @@ require (
 	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250219193635-3e6c6b39d0e0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.3.1

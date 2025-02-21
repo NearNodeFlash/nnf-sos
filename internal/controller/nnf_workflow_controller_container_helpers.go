@@ -28,6 +28,7 @@ import (
 
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnftoken "github.com/NearNodeFlash/nnf-sos/pkg/token"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -46,6 +47,7 @@ type nnfUserContainer struct {
 	profile  *nnfv1alpha6.NnfContainerProfile
 	nnfNodes []string
 	volumes  []nnfContainerVolume
+	secrets  []nnfContainerSecret
 	username string
 	uid, gid int64
 	client   client.Client
@@ -65,6 +67,19 @@ type nnfContainerVolume struct {
 	envVarName     string
 	pvcName        string
 }
+
+// This struct contains all the necessary information for mounting a secret into a container
+type nnfContainerSecret struct {
+	name       string
+	mountPath  string
+	secretName string
+	// The files to mount from that secret and the env var to use for each one.
+	envVarsToFileNames map[string]string
+}
+
+const (
+	requiresContainerAuth = "container-auth"
+)
 
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
 // a job for the launcher (to run mpirun) and a replicaset for the worker pods. The worker nodes
@@ -169,6 +184,10 @@ func (c *nnfUserContainer) createMPIJob() error {
 	c.addEnvVars(launcherSpec, true)
 	c.addEnvVars(workerSpec, true)
 
+	// Any server that uses TLS/token when communicating with the compute node
+	// will be in the launcher, so mount any secrets there.
+	c.addSecrets(launcherSpec)
+
 	err = c.client.Create(c.ctx, mpiJob)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -217,6 +236,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	c.applyTolerations(podSpec)
 	c.applyPermissions(podSpec, nil, false)
 	c.addNnfVolumes(podSpec)
+	c.addSecrets(podSpec)
 	c.addEnvVars(podSpec, false)
 
 	// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
@@ -549,6 +569,35 @@ func (c *nnfUserContainer) addNnfVolumes(spec *corev1.PodSpec) {
 	}
 }
 
+func (c *nnfUserContainer) addSecrets(spec *corev1.PodSpec) {
+	for _, secretSpec := range c.secrets {
+		volSource := corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretSpec.secretName,
+			},
+		}
+		spec.Volumes = append(spec.Volumes, corev1.Volume{Name: secretSpec.name, VolumeSource: volSource})
+
+		// Add VolumeMounts and Volume environment variables for all containers
+		for idx := range spec.Containers {
+			container := &spec.Containers[idx]
+
+			container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+				Name:      secretSpec.name,
+				MountPath: secretSpec.mountPath,
+				ReadOnly:  true,
+			})
+
+			for key, value := range secretSpec.envVarsToFileNames {
+				container.Env = append(container.Env, corev1.EnvVar{
+					Name:  key,
+					Value: fmt.Sprintf("%s/%s", secretSpec.mountPath, value),
+				})
+			}
+		}
+	}
+}
+
 func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
 	// Add in non-volume environment variables for all containers
 	for idx := range spec.Containers {
@@ -590,4 +639,127 @@ func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
 				},
 			})
 	}
+}
+
+func (r *NnfWorkflowReconciler) setupContainerAuth(ctx context.Context, workflow *dwsv1alpha3.Workflow, log logr.Logger) (*dwsv1alpha3.WorkflowTokenSecret, error) {
+	privKey, err := r.createContainerTokenKey(ctx, workflow, log)
+	if err != nil {
+		return nil, err
+	}
+	workflowToken, err := r.createContainerToken(ctx, workflow, privKey, log)
+	if err != nil {
+		return nil, err
+	}
+	return workflowToken, nil
+}
+
+func makeWorkflowTokenName(workflow *dwsv1alpha3.Workflow) (*dwsv1alpha3.WorkflowTokenSecret, string) {
+	workflowToken := workflow.Status.WorkflowToken
+	if workflowToken == nil {
+		workflowToken = &dwsv1alpha3.WorkflowTokenSecret{
+			SecretName:      workflow.GetName() + "-token",
+			SecretNamespace: workflow.GetNamespace(),
+		}
+	}
+	serversSecretName := workflowToken.SecretName + "-server"
+	return workflowToken, serversSecretName
+}
+
+func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, workflow *dwsv1alpha3.Workflow, log logr.Logger) ([]byte, error) {
+	immutable := true
+	workflowToken, serversSecretName := makeWorkflowTokenName(workflow)
+	tokenKeySecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serversSecretName,
+			Namespace: workflowToken.SecretNamespace,
+		},
+		Type:      corev1.SecretTypeOpaque,
+		Immutable: &immutable,
+		Data:      make(map[string][]byte),
+	}
+	errGroup := fmt.Sprintf("could not create secret: %v", client.ObjectKeyFromObject(tokenKeySecret))
+	userMessageError := "could not create workflow's server-token secret"
+
+	keyBytes, pemKey, err := nnftoken.CreateKeyForTokens()
+	if err != nil {
+		return []byte(""), dwsv1alpha3.NewResourceError("%s: %s", errGroup, "CreateKeyForTokens").WithError(err).WithUserMessage("%s", userMessageError)
+	}
+	tokenKeySecret.Data["token.key"] = pemKey
+	dwsv1alpha3.AddWorkflowLabels(tokenKeySecret, workflow)
+	dwsv1alpha3.AddOwnerLabels(tokenKeySecret, workflow)
+	if err := ctrl.SetControllerReference(workflow, tokenKeySecret, r.Scheme); err != nil {
+		return []byte(""), dwsv1alpha3.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
+	}
+
+	if err := r.Create(ctx, tokenKeySecret); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			// Get the key from it so we can use it to create a token.
+			prevTokenKeySecret := &corev1.Secret{}
+			if err = r.Get(ctx, client.ObjectKeyFromObject(tokenKeySecret), prevTokenKeySecret); err != nil {
+				return []byte(""), dwsv1alpha3.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
+			}
+			pemKey = prevTokenKeySecret.Data["token.key"]
+			if keyBytes, err = nnftoken.GetKeyFromPEM(pemKey); err != nil {
+				return []byte(""), dwsv1alpha3.NewResourceError("%s: %s", errGroup, "GetKeyFromPEM").WithError(err).WithUserMessage("%s", userMessageError)
+			}
+			log.Info("using existing key", "secret", client.ObjectKeyFromObject(prevTokenKeySecret))
+		} else {
+			return []byte(""), dwsv1alpha3.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
+		}
+	} else {
+		log.Info("created key", "secret", client.ObjectKeyFromObject(tokenKeySecret))
+	}
+	return keyBytes, nil
+}
+
+func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workflow *dwsv1alpha3.Workflow, keyBytes []byte, log logr.Logger) (*dwsv1alpha3.WorkflowTokenSecret, error) {
+	immutable := true
+	workflowToken, _ := makeWorkflowTokenName(workflow)
+	tokenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      workflowToken.SecretName,
+			Namespace: workflowToken.SecretNamespace,
+		},
+		Type:       corev1.SecretTypeOpaque,
+		Immutable:  &immutable,
+		StringData: make(map[string]string),
+	}
+	errGroup := fmt.Sprintf("could not create secret: %v", client.ObjectKeyFromObject(tokenSecret))
+	userMessageError := "could not create or update workflow's client-token secret"
+
+	tokenString, err := nnftoken.CreateTokenFromKey(keyBytes, "user-container")
+	if err != nil {
+		return nil, dwsv1alpha3.NewResourceError("%s: %s", errGroup, "CreateTokenFromKey").WithError(err).WithUserMessage("%s", userMessageError)
+	}
+	tokenSecret.StringData["token"] = tokenString
+	dwsv1alpha3.AddWorkflowLabels(tokenSecret, workflow)
+	dwsv1alpha3.AddOwnerLabels(tokenSecret, workflow)
+	if err := ctrl.SetControllerReference(workflow, tokenSecret, r.Scheme); err != nil {
+		return nil, dwsv1alpha3.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
+	}
+
+	if err := r.Create(ctx, tokenSecret); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			// Get the token to verify it against our key.
+			// In this case, the user container may already be running and using
+			// the already-existing token.
+			// If the token doesn't verify with the key then we cannot create
+			// a new token&secret; we have to bail.
+			prevTokenSecret := &corev1.Secret{}
+			if err = r.Get(ctx, client.ObjectKeyFromObject(tokenSecret), prevTokenSecret); err != nil {
+				return nil, dwsv1alpha3.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
+			}
+			// Note: we read from Secret.Data, rather than Secret.StringData,
+			// per the instructions in corev1.Secret.
+			tokenStringBytes := prevTokenSecret.Data["token"]
+			if err = nnftoken.VerifyToken(string(tokenStringBytes), keyBytes); err != nil {
+				return nil, dwsv1alpha3.NewResourceError("%s: %s", errGroup, "VerifyToken").WithError(err).WithUserMessage("%s", userMessageError)
+			}
+		} else {
+			return nil, dwsv1alpha3.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
+		}
+	} else {
+		log.Info("created token", "secret", client.ObjectKeyFromObject(tokenSecret))
+	}
+	return workflowToken, nil
 }
