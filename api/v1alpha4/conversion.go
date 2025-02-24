@@ -616,7 +616,11 @@ func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
 }
 
-// DWS ResourceError conversion routines.
+// +crdbumper:carryforward:begin="Epilog"
+// DWS ResourceError conversion routines. These must be present in the oldest
+// spoke, and only in the oldest spoke.
+// Then re-run "make generate-go-conversions" and it should find these and hook
+// them up in the other spokes.
 
 func autoConvert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(in *dwsv1alpha2.ResourceError, out *dwsv1alpha3.ResourceError, s apiconversion.Scope) error {
 	out.Error = (*dwsv1alpha3.ResourceErrorInfo)(unsafe.Pointer(in.Error))
@@ -663,6 +667,9 @@ func autoConvert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dw
 func Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dwsv1alpha3.ResourceErrorInfo, out *dwsv1alpha2.ResourceErrorInfo, s apiconversion.Scope) error {
 	return autoConvert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in, out, s)
 }
+
+// End of DWS ResourceError conversion routines.
+// +crdbumper:carryforward:end
 
 // The conversion-gen tool dropped these from zz_generated.conversion.go to
 // force us to acknowledge that we are addressing the conversion requirements.
