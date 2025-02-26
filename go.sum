@@ -1,13 +1,13 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/DataWorkflowServices/dws v0.0.1-0.20250220222023-dbda0af20ccc h1:brTiu2neQ0ZXuOtCJTNYwW8pzfEy57g8+RZAl9LMZXM=
-github.com/DataWorkflowServices/dws v0.0.1-0.20250220222023-dbda0af20ccc/go.mod h1:i9v4K2d64a9uyd9ZazOJ85RWzVQjIgHWXkLo895KDAE=
+github.com/DataWorkflowServices/dws v0.0.1-0.20250224211524-95e559ed4fa8 h1:plfxAo/J9942dSPju40X3JzvhxhcrBowk/DVmZ3WswE=
+github.com/DataWorkflowServices/dws v0.0.1-0.20250224211524-95e559ed4fa8/go.mod h1:i9v4K2d64a9uyd9ZazOJ85RWzVQjIgHWXkLo895KDAE=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250219194350-45aad5cbbe17 h1:xYLLW3fMEKauujqkmspeWoyWhEEu+capOKUPePo4IuU=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250219194350-45aad5cbbe17/go.mod h1:H9GBWOmFp9BGGBWDVZk0pvPWzL6jUKkieVsIIoPlzMs=
-github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250219193635-3e6c6b39d0e0 h1:5arAC1ZW6QRZsv4Sowhno3EeYtFTnYc/4Ody08shDDY=
-github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250219193635-3e6c6b39d0e0/go.mod h1:lx13ustzE/+39fLECky+CFKkAV8GYlX9eaI6IGmHQkY=
+github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250220202952-3c878bceb55c h1:YR/0Cd4QGDluZ0UwDzhJxBHy4eDhBjKFQSEP7LsEjsY=
+github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250220202952-3c878bceb55c/go.mod h1:lx13ustzE/+39fLECky+CFKkAV8GYlX9eaI6IGmHQkY=
 github.com/OneOfOne/xxhash v1.2.2 h1:KMrpdQIwFcEqXDklaen+P1axHaj9BSKzvpUUfnHldSE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=

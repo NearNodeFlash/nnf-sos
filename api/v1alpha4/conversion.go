@@ -174,12 +174,17 @@ func (src *NnfDataMovementProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha6.NnfDataMovementProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Data.SetprivCommand = restored.Data.SetprivCommand
+	}
 
 	return nil
 }
@@ -680,4 +685,8 @@ func Convert_v1alpha6_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *nnfv
 
 func Convert_v1alpha6_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in *nnfv1alpha6.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s apiconversion.Scope) error {
 	return autoConvert_v1alpha6_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in, out, s)
+}
+
+func Convert_v1alpha6_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in *nnfv1alpha6.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in, out, s)
 }

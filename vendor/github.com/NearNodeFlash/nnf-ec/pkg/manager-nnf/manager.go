@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -1141,17 +1141,20 @@ func (*StorageService) StorageServiceIdStorageGroupIdDelete(storageServiceId, st
 		for _, pv := range sp.providingVolumes {
 			volume := pv.Storage.FindVolume(pv.VolumeId)
 			if volume == nil {
-				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithCause(fmt.Sprintf("Storage group '%s' detach volume '%s' not found", storageGroupId, pv.VolumeId))
+				err := fmt.Errorf("Volume not found")
+				log.Error(err, "Storage group detach volume not found", "storageGroup", storageGroupId, "volumeid", pv.VolumeId)
+				continue
 			}
 
 			if err := volume.DetachController(sg.endpoint.controllerId); err != nil {
-				return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' failed to detach controller '%d'", storageGroupId, sg.endpoint.controllerId))
+				log.Error(err, "Storage group failed to detach controller", "storageGroup", storageGroupId, "controller", sg.endpoint.controllerId)
+				continue
 			}
 		}
 
 		// Notify the Server the namespaces were removed
 		if err := sg.serverStorage.Delete(); err != nil {
-			return ec.NewErrInternalServerError().WithResourceType(StorageGroupOdataType).WithError(err).WithCause(fmt.Sprintf("Storage group '%s' server delete failed", storageGroupId))
+			log.Error(err, "Storage group server delete failed", "storageGroup", storageGroupId)
 		}
 
 		return nil
