@@ -21,6 +21,7 @@ package v1alpha5
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -169,12 +170,16 @@ func (src *NnfDataMovementProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha6.NnfDataMovementProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Data.SetprivCommand = restored.Data.SetprivCommand
+	}
 
 	return nil
 }
@@ -598,4 +603,8 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+func Convert_v1alpha6_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *nnfv1alpha6.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
 }

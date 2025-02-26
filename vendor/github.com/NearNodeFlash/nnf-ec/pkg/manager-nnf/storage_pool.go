@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -155,11 +155,14 @@ func (p *StoragePool) deallocateVolumes() error {
 		for _, pv := range p.providingVolumes {
 			volume := pv.Storage.FindVolume(pv.VolumeId)
 			if volume == nil {
-				return fmt.Errorf("Volume %s not found", pv.VolumeId)
+				err := fmt.Errorf("Volume not found")
+				log.Error(err, "StoragePool deallocateVolumes volume not found", "volume", pv.VolumeId)
+				continue
 			}
 
 			if err := volFn(volume); err != nil {
-				return err
+				log.Error(err, "Volume function failed", "function", volFn, "volume", pv.VolumeId)
+				continue
 			}
 		}
 
@@ -352,7 +355,7 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 		// will delete any remaining volumes
 
 		// Recover the namespaces that make up this storage pool
-		if err := rh.storagePool.recoverVolumes(rh.volumes, rh.lastLogEntryType == storagePoolStorageDeleteStartLogEntryType); err != nil {
+		if err := rh.storagePool.recoverVolumes(rh.volumes, true /* ignore errors */); err != nil {
 			return false, err
 		}
 

@@ -86,26 +86,34 @@ type NnfDataMovementProfileData struct {
 	// If CreateDestDir is true, then use StatCommand to perform the stat commands.
 	// Use setpriv to execute with the specified UID/GID.
 	// Available $VARS:
-	//   HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+	//   HOSTFILE: Hostfile that is created and used for mpirun. Contains a list of hosts and the
 	//             slots/max_slots for each host. This hostfile is created at
 	//             `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
-	//   UID: User ID that is inherited from the Workflow
-	//   GID: Group ID that is inherited from the Workflow
+	//   SETPRIV: Placeholder for where to inject the SETPRIV command to become the UID/GID
+	//   		  inherited from the workflow.
 	//   PATH: Path to stat
-	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- setpriv --euid $UID --egid $GID --clear-groups stat --cached never -c '%F' $PATH"
+	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV stat --cached never -c '%F' $PATH"
 	StatCommand string `json:"statCommand"`
 
 	// If CreateDestDir is true, then use MkdirCommand to perform the mkdir commands.
 	// Use setpriv to execute with the specified UID/GID.
 	// Available $VARS:
-	//   HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
+	//   HOSTFILE: Hostfile that is created and used for mpirun. Contains a list of hosts and the
 	//             slots/max_slots for each host. This hostfile is created at
 	//             `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
+	//   SETPRIV: Placeholder for where to inject the SETPRIV command to become the UID/GID
+	//   		  inherited from the workflow.
+	//   PATH: Path to stat
+	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV mkdir -p $PATH"
+	MkdirCommand string `json:"mkdirCommand"`
+
+	// The full setpriv command that is used to become the user and group specified in the workflow.
+	// This is used by the StatCommand and MkdirCommand.
+	// Available $VARS:
 	//   UID: User ID that is inherited from the Workflow
 	//   GID: Group ID that is inherited from the Workflow
-	//   PATH: Path to stat
-	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- setpriv --euid $UID --egid $GID --clear-groups mkdir -p $PATH"
-	MkdirCommand string `json:"mkdirCommand"`
+	// +kubebuilder:default:="setpriv --euid $UID --egid $GID --clear-groups"
+	SetprivCommand string `json:"setprivCommand"`
 }
 
 // +kubebuilder:object:root=true
