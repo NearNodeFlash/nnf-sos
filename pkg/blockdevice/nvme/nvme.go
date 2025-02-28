@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
-	"strings"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/go-logr/logr"
@@ -84,16 +83,14 @@ func NvmeRescanDevices(log logr.Logger) error {
 		return fmt.Errorf("could not read /dev: %w", err)
 	}
 
-	nvmeDevices := []string{}
 	nvmeRegex, _ := regexp.Compile("nvme[0-9]+$")
 	for _, device := range devices {
 		if match := nvmeRegex.MatchString(device.Name()); match {
-			nvmeDevices = append(nvmeDevices, "/dev/"+device.Name())
+			nvmeDevice := "/dev/" + device.Name()
+			if _, err := command.Run("nvme ns-rescan "+nvmeDevice, log); err != nil {
+				return fmt.Errorf("could not rescan NVMe device: %w", err)
+			}
 		}
-	}
-
-	if _, err := command.Run("nvme ns-rescan "+strings.Join(nvmeDevices, " "), log); err != nil {
-		return fmt.Errorf("could not rescan NVMe devices: %w", err)
 	}
 
 	return nil
