@@ -808,7 +808,9 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		return &ctrl.Result{}, nil
 	}
 
-	storage.Status.AllocationSets[allocationSetIndex].Ready = true
+	if !skipOST0 {
+		storage.Status.AllocationSets[allocationSetIndex].Ready = true
+	}
 
 	return nil, nil
 }
