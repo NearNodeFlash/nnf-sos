@@ -377,8 +377,7 @@ func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha6.NnfLus
 	return nil
 }
 
-// HandleNewClaims looks for any new claims in Spec.ClaimList and assigns them
-// an fsname
+// HandleNewCommands looks for new commands in the Spec section and runs them
 func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha6.NnfLustreMGT) (*ctrl.Result, error) {
 	commandMap := map[corev1.ObjectReference]*nnfv1alpha6.NnfLustreMGTStatusCommand{}
 	for _, command := range nnfLustreMgt.Status.CommandList {
@@ -414,8 +413,7 @@ func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustr
 	return nil, nil
 }
 
-// RemoveOldClaims removes any old entries from the Status.ClaimList and erases the fsname from
-// the MGT if necessary.
+// RemoveOldCommands removes any old entries from the Status.CommandList
 func (r *NnfLustreMGTReconciler) RemoveOldCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha6.NnfLustreMGT) error {
 	commandMap := map[corev1.ObjectReference]bool{}
 	for _, command := range nnfLustreMgt.Spec.CommandList {
