@@ -113,12 +113,11 @@ func NnfStorageProfileFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
 	}
 }
 
-// Add a breadcrumb to the fuzzed names to aid in debugging.
 func NnfStorageProfilev4Fuzzer(in *NnfStorageProfileData, c fuzz.Continue) {
 	// Tell the fuzzer to begin by fuzzing everything in the object.
 	c.FuzzNoCustom(in)
 
-	// Remove any fuss from the PostMount and PreUnmount fields in the MDT, MGT, and MGT/MDT
+	// Remove any fuzz from the PostMount and PreUnmount fields in the MDT, MGT, and MGT/MDT
 	// command lines. They aren't used, and they're removed starting in v1alpha6
 	in.LustreStorage.MdtCmdLines.PostMount = []string{}
 	in.LustreStorage.MdtCmdLines.PreUnmount = []string{}
@@ -128,7 +127,6 @@ func NnfStorageProfilev4Fuzzer(in *NnfStorageProfileData, c fuzz.Continue) {
 	in.LustreStorage.MgtMdtCmdLines.PreUnmount = []string{}
 }
 
-// Add a breadcrumb to the fuzzed names to aid in debugging.
 func NnfStorageProfilev6Fuzzer(in *nnfv1alpha6.NnfStorageProfileData, c fuzz.Continue) {
 	// Tell the fuzzer to begin by fuzzing everything in the object.
 	c.FuzzNoCustom(in)
