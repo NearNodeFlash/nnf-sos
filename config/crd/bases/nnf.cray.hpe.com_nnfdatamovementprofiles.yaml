@@ -362,17 +362,15 @@ spec:
                 type: integer
               mkdirCommand:
                 default: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE --
-                  setpriv --euid $UID --egid $GID --clear-groups mkdir -p $PATH
-                description: |-
-                  If CreateDestDir is true, then use MkdirCommand to perform the mkdir commands.
-                  Use setpriv to execute with the specified UID/GID.
-                  Available $VARS:
-                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
-                              slots/max_slots for each host. This hostfile is created at
-                              `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
-                    UID: User ID that is inherited from the Workflow
-                    GID: Group ID that is inherited from the Workflow
-                    PATH: Path to stat
+                  $SETPRIV mkdir -p $PATH
+                description: "If CreateDestDir is true, then use MkdirCommand to perform
+                  the mkdir commands.\nUse setpriv to execute with the specified UID/GID.\nAvailable
+                  $VARS:\n  HOSTFILE: Hostfile that is created and used for mpirun.
+                  Contains a list of hosts and the\n            slots/max_slots for
+                  each host. This hostfile is created at\n            `/tmp/<dm-name>/hostfile`.
+                  This is the same hostfile used as the one for Command.\n  SETPRIV:
+                  Placeholder for where to inject the SETPRIV command to become the
+                  UID/GID\n  \t\t  inherited from the workflow.\n  PATH: Path to stat"
                 type: string
               pinned:
                 default: false
@@ -387,6 +385,15 @@ spec:
                   progress to be collected. A value of 0 disables this functionality.
                 minimum: 0
                 type: integer
+              setprivCommand:
+                default: setpriv --euid $UID --egid $GID --clear-groups
+                description: |-
+                  The full setpriv command that is used to become the user and group specified in the workflow.
+                  This is used by the StatCommand and MkdirCommand.
+                  Available $VARS:
+                    UID: User ID that is inherited from the Workflow
+                    GID: Group ID that is inherited from the Workflow
+                type: string
               slots:
                 default: 8
                 description: |-
@@ -396,18 +403,15 @@ spec:
                 type: integer
               statCommand:
                 default: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE --
-                  setpriv --euid $UID --egid $GID --clear-groups stat --cached never
-                  -c '%F' $PATH
-                description: |-
-                  If CreateDestDir is true, then use StatCommand to perform the stat commands.
-                  Use setpriv to execute with the specified UID/GID.
-                  Available $VARS:
-                    HOSTFILE: hostfile that is created and used for mpirun. Contains a list of hosts and the
-                              slots/max_slots for each host. This hostfile is created at
-                              `/tmp/<dm-name>/hostfile`. This is the same hostfile used as the one for Command.
-                    UID: User ID that is inherited from the Workflow
-                    GID: Group ID that is inherited from the Workflow
-                    PATH: Path to stat
+                  $SETPRIV stat --cached never -c '%F' $PATH
+                description: "If CreateDestDir is true, then use StatCommand to perform
+                  the stat commands.\nUse setpriv to execute with the specified UID/GID.\nAvailable
+                  $VARS:\n  HOSTFILE: Hostfile that is created and used for mpirun.
+                  Contains a list of hosts and the\n            slots/max_slots for
+                  each host. This hostfile is created at\n            `/tmp/<dm-name>/hostfile`.
+                  This is the same hostfile used as the one for Command.\n  SETPRIV:
+                  Placeholder for where to inject the SETPRIV command to become the
+                  UID/GID\n  \t\t  inherited from the workflow.\n  PATH: Path to stat"
                 type: string
               storeStdout:
                 default: false
@@ -420,6 +424,7 @@ spec:
             - createDestDir
             - maxSlots
             - mkdirCommand
+            - setprivCommand
             - slots
             - statCommand
             type: object
