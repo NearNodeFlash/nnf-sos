@@ -939,6 +939,8 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 }
 
 func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStorage *nnfv1alpha6.NnfStorage) (*ctrl.Result, error) {
+	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
+
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfStorage)
 	if err != nil {
 		return nil, dwsv1alpha3.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
@@ -961,6 +963,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 
 	// An NnfLustreMgt in the "nnf-system" namespace indicates an external MGT. Commands can't be run on external MGTs.
 	if nnfLustreMgt.GetNamespace() == "nnf-system" {
+		log.Info("not running MGT commands for external MGT")
 		return nil, nil
 	}
 
