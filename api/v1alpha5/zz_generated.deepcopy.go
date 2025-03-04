@@ -1854,6 +1854,11 @@ func (in *NnfStorageProfileLustreCmdLines) DeepCopyInto(out *NnfStorageProfileLu
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.PreDeactivate != nil {
+		in, out := &in.PreDeactivate, &out.PreDeactivate
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.PostMount != nil {
 		in, out := &in.PostMount, &out.PostMount
 		*out = make([]string, len(*in))
@@ -1861,11 +1866,6 @@ func (in *NnfStorageProfileLustreCmdLines) DeepCopyInto(out *NnfStorageProfileLu
 	}
 	if in.PreUnmount != nil {
 		in, out := &in.PreUnmount, &out.PreUnmount
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
-	if in.PreDeactivate != nil {
-		in, out := &in.PreDeactivate, &out.PreDeactivate
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

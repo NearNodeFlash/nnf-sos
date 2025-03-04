@@ -248,7 +248,16 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if storage.Spec.FileSystemType == "lustre" && !storage.Status.Ready {
-		res, err := r.setLustreOwnerGroup(ctx, storage)
+		res, err := r.runSharedMGTCommands(ctx, storage)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if res != nil {
+			return *res, nil
+		}
+
+		res, err = r.setLustreOwnerGroup(ctx, storage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -503,6 +512,20 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 	log := r.Log.WithValues("NnfStorage", types.NamespacedName{Name: nnfStorage.Name, Namespace: nnfStorage.Namespace})
 
 	if nnfStorage.Spec.FileSystemType == "lustre" {
+		// The OSTs should be the last Lustre target to be created. Wait until the MGT, MGT/MDT and MDT targets
+		// are ready before creating the OSTs.
+		if nnfStorage.Spec.AllocationSets[allocationSetIndex].TargetType == "ost" {
+			for i, allocationSet := range nnfStorage.Status.AllocationSets {
+				if i == allocationSetIndex {
+					continue
+				}
+
+				if !allocationSet.Ready {
+					return nil, nil
+				}
+			}
+		}
+
 		mgsAddress := nnfStorage.Spec.AllocationSets[allocationSetIndex].MgsAddress
 
 		mgsNode := ""
@@ -915,6 +938,99 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 
 }
 
+func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStorage *nnfv1alpha6.NnfStorage) (*ctrl.Result, error) {
+	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
+
+	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfStorage)
+	if err != nil {
+		return nil, dwsv1alpha3.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
+	}
+
+	// Some tests don't fake out the nnfStorage completely
+	if len(nnfStorage.Spec.AllocationSets) == 0 {
+		return nil, nil
+	}
+
+	// If this NnfStorage is for a standalone MGT, then we don't need to run the shared MGT commands
+	if len(nnfStorage.Spec.AllocationSets) == 1 && nnfStorage.Spec.AllocationSets[0].Name == "mgt" {
+		return nil, nil
+	}
+
+	nnfLustreMgt, err := r.getLustreMgt(ctx, nnfStorage)
+	if err != nil {
+		return nil, dwsv1alpha3.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
+	}
+
+	// An NnfLustreMgt in the "nnf-system" namespace indicates an external MGT. Commands can't be run on external MGTs.
+	if nnfLustreMgt.GetNamespace() == "nnf-system" {
+		log.Info("not running MGT commands for external MGT")
+		return nil, nil
+	}
+
+	reference := corev1.ObjectReference{
+		Name:      nnfStorage.Name,
+		Namespace: nnfStorage.Namespace,
+		Kind:      reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name(),
+	}
+
+	// Check if the command has already been run. If a command exists with the correct
+	// reference, then wait for it to be ready.
+	for _, command := range nnfLustreMgt.Status.CommandList {
+		if command.Reference == reference {
+			if command.Ready {
+				return nil, nil
+			}
+
+			if command.Error != nil {
+				return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("shared MGT could not run command").WithError(command.Error)
+			}
+			// Commands haven't run yet. Keep waiting
+			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
+	}
+
+	// Check if the command has already been requested in the Spec.
+	for _, command := range nnfLustreMgt.Spec.CommandList {
+		if command.Reference == reference {
+			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
+	}
+
+	// The command has not been requested, so add it
+	mgtCommand := nnfv1alpha6.NnfLustreMGTSpecCommand{
+		Reference: corev1.ObjectReference{
+			Name:      nnfStorage.Name,
+			Namespace: nnfStorage.Namespace,
+			Kind:      reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name(),
+		},
+	}
+
+	m := map[string]string{
+		"$MGS_NID": nnfStorage.Status.MgsAddress,
+		"$FS_NAME": nnfStorage.Status.FileSystemName,
+		"$USERID":  fmt.Sprintf("%d", nnfStorage.Spec.UserID),
+		"$GROUPID": fmt.Sprintf("%d", nnfStorage.Spec.GroupID),
+	}
+
+	// Initialize the VarHandler substitution variables
+	varHandler := var_handler.NewVarHandler(m)
+
+	for _, rawCommand := range nnfStorageProfile.Data.LustreStorage.PreMountMGTCmds {
+		mgtCommand.Commands = append(mgtCommand.Commands, varHandler.ReplaceAll(rawCommand))
+	}
+
+	nnfLustreMgt.Spec.CommandList = append(nnfLustreMgt.Spec.CommandList, mgtCommand)
+	if err := r.Update(ctx, nnfLustreMgt); err != nil {
+		if apierrors.IsConflict(err) {
+			return &ctrl.Result{}, nil
+		}
+
+		return nil, dwsv1alpha3.NewResourceError("could not update NnfLustreMGT with commands").WithError(err).WithMajor()
+	}
+
+	return nil, nil
+}
+
 func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStorage *nnfv1alpha6.NnfStorage) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfStorage", client.ObjectKeyFromObject(nnfStorage))
 
@@ -1158,6 +1274,19 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			return nodeStoragesExist, err
 		}
 
+		// Collect status information from the NnfNodeStorage resources and aggregate it into the
+		// NnfStorage
+		for i := range storage.Status.AllocationSets {
+			_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
+			if err != nil {
+				return nodeStoragesExist, err
+			}
+		}
+
+		if !ostDeleteStatus.Complete() {
+			return nodeStoragesExist, nil
+		}
+
 		mdtDeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha6.AllocationSetLabel: "mdt"})
 		if err != nil {
 			return nodeStoragesExist, err
@@ -1172,7 +1301,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			}
 		}
 
-		if !ostDeleteStatus.Complete() || !mdtDeleteStatus.Complete() {
+		if !mdtDeleteStatus.Complete() {
 			return nodeStoragesExist, nil
 		}
 
@@ -1247,21 +1376,36 @@ func (r *NnfStorageReconciler) releaseLustreMgt(ctx context.Context, storage *nn
 	}
 
 	// Remove our claim from the spec section.
+	updateResource := false
 	for i, reference := range nnfLustreMgt.Spec.ClaimList {
 		if reference.Name == storage.GetName() && reference.Namespace == storage.GetNamespace() {
 			nnfLustreMgt.Spec.ClaimList = append(nnfLustreMgt.Spec.ClaimList[:i], nnfLustreMgt.Spec.ClaimList[i+1:]...)
+			updateResource = true
+		}
+	}
 
-			if err := r.Update(ctx, nnfLustreMgt); err != nil {
-				return false, dwsv1alpha3.NewResourceError("could not remove reference from nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
-			}
+	for i, mgtCommand := range nnfLustreMgt.Spec.CommandList {
+		if mgtCommand.Reference.Name == storage.GetName() && mgtCommand.Reference.Namespace == storage.GetNamespace() {
+			nnfLustreMgt.Spec.CommandList = append(nnfLustreMgt.Spec.CommandList[:i], nnfLustreMgt.Spec.CommandList[i+1:]...)
+			updateResource = true
+		}
+	}
 
-			return false, nil
+	if updateResource {
+		if err := r.Update(ctx, nnfLustreMgt); err != nil {
+			return false, dwsv1alpha3.NewResourceError("could not remove reference from nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
 		}
 	}
 
 	// Wait for the claim to disappear from the status section. This means the fsname has been erased from the MGT
 	for _, claim := range nnfLustreMgt.Status.ClaimList {
 		if claim.Reference.Name == storage.GetName() && claim.Reference.Namespace == storage.GetNamespace() {
+			return false, nil
+		}
+	}
+
+	for _, mgtCommand := range nnfLustreMgt.Spec.CommandList {
+		if mgtCommand.Reference.Name == storage.GetName() && mgtCommand.Reference.Namespace == storage.GetNamespace() {
 			return false, nil
 		}
 	}

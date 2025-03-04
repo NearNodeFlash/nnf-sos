@@ -145,14 +145,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 			return nil, nil, dwsv1alpha3.NewResourceError("could not create zpool block device").WithError(err).WithMajor()
 		}
 
-		mountCommand := ""
-		if _, found := os.LookupEnv("RABBIT_NODE"); found {
-			mountCommand = nnfStorageProfile.Data.LustreStorage.MountRabbit
-		} else {
-			mountCommand = nnfStorageProfile.Data.LustreStorage.MountCompute
-		}
-
-		fileSystem, err := newLustreFileSystem(ctx, c, nnfNodeStorage, commandLines, mountCommand, blockDevice, index, log)
+		fileSystem, err := newLustreFileSystem(ctx, c, nnfNodeStorage, commandLines, nnfStorageProfile.Data.LustreStorage.ClientCmdLines, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha3.NewResourceError("could not create lustre file system").WithError(err).WithMajor()
 		}
@@ -431,12 +424,19 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	return &fs, nil
 }
 
-func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha6.NnfNodeStorage, cmdLines nnfv1alpha6.NnfStorageProfileLustreCmdLines, mountCommand string, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha6.NnfNodeStorage, targetCmdLines nnfv1alpha6.NnfStorageProfileLustreCmdLines, clientCmdLines nnfv1alpha6.NnfStorageProfileLustreClientCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
 	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
 	if err != nil {
 		return nil, dwsv1alpha3.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
+	}
+
+	mountCommand := ""
+	if _, found := os.LookupEnv("RABBIT_NODE"); found {
+		mountCommand = clientCmdLines.MountRabbit
+	} else {
+		mountCommand = clientCmdLines.MountCompute
 	}
 
 	fs.Log = log
@@ -447,13 +447,13 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
-	fs.CommandArgs.Mkfs = cmdLines.Mkfs
-	fs.CommandArgs.MountTarget = cmdLines.MountTarget
+	fs.CommandArgs.Mkfs = targetCmdLines.Mkfs
+	fs.CommandArgs.MountTarget = targetCmdLines.MountTarget
 	fs.CommandArgs.Mount = mountCommand
-	fs.CommandArgs.PostActivate = cmdLines.PostActivate
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.PreDeactivate = cmdLines.PreDeactivate
+	fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
+	fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
+	fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
+	fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents

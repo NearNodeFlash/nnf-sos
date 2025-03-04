@@ -27,6 +27,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// NnfLustreMGTSpecCommand specifies a list of commands to run on the MGT
+type NnfLustreMGTSpecCommand struct {
+	// Reference is an ObjectReference of the NnfStorage requesting the commands
+	Reference corev1.ObjectReference `json:"reference,omitempty"`
+
+	// Commands is the list of commands to run
+	Commands []string `json:"commands,omitempty"`
+}
+
+type NnfLustreMGTStatusCommand struct {
+	// Reference is an ObjectReference of the NnfStorage requesting the commands
+	Reference corev1.ObjectReference `json:"reference,omitempty"`
+
+	// Ready is true when all commands have been run successfully
+	Ready bool `json:"ready"`
+
+	// Error information
+	dwsv1alpha3.ResourceError `json:",inline"`
+}
+
 // NnfLustreMGTSpec defines the desired state of NnfLustreMGT
 type NnfLustreMGTSpec struct {
 	// Addresses is the list of LNet addresses for the MGT
@@ -48,6 +68,9 @@ type NnfLustreMGTSpec struct {
 
 	// ClaimList is the list of currently in use fsnames
 	ClaimList []corev1.ObjectReference `json:"claimList,omitempty"`
+
+	// CommandList is the list of commands requested to run on the MGT
+	CommandList []NnfLustreMGTSpecCommand `json:"commandList,omitempty"`
 }
 
 // NnfLustreMGTStatus defines the current state of NnfLustreMGT
@@ -59,6 +82,9 @@ type NnfLustreMGTStatus struct {
 
 	// ClaimList is the list of currently in use fsnames
 	ClaimList []NnfLustreMGTStatusClaim `json:"claimList,omitempty"`
+
+	// CommandList is the status of commands requested to run on the MGT
+	CommandList []NnfLustreMGTStatusCommand `json:"commandList,omitempty"`
 
 	dwsv1alpha3.ResourceError `json:",inline"`
 }

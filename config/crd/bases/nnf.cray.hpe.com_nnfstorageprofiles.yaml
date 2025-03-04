@@ -1643,6 +1643,35 @@ spec:
                     description: CapacityScalingFactor is a scaling factor for the
                       OST capacity requested in the DirectiveBreakdown
                     type: string
+                  clientCommandLines:
+                    description: ClientCmdLines contains commands to mount a Lustre
+                      client
+                    properties:
+                      mountCompute:
+                        description: MountCompute specifies mount options for making
+                          the Lustre client mount on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for making
+                          the Lustre client mount on the Rabbit.
+                        type: string
+                      rabbitPostMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
+                      rabbitPreUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   combinedMgtMdt:
                     default: false
                     description: CombinedMGTMDT indicates whether the MGT and MDT
@@ -1683,26 +1712,10 @@ spec:
                         items:
                           type: string
                         type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -1765,26 +1778,10 @@ spec:
                         items:
                           type: string
                         type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -1818,26 +1815,10 @@ spec:
                         items:
                           type: string
                         type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -1908,14 +1889,6 @@ spec:
                     required:
                     - colocateComputes
                     type: object
-                  mountCompute:
-                    description: MountCompute specifies mount options for making the
-                      Lustre client mount on the Compute.
-                    type: string
-                  mountRabbit:
-                    description: MountRabbit specifies mount options for making the
-                      Lustre client mount on the Rabbit.
-                    type: string
                   ostCommandlines:
                     description: OstCmdLines contains commands to create an OST target.
                     properties:
@@ -1938,26 +1911,10 @@ spec:
                         items:
                           type: string
                         type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
                       preDeactivate:
                         description: |-
                           PreDeactivate specifies a list of commands to run on the Rabbit before the
                           Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
                         items:
                           type: string
                         type: array
@@ -1998,6 +1955,12 @@ spec:
                     required:
                     - colocateComputes
                     type: object
+                  preMountMGTCommands:
+                    description: PreMountMGTCmds contains commands to be run on the
+                      MGT after all Lustre targets are created and activated
+                    items:
+                      type: string
+                    type: array
                   standaloneMgtPoolName:
                     description: |-
                       StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating

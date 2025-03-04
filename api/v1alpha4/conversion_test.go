@@ -22,7 +22,10 @@ package v1alpha4
 import (
 	"testing"
 
+	fuzz "github.com/google/gofuzz"
 	. "github.com/onsi/ginkgo/v2"
+	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
+	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
@@ -91,8 +94,9 @@ func TestFuzzyConversion(t *testing.T) {
 	}))
 
 	t.Run("for NnfStorageProfile", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
-		Hub:   &nnfv1alpha6.NnfStorageProfile{},
-		Spoke: &NnfStorageProfile{},
+		Hub:         &nnfv1alpha6.NnfStorageProfile{},
+		Spoke:       &NnfStorageProfile{},
+		FuzzerFuncs: []fuzzer.FuzzerFuncs{NnfStorageProfileFuzzFunc},
 	}))
 
 	t.Run("for NnfSystemStorage", utilconversion.FuzzTestFunc(utilconversion.FuzzTestFuncInput{
@@ -100,6 +104,32 @@ func TestFuzzyConversion(t *testing.T) {
 		Spoke: &NnfSystemStorage{},
 	}))
 
+}
+
+func NnfStorageProfileFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
+	return []interface{}{
+		NnfStorageProfilev4Fuzzer,
+		NnfStorageProfilev6Fuzzer,
+	}
+}
+
+func NnfStorageProfilev4Fuzzer(in *NnfStorageProfileData, c fuzz.Continue) {
+	// Tell the fuzzer to begin by fuzzing everything in the object.
+	c.FuzzNoCustom(in)
+
+	// Remove any fuzz from the PostMount and PreUnmount fields in the MDT, MGT, and MGT/MDT
+	// command lines. They aren't used, and they're removed starting in v1alpha6
+	in.LustreStorage.MdtCmdLines.PostMount = []string{}
+	in.LustreStorage.MdtCmdLines.PreUnmount = []string{}
+	in.LustreStorage.MgtCmdLines.PostMount = []string{}
+	in.LustreStorage.MgtCmdLines.PreUnmount = []string{}
+	in.LustreStorage.MgtMdtCmdLines.PostMount = []string{}
+	in.LustreStorage.MgtMdtCmdLines.PreUnmount = []string{}
+}
+
+func NnfStorageProfilev6Fuzzer(in *nnfv1alpha6.NnfStorageProfileData, c fuzz.Continue) {
+	// Tell the fuzzer to begin by fuzzing everything in the object.
+	c.FuzzNoCustom(in)
 }
 
 // Just touch ginkgo, so it's here to interpret any ginkgo args from
