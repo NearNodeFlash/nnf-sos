@@ -175,7 +175,10 @@ func (c *nnfUserContainer) createMPIJob() error {
 		return err
 	}
 	// Add the ports to the worker spec and add environment variable for both launcher/worker
-	addHostPorts(workerSpec, ports)
+	// TODO: This is a temporary solution to open the port on the launcher. Do we want to open up
+	// another port for the workers so they can be contacted by the compute nodes?
+	// addHostPorts(workerSpec, ports)
+	addHostPorts(launcherSpec, ports)
 	addPortsEnvVars(launcherSpec, ports)
 	addPortsEnvVars(workerSpec, ports)
 
