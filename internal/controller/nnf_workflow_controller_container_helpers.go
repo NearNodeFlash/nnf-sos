@@ -174,11 +174,11 @@ func (c *nnfUserContainer) createMPIJob() error {
 	if err != nil {
 		return err
 	}
-	// Add the ports to the worker spec and add environment variable for both launcher/worker
-	// TODO: This is a temporary solution to open the port on the launcher. Do we want to open up
-	// another port for the workers so they can be contacted by the compute nodes?
-	// addHostPorts(workerSpec, ports)
+	// Add the ports to the launcher spec and add environment variable for both launcher/worker
 	addHostPorts(launcherSpec, ports)
+	if err := addHostPorts(launcherSpec, ports); err != nil {
+		return err
+	}
 	addPortsEnvVars(launcherSpec, ports)
 	addPortsEnvVars(workerSpec, ports)
 
@@ -233,7 +233,9 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	if err != nil {
 		return err
 	}
-	addHostPorts(podSpec, ports)
+	if err := addHostPorts(podSpec, ports); err != nil {
+		return err
+	}
 	addPortsEnvVars(podSpec, ports)
 
 	c.applyTolerations(podSpec)
@@ -481,24 +483,27 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 }
 
 // Given a list of ports, add HostPort entries for all containers in a PodSpec
-func addHostPorts(spec *corev1.PodSpec, ports []uint16) {
+func addHostPorts(spec *corev1.PodSpec, ports []uint16) error {
 
 	// Nothing to add
 	if len(ports) < 1 {
-		return
+		return nil
 	}
 
-	// Add the ports to the containers
-	for idx := range spec.Containers {
+	if len(spec.Containers) < len(ports) {
+		return fmt.Errorf("number of ports (%d) requested in profile does not match number of containers (%d) - containers cannot share ports", len(ports), len(spec.Containers))
+	}
+
+	// Add the ports to the containers - each container gets its own port
+	for idx, port := range ports {
 		container := &spec.Containers[idx]
-
-		for _, port := range ports {
-			container.Ports = append(container.Ports, corev1.ContainerPort{
-				ContainerPort: int32(port),
-				HostPort:      int32(port),
-			})
-		}
+		container.Ports = append(container.Ports, corev1.ContainerPort{
+			ContainerPort: int32(port),
+			HostPort:      int32(port),
+		})
 	}
+
+	return nil
 }
 
 // Given a list of ports, convert it into an environment variable name and comma separated value
