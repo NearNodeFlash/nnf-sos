@@ -97,7 +97,6 @@ type NnfNodeBlockStorageAllocationStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:unservedversion
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.ready"
 // +kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

@@ -70,7 +70,6 @@ type NnfLustreMGTStatusClaim struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:unservedversion
 // NnfLustreMGT is the Schema for the nnfstorageprofiles API
 type NnfLustreMGT struct {
 	metav1.TypeMeta   `json:",inline"`

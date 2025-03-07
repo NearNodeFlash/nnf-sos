@@ -14766,7 +14766,7 @@ spec:
             - ready
             type: object
         type: object
-    served: false
+    served: true
     storage: false
     subresources:
       status: {}
