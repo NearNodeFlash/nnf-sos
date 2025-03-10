@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -382,6 +383,7 @@ exit 1
 	})
 }
 
+// FIXME: consider renaming to mpiWorker
 func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mpiv2beta1.MPIJobSpec, worker bool) {
 
 	// Add volume for /etc/passwd to map user to UID/GID
@@ -432,10 +434,16 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 		// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
 		// the worker are executed via the launcher as the `mpiuser` and not root.
 		if !worker {
-			container.SecurityContext.RunAsUser = &c.uid
-			container.SecurityContext.RunAsGroup = &c.gid
-			container.SecurityContext.RunAsNonRoot = pointy.Bool(true)
-			container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(false)
+			// We need to give the copy offload worker root permissions
+			if spec.ServiceAccountName == "nnf-dm-copy-offload" && slices.Contains(container.Command, "sshd") {
+				container.SecurityContext.Privileged = pointy.Bool(true)
+				container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(true)
+			} else {
+				container.SecurityContext.RunAsUser = &c.uid
+				container.SecurityContext.RunAsGroup = &c.gid
+				container.SecurityContext.RunAsNonRoot = pointy.Bool(true)
+				container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(false)
+			}
 		} else {
 			// For the worker nodes, we need to ensure we have the appropriate linux capabilities to
 			// allow for ssh access for mpirun. Drop all capabilities and only add what is
