@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -388,6 +389,14 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 
 	c.log.Info("BLAKE applyPermissions start", "worker", worker)
 
+	prettySpec := func() string {
+		jsonBytes, err := json.MarshalIndent(spec, "", "  ")
+		if err != nil {
+			return fmt.Sprintf("Error marshaling PodSpec to JSON: %v", err)
+		}
+		return string(jsonBytes)
+	}
+
 	// Add volume for /etc/passwd to map user to UID/GID
 	spec.Volumes = append(spec.Volumes, corev1.Volume{
 		Name: "passwd",
@@ -442,13 +451,13 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 			if spec.ServiceAccountName == "nnf-dm-copy-offload" && slices.Contains(container.Command, "sshd") {
 				container.SecurityContext.Privileged = pointy.Bool(true)
 				container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(true)
-				c.log.Info("BLAKE applyPermissions !worker copy offload", "spec", spec)
+				c.log.Info("BLAKE applyPermissions !worker copy offload", "spec", prettySpec)
 			} else {
 				container.SecurityContext.RunAsUser = &c.uid
 				container.SecurityContext.RunAsGroup = &c.gid
 				container.SecurityContext.RunAsNonRoot = pointy.Bool(true)
 				container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(false)
-				c.log.Info("BLAKE applyPermissions !worker user container", "spec", spec)
+				c.log.Info("BLAKE applyPermissions !worker user container", "spec", prettySpec)
 			}
 		} else {
 			// For the worker nodes, we need to ensure we have the appropriate linux capabilities to
