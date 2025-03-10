@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -446,9 +445,9 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 		// the worker. The worker needs to run an ssh daemon, which requires root. Commands on
 		// the worker are executed via the launcher as the `mpiuser` and not root.
 		if !worker {
-			c.log.Info("BLAKE applyPermissions !worker container", "worker", worker, "serviceAccountName", spec.ServiceAccountName)
+			c.log.Info("BLAKE applyPermissions !worker container", "worker", worker, "serviceAccountName", spec.ServiceAccountName, "name", container.Name)
 			// We need to give the copy offload worker root permissions
-			if spec.ServiceAccountName == "nnf-dm-copy-offload" && slices.Contains(container.Command, "sshd") {
+			if spec.ServiceAccountName == "nnf-dm-copy-offload" && container.Name == "copy-offload-worker" {
 				container.SecurityContext.Privileged = pointy.Bool(true)
 				container.SecurityContext.AllowPrivilegeEscalation = pointy.Bool(true)
 				c.log.Info("BLAKE applyPermissions !worker copy offload", "spec", prettySpec)
