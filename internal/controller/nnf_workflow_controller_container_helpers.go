@@ -248,7 +248,9 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
 	for _, nnfNode := range c.nnfNodes {
 		job.ObjectMeta.Name = c.workflow.Name + "-" + nnfNode
-		podSpec.Hostname = nnfNode
+
+		// TODO: do we want to set hostname?
+		// podSpec.Hostname = nnfNode
 
 		// In our case, the target is only 1 node for the job, so a restartPolicy of Never
 		// is ok because any retry (i.e. new pod) will land on the same node.
