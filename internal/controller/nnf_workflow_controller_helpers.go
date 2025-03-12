@@ -1501,6 +1501,8 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 		return nil, err
 	}
 	isMPIJob := profile.Data.MPISpec != nil
+	// TODO: Find the copy offload launcher and make an env variable for it
+	// isCopyOffload := false
 
 	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
 	// up to the workflow in every one of our return cases. Each return path will check for
