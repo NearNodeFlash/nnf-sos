@@ -1379,6 +1379,13 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	}
 
 	if mpiJob {
+		// FIXME
+		// if profile.Data.MPISpec.MPIReplicaSpecs["Launcher"].Template.Spec.ServiceAccountName == "nnf-dm-copy-offload" {
+		rs, found := profile.Data.MPISpec.MPIReplicaSpecs["Launcher"]
+		if found && rs.Template.Spec.ServiceAccountName == "nnf-dm-copy-offload" {
+			c.copyOffload = true
+		}
+
 		if err := c.createMPIJob(); err != nil {
 			return nil, dwsv1alpha3.NewResourceError("unable to create/update MPIJob").WithMajor().WithError(err)
 		}
