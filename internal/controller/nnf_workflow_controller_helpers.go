@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1379,10 +1380,7 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	}
 
 	if mpiJob {
-		// FIXME
-		// if profile.Data.MPISpec.MPIReplicaSpecs["Launcher"].Template.Spec.ServiceAccountName == "nnf-dm-copy-offload" {
-		rs, found := profile.Data.MPISpec.MPIReplicaSpecs["Launcher"]
-		if found && rs.Template.Spec.ServiceAccountName == "nnf-dm-copy-offload" {
+		if slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
 			c.copyOffload = true
 		}
 
@@ -1501,8 +1499,6 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 		return nil, err
 	}
 	isMPIJob := profile.Data.MPISpec != nil
-	// TODO: Find the copy offload launcher and make an env variable for it
-	// isCopyOffload := false
 
 	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
 	// up to the workflow in every one of our return cases. Each return path will check for
@@ -1542,6 +1538,21 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 				running = true
 				break
 			}
+		}
+
+		// If we're up and running and this is copy offload, then go and find which rabbit node the
+		// launcher pod landed on and set an env var for flux. This tells the compute how to contact
+		// the copy offload server.
+		if running && slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
+			jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
+			if err != nil || len(jobList.Items) < 1 {
+				return nil, dwsv1alpha3.NewResourceError("could not retrieve MPIJob Child Jobs to find launcher node").WithError(err).WithFatal()
+			}
+
+			launcherJob := jobList.Items[0]
+			launcherNnfNode := launcherJob.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"]
+			workflow.Status.Env["NNF_COPY_OFFLOAD_SERVER"] = launcherNnfNode
+
 		}
 
 		// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.

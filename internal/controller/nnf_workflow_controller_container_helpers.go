@@ -80,6 +80,7 @@ type nnfContainerSecret struct {
 
 const (
 	requiresContainerAuth = "container-auth"
+	requiresCopyOffload   = "copy-offload"
 )
 
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates

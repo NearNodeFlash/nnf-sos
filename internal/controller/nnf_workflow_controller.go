@@ -374,7 +374,10 @@ func intepretRequiresKeyword(workflow *dwsv1alpha3.Workflow, requiresList string
 
 	for _, value := range strings.Split(requiresList, ",") {
 		switch value {
-		case "copy-offload", "user-container-auth":
+		case "copy-offload":
+			addWord(requiresCopyOffload)
+			addWord(requiresContainerAuth)
+		case "user-container-auth":
 			addWord(requiresContainerAuth)
 		}
 	}
@@ -837,7 +840,6 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	}
 
 	// Check results of data movement operations
-	// TODO: Detailed Fail Message?
 	for _, dm := range dataMovementList.Items {
 		if dm.Status.Status != nnfv1alpha6.DataMovementConditionReasonSuccess {
 			handleWorkflowErrorByIndex(dwsv1alpha3.NewResourceError("").WithUserMessage(
@@ -1107,7 +1109,6 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	}
 
 	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
-	// TODO: Customer asked if this could be optional
 	matchingLabels := dwsv1alpha3.MatchingOwner(workflow)
 	matchingLabels[nnfv1alpha6.DataMovementTeardownStateLabel] = string(dwsv1alpha3.StatePostRun)
 
