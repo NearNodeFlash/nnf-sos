@@ -106,14 +106,6 @@ func (c *nnfUserContainer) createMPIJob() error {
 		mpiJob.Spec.RunPolicy.BackoffLimit = &c.profile.Data.RetryLimit
 	}
 
-	// TODO: To honor mpiJob.Spec.SlotsPerWorker for copy offload, we need to get the slots from the
-	// dm profile. We currently have no place to specify that profile in the directives since we're
-	// not using a copy_in/copy_out directive to enable copy offload.
-	// if c.copyOffload {
-	// Get dm profile
-	// mpiJob.Spec.SlotsPerWorker = dmProfile.Data.slots
-	// }
-
 	// MPIJobs have two pod specs: one for the launcher and one for the workers. The webhook ensures
 	// that the launcher/worker specs exist
 	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
