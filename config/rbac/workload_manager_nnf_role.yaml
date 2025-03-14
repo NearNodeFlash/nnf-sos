@@ -79,6 +79,8 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - dataworkflowservices.github.io
