@@ -1540,7 +1540,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			}
 		}
 
-		// If we're up and running and this is copy offload, then go and find which rabbit node the
+		// If we're up and running and this is copy offload, then determine which rabbit node the
 		// launcher pod landed on and set an env var for flux. This tells the compute how to contact
 		// the copy offload server.
 		if running && slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
