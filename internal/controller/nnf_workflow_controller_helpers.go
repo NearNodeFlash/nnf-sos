@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1379,6 +1380,10 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	}
 
 	if mpiJob {
+		if slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
+			c.copyOffload = true
+		}
+
 		if err := c.createMPIJob(); err != nil {
 			return nil, dwsv1alpha3.NewResourceError("unable to create/update MPIJob").WithMajor().WithError(err)
 		}
@@ -1533,6 +1538,21 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 				running = true
 				break
 			}
+		}
+
+		// If we're up and running and this is copy offload, then go and find which rabbit node the
+		// launcher pod landed on and set an env var for flux. This tells the compute how to contact
+		// the copy offload server.
+		if running && slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
+			jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
+			if err != nil || len(jobList.Items) < 1 {
+				return nil, dwsv1alpha3.NewResourceError("could not retrieve MPIJob Child Jobs to find launcher node").WithError(err).WithFatal()
+			}
+
+			launcherJob := jobList.Items[0]
+			launcherNnfNode := launcherJob.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"]
+			workflow.Status.Env["NNF_COPY_OFFLOAD_SERVER"] = launcherNnfNode
+
 		}
 
 		// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.
