@@ -177,8 +177,8 @@ func (c *nnfUserContainer) createMPIJob() error {
 		return err
 	}
 
-	// Add the ports to the worker spec and add environment variable for both launcher/worker For
-	// copy offload we want the ports on the launcher so the copy offload server can be contacted
+	// Add the ports to the worker spec and add environment variable for both launcher/worker. For
+	// copy offload we want the ports on the launcher, so the copy offload server can be contacted
 	// from the computes.
 	// FIXME: For user-containers, we're opening the ports on the workers - but is that what we
 	// actually want?
