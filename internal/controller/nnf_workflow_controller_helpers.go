@@ -1540,10 +1540,9 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			}
 		}
 
-		// If we're up and running and this is copy offload, then determine which rabbit node the
-		// launcher pod landed on and set an env var for flux. This tells the compute how to contact
-		// the copy offload server.
-		if running && slices.Contains(workflow.Status.Requires, requiresCopyOffload) {
+		// If we're up and running, then determine which rabbit node the launcher pod landed on and
+		// set an env var for flux. This tells the computes where to contact the MPI Launcher
+		if running {
 			jobList, err := r.getMPIJobChildrenJobs(ctx, workflow, mpiJob)
 			if err != nil || len(jobList.Items) < 1 {
 				return nil, dwsv1alpha3.NewResourceError("could not retrieve MPIJob Child Jobs to find launcher node").WithError(err).WithFatal()
@@ -1551,13 +1550,11 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 
 			launcherJob := jobList.Items[0]
 			launcherNnfNode := launcherJob.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"]
-			workflow.Status.Env["NNF_COPY_OFFLOAD_SERVER"] = launcherNnfNode
+			workflow.Status.Env["NNF_CONTAINER_LAUNCHER"] = launcherNnfNode
 
-		}
-
-		// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.
-		// If no timeout, then just requeue.
-		if !running {
+		} else {
+			// Jobs are not running. Check to see if timeout elapsed and have k8s stop the jobs for us.
+			// If no timeout, then just requeue.
 			if timeoutElapsed {
 				r.Log.Info("container prerun timeout occurred, attempting to set MPIJob activeDeadlineSeconds")
 				if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, time.Duration(1*time.Millisecond)); err != nil {
