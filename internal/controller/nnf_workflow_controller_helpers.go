@@ -678,6 +678,15 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					}
 				}
 
+				// Add a command variable for the JobID. This is easiest to do here since the JobID isn't passed down
+				// to the NnfNodeStorage
+				commandVariable := nnfv1alpha6.CommandVariablesSpec{}
+				commandVariable.Name = "$JOBID"
+				commandVariable.Indexed = false
+				commandVariable.Value = workflow.Spec.JobID.String()
+
+				nnfAllocSet.CommandVariables = append(nnfAllocSet.CommandVariables, commandVariable)
+
 				nnfStorage.Spec.AllocationSets = append(nnfStorage.Spec.AllocationSets, nnfAllocSet)
 			}
 
