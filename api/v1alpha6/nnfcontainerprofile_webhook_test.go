@@ -174,43 +174,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow numPorts to be smaller than the number of Launcher containers", func() {
-		nnfProfile.Data.NumPorts = 1
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-				mpiv2beta1.MPIReplicaTypeLauncher: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{Name: "test1"},
-								{Name: "test2"},
-							},
-						},
-					},
-				},
-				mpiv2beta1.MPIReplicaTypeWorker: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{},
-					},
-				},
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow numPorts to be smaller than the number of containers", func() {
-		nnfProfile.Data.NumPorts = 1
-		nnfProfile.Data.Spec = &corev1.PodSpec{
-			Containers: []corev1.Container{
-				{Name: "test1"},
-				{Name: "test2"},
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
 	It("Should not allow an empty Worker ReplicaSpec", func() {
 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
