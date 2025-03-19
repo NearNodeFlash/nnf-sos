@@ -9,20 +9,26 @@ data:
     combinedMgtMdt: true
     mgtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mgs --backfstype=$BACKFS $ZVOL_NAME
+      mkfs: --mgs --backfstype=$BACKFS --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
       mountTarget: $ZVOL_NAME $MOUNT_PATH
     mdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
       mountTarget: $ZVOL_NAME $MOUNT_PATH
+      postActivate:
+      - mountpoint $MOUNT_PATH
     mgtMdtCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX $ZVOL_NAME
+      mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
       mountTarget: $ZVOL_NAME $MOUNT_PATH
+      postActivate:
+      - mountpoint $MOUNT_PATH
     ostCommandlines:
       zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-      mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX $ZVOL_NAME
+      mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
       mountTarget: $ZVOL_NAME $MOUNT_PATH
+      postActivate:
+      - mountpoint $MOUNT_PATH
     ostOptions:
       scale: 5
       colocateComputes: true
@@ -37,12 +43,32 @@ data:
       mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
       rabbitPostMount:
         - 'lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH'
+    preMountMGTCommands:
+    - lctl set_param -P osc.$FS_NAME-*.max_rpcs_in_flight=64
+    - lctl set_param -P osc.$FS_NAME-*.max_dirty_mb=2000
+    - lctl set_param -P osc.$FS_NAME-*.checksums=1
+    - lctl set_param -P osc.$FS_NAME-*.max_pages_per_rpc=4096
+    - lctl set_param -P osc.$FS_NAME-*.grant_shrink=0
+    - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_mb=512
+    - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_per_file_mb=512
+    - lctl set_param -P mdc.$FS_NAME-*.max_rpcs_in_flight=64
+    - lctl set_param -P mdt.$FS_NAME-*.enable_remote_dir_gid=-1
+    - lctl set_param -P obdfilter.$FS_NAME-*.brw_size=16
+    - lctl set_param -P osp.$FS_NAME-*-osc-*.max_rpcs_in_progress=65536
+    - lctl set_param -P *.$FS_NAME-*.job_cleanup_interval=21600
+    - lctl set_param -P bulk_timeout=127
+    - lctl set_param -P ldlm.lock_reclaim_threshold_mb=16993
+    - lctl set_param -P ldlm.lock_limit_mb=25747
+    - lctl conf_param $FS_NAME.sys.timeout=200
+    - lctl conf_param $FS_NAME-MDT*.lov.qos_threshold_rr=100
+    - lctl conf_param $FS_NAME-OST*.osc.checksums=1
+    - lctl conf_param $FS_NAME-OST*.osc.resend_count=43
   gfs2Storage:
     commandlines:
       sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
-      vgCreate: --shared $VG_NAME $DEVICE_LIST
+      vgCreate: --shared --addtag $JOBID $VG_NAME $DEVICE_LIST
       vgChange:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME
@@ -62,7 +88,7 @@ data:
       sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
-      vgCreate: --shared $VG_NAME $DEVICE_LIST
+      vgCreate: --shared --addtag $JOBID $VG_NAME $DEVICE_LIST
       vgChange:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME
@@ -82,7 +108,7 @@ data:
       sharedVg: true
       pvCreate: $DEVICE
       pvRemove: $DEVICE
-      vgCreate: --shared $VG_NAME $DEVICE_LIST
+      vgCreate: --shared --addtag $JOBID $VG_NAME $DEVICE_LIST
       vgChange:
         lockStart: --lock-start $VG_NAME
         lockStop: --lock-stop $VG_NAME

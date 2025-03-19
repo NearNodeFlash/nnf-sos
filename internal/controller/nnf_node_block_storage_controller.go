@@ -58,6 +58,7 @@ import (
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
+	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 )
 
 const (
@@ -551,6 +552,20 @@ func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceA
 		if ok {
 			switch ecErr.Cause() {
 			case "Insufficient capacity available":
+				// log which VGs and zpools exist to make it easier to tell why we ran out of space
+				log := r.Log.WithValues("StoragePool ID", id)
+
+				vgsOutput, err := command.Run("vgs -o vg_name,vg_tags,vg_size,vg_attr,pv_count,lv_count, --reportformat json", log)
+				if err != nil {
+					log.Info("vgs failed", "error", err)
+				}
+				zpoolOutput, err := command.Run("zfs list -H -o space,nnf:jobid", log)
+				if err != nil {
+					log.Info("zfs list failed", "error", err)
+				}
+
+				log.Info("insufficient capacity", "LVM volume groups", vgsOutput, "zfs datasets", zpoolOutput)
+
 				return nil, resourceErr.WithUserMessage("%s: insufficient capacity available", os.Getenv("NNF_NODE_NAME")).WithWLM().WithFatal()
 			default:
 				return nil, resourceErr
