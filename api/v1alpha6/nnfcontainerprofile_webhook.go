@@ -135,6 +135,11 @@ func (r *NnfContainerProfile) validateContent() error {
 		if !workerOk || len(worker.Template.Spec.Containers) < 1 {
 			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
 		}
+		// Ensure that the user has requested the same number of ports as the number of containers in the Launcher spec
+		expectedPorts := len(r.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec.Containers)
+		if r.Data.NumPorts != 0 && r.Data.NumPorts != int32(expectedPorts) {
+			return fmt.Errorf("%d containers are found in the Launcher PodSpec and do not match the NumPorts value of %d", expectedPorts, r.Data.NumPorts)
+		}
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
 		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
@@ -147,6 +152,12 @@ func (r *NnfContainerProfile) validateContent() error {
 
 		if len(r.Data.Spec.Containers) < 1 {
 			return fmt.Errorf("at least 1 container must be defined in Spec")
+		}
+
+		// Ensure that the user has requested the same number of ports as the number of containers in the spec
+		expectedPorts := len(r.Data.Spec.Containers)
+		if r.Data.NumPorts != 0 && r.Data.NumPorts != int32(expectedPorts) {
+			return fmt.Errorf("%d containers are found in the PodSpec and do not match the NumPorts value of %d", expectedPorts, r.Data.NumPorts)
 		}
 	}
 

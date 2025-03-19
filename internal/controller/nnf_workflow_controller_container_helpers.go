@@ -177,16 +177,12 @@ func (c *nnfUserContainer) createMPIJob() error {
 		return err
 	}
 
-	// Add the ports to the worker spec and add environment variable for both launcher/worker. For
-	// copy offload we want the ports on the launcher, so the copy offload server can be contacted
-	// from the computes.
-	// FIXME: For user-containers, we're opening the ports on the workers - but is that what we
-	// actually want?
-	if c.copyOffload {
-		addHostPorts(launcherSpec, ports)
-	} else {
-		addHostPorts(workerSpec, ports)
+	// Add host poarts for only the launcher spec's containers
+	if err := addHostPorts(launcherSpec, ports); err != nil {
+		return err
 	}
+
+	// Add env variables for those ports to both launcher and worker containers
 	addPortsEnvVars(launcherSpec, ports)
 	addPortsEnvVars(workerSpec, ports)
 
@@ -241,7 +237,10 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	if err != nil {
 		return err
 	}
-	addHostPorts(podSpec, ports)
+
+	if err := addHostPorts(podSpec, ports); err != nil {
+		return err
+	}
 	addPortsEnvVars(podSpec, ports)
 
 	c.applyTolerations(podSpec)
@@ -459,9 +458,11 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 
 func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 	ports := []uint16{}
-	expectedPorts := int(c.profile.Data.NumPorts)
 
-	if expectedPorts < 1 {
+	// Each container gets NumPorts ports
+	expectedPorts := countContainersInProfile(c.profile) * int(c.profile.Data.NumPorts)
+
+	if expectedPorts <= 0 {
 		return ports, nil
 	}
 
@@ -488,27 +489,38 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 	return ports, nil
 }
 
-// Given a list of ports, add HostPort entries for all containers in a PodSpec
-func addHostPorts(spec *corev1.PodSpec, ports []uint16) {
+// This function distributes a given list of ports across all containers in the PodSpec. Each
+// container is assigned an equal number of ports from the list. If the number of ports is not
+// evenly divisible by the number of containers, an error is returned.
+func addHostPorts(spec *corev1.PodSpec, ports []uint16) error {
 
 	// Nothing to add
 	if len(ports) < 1 {
-		return
+		return nil
 	}
 
+	if len(ports)%len(spec.Containers) != 0 {
+		return fmt.Errorf("number of ports (%d) must be a multiple of the number of containers (%d)", len(ports), len(spec.Containers))
+	}
+
+	portsPerContainer := len(ports) / len(spec.Containers)
+	portIdx := 0
+
 	// Add the ports to the containers
-	// FIXME: this adds the same ports to all containers. Is that what we actually want? Doesn't
-	// each container need it's own port?
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
-		for _, port := range ports {
+		// Assign portsPerContainer ports to the current container
+		for i := 0; i < portsPerContainer; i++ {
 			container.Ports = append(container.Ports, corev1.ContainerPort{
-				ContainerPort: int32(port),
-				HostPort:      int32(port),
+				ContainerPort: int32(ports[portIdx]),
+				HostPort:      int32(ports[portIdx]),
 			})
+			portIdx++
 		}
 	}
+
+	return nil
 }
 
 // Given a list of ports, convert it into an environment variable name and comma separated value
@@ -537,6 +549,18 @@ func addPortsEnvVars(spec *corev1.PodSpec, ports []uint16) {
 			Value: val,
 		})
 	}
+}
+
+// Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
+// containers
+func countContainersInProfile(profile *nnfv1alpha6.NnfContainerProfile) int {
+	if profile.Data.MPISpec != nil {
+		return len(profile.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.Containers)
+	} else if profile.Data.Spec != nil {
+		return len(profile.Data.Spec.Containers)
+	}
+
+	return 0
 }
 
 func (c *nnfUserContainer) addNnfVolumes(spec *corev1.PodSpec) {

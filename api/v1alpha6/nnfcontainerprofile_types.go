@@ -69,10 +69,11 @@ type NnfContainerProfileData struct {
 	// only Workflows that have a matching group ID can select this profile.
 	GroupID *uint32 `json:"groupID,omitempty"`
 
-	// Number of ports to open for communication with the user container. These ports are opened on
-	// the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
-	// The requested ports are made available as environment variables inside the container and in
-	// the DWS workflow (NNF_CONTAINER_PORTS).
+	// Number of ports to open for each container specified in the PodSpec. For MPI Jobs, this is
+	// only for the Launcher container(s) listed in the MPIReplicaSet's PodSpec. These ports are
+	// opened on the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute
+	// nodes). The requested ports are made available as environment variables inside the container
+	// and in the DWS workflow (NNF_CONTAINER_PORTS).
 	NumPorts int32 `json:"numPorts,omitempty"`
 
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
