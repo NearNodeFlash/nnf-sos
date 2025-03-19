@@ -1519,7 +1519,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			)
 
 			DescribeTable("should go to Proposal Ready with interpreted Requires in the workflow",
-				func(requiresList string, wantList string) {
+				func(requiresList string, wantList []string) {
 					buildRestrictedContainerProfile(nil, nil)
 					buildWorkflowWithCorrectDirectives(requiresList)
 					Eventually(func(g Gomega) bool {
@@ -1529,16 +1529,17 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					if len(wantList) == 0 {
 						Expect(workflow.Status.Requires).To(HaveLen(0))
 					} else {
-						words := strings.Split(wantList, ",")
-						Expect(workflow.Status.Requires).Should(ContainElements(words))
-						Expect(workflow.Status.Requires).To(HaveLen(len(words)))
+						Expect(workflow.Status.Requires).Should(ContainElements(wantList))
+						Expect(workflow.Status.Requires).To(HaveLen(len(wantList)))
 					}
 				},
-				// The 'requiresList' content is constrained by the nnf-ruleset,
-				// while the 'wantList' content is not.
-				Entry("when requires list is empty", "", ""),
-				Entry("when requires list has one", "copy-offload", requiresContainerAuth),
-				Entry("when requires list has multiple matches", "copy-offload,user-container-auth", requiresContainerAuth),
+				// The 'requiresList' content is constrained by the nnf-ruleset, while the
+				// 'wantList' content is not.
+				Entry("when requires list is empty", "", []string{}),
+				Entry("when requires list has one", "user-container-auth", []string{requiresContainerAuth}),
+				// copy-offload adds two words: one for itself and one for container auth
+				Entry("when requires list has copy-offload", "copy-offload", []string{requiresContainerAuth, requiresCopyOffload}),
+				Entry("when requires list has multiple matches", "copy-offload,user-container-auth", []string{requiresContainerAuth, requiresCopyOffload}),
 			)
 		})
 

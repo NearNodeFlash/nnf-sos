@@ -43,18 +43,19 @@ import (
 )
 
 type nnfUserContainer struct {
-	workflow *dwsv1alpha3.Workflow
-	profile  *nnfv1alpha6.NnfContainerProfile
-	nnfNodes []string
-	volumes  []nnfContainerVolume
-	secrets  []nnfContainerSecret
-	username string
-	uid, gid int64
-	client   client.Client
-	log      logr.Logger
-	scheme   *runtime.Scheme
-	ctx      context.Context
-	index    int
+	workflow    *dwsv1alpha3.Workflow
+	profile     *nnfv1alpha6.NnfContainerProfile
+	nnfNodes    []string
+	volumes     []nnfContainerVolume
+	secrets     []nnfContainerSecret
+	username    string
+	uid, gid    int64
+	client      client.Client
+	log         logr.Logger
+	scheme      *runtime.Scheme
+	ctx         context.Context
+	index       int
+	copyOffload bool
 }
 
 // This struct contains all the necessary information for mounting container storages
@@ -79,6 +80,7 @@ type nnfContainerSecret struct {
 
 const (
 	requiresContainerAuth = "container-auth"
+	requiresCopyOffload   = "copy-offload"
 )
 
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
@@ -174,8 +176,17 @@ func (c *nnfUserContainer) createMPIJob() error {
 	if err != nil {
 		return err
 	}
-	// Add the ports to the worker spec and add environment variable for both launcher/worker
-	addHostPorts(workerSpec, ports)
+
+	// Add the ports to the worker spec and add environment variable for both launcher/worker. For
+	// copy offload we want the ports on the launcher, so the copy offload server can be contacted
+	// from the computes.
+	// FIXME: For user-containers, we're opening the ports on the workers - but is that what we
+	// actually want?
+	if c.copyOffload {
+		addHostPorts(launcherSpec, ports)
+	} else {
+		addHostPorts(workerSpec, ports)
+	}
 	addPortsEnvVars(launcherSpec, ports)
 	addPortsEnvVars(workerSpec, ports)
 
@@ -486,6 +497,8 @@ func addHostPorts(spec *corev1.PodSpec, ports []uint16) {
 	}
 
 	// Add the ports to the containers
+	// FIXME: this adds the same ports to all containers. Is that what we actually want? Doesn't
+	// each container need it's own port?
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
