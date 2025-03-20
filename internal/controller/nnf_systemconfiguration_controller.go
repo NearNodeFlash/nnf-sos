@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -67,7 +67,7 @@ type NnfSystemConfigurationReconciler struct {
 func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	metrics.NnfSystemConfigurationReconcilesTotal.Inc()
 
-	systemConfiguration := &dwsv1alpha2.SystemConfiguration{}
+	systemConfiguration := &dwsv1alpha3.SystemConfiguration{}
 	if err := r.Get(ctx, req.NamespacedName, systemConfiguration); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -77,7 +77,7 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 
 	// Create a status updater that handles the call to r.Status().Update() if any of the fields
 	// in systemConfiguration.Status{} change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha2.SystemConfigurationStatus](systemConfiguration)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha3.SystemConfigurationStatus](systemConfiguration)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Handle cleanup if the resource is being deleted
@@ -147,7 +147,7 @@ func (r *NnfSystemConfigurationReconciler) Reconcile(ctx context.Context, req ct
 
 // createNamespaces creates a namespace for each entry in the validNamespaces map. The
 // namespaces have a "name" and "namespace" label for the SystemConfiguration owner.
-func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context, config *dwsv1alpha2.SystemConfiguration, validNamespaces map[string]struct{}) error {
+func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context, config *dwsv1alpha3.SystemConfiguration, validNamespaces map[string]struct{}) error {
 	for name := range validNamespaces {
 		namespace := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -156,7 +156,7 @@ func (r *NnfSystemConfigurationReconciler) createNamespaces(ctx context.Context,
 		}
 		_, err := ctrl.CreateOrUpdate(ctx, r.Client, namespace,
 			func() error {
-				dwsv1alpha2.AddOwnerLabels(namespace, config)
+				dwsv1alpha3.AddOwnerLabels(namespace, config)
 				return nil
 			})
 		if err != nil {
@@ -220,12 +220,12 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			taint := &corev1.Taint{
-				Key:   nnfv1alpha5.RabbitNodeTaintKey,
+				Key:   nnfv1alpha6.RabbitNodeTaintKey,
 				Value: "true",
 			}
 
 			staleLabel := false
-			_, hasCompletedLabel := labels[nnfv1alpha5.TaintsAndLabelsCompletedLabel]
+			_, hasCompletedLabel := labels[nnfv1alpha6.TaintsAndLabelsCompletedLabel]
 			if effect == corev1.TaintEffectNoSchedule && hasCompletedLabel {
 				// We're in pass 1.
 				// The presence of the label means that the taint state has been
@@ -251,7 +251,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					continue
 				}
 				// Clear the label and continue working on this node.
-				delete(labels, nnfv1alpha5.TaintsAndLabelsCompletedLabel)
+				delete(labels, nnfv1alpha6.TaintsAndLabelsCompletedLabel)
 				node.SetLabels(labels)
 			} else if hasCompletedLabel {
 				// All other passes honor the label.
@@ -267,7 +267,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels[nnfv1alpha5.TaintsAndLabelsCompletedLabel] = "true"
+				labels[nnfv1alpha6.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
@@ -281,8 +281,8 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels[nnfv1alpha5.RabbitNodeSelectorLabel]; !present {
-				labels[nnfv1alpha5.RabbitNodeSelectorLabel] = "true"
+			if _, present := labels[nnfv1alpha6.RabbitNodeSelectorLabel]; !present {
+				labels[nnfv1alpha6.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}
@@ -314,9 +314,9 @@ func (r *NnfSystemConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha2.OwnerLabelMapFunc)).
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha3.OwnerLabelMapFunc)).
 		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
-		For(&dwsv1alpha2.SystemConfiguration{})
+		For(&dwsv1alpha3.SystemConfiguration{})
 
 	return builder.Complete(r)
 }

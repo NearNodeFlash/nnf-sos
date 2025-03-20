@@ -1,10 +1,29 @@
+/*
+ * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+ * Other additional copyright holders may be indicated within.
+ *
+ * The entirety of this work is licensed under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package controller
 
 import (
 	"reflect"
 
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -50,13 +69,13 @@ var _ = Describe("NnfWorkflowControllerHelpers", func() {
 		DescribeTable("Test NNF filesystems (NnfAccess)",
 			func(fsType, path, output string) {
 				// We can hardwire these fields and assume the same mountpath/mountpathprefix, index, namespace, etc
-				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha5.NnfStorage{}).Name()}
+				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha6.NnfStorage{}).Name()}
 				mntPath := "/mnt/nnf/123456-0/"
 				idx := 0
 				ns := "slushy44"
 
-				access := nnfv1alpha5.NnfAccess{
-					Spec: nnfv1alpha5.NnfAccessSpec{
+				access := nnfv1alpha6.NnfAccess{
+					Spec: nnfv1alpha6.NnfAccessSpec{
 						MountPath:       mntPath,
 						MountPathPrefix: mntPath,
 					},

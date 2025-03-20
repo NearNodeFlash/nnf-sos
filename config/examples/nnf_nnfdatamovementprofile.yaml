@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha5
+apiVersion: nnf.cray.hpe.com/v1alpha6
 kind: NnfDataMovementProfile
 metadata:
   name: template
@@ -8,7 +8,9 @@ data:
   slots: 8
   maxSlots: 0
   command: ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --uid $UID --gid $GID $SRC $DEST
-  statCommand: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- setpriv --euid $UID --egid $GID --clear-groups stat --cached never -c '%F' $PATH 
+  statCommand: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV stat --cached never -c '%F' $PATH
+  mkdirCommand: mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV mkdir -p $PATH
+  setprivCommand: setpriv --euid $UID --egid $GID --clear-groups
   logStdout: false
   storeStdout: false
   progressIntervalSeconds: 5

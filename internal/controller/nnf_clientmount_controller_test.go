@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,32 +23,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 )
 
 var _ = Describe("Clientmount Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for Servers ", func() {
-		s := dwsv1alpha2.Servers{
-			Spec: dwsv1alpha2.ServersSpec{
-				AllocationSets: []dwsv1alpha2.ServersSpecAllocationSet{
-					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
+		s := dwsv1alpha3.Servers{
+			Spec: dwsv1alpha3.ServersSpec{
+				AllocationSets: []dwsv1alpha3.ServersSpecAllocationSet{
+					{Label: "ost", Storage: []dwsv1alpha3.ServersSpecStorage{
 						{Name: "rabbit-node-1", AllocationCount: 2},
 						{Name: "rabbit-node-2", AllocationCount: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Label: "ost", Storage: []dwsv1alpha2.ServersSpecStorage{
+					{Label: "ost", Storage: []dwsv1alpha3.ServersSpecStorage{
 						{Name: "rabbit-node-2", AllocationCount: 1}},
 					},
-					{Label: "mdt", Storage: []dwsv1alpha2.ServersSpecStorage{
+					{Label: "mdt", Storage: []dwsv1alpha3.ServersSpecStorage{
 						{Name: "rabbit-node-3", AllocationCount: 1},
 						{Name: "rabbit-node-4", AllocationCount: 1},
 						{Name: "rabbit-node-8", AllocationCount: 1}},
 					},
-					{Label: "mgt", Storage: []dwsv1alpha2.ServersSpecStorage{
+					{Label: "mgt", Storage: []dwsv1alpha3.ServersSpecStorage{
 						{Name: "rabbit-node-3", AllocationCount: 1}},
 					},
-					{Label: "mgtmdt", Storage: []dwsv1alpha2.ServersSpecStorage{
+					{Label: "mgtmdt", Storage: []dwsv1alpha3.ServersSpecStorage{
 						{Name: "rabbit-node-4", AllocationCount: 1}},
 					},
 				},

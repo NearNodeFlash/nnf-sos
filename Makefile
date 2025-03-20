@@ -218,7 +218,7 @@ ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
 # https://onsi.github.io/gomega/ says: "By default, Eventually will poll every 10 milliseconds for up to 1 second"
 EVENTUALLY_TIMEOUT ?= "20s"
 EVENTUALLY_INTERVAL ?= "100ms"
-TESTDIRS ?= internal api github/cluster-api
+TESTDIRS ?= internal api pkg github/cluster-api
 FAILFAST ?= no
 test: manifests generate fmt vet envtest ## Run tests.
 	find internal -name "*.db" -type d -exec rm -rf {} +
@@ -371,9 +371,9 @@ CONVERSION_VERIFIER := $(LOCALBIN)/$(CONVERSION_VERIFIER_BIN)
 CONVERSION_VERIFIER_PKG := sigs.k8s.io/cluster-api/hack/tools/conversion-verifier
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.1.1
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
-CONVERSION_GEN_VER := v0.30.2
+KUSTOMIZE_VERSION ?= v5.5.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
+CONVERSION_GEN_VER := v0.31.5
 
 # Can be "latest", but cannot be a tag, such as "v1.3.3".  However, it will
 # work with the short-form git commit rev that has been tagged.
@@ -407,7 +407,7 @@ $(CONVERSION_GEN): $(LOCALBIN) # Build conversion-gen from tools folder.
 # The SRC_DIRS value is a space-separated list of paths to old versions.
 # The --input-dirs value is a single path item; specify multiple --input-dirs
 # parameters if you have multiple old versions.
-SRC_DIRS=./api/v1alpha2 ./api/v1alpha3 ./api/v1alpha4
+SRC_DIRS=./api/v1alpha4 ./api/v1alpha5
 generate-go-conversions: $(CONVERSION_GEN) ## Generate conversions go code
 	$(MAKE) clean-generated-conversions SRC_DIRS="$(SRC_DIRS)"
 	$(CONVERSION_GEN) \
@@ -450,7 +450,7 @@ verify-conversions: $(CONVERSION_VERIFIER)  ## Verifies expected API conversion 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20240320141353-395cfc7486e6
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.17
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
