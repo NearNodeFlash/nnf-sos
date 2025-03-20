@@ -79,6 +79,8 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - dataworkflowservices.github.io
@@ -129,3 +131,11 @@ rules:
     - nnfdatamovements/status
   verbs:
     - get
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch

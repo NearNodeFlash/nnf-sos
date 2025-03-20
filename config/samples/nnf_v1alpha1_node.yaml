@@ -1,7 +1,0 @@
-apiVersion: nnf.cray.hpe.com/v1alpha1
-kind: NnfNode
-metadata:
-  name: nnf-nlc
-  namespace: kind-worker
-spec:
-  # Add fields here

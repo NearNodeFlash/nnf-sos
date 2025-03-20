@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
-	"strings"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 	"github.com/go-logr/logr"
@@ -78,10 +77,10 @@ func NvmeListDevices(log logr.Logger) ([]NvmeDevice, error) {
 	return devices, nil
 }
 
-func NvmeRescanDevices(log logr.Logger) error {
+func NvmeGetDevices() ([]string, error) {
 	devices, err := ioutil.ReadDir("/dev/")
 	if err != nil {
-		return fmt.Errorf("could not read /dev: %w", err)
+		return []string{}, fmt.Errorf("could not read /dev: %w", err)
 	}
 
 	nvmeDevices := []string{}
@@ -92,8 +91,70 @@ func NvmeRescanDevices(log logr.Logger) error {
 		}
 	}
 
-	if _, err := command.Run("nvme ns-rescan "+strings.Join(nvmeDevices, " "), log); err != nil {
-		return fmt.Errorf("could not rescan NVMe devices: %w", err)
+	return nvmeDevices, nil
+}
+
+func NvmeGetNamespaceDevices() ([]string, error) {
+	devices, err := ioutil.ReadDir("/dev/")
+	if err != nil {
+		return []string{}, fmt.Errorf("could not read /dev: %w", err)
+	}
+
+	nvmeNamespaceDevices := []string{}
+	nvmeRegex, _ := regexp.Compile("nvme[0-9]+n[0-9]+$")
+	for _, device := range devices {
+		if match := nvmeRegex.MatchString(device.Name()); match {
+			nvmeNamespaceDevices = append(nvmeNamespaceDevices, "/dev/"+device.Name())
+		}
+	}
+
+	return nvmeNamespaceDevices, nil
+}
+
+func NvmeRescanDevices(log logr.Logger) error {
+	nvmeDevices, err := NvmeGetDevices()
+	if err != nil {
+		return err
+	}
+
+	startingNamespaces, err := NvmeGetNamespaceDevices()
+	if err != nil {
+		return err
+	}
+
+	for _, nvmeDevice := range nvmeDevices {
+		if _, err := command.Run("nvme ns-rescan "+nvmeDevice, log); err != nil {
+			return fmt.Errorf("could not rescan NVMe device: %w", err)
+		}
+	}
+
+	endingNamespaces, err := NvmeGetNamespaceDevices()
+	if err != nil {
+		return err
+	}
+
+	removedNamespaces := []string{}
+
+	for _, startingNamespace := range startingNamespaces {
+		found := false
+		for i, endingNamespace := range endingNamespaces {
+			if startingNamespace == endingNamespace {
+				found = true
+				endingNamespaces = append(endingNamespaces[:i], endingNamespaces[i+1:]...)
+				break
+			}
+		}
+		if !found {
+			removedNamespaces = append(removedNamespaces, startingNamespace)
+		}
+	}
+
+	if len(removedNamespaces) != 0 {
+		log.Info("nvme ns-rescan removed NVMe devices", "device paths", removedNamespaces)
+	}
+
+	if len(endingNamespaces) != 0 {
+		log.Info("nvme ns-rescan added NVMe devices", "device paths", endingNamespaces)
 	}
 
 	return nil

@@ -46,6 +46,10 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target has been activated
 	PostActivate []string `json:"postActivate,omitempty"`
 
+	// PreDeactivate specifies a list of commands to run on the Rabbit before the
+	// Lustre target is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
 	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
 	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
 	// it afterward.
@@ -55,10 +59,6 @@ type NnfStorageProfileLustreCmdLines struct {
 	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
 	// unmounting it afterward.
 	PreUnmount []string `json:"preUnmount,omitempty"`
-
-	// PreDeactivate specifies a list of commands to run on the Rabbit before the
-	// Lustre target is deactivated
-	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
 // NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
@@ -285,7 +285,6 @@ type NnfStorageProfileData struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="DEFAULT",type="boolean",JSONPath=".data.default",description="True if this is the default instance"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -298,7 +297,6 @@ type NnfStorageProfile struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:storageversion
 
 // NnfStorageProfileList contains a list of NnfStorageProfile
 type NnfStorageProfileList struct {

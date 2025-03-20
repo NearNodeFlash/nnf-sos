@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -155,11 +155,14 @@ func (p *StoragePool) deallocateVolumes() error {
 		for _, pv := range p.providingVolumes {
 			volume := pv.Storage.FindVolume(pv.VolumeId)
 			if volume == nil {
-				return fmt.Errorf("Volume %s not found", pv.VolumeId)
+				err := fmt.Errorf("Volume not found")
+				log.Error(err, "StoragePool deallocateVolumes volume not found", "volume", pv.VolumeId)
+				continue
 			}
 
 			if err := volFn(volume); err != nil {
-				return err
+				log.Error(err, "Volume function failed", "function", volFn, "volume", pv.VolumeId)
+				continue
 			}
 		}
 
@@ -344,15 +347,15 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 
 	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
 		// Case 1. Create Complete: In this case, we've fully created the storage pool and it should be
-		// fully recoverable and place back in use.
+		// fully recoverable and placed back in use.
 
-		// Case 2. Delete Start: We started a delete but it did not finish. This means the storage pool
+		// Case 2. Delete Start: We started a delete, but it did not finish. This means the storage pool
 		// still exists, and its volumes are unknown. Here we try to recover the volumes, but ignore any
 		// errors as the volume might be deleted. The client should retry the delete, at which point we
 		// will delete any remaining volumes
 
 		// Recover the namespaces that make up this storage pool
-		if err := rh.storagePool.recoverVolumes(rh.volumes, rh.lastLogEntryType == storagePoolStorageDeleteStartLogEntryType); err != nil {
+		if err := rh.storagePool.recoverVolumes(rh.volumes, true /* ignore errors */); err != nil {
 			return false, err
 		}
 

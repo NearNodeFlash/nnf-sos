@@ -23,32 +23,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 )
 
 var _ = Describe("NNFStorage Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for NnfStorage", func() {
-		s := nnfv1alpha5.NnfStorage{
-			Spec: nnfv1alpha5.NnfStorageSpec{
-				AllocationSets: []nnfv1alpha5.NnfStorageAllocationSetSpec{
-					{Name: "ost", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
+		s := nnfv1alpha6.NnfStorage{
+			Spec: nnfv1alpha6.NnfStorageSpec{
+				AllocationSets: []nnfv1alpha6.NnfStorageAllocationSetSpec{
+					{Name: "ost", Nodes: []nnfv1alpha6.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-1", Count: 2},
 						{Name: "rabbit-node-2", Count: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Name: "ost", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
+					{Name: "ost", Nodes: []nnfv1alpha6.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-2", Count: 1}},
 					},
-					{Name: "mdt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
+					{Name: "mdt", Nodes: []nnfv1alpha6.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1},
 						{Name: "rabbit-node-4", Count: 1},
 						{Name: "rabbit-node-8", Count: 1}},
 					},
-					{Name: "mgt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
+					{Name: "mgt", Nodes: []nnfv1alpha6.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1}},
 					},
-					{Name: "mgtmdt", Nodes: []nnfv1alpha5.NnfStorageAllocationNodes{
+					{Name: "mgtmdt", Nodes: []nnfv1alpha6.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-4", Count: 1}},
 					},
 				},

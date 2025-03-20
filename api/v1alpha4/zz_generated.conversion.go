@@ -28,7 +28,8 @@ import (
 	unsafe "unsafe"
 
 	v1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
-	v1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	v1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	v1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	v2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,938 +44,998 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*LustreStorageSpec)(nil), (*v1alpha5.LustreStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec(a.(*LustreStorageSpec), b.(*v1alpha5.LustreStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*LustreStorageSpec)(nil), (*v1alpha6.LustreStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec(a.(*LustreStorageSpec), b.(*v1alpha6.LustreStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.LustreStorageSpec)(nil), (*LustreStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(a.(*v1alpha5.LustreStorageSpec), b.(*LustreStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.LustreStorageSpec)(nil), (*LustreStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(a.(*v1alpha6.LustreStorageSpec), b.(*LustreStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfAccess)(nil), (*v1alpha5.NnfAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfAccess_To_v1alpha5_NnfAccess(a.(*NnfAccess), b.(*v1alpha5.NnfAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfAccess)(nil), (*v1alpha6.NnfAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess(a.(*NnfAccess), b.(*v1alpha6.NnfAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfAccess)(nil), (*NnfAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfAccess_To_v1alpha4_NnfAccess(a.(*v1alpha5.NnfAccess), b.(*NnfAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfAccess)(nil), (*NnfAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess(a.(*v1alpha6.NnfAccess), b.(*NnfAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfAccessList)(nil), (*v1alpha5.NnfAccessList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfAccessList_To_v1alpha5_NnfAccessList(a.(*NnfAccessList), b.(*v1alpha5.NnfAccessList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfAccessList)(nil), (*v1alpha6.NnfAccessList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfAccessList_To_v1alpha6_NnfAccessList(a.(*NnfAccessList), b.(*v1alpha6.NnfAccessList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfAccessList)(nil), (*NnfAccessList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfAccessList_To_v1alpha4_NnfAccessList(a.(*v1alpha5.NnfAccessList), b.(*NnfAccessList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfAccessList)(nil), (*NnfAccessList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfAccessList_To_v1alpha4_NnfAccessList(a.(*v1alpha6.NnfAccessList), b.(*NnfAccessList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfAccessSpec)(nil), (*v1alpha5.NnfAccessSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(a.(*NnfAccessSpec), b.(*v1alpha5.NnfAccessSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfAccessSpec)(nil), (*v1alpha6.NnfAccessSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(a.(*NnfAccessSpec), b.(*v1alpha6.NnfAccessSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfAccessSpec)(nil), (*NnfAccessSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(a.(*v1alpha5.NnfAccessSpec), b.(*NnfAccessSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfAccessSpec)(nil), (*NnfAccessSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(a.(*v1alpha6.NnfAccessSpec), b.(*NnfAccessSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfAccessStatus)(nil), (*v1alpha5.NnfAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(a.(*NnfAccessStatus), b.(*v1alpha5.NnfAccessStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfAccessStatus)(nil), (*v1alpha6.NnfAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(a.(*NnfAccessStatus), b.(*v1alpha6.NnfAccessStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfAccessStatus)(nil), (*NnfAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(a.(*v1alpha5.NnfAccessStatus), b.(*NnfAccessStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfAccessStatus)(nil), (*NnfAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(a.(*v1alpha6.NnfAccessStatus), b.(*NnfAccessStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfContainerProfile)(nil), (*v1alpha5.NnfContainerProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(a.(*NnfContainerProfile), b.(*v1alpha5.NnfContainerProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfContainerProfile)(nil), (*v1alpha6.NnfContainerProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(a.(*NnfContainerProfile), b.(*v1alpha6.NnfContainerProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfContainerProfile)(nil), (*NnfContainerProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(a.(*v1alpha5.NnfContainerProfile), b.(*NnfContainerProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfContainerProfile)(nil), (*NnfContainerProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(a.(*v1alpha6.NnfContainerProfile), b.(*NnfContainerProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileData)(nil), (*v1alpha5.NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(a.(*NnfContainerProfileData), b.(*v1alpha5.NnfContainerProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileData)(nil), (*v1alpha6.NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(a.(*NnfContainerProfileData), b.(*v1alpha6.NnfContainerProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfContainerProfileData)(nil), (*NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(a.(*v1alpha5.NnfContainerProfileData), b.(*NnfContainerProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfContainerProfileData)(nil), (*NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(a.(*v1alpha6.NnfContainerProfileData), b.(*NnfContainerProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileList)(nil), (*v1alpha5.NnfContainerProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfContainerProfileList_To_v1alpha5_NnfContainerProfileList(a.(*NnfContainerProfileList), b.(*v1alpha5.NnfContainerProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileList)(nil), (*v1alpha6.NnfContainerProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList(a.(*NnfContainerProfileList), b.(*v1alpha6.NnfContainerProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfContainerProfileList)(nil), (*NnfContainerProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(a.(*v1alpha5.NnfContainerProfileList), b.(*NnfContainerProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfContainerProfileList)(nil), (*NnfContainerProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(a.(*v1alpha6.NnfContainerProfileList), b.(*NnfContainerProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileStorage)(nil), (*v1alpha5.NnfContainerProfileStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha5_NnfContainerProfileStorage(a.(*NnfContainerProfileStorage), b.(*v1alpha5.NnfContainerProfileStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileStorage)(nil), (*v1alpha6.NnfContainerProfileStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha6_NnfContainerProfileStorage(a.(*NnfContainerProfileStorage), b.(*v1alpha6.NnfContainerProfileStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfContainerProfileStorage)(nil), (*NnfContainerProfileStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(a.(*v1alpha5.NnfContainerProfileStorage), b.(*NnfContainerProfileStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfContainerProfileStorage)(nil), (*NnfContainerProfileStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(a.(*v1alpha6.NnfContainerProfileStorage), b.(*NnfContainerProfileStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovement)(nil), (*v1alpha5.NnfDataMovement)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovement_To_v1alpha5_NnfDataMovement(a.(*NnfDataMovement), b.(*v1alpha5.NnfDataMovement), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovement)(nil), (*v1alpha6.NnfDataMovement)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement(a.(*NnfDataMovement), b.(*v1alpha6.NnfDataMovement), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovement)(nil), (*NnfDataMovement)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovement_To_v1alpha4_NnfDataMovement(a.(*v1alpha5.NnfDataMovement), b.(*NnfDataMovement), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovement)(nil), (*NnfDataMovement)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement(a.(*v1alpha6.NnfDataMovement), b.(*NnfDataMovement), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementCommandStatus)(nil), (*v1alpha5.NnfDataMovementCommandStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMovementCommandStatus(a.(*NnfDataMovementCommandStatus), b.(*v1alpha5.NnfDataMovementCommandStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementCommandStatus)(nil), (*v1alpha6.NnfDataMovementCommandStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha6_NnfDataMovementCommandStatus(a.(*NnfDataMovementCommandStatus), b.(*v1alpha6.NnfDataMovementCommandStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementCommandStatus)(nil), (*NnfDataMovementCommandStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(a.(*v1alpha5.NnfDataMovementCommandStatus), b.(*NnfDataMovementCommandStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementCommandStatus)(nil), (*NnfDataMovementCommandStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(a.(*v1alpha6.NnfDataMovementCommandStatus), b.(*NnfDataMovementCommandStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementConfig)(nil), (*v1alpha5.NnfDataMovementConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig(a.(*NnfDataMovementConfig), b.(*v1alpha5.NnfDataMovementConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementConfig)(nil), (*v1alpha6.NnfDataMovementConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha6_NnfDataMovementConfig(a.(*NnfDataMovementConfig), b.(*v1alpha6.NnfDataMovementConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementConfig)(nil), (*NnfDataMovementConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(a.(*v1alpha5.NnfDataMovementConfig), b.(*NnfDataMovementConfig), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementConfig)(nil), (*NnfDataMovementConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(a.(*v1alpha6.NnfDataMovementConfig), b.(*NnfDataMovementConfig), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementList)(nil), (*v1alpha5.NnfDataMovementList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementList_To_v1alpha5_NnfDataMovementList(a.(*NnfDataMovementList), b.(*v1alpha5.NnfDataMovementList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementList)(nil), (*v1alpha6.NnfDataMovementList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementList_To_v1alpha6_NnfDataMovementList(a.(*NnfDataMovementList), b.(*v1alpha6.NnfDataMovementList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementList)(nil), (*NnfDataMovementList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(a.(*v1alpha5.NnfDataMovementList), b.(*NnfDataMovementList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementList)(nil), (*NnfDataMovementList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(a.(*v1alpha6.NnfDataMovementList), b.(*NnfDataMovementList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManager)(nil), (*v1alpha5.NnfDataMovementManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(a.(*NnfDataMovementManager), b.(*v1alpha5.NnfDataMovementManager), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManager)(nil), (*v1alpha6.NnfDataMovementManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementManager_To_v1alpha6_NnfDataMovementManager(a.(*NnfDataMovementManager), b.(*v1alpha6.NnfDataMovementManager), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementManager)(nil), (*NnfDataMovementManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(a.(*v1alpha5.NnfDataMovementManager), b.(*NnfDataMovementManager), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementManager)(nil), (*NnfDataMovementManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(a.(*v1alpha6.NnfDataMovementManager), b.(*NnfDataMovementManager), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerList)(nil), (*v1alpha5.NnfDataMovementManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList(a.(*NnfDataMovementManagerList), b.(*v1alpha5.NnfDataMovementManagerList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerList)(nil), (*v1alpha6.NnfDataMovementManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha6_NnfDataMovementManagerList(a.(*NnfDataMovementManagerList), b.(*v1alpha6.NnfDataMovementManagerList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementManagerList)(nil), (*NnfDataMovementManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(a.(*v1alpha5.NnfDataMovementManagerList), b.(*NnfDataMovementManagerList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementManagerList)(nil), (*NnfDataMovementManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(a.(*v1alpha6.NnfDataMovementManagerList), b.(*NnfDataMovementManagerList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerSpec)(nil), (*v1alpha5.NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(a.(*NnfDataMovementManagerSpec), b.(*v1alpha5.NnfDataMovementManagerSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerSpec)(nil), (*v1alpha6.NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec(a.(*NnfDataMovementManagerSpec), b.(*v1alpha6.NnfDataMovementManagerSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementManagerSpec)(nil), (*NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(a.(*v1alpha5.NnfDataMovementManagerSpec), b.(*NnfDataMovementManagerSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementManagerSpec)(nil), (*NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(a.(*v1alpha6.NnfDataMovementManagerSpec), b.(*NnfDataMovementManagerSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerStatus)(nil), (*v1alpha5.NnfDataMovementManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus(a.(*NnfDataMovementManagerStatus), b.(*v1alpha5.NnfDataMovementManagerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerStatus)(nil), (*v1alpha6.NnfDataMovementManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus(a.(*NnfDataMovementManagerStatus), b.(*v1alpha6.NnfDataMovementManagerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementManagerStatus)(nil), (*NnfDataMovementManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(a.(*v1alpha5.NnfDataMovementManagerStatus), b.(*NnfDataMovementManagerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementManagerStatus)(nil), (*NnfDataMovementManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(a.(*v1alpha6.NnfDataMovementManagerStatus), b.(*NnfDataMovementManagerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfile)(nil), (*v1alpha5.NnfDataMovementProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(a.(*NnfDataMovementProfile), b.(*v1alpha5.NnfDataMovementProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfile)(nil), (*v1alpha6.NnfDataMovementProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile(a.(*NnfDataMovementProfile), b.(*v1alpha6.NnfDataMovementProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementProfile)(nil), (*NnfDataMovementProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(a.(*v1alpha5.NnfDataMovementProfile), b.(*NnfDataMovementProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementProfile)(nil), (*NnfDataMovementProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(a.(*v1alpha6.NnfDataMovementProfile), b.(*NnfDataMovementProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfileData)(nil), (*v1alpha5.NnfDataMovementProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(a.(*NnfDataMovementProfileData), b.(*v1alpha5.NnfDataMovementProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfileData)(nil), (*v1alpha6.NnfDataMovementProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData(a.(*NnfDataMovementProfileData), b.(*v1alpha6.NnfDataMovementProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementProfileData)(nil), (*NnfDataMovementProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(a.(*v1alpha5.NnfDataMovementProfileData), b.(*NnfDataMovementProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfileList)(nil), (*v1alpha6.NnfDataMovementProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha6_NnfDataMovementProfileList(a.(*NnfDataMovementProfileList), b.(*v1alpha6.NnfDataMovementProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementProfileList)(nil), (*v1alpha5.NnfDataMovementProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha5_NnfDataMovementProfileList(a.(*NnfDataMovementProfileList), b.(*v1alpha5.NnfDataMovementProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementProfileList)(nil), (*NnfDataMovementProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(a.(*v1alpha6.NnfDataMovementProfileList), b.(*NnfDataMovementProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementProfileList)(nil), (*NnfDataMovementProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(a.(*v1alpha5.NnfDataMovementProfileList), b.(*NnfDataMovementProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementSpec)(nil), (*v1alpha6.NnfDataMovementSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec(a.(*NnfDataMovementSpec), b.(*v1alpha6.NnfDataMovementSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementSpec)(nil), (*v1alpha5.NnfDataMovementSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec(a.(*NnfDataMovementSpec), b.(*v1alpha5.NnfDataMovementSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementSpec)(nil), (*NnfDataMovementSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(a.(*v1alpha6.NnfDataMovementSpec), b.(*NnfDataMovementSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementSpec)(nil), (*NnfDataMovementSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(a.(*v1alpha5.NnfDataMovementSpec), b.(*NnfDataMovementSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementSpecSourceDestination)(nil), (*v1alpha6.NnfDataMovementSpecSourceDestination)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha6_NnfDataMovementSpecSourceDestination(a.(*NnfDataMovementSpecSourceDestination), b.(*v1alpha6.NnfDataMovementSpecSourceDestination), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementSpecSourceDestination)(nil), (*v1alpha5.NnfDataMovementSpecSourceDestination)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha5_NnfDataMovementSpecSourceDestination(a.(*NnfDataMovementSpecSourceDestination), b.(*v1alpha5.NnfDataMovementSpecSourceDestination), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementSpecSourceDestination)(nil), (*NnfDataMovementSpecSourceDestination)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(a.(*v1alpha6.NnfDataMovementSpecSourceDestination), b.(*NnfDataMovementSpecSourceDestination), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementSpecSourceDestination)(nil), (*NnfDataMovementSpecSourceDestination)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(a.(*v1alpha5.NnfDataMovementSpecSourceDestination), b.(*NnfDataMovementSpecSourceDestination), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDataMovementStatus)(nil), (*v1alpha6.NnfDataMovementStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus(a.(*NnfDataMovementStatus), b.(*v1alpha6.NnfDataMovementStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementStatus)(nil), (*v1alpha5.NnfDataMovementStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus(a.(*NnfDataMovementStatus), b.(*v1alpha5.NnfDataMovementStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDataMovementStatus)(nil), (*NnfDataMovementStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(a.(*v1alpha6.NnfDataMovementStatus), b.(*NnfDataMovementStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDataMovementStatus)(nil), (*NnfDataMovementStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(a.(*v1alpha5.NnfDataMovementStatus), b.(*NnfDataMovementStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfDriveStatus)(nil), (*v1alpha6.NnfDriveStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfDriveStatus_To_v1alpha6_NnfDriveStatus(a.(*NnfDriveStatus), b.(*v1alpha6.NnfDriveStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDriveStatus)(nil), (*v1alpha5.NnfDriveStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfDriveStatus_To_v1alpha5_NnfDriveStatus(a.(*NnfDriveStatus), b.(*v1alpha5.NnfDriveStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfDriveStatus)(nil), (*NnfDriveStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(a.(*v1alpha6.NnfDriveStatus), b.(*NnfDriveStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfDriveStatus)(nil), (*NnfDriveStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(a.(*v1alpha5.NnfDriveStatus), b.(*NnfDriveStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfLustreMGT)(nil), (*v1alpha6.NnfLustreMGT)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT(a.(*NnfLustreMGT), b.(*v1alpha6.NnfLustreMGT), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfLustreMGT)(nil), (*v1alpha5.NnfLustreMGT)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(a.(*NnfLustreMGT), b.(*v1alpha5.NnfLustreMGT), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfLustreMGT)(nil), (*NnfLustreMGT)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(a.(*v1alpha6.NnfLustreMGT), b.(*NnfLustreMGT), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfLustreMGT)(nil), (*NnfLustreMGT)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(a.(*v1alpha5.NnfLustreMGT), b.(*NnfLustreMGT), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTList)(nil), (*v1alpha6.NnfLustreMGTList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfLustreMGTList_To_v1alpha6_NnfLustreMGTList(a.(*NnfLustreMGTList), b.(*v1alpha6.NnfLustreMGTList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTList)(nil), (*v1alpha5.NnfLustreMGTList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfLustreMGTList_To_v1alpha5_NnfLustreMGTList(a.(*NnfLustreMGTList), b.(*v1alpha5.NnfLustreMGTList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfLustreMGTList)(nil), (*NnfLustreMGTList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(a.(*v1alpha6.NnfLustreMGTList), b.(*NnfLustreMGTList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfLustreMGTList)(nil), (*NnfLustreMGTList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(a.(*v1alpha5.NnfLustreMGTList), b.(*NnfLustreMGTList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTSpec)(nil), (*v1alpha6.NnfLustreMGTSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec(a.(*NnfLustreMGTSpec), b.(*v1alpha6.NnfLustreMGTSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTSpec)(nil), (*v1alpha5.NnfLustreMGTSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(a.(*NnfLustreMGTSpec), b.(*v1alpha5.NnfLustreMGTSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTStatus)(nil), (*v1alpha6.NnfLustreMGTStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(a.(*NnfLustreMGTStatus), b.(*v1alpha6.NnfLustreMGTStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfLustreMGTSpec)(nil), (*NnfLustreMGTSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(a.(*v1alpha5.NnfLustreMGTSpec), b.(*NnfLustreMGTSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTStatusClaim)(nil), (*v1alpha6.NnfLustreMGTStatusClaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha6_NnfLustreMGTStatusClaim(a.(*NnfLustreMGTStatusClaim), b.(*v1alpha6.NnfLustreMGTStatusClaim), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTStatus)(nil), (*v1alpha5.NnfLustreMGTStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(a.(*NnfLustreMGTStatus), b.(*v1alpha5.NnfLustreMGTStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfLustreMGTStatusClaim)(nil), (*NnfLustreMGTStatusClaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(a.(*v1alpha6.NnfLustreMGTStatusClaim), b.(*NnfLustreMGTStatusClaim), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfLustreMGTStatus)(nil), (*NnfLustreMGTStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(a.(*v1alpha5.NnfLustreMGTStatus), b.(*NnfLustreMGTStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNode)(nil), (*v1alpha6.NnfNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNode_To_v1alpha6_NnfNode(a.(*NnfNode), b.(*v1alpha6.NnfNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfLustreMGTStatusClaim)(nil), (*v1alpha5.NnfLustreMGTStatusClaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha5_NnfLustreMGTStatusClaim(a.(*NnfLustreMGTStatusClaim), b.(*v1alpha5.NnfLustreMGTStatusClaim), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNode)(nil), (*NnfNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNode_To_v1alpha4_NnfNode(a.(*v1alpha6.NnfNode), b.(*NnfNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfLustreMGTStatusClaim)(nil), (*NnfLustreMGTStatusClaim)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(a.(*v1alpha5.NnfLustreMGTStatusClaim), b.(*NnfLustreMGTStatusClaim), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorage)(nil), (*v1alpha6.NnfNodeBlockStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage(a.(*NnfNodeBlockStorage), b.(*v1alpha6.NnfNodeBlockStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNode)(nil), (*v1alpha5.NnfNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNode_To_v1alpha5_NnfNode(a.(*NnfNode), b.(*v1alpha5.NnfNode), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorage)(nil), (*NnfNodeBlockStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(a.(*v1alpha6.NnfNodeBlockStorage), b.(*NnfNodeBlockStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNode)(nil), (*NnfNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNode_To_v1alpha4_NnfNode(a.(*v1alpha5.NnfNode), b.(*NnfNode), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAccessStatus)(nil), (*v1alpha6.NnfNodeBlockStorageAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha6_NnfNodeBlockStorageAccessStatus(a.(*NnfNodeBlockStorageAccessStatus), b.(*v1alpha6.NnfNodeBlockStorageAccessStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorage)(nil), (*v1alpha5.NnfNodeBlockStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(a.(*NnfNodeBlockStorage), b.(*v1alpha5.NnfNodeBlockStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageAccessStatus)(nil), (*NnfNodeBlockStorageAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(a.(*v1alpha6.NnfNodeBlockStorageAccessStatus), b.(*NnfNodeBlockStorageAccessStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorage)(nil), (*NnfNodeBlockStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(a.(*v1alpha5.NnfNodeBlockStorage), b.(*NnfNodeBlockStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAllocationSpec)(nil), (*v1alpha6.NnfNodeBlockStorageAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha6_NnfNodeBlockStorageAllocationSpec(a.(*NnfNodeBlockStorageAllocationSpec), b.(*v1alpha6.NnfNodeBlockStorageAllocationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAccessStatus)(nil), (*v1alpha5.NnfNodeBlockStorageAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha5_NnfNodeBlockStorageAccessStatus(a.(*NnfNodeBlockStorageAccessStatus), b.(*v1alpha5.NnfNodeBlockStorageAccessStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageAllocationSpec)(nil), (*NnfNodeBlockStorageAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(a.(*v1alpha6.NnfNodeBlockStorageAllocationSpec), b.(*NnfNodeBlockStorageAllocationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageAccessStatus)(nil), (*NnfNodeBlockStorageAccessStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(a.(*v1alpha5.NnfNodeBlockStorageAccessStatus), b.(*NnfNodeBlockStorageAccessStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAllocationStatus)(nil), (*v1alpha6.NnfNodeBlockStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha6_NnfNodeBlockStorageAllocationStatus(a.(*NnfNodeBlockStorageAllocationStatus), b.(*v1alpha6.NnfNodeBlockStorageAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAllocationSpec)(nil), (*v1alpha5.NnfNodeBlockStorageAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha5_NnfNodeBlockStorageAllocationSpec(a.(*NnfNodeBlockStorageAllocationSpec), b.(*v1alpha5.NnfNodeBlockStorageAllocationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageAllocationStatus)(nil), (*NnfNodeBlockStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(a.(*v1alpha6.NnfNodeBlockStorageAllocationStatus), b.(*NnfNodeBlockStorageAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageAllocationSpec)(nil), (*NnfNodeBlockStorageAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(a.(*v1alpha5.NnfNodeBlockStorageAllocationSpec), b.(*NnfNodeBlockStorageAllocationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageDeviceStatus)(nil), (*v1alpha6.NnfNodeBlockStorageDeviceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha6_NnfNodeBlockStorageDeviceStatus(a.(*NnfNodeBlockStorageDeviceStatus), b.(*v1alpha6.NnfNodeBlockStorageDeviceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageAllocationStatus)(nil), (*v1alpha5.NnfNodeBlockStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha5_NnfNodeBlockStorageAllocationStatus(a.(*NnfNodeBlockStorageAllocationStatus), b.(*v1alpha5.NnfNodeBlockStorageAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageDeviceStatus)(nil), (*NnfNodeBlockStorageDeviceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(a.(*v1alpha6.NnfNodeBlockStorageDeviceStatus), b.(*NnfNodeBlockStorageDeviceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageAllocationStatus)(nil), (*NnfNodeBlockStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(a.(*v1alpha5.NnfNodeBlockStorageAllocationStatus), b.(*NnfNodeBlockStorageAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageList)(nil), (*v1alpha6.NnfNodeBlockStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha6_NnfNodeBlockStorageList(a.(*NnfNodeBlockStorageList), b.(*v1alpha6.NnfNodeBlockStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageDeviceStatus)(nil), (*v1alpha5.NnfNodeBlockStorageDeviceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockStorageDeviceStatus(a.(*NnfNodeBlockStorageDeviceStatus), b.(*v1alpha5.NnfNodeBlockStorageDeviceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageList)(nil), (*NnfNodeBlockStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(a.(*v1alpha6.NnfNodeBlockStorageList), b.(*NnfNodeBlockStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageDeviceStatus)(nil), (*NnfNodeBlockStorageDeviceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(a.(*v1alpha5.NnfNodeBlockStorageDeviceStatus), b.(*NnfNodeBlockStorageDeviceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageSpec)(nil), (*v1alpha6.NnfNodeBlockStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec(a.(*NnfNodeBlockStorageSpec), b.(*v1alpha6.NnfNodeBlockStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageList)(nil), (*v1alpha5.NnfNodeBlockStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList(a.(*NnfNodeBlockStorageList), b.(*v1alpha5.NnfNodeBlockStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageSpec)(nil), (*NnfNodeBlockStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(a.(*v1alpha6.NnfNodeBlockStorageSpec), b.(*NnfNodeBlockStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageList)(nil), (*NnfNodeBlockStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(a.(*v1alpha5.NnfNodeBlockStorageList), b.(*NnfNodeBlockStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageStatus)(nil), (*v1alpha6.NnfNodeBlockStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(a.(*NnfNodeBlockStorageStatus), b.(*v1alpha6.NnfNodeBlockStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageSpec)(nil), (*v1alpha5.NnfNodeBlockStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec(a.(*NnfNodeBlockStorageSpec), b.(*v1alpha5.NnfNodeBlockStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeBlockStorageStatus)(nil), (*NnfNodeBlockStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(a.(*v1alpha6.NnfNodeBlockStorageStatus), b.(*NnfNodeBlockStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageSpec)(nil), (*NnfNodeBlockStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(a.(*v1alpha5.NnfNodeBlockStorageSpec), b.(*NnfNodeBlockStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeECData)(nil), (*v1alpha6.NnfNodeECData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeECData_To_v1alpha6_NnfNodeECData(a.(*NnfNodeECData), b.(*v1alpha6.NnfNodeECData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeBlockStorageStatus)(nil), (*v1alpha5.NnfNodeBlockStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(a.(*NnfNodeBlockStorageStatus), b.(*v1alpha5.NnfNodeBlockStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeECData)(nil), (*NnfNodeECData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeECData_To_v1alpha4_NnfNodeECData(a.(*v1alpha6.NnfNodeECData), b.(*NnfNodeECData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeBlockStorageStatus)(nil), (*NnfNodeBlockStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(a.(*v1alpha5.NnfNodeBlockStorageStatus), b.(*NnfNodeBlockStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataList)(nil), (*v1alpha6.NnfNodeECDataList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeECDataList_To_v1alpha6_NnfNodeECDataList(a.(*NnfNodeECDataList), b.(*v1alpha6.NnfNodeECDataList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeECData)(nil), (*v1alpha5.NnfNodeECData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeECData_To_v1alpha5_NnfNodeECData(a.(*NnfNodeECData), b.(*v1alpha5.NnfNodeECData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeECDataList)(nil), (*NnfNodeECDataList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(a.(*v1alpha6.NnfNodeECDataList), b.(*NnfNodeECDataList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeECData)(nil), (*NnfNodeECData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeECData_To_v1alpha4_NnfNodeECData(a.(*v1alpha5.NnfNodeECData), b.(*NnfNodeECData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataSpec)(nil), (*v1alpha6.NnfNodeECDataSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec(a.(*NnfNodeECDataSpec), b.(*v1alpha6.NnfNodeECDataSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataList)(nil), (*v1alpha5.NnfNodeECDataList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeECDataList_To_v1alpha5_NnfNodeECDataList(a.(*NnfNodeECDataList), b.(*v1alpha5.NnfNodeECDataList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeECDataSpec)(nil), (*NnfNodeECDataSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(a.(*v1alpha6.NnfNodeECDataSpec), b.(*NnfNodeECDataSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeECDataList)(nil), (*NnfNodeECDataList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(a.(*v1alpha5.NnfNodeECDataList), b.(*NnfNodeECDataList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataStatus)(nil), (*v1alpha6.NnfNodeECDataStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus(a.(*NnfNodeECDataStatus), b.(*v1alpha6.NnfNodeECDataStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataSpec)(nil), (*v1alpha5.NnfNodeECDataSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec(a.(*NnfNodeECDataSpec), b.(*v1alpha5.NnfNodeECDataSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeECDataStatus)(nil), (*NnfNodeECDataStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(a.(*v1alpha6.NnfNodeECDataStatus), b.(*NnfNodeECDataStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeECDataSpec)(nil), (*NnfNodeECDataSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(a.(*v1alpha5.NnfNodeECDataSpec), b.(*NnfNodeECDataSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeList)(nil), (*v1alpha6.NnfNodeList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeList_To_v1alpha6_NnfNodeList(a.(*NnfNodeList), b.(*v1alpha6.NnfNodeList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeECDataStatus)(nil), (*v1alpha5.NnfNodeECDataStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus(a.(*NnfNodeECDataStatus), b.(*v1alpha5.NnfNodeECDataStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeList)(nil), (*NnfNodeList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeList_To_v1alpha4_NnfNodeList(a.(*v1alpha6.NnfNodeList), b.(*NnfNodeList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeECDataStatus)(nil), (*NnfNodeECDataStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(a.(*v1alpha5.NnfNodeECDataStatus), b.(*NnfNodeECDataStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeSpec)(nil), (*v1alpha6.NnfNodeSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec(a.(*NnfNodeSpec), b.(*v1alpha6.NnfNodeSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeList)(nil), (*v1alpha5.NnfNodeList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeList_To_v1alpha5_NnfNodeList(a.(*NnfNodeList), b.(*v1alpha5.NnfNodeList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeSpec)(nil), (*NnfNodeSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(a.(*v1alpha6.NnfNodeSpec), b.(*NnfNodeSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeList)(nil), (*NnfNodeList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeList_To_v1alpha4_NnfNodeList(a.(*v1alpha5.NnfNodeList), b.(*NnfNodeList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStatus)(nil), (*v1alpha6.NnfNodeStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus(a.(*NnfNodeStatus), b.(*v1alpha6.NnfNodeStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeSpec)(nil), (*v1alpha5.NnfNodeSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec(a.(*NnfNodeSpec), b.(*v1alpha5.NnfNodeSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeStatus)(nil), (*NnfNodeStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(a.(*v1alpha6.NnfNodeStatus), b.(*NnfNodeStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeSpec)(nil), (*NnfNodeSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(a.(*v1alpha5.NnfNodeSpec), b.(*NnfNodeSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStorage)(nil), (*v1alpha6.NnfNodeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage(a.(*NnfNodeStorage), b.(*v1alpha6.NnfNodeStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStatus)(nil), (*v1alpha5.NnfNodeStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus(a.(*NnfNodeStatus), b.(*v1alpha5.NnfNodeStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeStorage)(nil), (*NnfNodeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(a.(*v1alpha6.NnfNodeStorage), b.(*NnfNodeStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeStatus)(nil), (*NnfNodeStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(a.(*v1alpha5.NnfNodeStatus), b.(*NnfNodeStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageAllocationStatus)(nil), (*v1alpha6.NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(a.(*NnfNodeStorageAllocationStatus), b.(*v1alpha6.NnfNodeStorageAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStorage)(nil), (*v1alpha5.NnfNodeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(a.(*NnfNodeStorage), b.(*v1alpha5.NnfNodeStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeStorageAllocationStatus)(nil), (*NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(a.(*v1alpha6.NnfNodeStorageAllocationStatus), b.(*NnfNodeStorageAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeStorage)(nil), (*NnfNodeStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(a.(*v1alpha5.NnfNodeStorage), b.(*NnfNodeStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageList)(nil), (*v1alpha6.NnfNodeStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStorageList_To_v1alpha6_NnfNodeStorageList(a.(*NnfNodeStorageList), b.(*v1alpha6.NnfNodeStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageAllocationStatus)(nil), (*v1alpha5.NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageAllocationStatus(a.(*NnfNodeStorageAllocationStatus), b.(*v1alpha5.NnfNodeStorageAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeStorageList)(nil), (*NnfNodeStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(a.(*v1alpha6.NnfNodeStorageList), b.(*NnfNodeStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeStorageAllocationStatus)(nil), (*NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(a.(*v1alpha5.NnfNodeStorageAllocationStatus), b.(*NnfNodeStorageAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageSpec)(nil), (*v1alpha6.NnfNodeStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(a.(*NnfNodeStorageSpec), b.(*v1alpha6.NnfNodeStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageList)(nil), (*v1alpha5.NnfNodeStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(a.(*NnfNodeStorageList), b.(*v1alpha5.NnfNodeStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageStatus)(nil), (*v1alpha6.NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(a.(*NnfNodeStorageStatus), b.(*v1alpha6.NnfNodeStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeStorageList)(nil), (*NnfNodeStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(a.(*v1alpha5.NnfNodeStorageList), b.(*NnfNodeStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfNodeStorageStatus)(nil), (*NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(a.(*v1alpha6.NnfNodeStorageStatus), b.(*NnfNodeStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageSpec)(nil), (*v1alpha5.NnfNodeStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(a.(*NnfNodeStorageSpec), b.(*v1alpha5.NnfNodeStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManager)(nil), (*v1alpha6.NnfPortManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManager_To_v1alpha6_NnfPortManager(a.(*NnfPortManager), b.(*v1alpha6.NnfPortManager), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageStatus)(nil), (*v1alpha5.NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(a.(*NnfNodeStorageStatus), b.(*v1alpha5.NnfNodeStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManager)(nil), (*NnfPortManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManager_To_v1alpha4_NnfPortManager(a.(*v1alpha6.NnfPortManager), b.(*NnfPortManager), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfNodeStorageStatus)(nil), (*NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(a.(*v1alpha5.NnfNodeStorageStatus), b.(*NnfNodeStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManagerAllocationSpec)(nil), (*v1alpha6.NnfPortManagerAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha6_NnfPortManagerAllocationSpec(a.(*NnfPortManagerAllocationSpec), b.(*v1alpha6.NnfPortManagerAllocationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManager)(nil), (*v1alpha5.NnfPortManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManager_To_v1alpha5_NnfPortManager(a.(*NnfPortManager), b.(*v1alpha5.NnfPortManager), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManagerAllocationSpec)(nil), (*NnfPortManagerAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(a.(*v1alpha6.NnfPortManagerAllocationSpec), b.(*NnfPortManagerAllocationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManager)(nil), (*NnfPortManager)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManager_To_v1alpha4_NnfPortManager(a.(*v1alpha5.NnfPortManager), b.(*NnfPortManager), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManagerAllocationStatus)(nil), (*v1alpha6.NnfPortManagerAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha6_NnfPortManagerAllocationStatus(a.(*NnfPortManagerAllocationStatus), b.(*v1alpha6.NnfPortManagerAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManagerAllocationSpec)(nil), (*v1alpha5.NnfPortManagerAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha5_NnfPortManagerAllocationSpec(a.(*NnfPortManagerAllocationSpec), b.(*v1alpha5.NnfPortManagerAllocationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManagerAllocationStatus)(nil), (*NnfPortManagerAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(a.(*v1alpha6.NnfPortManagerAllocationStatus), b.(*NnfPortManagerAllocationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManagerAllocationSpec)(nil), (*NnfPortManagerAllocationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(a.(*v1alpha5.NnfPortManagerAllocationSpec), b.(*NnfPortManagerAllocationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManagerList)(nil), (*v1alpha6.NnfPortManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManagerList_To_v1alpha6_NnfPortManagerList(a.(*NnfPortManagerList), b.(*v1alpha6.NnfPortManagerList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManagerAllocationStatus)(nil), (*v1alpha5.NnfPortManagerAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha5_NnfPortManagerAllocationStatus(a.(*NnfPortManagerAllocationStatus), b.(*v1alpha5.NnfPortManagerAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManagerList)(nil), (*NnfPortManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(a.(*v1alpha6.NnfPortManagerList), b.(*NnfPortManagerList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManagerAllocationStatus)(nil), (*NnfPortManagerAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(a.(*v1alpha5.NnfPortManagerAllocationStatus), b.(*NnfPortManagerAllocationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManagerSpec)(nil), (*v1alpha6.NnfPortManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec(a.(*NnfPortManagerSpec), b.(*v1alpha6.NnfPortManagerSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManagerList)(nil), (*v1alpha5.NnfPortManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManagerList_To_v1alpha5_NnfPortManagerList(a.(*NnfPortManagerList), b.(*v1alpha5.NnfPortManagerList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManagerSpec)(nil), (*NnfPortManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(a.(*v1alpha6.NnfPortManagerSpec), b.(*NnfPortManagerSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManagerList)(nil), (*NnfPortManagerList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(a.(*v1alpha5.NnfPortManagerList), b.(*NnfPortManagerList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfPortManagerStatus)(nil), (*v1alpha6.NnfPortManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus(a.(*NnfPortManagerStatus), b.(*v1alpha6.NnfPortManagerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManagerSpec)(nil), (*v1alpha5.NnfPortManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec(a.(*NnfPortManagerSpec), b.(*v1alpha5.NnfPortManagerSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfPortManagerStatus)(nil), (*NnfPortManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(a.(*v1alpha6.NnfPortManagerStatus), b.(*NnfPortManagerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManagerSpec)(nil), (*NnfPortManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(a.(*v1alpha5.NnfPortManagerSpec), b.(*NnfPortManagerSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfResourceStatus)(nil), (*v1alpha6.NnfResourceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(a.(*NnfResourceStatus), b.(*v1alpha6.NnfResourceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfPortManagerStatus)(nil), (*v1alpha5.NnfPortManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus(a.(*NnfPortManagerStatus), b.(*v1alpha5.NnfPortManagerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfResourceStatus)(nil), (*NnfResourceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(a.(*v1alpha6.NnfResourceStatus), b.(*NnfResourceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfPortManagerStatus)(nil), (*NnfPortManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(a.(*v1alpha5.NnfPortManagerStatus), b.(*NnfPortManagerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfServerStatus)(nil), (*v1alpha6.NnfServerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfServerStatus_To_v1alpha6_NnfServerStatus(a.(*NnfServerStatus), b.(*v1alpha6.NnfServerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfResourceStatus)(nil), (*v1alpha5.NnfResourceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(a.(*NnfResourceStatus), b.(*v1alpha5.NnfResourceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfServerStatus)(nil), (*NnfServerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfServerStatus_To_v1alpha4_NnfServerStatus(a.(*v1alpha6.NnfServerStatus), b.(*NnfServerStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfResourceStatus)(nil), (*NnfResourceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(a.(*v1alpha5.NnfResourceStatus), b.(*NnfResourceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorage)(nil), (*v1alpha6.NnfStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage(a.(*NnfStorage), b.(*v1alpha6.NnfStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfServerStatus)(nil), (*v1alpha5.NnfServerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfServerStatus_To_v1alpha5_NnfServerStatus(a.(*NnfServerStatus), b.(*v1alpha5.NnfServerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorage)(nil), (*NnfStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage(a.(*v1alpha6.NnfStorage), b.(*NnfStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfServerStatus)(nil), (*NnfServerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfServerStatus_To_v1alpha4_NnfServerStatus(a.(*v1alpha5.NnfServerStatus), b.(*NnfServerStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationNodes)(nil), (*v1alpha6.NnfStorageAllocationNodes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha6_NnfStorageAllocationNodes(a.(*NnfStorageAllocationNodes), b.(*v1alpha6.NnfStorageAllocationNodes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorage)(nil), (*v1alpha5.NnfStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage(a.(*NnfStorage), b.(*v1alpha5.NnfStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageAllocationNodes)(nil), (*NnfStorageAllocationNodes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(a.(*v1alpha6.NnfStorageAllocationNodes), b.(*NnfStorageAllocationNodes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorage)(nil), (*NnfStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage(a.(*v1alpha5.NnfStorage), b.(*NnfStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationSetSpec)(nil), (*v1alpha6.NnfStorageAllocationSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec(a.(*NnfStorageAllocationSetSpec), b.(*v1alpha6.NnfStorageAllocationSetSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationNodes)(nil), (*v1alpha5.NnfStorageAllocationNodes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha5_NnfStorageAllocationNodes(a.(*NnfStorageAllocationNodes), b.(*v1alpha5.NnfStorageAllocationNodes), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationSetStatus)(nil), (*v1alpha6.NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(a.(*NnfStorageAllocationSetStatus), b.(*v1alpha6.NnfStorageAllocationSetStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageAllocationNodes)(nil), (*NnfStorageAllocationNodes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(a.(*v1alpha5.NnfStorageAllocationNodes), b.(*NnfStorageAllocationNodes), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageAllocationSetStatus)(nil), (*NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(a.(*v1alpha6.NnfStorageAllocationSetStatus), b.(*NnfStorageAllocationSetStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationSetSpec)(nil), (*v1alpha5.NnfStorageAllocationSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec(a.(*NnfStorageAllocationSetSpec), b.(*v1alpha5.NnfStorageAllocationSetSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageList)(nil), (*v1alpha6.NnfStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageList_To_v1alpha6_NnfStorageList(a.(*NnfStorageList), b.(*v1alpha6.NnfStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationSetStatus)(nil), (*v1alpha5.NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAllocationSetStatus(a.(*NnfStorageAllocationSetStatus), b.(*v1alpha5.NnfStorageAllocationSetStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageList)(nil), (*NnfStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageList_To_v1alpha4_NnfStorageList(a.(*v1alpha6.NnfStorageList), b.(*NnfStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageAllocationSetStatus)(nil), (*NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(a.(*v1alpha5.NnfStorageAllocationSetStatus), b.(*NnfStorageAllocationSetStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreComponents)(nil), (*v1alpha6.NnfStorageLustreComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(a.(*NnfStorageLustreComponents), b.(*v1alpha6.NnfStorageLustreComponents), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageList)(nil), (*v1alpha5.NnfStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList(a.(*NnfStorageList), b.(*v1alpha5.NnfStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageLustreComponents)(nil), (*NnfStorageLustreComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(a.(*v1alpha6.NnfStorageLustreComponents), b.(*NnfStorageLustreComponents), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageList)(nil), (*NnfStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList(a.(*v1alpha5.NnfStorageList), b.(*NnfStorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreSpec)(nil), (*v1alpha6.NnfStorageLustreSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec(a.(*NnfStorageLustreSpec), b.(*v1alpha6.NnfStorageLustreSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreComponents)(nil), (*v1alpha5.NnfStorageLustreComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(a.(*NnfStorageLustreComponents), b.(*v1alpha5.NnfStorageLustreComponents), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageLustreSpec)(nil), (*NnfStorageLustreSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(a.(*v1alpha6.NnfStorageLustreSpec), b.(*NnfStorageLustreSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageLustreComponents)(nil), (*NnfStorageLustreComponents)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(a.(*v1alpha5.NnfStorageLustreComponents), b.(*NnfStorageLustreComponents), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreStatus)(nil), (*v1alpha6.NnfStorageLustreStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(a.(*NnfStorageLustreStatus), b.(*v1alpha6.NnfStorageLustreStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreSpec)(nil), (*v1alpha5.NnfStorageLustreSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(a.(*NnfStorageLustreSpec), b.(*v1alpha5.NnfStorageLustreSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageLustreStatus)(nil), (*NnfStorageLustreStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(a.(*v1alpha6.NnfStorageLustreStatus), b.(*NnfStorageLustreStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageLustreSpec)(nil), (*NnfStorageLustreSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(a.(*v1alpha5.NnfStorageLustreSpec), b.(*NnfStorageLustreSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfile)(nil), (*v1alpha6.NnfStorageProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile(a.(*NnfStorageProfile), b.(*v1alpha6.NnfStorageProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageLustreStatus)(nil), (*v1alpha5.NnfStorageLustreStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus(a.(*NnfStorageLustreStatus), b.(*v1alpha5.NnfStorageLustreStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfile)(nil), (*NnfStorageProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(a.(*v1alpha6.NnfStorageProfile), b.(*NnfStorageProfile), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageLustreStatus)(nil), (*NnfStorageLustreStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(a.(*v1alpha5.NnfStorageLustreStatus), b.(*NnfStorageLustreStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileCmdLines)(nil), (*v1alpha6.NnfStorageProfileCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(a.(*NnfStorageProfileCmdLines), b.(*v1alpha6.NnfStorageProfileCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfile)(nil), (*v1alpha5.NnfStorageProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(a.(*NnfStorageProfile), b.(*v1alpha5.NnfStorageProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileCmdLines)(nil), (*NnfStorageProfileCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(a.(*v1alpha6.NnfStorageProfileCmdLines), b.(*NnfStorageProfileCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfile)(nil), (*NnfStorageProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(a.(*v1alpha5.NnfStorageProfile), b.(*NnfStorageProfile), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileData)(nil), (*v1alpha6.NnfStorageProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData(a.(*NnfStorageProfileData), b.(*v1alpha6.NnfStorageProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileCmdLines)(nil), (*v1alpha5.NnfStorageProfileCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(a.(*NnfStorageProfileCmdLines), b.(*v1alpha5.NnfStorageProfileCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileData)(nil), (*NnfStorageProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(a.(*v1alpha6.NnfStorageProfileData), b.(*NnfStorageProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileCmdLines)(nil), (*NnfStorageProfileCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(a.(*v1alpha5.NnfStorageProfileCmdLines), b.(*NnfStorageProfileCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileGFS2Data)(nil), (*v1alpha6.NnfStorageProfileGFS2Data)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data(a.(*NnfStorageProfileGFS2Data), b.(*v1alpha6.NnfStorageProfileGFS2Data), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileData)(nil), (*v1alpha5.NnfStorageProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData(a.(*NnfStorageProfileData), b.(*v1alpha5.NnfStorageProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileGFS2Data)(nil), (*NnfStorageProfileGFS2Data)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(a.(*v1alpha6.NnfStorageProfileGFS2Data), b.(*NnfStorageProfileGFS2Data), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileData)(nil), (*NnfStorageProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(a.(*v1alpha5.NnfStorageProfileData), b.(*NnfStorageProfileData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLVMLvChangeCmdLines)(nil), (*v1alpha6.NnfStorageProfileLVMLvChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines(a.(*NnfStorageProfileLVMLvChangeCmdLines), b.(*v1alpha6.NnfStorageProfileLVMLvChangeCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileGFS2Data)(nil), (*v1alpha5.NnfStorageProfileGFS2Data)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data(a.(*NnfStorageProfileGFS2Data), b.(*v1alpha5.NnfStorageProfileGFS2Data), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileLVMLvChangeCmdLines)(nil), (*NnfStorageProfileLVMLvChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(a.(*v1alpha6.NnfStorageProfileLVMLvChangeCmdLines), b.(*NnfStorageProfileLVMLvChangeCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileGFS2Data)(nil), (*NnfStorageProfileGFS2Data)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(a.(*v1alpha5.NnfStorageProfileGFS2Data), b.(*NnfStorageProfileGFS2Data), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLVMVgChangeCmdLines)(nil), (*v1alpha6.NnfStorageProfileLVMVgChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines(a.(*NnfStorageProfileLVMVgChangeCmdLines), b.(*v1alpha6.NnfStorageProfileLVMVgChangeCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLVMLvChangeCmdLines)(nil), (*v1alpha5.NnfStorageProfileLVMLvChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines(a.(*NnfStorageProfileLVMLvChangeCmdLines), b.(*v1alpha5.NnfStorageProfileLVMLvChangeCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileLVMVgChangeCmdLines)(nil), (*NnfStorageProfileLVMVgChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(a.(*v1alpha6.NnfStorageProfileLVMVgChangeCmdLines), b.(*NnfStorageProfileLVMVgChangeCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileLVMLvChangeCmdLines)(nil), (*NnfStorageProfileLVMLvChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(a.(*v1alpha5.NnfStorageProfileLVMLvChangeCmdLines), b.(*NnfStorageProfileLVMLvChangeCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileList)(nil), (*v1alpha6.NnfStorageProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileList_To_v1alpha6_NnfStorageProfileList(a.(*NnfStorageProfileList), b.(*v1alpha6.NnfStorageProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLVMVgChangeCmdLines)(nil), (*v1alpha5.NnfStorageProfileLVMVgChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines(a.(*NnfStorageProfileLVMVgChangeCmdLines), b.(*v1alpha5.NnfStorageProfileLVMVgChangeCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileList)(nil), (*NnfStorageProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(a.(*v1alpha6.NnfStorageProfileList), b.(*NnfStorageProfileList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileLVMVgChangeCmdLines)(nil), (*NnfStorageProfileLVMVgChangeCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(a.(*v1alpha5.NnfStorageProfileLVMVgChangeCmdLines), b.(*NnfStorageProfileLVMVgChangeCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileLustreCmdLines)(nil), (*NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(a.(*v1alpha6.NnfStorageProfileLustreCmdLines), b.(*NnfStorageProfileLustreCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileList)(nil), (*v1alpha5.NnfStorageProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileList_To_v1alpha5_NnfStorageProfileList(a.(*NnfStorageProfileList), b.(*v1alpha5.NnfStorageProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha6.NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha6.NnfStorageProfileLustreMiscOptions), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileList)(nil), (*NnfStorageProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(a.(*v1alpha5.NnfStorageProfileList), b.(*NnfStorageProfileList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileLustreMiscOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(a.(*v1alpha6.NnfStorageProfileLustreMiscOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreCmdLines)(nil), (*v1alpha5.NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(a.(*NnfStorageProfileLustreCmdLines), b.(*v1alpha5.NnfStorageProfileLustreCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileRawData)(nil), (*v1alpha6.NnfStorageProfileRawData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData(a.(*NnfStorageProfileRawData), b.(*v1alpha6.NnfStorageProfileRawData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileLustreCmdLines)(nil), (*NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(a.(*v1alpha5.NnfStorageProfileLustreCmdLines), b.(*NnfStorageProfileLustreCmdLines), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileRawData)(nil), (*NnfStorageProfileRawData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(a.(*v1alpha6.NnfStorageProfileRawData), b.(*NnfStorageProfileRawData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreData)(nil), (*v1alpha5.NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(a.(*NnfStorageProfileLustreData), b.(*v1alpha5.NnfStorageProfileLustreData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileXFSData)(nil), (*v1alpha6.NnfStorageProfileXFSData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData(a.(*NnfStorageProfileXFSData), b.(*v1alpha6.NnfStorageProfileXFSData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileLustreData)(nil), (*NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(a.(*v1alpha5.NnfStorageProfileLustreData), b.(*NnfStorageProfileLustreData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageProfileXFSData)(nil), (*NnfStorageProfileXFSData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(a.(*v1alpha6.NnfStorageProfileXFSData), b.(*NnfStorageProfileXFSData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha5.NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha5.NnfStorageProfileLustreMiscOptions), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageSpec)(nil), (*v1alpha6.NnfStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec(a.(*NnfStorageSpec), b.(*v1alpha6.NnfStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileLustreMiscOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(a.(*v1alpha5.NnfStorageProfileLustreMiscOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageSpec)(nil), (*NnfStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(a.(*v1alpha6.NnfStorageSpec), b.(*NnfStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileRawData)(nil), (*v1alpha5.NnfStorageProfileRawData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData(a.(*NnfStorageProfileRawData), b.(*v1alpha5.NnfStorageProfileRawData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfStorageStatus)(nil), (*v1alpha6.NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(a.(*NnfStorageStatus), b.(*v1alpha6.NnfStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileRawData)(nil), (*NnfStorageProfileRawData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(a.(*v1alpha5.NnfStorageProfileRawData), b.(*NnfStorageProfileRawData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfStorageStatus)(nil), (*NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(a.(*v1alpha6.NnfStorageStatus), b.(*NnfStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileXFSData)(nil), (*v1alpha5.NnfStorageProfileXFSData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData(a.(*NnfStorageProfileXFSData), b.(*v1alpha5.NnfStorageProfileXFSData), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfSystemStorage)(nil), (*v1alpha6.NnfSystemStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage(a.(*NnfSystemStorage), b.(*v1alpha6.NnfSystemStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageProfileXFSData)(nil), (*NnfStorageProfileXFSData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(a.(*v1alpha5.NnfStorageProfileXFSData), b.(*NnfStorageProfileXFSData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfSystemStorage)(nil), (*NnfSystemStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(a.(*v1alpha6.NnfSystemStorage), b.(*NnfSystemStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageSpec)(nil), (*v1alpha5.NnfStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(a.(*NnfStorageSpec), b.(*v1alpha5.NnfStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageList)(nil), (*v1alpha6.NnfSystemStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfSystemStorageList_To_v1alpha6_NnfSystemStorageList(a.(*NnfSystemStorageList), b.(*v1alpha6.NnfSystemStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageSpec)(nil), (*NnfStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(a.(*v1alpha5.NnfStorageSpec), b.(*NnfStorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfSystemStorageList)(nil), (*NnfSystemStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(a.(*v1alpha6.NnfSystemStorageList), b.(*NnfSystemStorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageStatus)(nil), (*v1alpha5.NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(a.(*NnfStorageStatus), b.(*v1alpha5.NnfStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageSpec)(nil), (*v1alpha6.NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec(a.(*NnfSystemStorageSpec), b.(*v1alpha6.NnfSystemStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfStorageStatus)(nil), (*NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(a.(*v1alpha5.NnfStorageStatus), b.(*NnfStorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfSystemStorageSpec)(nil), (*NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(a.(*v1alpha6.NnfSystemStorageSpec), b.(*NnfSystemStorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfSystemStorage)(nil), (*v1alpha5.NnfSystemStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(a.(*NnfSystemStorage), b.(*v1alpha5.NnfSystemStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageStatus)(nil), (*v1alpha6.NnfSystemStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(a.(*NnfSystemStorageStatus), b.(*v1alpha6.NnfSystemStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfSystemStorage)(nil), (*NnfSystemStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(a.(*v1alpha5.NnfSystemStorage), b.(*NnfSystemStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha6.NnfSystemStorageStatus)(nil), (*NnfSystemStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(a.(*v1alpha6.NnfSystemStorageStatus), b.(*NnfSystemStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageList)(nil), (*v1alpha5.NnfSystemStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList(a.(*NnfSystemStorageList), b.(*v1alpha5.NnfSystemStorageList), scope)
+	if err := s.AddConversionFunc((*v1alpha2.ResourceErrorInfo)(nil), (*v1alpha3.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(a.(*v1alpha2.ResourceErrorInfo), b.(*v1alpha3.ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfSystemStorageList)(nil), (*NnfSystemStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(a.(*v1alpha5.NnfSystemStorageList), b.(*NnfSystemStorageList), scope)
+	if err := s.AddConversionFunc((*v1alpha2.ResourceError)(nil), (*v1alpha3.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(a.(*v1alpha2.ResourceError), b.(*v1alpha3.ResourceError), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageSpec)(nil), (*v1alpha5.NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(a.(*NnfSystemStorageSpec), b.(*v1alpha5.NnfSystemStorageSpec), scope)
+	if err := s.AddConversionFunc((*v1alpha3.ResourceErrorInfo)(nil), (*v1alpha2.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(a.(*v1alpha3.ResourceErrorInfo), b.(*v1alpha2.ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfSystemStorageSpec)(nil), (*NnfSystemStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(a.(*v1alpha5.NnfSystemStorageSpec), b.(*NnfSystemStorageSpec), scope)
+	if err := s.AddConversionFunc((*v1alpha3.ResourceError)(nil), (*v1alpha2.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(a.(*v1alpha3.ResourceError), b.(*v1alpha2.ResourceError), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfSystemStorageStatus)(nil), (*v1alpha5.NnfSystemStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(a.(*NnfSystemStorageStatus), b.(*v1alpha5.NnfSystemStorageStatus), scope)
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreCmdLines)(nil), (*v1alpha6.NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(a.(*NnfStorageProfileLustreCmdLines), b.(*v1alpha6.NnfStorageProfileLustreCmdLines), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.NnfSystemStorageStatus)(nil), (*NnfSystemStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(a.(*v1alpha5.NnfSystemStorageStatus), b.(*NnfSystemStorageStatus), scope)
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreData)(nil), (*v1alpha6.NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha6_NnfStorageProfileLustreData(a.(*NnfStorageProfileLustreData), b.(*v1alpha6.NnfStorageProfileLustreData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha5.NnfNodeStorageSpec)(nil), (*NnfNodeStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(a.(*v1alpha5.NnfNodeStorageSpec), b.(*NnfNodeStorageSpec), scope)
+	if err := s.AddConversionFunc((*v1alpha6.NnfDataMovementProfileData)(nil), (*NnfDataMovementProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(a.(*v1alpha6.NnfDataMovementProfileData), b.(*NnfDataMovementProfileData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha5.NnfStorageAllocationSetSpec)(nil), (*NnfStorageAllocationSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(a.(*v1alpha5.NnfStorageAllocationSetSpec), b.(*NnfStorageAllocationSetSpec), scope)
+	if err := s.AddConversionFunc((*v1alpha6.NnfLustreMGTSpec)(nil), (*NnfLustreMGTSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(a.(*v1alpha6.NnfLustreMGTSpec), b.(*NnfLustreMGTSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha6.NnfLustreMGTStatus)(nil), (*NnfLustreMGTStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(a.(*v1alpha6.NnfLustreMGTStatus), b.(*NnfLustreMGTStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha6.NnfNodeStorageSpec)(nil), (*NnfNodeStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(a.(*v1alpha6.NnfNodeStorageSpec), b.(*NnfNodeStorageSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha6.NnfStorageAllocationSetSpec)(nil), (*NnfStorageAllocationSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(a.(*v1alpha6.NnfStorageAllocationSetSpec), b.(*NnfStorageAllocationSetSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha6.NnfStorageProfileLustreData)(nil), (*NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha6_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(a.(*v1alpha6.NnfStorageProfileLustreData), b.(*NnfStorageProfileLustreData), scope)
 	}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec(in *LustreStorageSpec, out *v1alpha5.LustreStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec(in *LustreStorageSpec, out *v1alpha6.LustreStorageSpec, s conversion.Scope) error {
 	out.FileSystemName = in.FileSystemName
 	out.TargetType = in.TargetType
 	out.StartIndex = in.StartIndex
 	out.MgsAddress = in.MgsAddress
 	out.BackFs = in.BackFs
-	if err := Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec(in *LustreStorageSpec, out *v1alpha5.LustreStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec(in, out, s)
+// Convert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec(in *LustreStorageSpec, out *v1alpha6.LustreStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in *v1alpha5.LustreStorageSpec, out *LustreStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in *v1alpha6.LustreStorageSpec, out *LustreStorageSpec, s conversion.Scope) error {
 	out.FileSystemName = in.FileSystemName
 	out.TargetType = in.TargetType
 	out.StartIndex = in.StartIndex
 	out.MgsAddress = in.MgsAddress
 	out.BackFs = in.BackFs
-	if err := Convert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in *v1alpha5.LustreStorageSpec, out *LustreStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in, out, s)
+// Convert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in *v1alpha6.LustreStorageSpec, out *LustreStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfAccess_To_v1alpha5_NnfAccess(in *NnfAccess, out *v1alpha5.NnfAccess, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess(in *NnfAccess, out *v1alpha6.NnfAccess, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfAccess_To_v1alpha5_NnfAccess is an autogenerated conversion function.
-func Convert_v1alpha4_NnfAccess_To_v1alpha5_NnfAccess(in *NnfAccess, out *v1alpha5.NnfAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfAccess_To_v1alpha5_NnfAccess(in, out, s)
+// Convert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess is an autogenerated conversion function.
+func Convert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess(in *NnfAccess, out *v1alpha6.NnfAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfAccess_To_v1alpha4_NnfAccess(in *v1alpha5.NnfAccess, out *NnfAccess, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess(in *v1alpha6.NnfAccess, out *NnfAccess, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfAccess_To_v1alpha4_NnfAccess is an autogenerated conversion function.
-func Convert_v1alpha5_NnfAccess_To_v1alpha4_NnfAccess(in *v1alpha5.NnfAccess, out *NnfAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfAccess_To_v1alpha4_NnfAccess(in, out, s)
+// Convert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess is an autogenerated conversion function.
+func Convert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess(in *v1alpha6.NnfAccess, out *NnfAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfAccessList_To_v1alpha5_NnfAccessList(in *NnfAccessList, out *v1alpha5.NnfAccessList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfAccessList_To_v1alpha6_NnfAccessList(in *NnfAccessList, out *v1alpha6.NnfAccessList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfAccess)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfAccess, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfAccess_To_v1alpha6_NnfAccess(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfAccessList_To_v1alpha5_NnfAccessList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfAccessList_To_v1alpha5_NnfAccessList(in *NnfAccessList, out *v1alpha5.NnfAccessList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfAccessList_To_v1alpha5_NnfAccessList(in, out, s)
+// Convert_v1alpha4_NnfAccessList_To_v1alpha6_NnfAccessList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfAccessList_To_v1alpha6_NnfAccessList(in *NnfAccessList, out *v1alpha6.NnfAccessList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfAccessList_To_v1alpha6_NnfAccessList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfAccessList_To_v1alpha4_NnfAccessList(in *v1alpha5.NnfAccessList, out *NnfAccessList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfAccessList_To_v1alpha4_NnfAccessList(in *v1alpha6.NnfAccessList, out *NnfAccessList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfAccess)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfAccess, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfAccess_To_v1alpha4_NnfAccess(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfAccessList_To_v1alpha4_NnfAccessList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfAccessList_To_v1alpha4_NnfAccessList(in *v1alpha5.NnfAccessList, out *NnfAccessList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfAccessList_To_v1alpha4_NnfAccessList(in, out, s)
+// Convert_v1alpha6_NnfAccessList_To_v1alpha4_NnfAccessList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfAccessList_To_v1alpha4_NnfAccessList(in *v1alpha6.NnfAccessList, out *NnfAccessList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfAccessList_To_v1alpha4_NnfAccessList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha5.NnfAccessSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha6.NnfAccessSpec, s conversion.Scope) error {
+	out.DesiredState = in.DesiredState
+	out.TeardownState = v1alpha3.WorkflowState(in.TeardownState)
+	out.Target = in.Target
+	out.UserID = in.UserID
+	out.GroupID = in.GroupID
+	out.ClientReference = in.ClientReference
+	out.MountPath = in.MountPath
+	out.MakeClientMounts = in.MakeClientMounts
+	out.MountPathPrefix = in.MountPathPrefix
+	out.StorageReference = in.StorageReference
+	out.IgnoreOfflineComputes = in.IgnoreOfflineComputes
+	return nil
+}
+
+// Convert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha6.NnfAccessSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfAccessSpec_To_v1alpha6_NnfAccessSpec(in, out, s)
+}
+
+func autoConvert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in *v1alpha6.NnfAccessSpec, out *NnfAccessSpec, s conversion.Scope) error {
 	out.DesiredState = in.DesiredState
 	out.TeardownState = v1alpha2.WorkflowState(in.TeardownState)
 	out.Target = in.Target
@@ -989,84 +1050,68 @@ func autoConvert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in *NnfAccessS
 	return nil
 }
 
-// Convert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha5.NnfAccessSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in, out, s)
+// Convert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in *v1alpha6.NnfAccessSpec, out *NnfAccessSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in *v1alpha5.NnfAccessSpec, out *NnfAccessSpec, s conversion.Scope) error {
-	out.DesiredState = in.DesiredState
-	out.TeardownState = v1alpha2.WorkflowState(in.TeardownState)
-	out.Target = in.Target
-	out.UserID = in.UserID
-	out.GroupID = in.GroupID
-	out.ClientReference = in.ClientReference
-	out.MountPath = in.MountPath
-	out.MakeClientMounts = in.MakeClientMounts
-	out.MountPathPrefix = in.MountPathPrefix
-	out.StorageReference = in.StorageReference
-	out.IgnoreOfflineComputes = in.IgnoreOfflineComputes
-	return nil
-}
-
-// Convert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in *v1alpha5.NnfAccessSpec, out *NnfAccessSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfAccessSpec_To_v1alpha4_NnfAccessSpec(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha5.NnfAccessStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha6.NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
-	return nil
-}
-
-// Convert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha5.NnfAccessStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(in, out, s)
-}
-
-func autoConvert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in *v1alpha5.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
-	out.State = in.State
-	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
-	return nil
-}
-
-// Convert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in *v1alpha5.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(in *NnfContainerProfile, out *v1alpha5.NnfContainerProfile, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(&in.Data, &out.Data, s); err != nil {
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfContainerProfile_To_v1alpha5_NnfContainerProfile is an autogenerated conversion function.
-func Convert_v1alpha4_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(in *NnfContainerProfile, out *v1alpha5.NnfContainerProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(in, out, s)
+// Convert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha6.NnfAccessStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfAccessStatus_To_v1alpha6_NnfAccessStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in *v1alpha5.NnfContainerProfile, out *NnfContainerProfile, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(&in.Data, &out.Data, s); err != nil {
+func autoConvert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in *v1alpha6.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
+	out.State = in.State
+	out.Ready = in.Ready
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfContainerProfile_To_v1alpha4_NnfContainerProfile is an autogenerated conversion function.
-func Convert_v1alpha5_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in *v1alpha5.NnfContainerProfile, out *NnfContainerProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in, out, s)
+// Convert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in *v1alpha6.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfAccessStatus_To_v1alpha4_NnfAccessStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha5.NnfContainerProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(in *NnfContainerProfile, out *v1alpha6.NnfContainerProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(&in.Data, &out.Data, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha4_NnfContainerProfile_To_v1alpha6_NnfContainerProfile is an autogenerated conversion function.
+func Convert_v1alpha4_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(in *NnfContainerProfile, out *v1alpha6.NnfContainerProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(in, out, s)
+}
+
+func autoConvert_v1alpha6_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in *v1alpha6.NnfContainerProfile, out *NnfContainerProfile, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(&in.Data, &out.Data, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha6_NnfContainerProfile_To_v1alpha4_NnfContainerProfile is an autogenerated conversion function.
+func Convert_v1alpha6_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in *v1alpha6.NnfContainerProfile, out *NnfContainerProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(in, out, s)
+}
+
+func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha6.NnfContainerProfileData, s conversion.Scope) error {
 	out.Pinned = in.Pinned
-	out.Storages = *(*[]v1alpha5.NnfContainerProfileStorage)(unsafe.Pointer(&in.Storages))
+	out.Storages = *(*[]v1alpha6.NnfContainerProfileStorage)(unsafe.Pointer(&in.Storages))
 	out.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PreRunTimeoutSeconds))
 	out.PostRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PostRunTimeoutSeconds))
 	out.RetryLimit = in.RetryLimit
@@ -1078,12 +1123,12 @@ func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfil
 	return nil
 }
 
-// Convert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha5.NnfContainerProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
+// Convert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha6.NnfContainerProfileData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha5.NnfContainerProfileData, out *NnfContainerProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha6.NnfContainerProfileData, out *NnfContainerProfileData, s conversion.Scope) error {
 	out.Pinned = in.Pinned
 	out.Storages = *(*[]NnfContainerProfileStorage)(unsafe.Pointer(&in.Storages))
 	out.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PreRunTimeoutSeconds))
@@ -1097,90 +1142,90 @@ func autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfil
 	return nil
 }
 
-// Convert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha5.NnfContainerProfileData, out *NnfContainerProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
+// Convert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData is an autogenerated conversion function.
+func Convert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha6.NnfContainerProfileData, out *NnfContainerProfileData, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfContainerProfileList_To_v1alpha5_NnfContainerProfileList(in *NnfContainerProfileList, out *v1alpha5.NnfContainerProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList(in *NnfContainerProfileList, out *v1alpha6.NnfContainerProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfContainerProfile)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha6.NnfContainerProfile)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha4_NnfContainerProfileList_To_v1alpha5_NnfContainerProfileList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfContainerProfileList_To_v1alpha5_NnfContainerProfileList(in *NnfContainerProfileList, out *v1alpha5.NnfContainerProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfContainerProfileList_To_v1alpha5_NnfContainerProfileList(in, out, s)
+// Convert_v1alpha4_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList(in *NnfContainerProfileList, out *v1alpha6.NnfContainerProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in *v1alpha5.NnfContainerProfileList, out *NnfContainerProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in *v1alpha6.NnfContainerProfileList, out *NnfContainerProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]NnfContainerProfile)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha5_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in *v1alpha5.NnfContainerProfileList, out *NnfContainerProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in, out, s)
+// Convert_v1alpha6_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in *v1alpha6.NnfContainerProfileList, out *NnfContainerProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfileList_To_v1alpha4_NnfContainerProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfContainerProfileStorage_To_v1alpha5_NnfContainerProfileStorage(in *NnfContainerProfileStorage, out *v1alpha5.NnfContainerProfileStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfContainerProfileStorage_To_v1alpha6_NnfContainerProfileStorage(in *NnfContainerProfileStorage, out *v1alpha6.NnfContainerProfileStorage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Optional = in.Optional
 	out.PVCMode = v1.PersistentVolumeAccessMode(in.PVCMode)
 	return nil
 }
 
-// Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha5_NnfContainerProfileStorage is an autogenerated conversion function.
-func Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha5_NnfContainerProfileStorage(in *NnfContainerProfileStorage, out *v1alpha5.NnfContainerProfileStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfContainerProfileStorage_To_v1alpha5_NnfContainerProfileStorage(in, out, s)
+// Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha6_NnfContainerProfileStorage is an autogenerated conversion function.
+func Convert_v1alpha4_NnfContainerProfileStorage_To_v1alpha6_NnfContainerProfileStorage(in *NnfContainerProfileStorage, out *v1alpha6.NnfContainerProfileStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfileStorage_To_v1alpha6_NnfContainerProfileStorage(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in *v1alpha5.NnfContainerProfileStorage, out *NnfContainerProfileStorage, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in *v1alpha6.NnfContainerProfileStorage, out *NnfContainerProfileStorage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Optional = in.Optional
 	out.PVCMode = v1.PersistentVolumeAccessMode(in.PVCMode)
 	return nil
 }
 
-// Convert_v1alpha5_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage is an autogenerated conversion function.
-func Convert_v1alpha5_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in *v1alpha5.NnfContainerProfileStorage, out *NnfContainerProfileStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in, out, s)
+// Convert_v1alpha6_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage is an autogenerated conversion function.
+func Convert_v1alpha6_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in *v1alpha6.NnfContainerProfileStorage, out *NnfContainerProfileStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfileStorage_To_v1alpha4_NnfContainerProfileStorage(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovement_To_v1alpha5_NnfDataMovement(in *NnfDataMovement, out *v1alpha5.NnfDataMovement, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement(in *NnfDataMovement, out *v1alpha6.NnfDataMovement, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovement_To_v1alpha5_NnfDataMovement is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovement_To_v1alpha5_NnfDataMovement(in *NnfDataMovement, out *v1alpha5.NnfDataMovement, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovement_To_v1alpha5_NnfDataMovement(in, out, s)
+// Convert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement(in *NnfDataMovement, out *v1alpha6.NnfDataMovement, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovement_To_v1alpha4_NnfDataMovement(in *v1alpha5.NnfDataMovement, out *NnfDataMovement, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement(in *v1alpha6.NnfDataMovement, out *NnfDataMovement, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovement_To_v1alpha4_NnfDataMovement is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovement_To_v1alpha4_NnfDataMovement(in *v1alpha5.NnfDataMovement, out *NnfDataMovement, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovement_To_v1alpha4_NnfDataMovement(in, out, s)
+// Convert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement(in *v1alpha6.NnfDataMovement, out *NnfDataMovement, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMovementCommandStatus(in *NnfDataMovementCommandStatus, out *v1alpha5.NnfDataMovementCommandStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha6_NnfDataMovementCommandStatus(in *NnfDataMovementCommandStatus, out *v1alpha6.NnfDataMovementCommandStatus, s conversion.Scope) error {
 	out.Command = in.Command
 	out.ElapsedTime = in.ElapsedTime
 	out.ProgressPercentage = (*int32)(unsafe.Pointer(in.ProgressPercentage))
@@ -1196,12 +1241,12 @@ func autoConvert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMoveme
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMovementCommandStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMovementCommandStatus(in *NnfDataMovementCommandStatus, out *v1alpha5.NnfDataMovementCommandStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha5_NnfDataMovementCommandStatus(in, out, s)
+// Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha6_NnfDataMovementCommandStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha6_NnfDataMovementCommandStatus(in *NnfDataMovementCommandStatus, out *v1alpha6.NnfDataMovementCommandStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementCommandStatus_To_v1alpha6_NnfDataMovementCommandStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in *v1alpha5.NnfDataMovementCommandStatus, out *NnfDataMovementCommandStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in *v1alpha6.NnfDataMovementCommandStatus, out *NnfDataMovementCommandStatus, s conversion.Scope) error {
 	out.Command = in.Command
 	out.ElapsedTime = in.ElapsedTime
 	out.ProgressPercentage = (*int32)(unsafe.Pointer(in.ProgressPercentage))
@@ -1217,12 +1262,12 @@ func autoConvert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMoveme
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in *v1alpha5.NnfDataMovementCommandStatus, out *NnfDataMovementCommandStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in, out, s)
+// Convert_v1alpha6_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in *v1alpha6.NnfDataMovementCommandStatus, out *NnfDataMovementCommandStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementCommandStatus_To_v1alpha4_NnfDataMovementCommandStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig(in *NnfDataMovementConfig, out *v1alpha5.NnfDataMovementConfig, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementConfig_To_v1alpha6_NnfDataMovementConfig(in *NnfDataMovementConfig, out *v1alpha6.NnfDataMovementConfig, s conversion.Scope) error {
 	out.Dryrun = in.Dryrun
 	out.MpirunOptions = in.MpirunOptions
 	out.DcpOptions = in.DcpOptions
@@ -1233,12 +1278,12 @@ func autoConvert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfi
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig(in *NnfDataMovementConfig, out *v1alpha5.NnfDataMovementConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig(in, out, s)
+// Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha6_NnfDataMovementConfig is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementConfig_To_v1alpha6_NnfDataMovementConfig(in *NnfDataMovementConfig, out *v1alpha6.NnfDataMovementConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementConfig_To_v1alpha6_NnfDataMovementConfig(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in *v1alpha5.NnfDataMovementConfig, out *NnfDataMovementConfig, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in *v1alpha6.NnfDataMovementConfig, out *NnfDataMovementConfig, s conversion.Scope) error {
 	out.Dryrun = in.Dryrun
 	out.MpirunOptions = in.MpirunOptions
 	out.DcpOptions = in.DcpOptions
@@ -1249,88 +1294,108 @@ func autoConvert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfi
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in *v1alpha5.NnfDataMovementConfig, out *NnfDataMovementConfig, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in, out, s)
+// Convert_v1alpha6_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in *v1alpha6.NnfDataMovementConfig, out *NnfDataMovementConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementConfig_To_v1alpha4_NnfDataMovementConfig(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementList_To_v1alpha5_NnfDataMovementList(in *NnfDataMovementList, out *v1alpha5.NnfDataMovementList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementList_To_v1alpha6_NnfDataMovementList(in *NnfDataMovementList, out *v1alpha6.NnfDataMovementList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfDataMovement)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfDataMovement, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfDataMovement_To_v1alpha6_NnfDataMovement(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementList_To_v1alpha5_NnfDataMovementList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementList_To_v1alpha5_NnfDataMovementList(in *NnfDataMovementList, out *v1alpha5.NnfDataMovementList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementList_To_v1alpha5_NnfDataMovementList(in, out, s)
+// Convert_v1alpha4_NnfDataMovementList_To_v1alpha6_NnfDataMovementList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementList_To_v1alpha6_NnfDataMovementList(in *NnfDataMovementList, out *v1alpha6.NnfDataMovementList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementList_To_v1alpha6_NnfDataMovementList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in *v1alpha5.NnfDataMovementList, out *NnfDataMovementList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in *v1alpha6.NnfDataMovementList, out *NnfDataMovementList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfDataMovement)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfDataMovement, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfDataMovement_To_v1alpha4_NnfDataMovement(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementList_To_v1alpha4_NnfDataMovementList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in *v1alpha5.NnfDataMovementList, out *NnfDataMovementList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in, out, s)
+// Convert_v1alpha6_NnfDataMovementList_To_v1alpha4_NnfDataMovementList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in *v1alpha6.NnfDataMovementList, out *NnfDataMovementList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementList_To_v1alpha4_NnfDataMovementList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(in *NnfDataMovementManager, out *v1alpha5.NnfDataMovementManager, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementManager_To_v1alpha6_NnfDataMovementManager(in *NnfDataMovementManager, out *v1alpha6.NnfDataMovementManager, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(in *NnfDataMovementManager, out *v1alpha5.NnfDataMovementManager, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(in, out, s)
+// Convert_v1alpha4_NnfDataMovementManager_To_v1alpha6_NnfDataMovementManager is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementManager_To_v1alpha6_NnfDataMovementManager(in *NnfDataMovementManager, out *v1alpha6.NnfDataMovementManager, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementManager_To_v1alpha6_NnfDataMovementManager(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in *v1alpha5.NnfDataMovementManager, out *NnfDataMovementManager, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in *v1alpha6.NnfDataMovementManager, out *NnfDataMovementManager, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in *v1alpha5.NnfDataMovementManager, out *NnfDataMovementManager, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in, out, s)
+// Convert_v1alpha6_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in *v1alpha6.NnfDataMovementManager, out *NnfDataMovementManager, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementManager_To_v1alpha4_NnfDataMovementManager(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList(in *NnfDataMovementManagerList, out *v1alpha5.NnfDataMovementManagerList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementManagerList_To_v1alpha6_NnfDataMovementManagerList(in *NnfDataMovementManagerList, out *v1alpha6.NnfDataMovementManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfDataMovementManager)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha6.NnfDataMovementManager)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList(in *NnfDataMovementManagerList, out *v1alpha5.NnfDataMovementManagerList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList(in, out, s)
+// Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha6_NnfDataMovementManagerList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementManagerList_To_v1alpha6_NnfDataMovementManagerList(in *NnfDataMovementManagerList, out *v1alpha6.NnfDataMovementManagerList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementManagerList_To_v1alpha6_NnfDataMovementManagerList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in *v1alpha5.NnfDataMovementManagerList, out *NnfDataMovementManagerList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in *v1alpha6.NnfDataMovementManagerList, out *NnfDataMovementManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]NnfDataMovementManager)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in *v1alpha5.NnfDataMovementManagerList, out *NnfDataMovementManagerList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in, out, s)
+// Convert_v1alpha6_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in *v1alpha6.NnfDataMovementManagerList, out *NnfDataMovementManagerList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementManagerList_To_v1alpha4_NnfDataMovementManagerList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha5.NnfDataMovementManagerSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha6.NnfDataMovementManagerSpec, s conversion.Scope) error {
 	out.Selector = in.Selector
 	out.Template = in.Template
 	out.UpdateStrategy = in.UpdateStrategy
@@ -1339,12 +1404,12 @@ func autoConvert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovement
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha5.NnfDataMovementManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in, out, s)
+// Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha6.NnfDataMovementManagerSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementManagerSpec_To_v1alpha6_NnfDataMovementManagerSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in *v1alpha5.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in *v1alpha6.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
 	out.Selector = in.Selector
 	out.Template = in.Template
 	out.UpdateStrategy = in.UpdateStrategy
@@ -1353,58 +1418,58 @@ func autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovement
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in *v1alpha5.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in, out, s)
+// Convert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in *v1alpha6.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementManagerSpec_To_v1alpha4_NnfDataMovementManagerSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus(in *NnfDataMovementManagerStatus, out *v1alpha5.NnfDataMovementManagerStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus(in *NnfDataMovementManagerStatus, out *v1alpha6.NnfDataMovementManagerStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus(in *NnfDataMovementManagerStatus, out *v1alpha5.NnfDataMovementManagerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha5_NnfDataMovementManagerStatus(in, out, s)
+// Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus(in *NnfDataMovementManagerStatus, out *v1alpha6.NnfDataMovementManagerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementManagerStatus_To_v1alpha6_NnfDataMovementManagerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in *v1alpha5.NnfDataMovementManagerStatus, out *NnfDataMovementManagerStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in *v1alpha6.NnfDataMovementManagerStatus, out *NnfDataMovementManagerStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in *v1alpha5.NnfDataMovementManagerStatus, out *NnfDataMovementManagerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in, out, s)
+// Convert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in *v1alpha6.NnfDataMovementManagerStatus, out *NnfDataMovementManagerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementManagerStatus_To_v1alpha4_NnfDataMovementManagerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(in *NnfDataMovementProfile, out *v1alpha5.NnfDataMovementProfile, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile(in *NnfDataMovementProfile, out *v1alpha6.NnfDataMovementProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(&in.Data, &out.Data, s); err != nil {
+	if err := Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData(&in.Data, &out.Data, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(in *NnfDataMovementProfile, out *v1alpha5.NnfDataMovementProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(in, out, s)
+// Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile(in *NnfDataMovementProfile, out *v1alpha6.NnfDataMovementProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in *v1alpha5.NnfDataMovementProfile, out *NnfDataMovementProfile, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in *v1alpha6.NnfDataMovementProfile, out *NnfDataMovementProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(&in.Data, &out.Data, s); err != nil {
+	if err := Convert_v1alpha6_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(&in.Data, &out.Data, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in *v1alpha5.NnfDataMovementProfile, out *NnfDataMovementProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in, out, s)
+// Convert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in *v1alpha6.NnfDataMovementProfile, out *NnfDataMovementProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *NnfDataMovementProfileData, out *v1alpha5.NnfDataMovementProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData(in *NnfDataMovementProfileData, out *v1alpha6.NnfDataMovementProfileData, s conversion.Scope) error {
 	out.Default = in.Default
 	out.Pinned = in.Pinned
 	out.Slots = in.Slots
@@ -1419,12 +1484,12 @@ func autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovement
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *NnfDataMovementProfileData, out *v1alpha5.NnfDataMovementProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
+// Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData(in *NnfDataMovementProfileData, out *v1alpha6.NnfDataMovementProfileData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementProfileData_To_v1alpha6_NnfDataMovementProfileData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in *v1alpha5.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in *v1alpha6.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s conversion.Scope) error {
 	out.Default = in.Default
 	out.Pinned = in.Pinned
 	out.Slots = in.Slots
@@ -1436,53 +1501,69 @@ func autoConvert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovement
 	out.CreateDestDir = in.CreateDestDir
 	out.StatCommand = in.StatCommand
 	out.MkdirCommand = in.MkdirCommand
+	// WARNING: in.SetprivCommand requires manual conversion: does not exist in peer-type
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in *v1alpha5.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfDataMovementProfileList_To_v1alpha5_NnfDataMovementProfileList(in *NnfDataMovementProfileList, out *v1alpha5.NnfDataMovementProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementProfileList_To_v1alpha6_NnfDataMovementProfileList(in *NnfDataMovementProfileList, out *v1alpha6.NnfDataMovementProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfDataMovementProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfDataMovementProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfDataMovementProfile_To_v1alpha6_NnfDataMovementProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha5_NnfDataMovementProfileList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha5_NnfDataMovementProfileList(in *NnfDataMovementProfileList, out *v1alpha5.NnfDataMovementProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementProfileList_To_v1alpha5_NnfDataMovementProfileList(in, out, s)
+// Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha6_NnfDataMovementProfileList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementProfileList_To_v1alpha6_NnfDataMovementProfileList(in *NnfDataMovementProfileList, out *v1alpha6.NnfDataMovementProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementProfileList_To_v1alpha6_NnfDataMovementProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in *v1alpha5.NnfDataMovementProfileList, out *NnfDataMovementProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in *v1alpha6.NnfDataMovementProfileList, out *NnfDataMovementProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfDataMovementProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfDataMovementProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfDataMovementProfile_To_v1alpha4_NnfDataMovementProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in *v1alpha5.NnfDataMovementProfileList, out *NnfDataMovementProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in, out, s)
+// Convert_v1alpha6_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in *v1alpha6.NnfDataMovementProfileList, out *NnfDataMovementProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementProfileList_To_v1alpha4_NnfDataMovementProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec(in *NnfDataMovementSpec, out *v1alpha5.NnfDataMovementSpec, s conversion.Scope) error {
-	out.Source = (*v1alpha5.NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Source))
-	out.Destination = (*v1alpha5.NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Destination))
+func autoConvert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec(in *NnfDataMovementSpec, out *v1alpha6.NnfDataMovementSpec, s conversion.Scope) error {
+	out.Source = (*v1alpha6.NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Source))
+	out.Destination = (*v1alpha6.NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Destination))
 	out.UserId = in.UserId
 	out.GroupId = in.GroupId
 	out.Cancel = in.Cancel
 	out.ProfileReference = in.ProfileReference
-	out.UserConfig = (*v1alpha5.NnfDataMovementConfig)(unsafe.Pointer(in.UserConfig))
+	out.UserConfig = (*v1alpha6.NnfDataMovementConfig)(unsafe.Pointer(in.UserConfig))
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec(in *NnfDataMovementSpec, out *v1alpha5.NnfDataMovementSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementSpec_To_v1alpha5_NnfDataMovementSpec(in, out, s)
+// Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec(in *NnfDataMovementSpec, out *v1alpha6.NnfDataMovementSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementSpec_To_v1alpha6_NnfDataMovementSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in *v1alpha5.NnfDataMovementSpec, out *NnfDataMovementSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in *v1alpha6.NnfDataMovementSpec, out *NnfDataMovementSpec, s conversion.Scope) error {
 	out.Source = (*NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Source))
 	out.Destination = (*NnfDataMovementSpecSourceDestination)(unsafe.Pointer(in.Destination))
 	out.UserId = in.UserId
@@ -1493,51 +1574,53 @@ func autoConvert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in *v1alpha5.NnfDataMovementSpec, out *NnfDataMovementSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in, out, s)
+// Convert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in *v1alpha6.NnfDataMovementSpec, out *NnfDataMovementSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementSpec_To_v1alpha4_NnfDataMovementSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha5_NnfDataMovementSpecSourceDestination(in *NnfDataMovementSpecSourceDestination, out *v1alpha5.NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha6_NnfDataMovementSpecSourceDestination(in *NnfDataMovementSpecSourceDestination, out *v1alpha6.NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
 	out.Path = in.Path
 	out.StorageReference = in.StorageReference
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha5_NnfDataMovementSpecSourceDestination is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha5_NnfDataMovementSpecSourceDestination(in *NnfDataMovementSpecSourceDestination, out *v1alpha5.NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha5_NnfDataMovementSpecSourceDestination(in, out, s)
+// Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha6_NnfDataMovementSpecSourceDestination is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha6_NnfDataMovementSpecSourceDestination(in *NnfDataMovementSpecSourceDestination, out *v1alpha6.NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementSpecSourceDestination_To_v1alpha6_NnfDataMovementSpecSourceDestination(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in *v1alpha5.NnfDataMovementSpecSourceDestination, out *NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in *v1alpha6.NnfDataMovementSpecSourceDestination, out *NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
 	out.Path = in.Path
 	out.StorageReference = in.StorageReference
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in *v1alpha5.NnfDataMovementSpecSourceDestination, out *NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in, out, s)
+// Convert_v1alpha6_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in *v1alpha6.NnfDataMovementSpecSourceDestination, out *NnfDataMovementSpecSourceDestination, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementSpecSourceDestination_To_v1alpha4_NnfDataMovementSpecSourceDestination(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus(in *NnfDataMovementStatus, out *v1alpha5.NnfDataMovementStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus(in *NnfDataMovementStatus, out *v1alpha6.NnfDataMovementStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Status = in.Status
 	out.Message = in.Message
 	out.StartTime = (*metav1.MicroTime)(unsafe.Pointer(in.StartTime))
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
-	out.CommandStatus = (*v1alpha5.NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	out.ResourceError = in.ResourceError
+	out.CommandStatus = (*v1alpha6.NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus(in *NnfDataMovementStatus, out *v1alpha5.NnfDataMovementStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatus(in, out, s)
+// Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus(in *NnfDataMovementStatus, out *v1alpha6.NnfDataMovementStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDataMovementStatus_To_v1alpha6_NnfDataMovementStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in *v1alpha5.NnfDataMovementStatus, out *NnfDataMovementStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in *v1alpha6.NnfDataMovementStatus, out *NnfDataMovementStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Status = in.Status
 	out.Message = in.Message
@@ -1545,106 +1628,128 @@ func autoConvert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in *v1alpha5.NnfDataMovementStatus, out *NnfDataMovementStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in, out, s)
+// Convert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in *v1alpha6.NnfDataMovementStatus, out *NnfDataMovementStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDataMovementStatus_To_v1alpha4_NnfDataMovementStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfDriveStatus_To_v1alpha5_NnfDriveStatus(in *NnfDriveStatus, out *v1alpha5.NnfDriveStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfDriveStatus_To_v1alpha6_NnfDriveStatus(in *NnfDriveStatus, out *v1alpha6.NnfDriveStatus, s conversion.Scope) error {
 	out.Model = in.Model
 	out.SerialNumber = in.SerialNumber
 	out.FirmwareVersion = in.FirmwareVersion
 	out.Slot = in.Slot
 	out.Capacity = in.Capacity
 	out.WearLevel = in.WearLevel
-	if err := Convert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
+	if err := Convert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfDriveStatus_To_v1alpha5_NnfDriveStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfDriveStatus_To_v1alpha5_NnfDriveStatus(in *NnfDriveStatus, out *v1alpha5.NnfDriveStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfDriveStatus_To_v1alpha5_NnfDriveStatus(in, out, s)
+// Convert_v1alpha4_NnfDriveStatus_To_v1alpha6_NnfDriveStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfDriveStatus_To_v1alpha6_NnfDriveStatus(in *NnfDriveStatus, out *v1alpha6.NnfDriveStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfDriveStatus_To_v1alpha6_NnfDriveStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in *v1alpha5.NnfDriveStatus, out *NnfDriveStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in *v1alpha6.NnfDriveStatus, out *NnfDriveStatus, s conversion.Scope) error {
 	out.Model = in.Model
 	out.SerialNumber = in.SerialNumber
 	out.FirmwareVersion = in.FirmwareVersion
 	out.Slot = in.Slot
 	out.Capacity = in.Capacity
 	out.WearLevel = in.WearLevel
-	if err := Convert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
+	if err := Convert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfDriveStatus_To_v1alpha4_NnfDriveStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in *v1alpha5.NnfDriveStatus, out *NnfDriveStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in, out, s)
+// Convert_v1alpha6_NnfDriveStatus_To_v1alpha4_NnfDriveStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in *v1alpha6.NnfDriveStatus, out *NnfDriveStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfDriveStatus_To_v1alpha4_NnfDriveStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(in *NnfLustreMGT, out *v1alpha5.NnfLustreMGT, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT(in *NnfLustreMGT, out *v1alpha6.NnfLustreMGT, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfLustreMGT_To_v1alpha5_NnfLustreMGT is an autogenerated conversion function.
-func Convert_v1alpha4_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(in *NnfLustreMGT, out *v1alpha5.NnfLustreMGT, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(in, out, s)
+// Convert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT is an autogenerated conversion function.
+func Convert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT(in *NnfLustreMGT, out *v1alpha6.NnfLustreMGT, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in *v1alpha5.NnfLustreMGT, out *NnfLustreMGT, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in *v1alpha6.NnfLustreMGT, out *NnfLustreMGT, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfLustreMGT_To_v1alpha4_NnfLustreMGT is an autogenerated conversion function.
-func Convert_v1alpha5_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in *v1alpha5.NnfLustreMGT, out *NnfLustreMGT, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in, out, s)
+// Convert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT is an autogenerated conversion function.
+func Convert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in *v1alpha6.NnfLustreMGT, out *NnfLustreMGT, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfLustreMGTList_To_v1alpha5_NnfLustreMGTList(in *NnfLustreMGTList, out *v1alpha5.NnfLustreMGTList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfLustreMGTList_To_v1alpha6_NnfLustreMGTList(in *NnfLustreMGTList, out *v1alpha6.NnfLustreMGTList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfLustreMGT)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfLustreMGT, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfLustreMGT_To_v1alpha6_NnfLustreMGT(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfLustreMGTList_To_v1alpha5_NnfLustreMGTList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfLustreMGTList_To_v1alpha5_NnfLustreMGTList(in *NnfLustreMGTList, out *v1alpha5.NnfLustreMGTList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfLustreMGTList_To_v1alpha5_NnfLustreMGTList(in, out, s)
+// Convert_v1alpha4_NnfLustreMGTList_To_v1alpha6_NnfLustreMGTList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfLustreMGTList_To_v1alpha6_NnfLustreMGTList(in *NnfLustreMGTList, out *v1alpha6.NnfLustreMGTList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfLustreMGTList_To_v1alpha6_NnfLustreMGTList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in *v1alpha5.NnfLustreMGTList, out *NnfLustreMGTList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in *v1alpha6.NnfLustreMGTList, out *NnfLustreMGTList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfLustreMGT)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfLustreMGT, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfLustreMGT_To_v1alpha4_NnfLustreMGT(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in *v1alpha5.NnfLustreMGTList, out *NnfLustreMGTList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in, out, s)
+// Convert_v1alpha6_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in *v1alpha6.NnfLustreMGTList, out *NnfLustreMGTList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfLustreMGTList_To_v1alpha4_NnfLustreMGTList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *NnfLustreMGTSpec, out *v1alpha5.NnfLustreMGTSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec(in *NnfLustreMGTSpec, out *v1alpha6.NnfLustreMGTSpec, s conversion.Scope) error {
 	out.Addresses = *(*[]string)(unsafe.Pointer(&in.Addresses))
 	out.FsNameBlackList = *(*[]string)(unsafe.Pointer(&in.FsNameBlackList))
 	out.FsNameStart = in.FsNameStart
@@ -1653,193 +1758,189 @@ func autoConvert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *NnfL
 	return nil
 }
 
-// Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *NnfLustreMGTSpec, out *v1alpha5.NnfLustreMGTSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in, out, s)
+// Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec(in *NnfLustreMGTSpec, out *v1alpha6.NnfLustreMGTSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfLustreMGTSpec_To_v1alpha6_NnfLustreMGTSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in *v1alpha5.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in *v1alpha6.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s conversion.Scope) error {
 	out.Addresses = *(*[]string)(unsafe.Pointer(&in.Addresses))
 	out.FsNameBlackList = *(*[]string)(unsafe.Pointer(&in.FsNameBlackList))
 	out.FsNameStart = in.FsNameStart
 	out.FsNameStartReference = in.FsNameStartReference
 	out.ClaimList = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.ClaimList))
+	// WARNING: in.CommandList requires manual conversion: does not exist in peer-type
 	return nil
 }
 
-// Convert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in *v1alpha5.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfLustreMGTSpec_To_v1alpha4_NnfLustreMGTSpec(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha5.NnfLustreMGTStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha6.NnfLustreMGTStatus, s conversion.Scope) error {
 	out.FsNameNext = in.FsNameNext
-	out.ClaimList = *(*[]v1alpha5.NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
-	out.ResourceError = in.ResourceError
+	out.ClaimList = *(*[]v1alpha6.NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha5.NnfLustreMGTStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in, out, s)
+// Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha6.NnfLustreMGTStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfLustreMGTStatus_To_v1alpha6_NnfLustreMGTStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in *v1alpha5.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in *v1alpha6.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s conversion.Scope) error {
 	out.FsNameNext = in.FsNameNext
 	out.ClaimList = *(*[]NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
-	out.ResourceError = in.ResourceError
+	// WARNING: in.CommandList requires manual conversion: does not exist in peer-type
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in *v1alpha5.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfLustreMGTStatus_To_v1alpha4_NnfLustreMGTStatus(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha5_NnfLustreMGTStatusClaim(in *NnfLustreMGTStatusClaim, out *v1alpha5.NnfLustreMGTStatusClaim, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha6_NnfLustreMGTStatusClaim(in *NnfLustreMGTStatusClaim, out *v1alpha6.NnfLustreMGTStatusClaim, s conversion.Scope) error {
 	out.Reference = in.Reference
 	out.FsName = in.FsName
 	return nil
 }
 
-// Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha5_NnfLustreMGTStatusClaim is an autogenerated conversion function.
-func Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha5_NnfLustreMGTStatusClaim(in *NnfLustreMGTStatusClaim, out *v1alpha5.NnfLustreMGTStatusClaim, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha5_NnfLustreMGTStatusClaim(in, out, s)
+// Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha6_NnfLustreMGTStatusClaim is an autogenerated conversion function.
+func Convert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha6_NnfLustreMGTStatusClaim(in *NnfLustreMGTStatusClaim, out *v1alpha6.NnfLustreMGTStatusClaim, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfLustreMGTStatusClaim_To_v1alpha6_NnfLustreMGTStatusClaim(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in *v1alpha5.NnfLustreMGTStatusClaim, out *NnfLustreMGTStatusClaim, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in *v1alpha6.NnfLustreMGTStatusClaim, out *NnfLustreMGTStatusClaim, s conversion.Scope) error {
 	out.Reference = in.Reference
 	out.FsName = in.FsName
 	return nil
 }
 
-// Convert_v1alpha5_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim is an autogenerated conversion function.
-func Convert_v1alpha5_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in *v1alpha5.NnfLustreMGTStatusClaim, out *NnfLustreMGTStatusClaim, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in, out, s)
+// Convert_v1alpha6_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim is an autogenerated conversion function.
+func Convert_v1alpha6_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in *v1alpha6.NnfLustreMGTStatusClaim, out *NnfLustreMGTStatusClaim, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfLustreMGTStatusClaim_To_v1alpha4_NnfLustreMGTStatusClaim(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNode_To_v1alpha5_NnfNode(in *NnfNode, out *v1alpha5.NnfNode, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNode_To_v1alpha6_NnfNode(in *NnfNode, out *v1alpha6.NnfNode, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNode_To_v1alpha5_NnfNode is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNode_To_v1alpha5_NnfNode(in *NnfNode, out *v1alpha5.NnfNode, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNode_To_v1alpha5_NnfNode(in, out, s)
+// Convert_v1alpha4_NnfNode_To_v1alpha6_NnfNode is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNode_To_v1alpha6_NnfNode(in *NnfNode, out *v1alpha6.NnfNode, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNode_To_v1alpha6_NnfNode(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNode_To_v1alpha4_NnfNode(in *v1alpha5.NnfNode, out *NnfNode, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNode_To_v1alpha4_NnfNode(in *v1alpha6.NnfNode, out *NnfNode, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNode_To_v1alpha4_NnfNode is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNode_To_v1alpha4_NnfNode(in *v1alpha5.NnfNode, out *NnfNode, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNode_To_v1alpha4_NnfNode(in, out, s)
+// Convert_v1alpha6_NnfNode_To_v1alpha4_NnfNode is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNode_To_v1alpha4_NnfNode(in *v1alpha6.NnfNode, out *NnfNode, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNode_To_v1alpha4_NnfNode(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(in *NnfNodeBlockStorage, out *v1alpha5.NnfNodeBlockStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage(in *NnfNodeBlockStorage, out *v1alpha6.NnfNodeBlockStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(in *NnfNodeBlockStorage, out *v1alpha5.NnfNodeBlockStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage(in *NnfNodeBlockStorage, out *v1alpha6.NnfNodeBlockStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in *v1alpha5.NnfNodeBlockStorage, out *NnfNodeBlockStorage, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in *v1alpha6.NnfNodeBlockStorage, out *NnfNodeBlockStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in *v1alpha5.NnfNodeBlockStorage, out *NnfNodeBlockStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in *v1alpha6.NnfNodeBlockStorage, out *NnfNodeBlockStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha5_NnfNodeBlockStorageAccessStatus(in *NnfNodeBlockStorageAccessStatus, out *v1alpha5.NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha6_NnfNodeBlockStorageAccessStatus(in *NnfNodeBlockStorageAccessStatus, out *v1alpha6.NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
 	out.DevicePaths = *(*[]string)(unsafe.Pointer(&in.DevicePaths))
 	out.StorageGroupId = in.StorageGroupId
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha5_NnfNodeBlockStorageAccessStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha5_NnfNodeBlockStorageAccessStatus(in *NnfNodeBlockStorageAccessStatus, out *v1alpha5.NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha5_NnfNodeBlockStorageAccessStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha6_NnfNodeBlockStorageAccessStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha6_NnfNodeBlockStorageAccessStatus(in *NnfNodeBlockStorageAccessStatus, out *v1alpha6.NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageAccessStatus_To_v1alpha6_NnfNodeBlockStorageAccessStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in *v1alpha5.NnfNodeBlockStorageAccessStatus, out *NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in *v1alpha6.NnfNodeBlockStorageAccessStatus, out *NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
 	out.DevicePaths = *(*[]string)(unsafe.Pointer(&in.DevicePaths))
 	out.StorageGroupId = in.StorageGroupId
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in *v1alpha5.NnfNodeBlockStorageAccessStatus, out *NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in *v1alpha6.NnfNodeBlockStorageAccessStatus, out *NnfNodeBlockStorageAccessStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageAccessStatus_To_v1alpha4_NnfNodeBlockStorageAccessStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha5_NnfNodeBlockStorageAllocationSpec(in *NnfNodeBlockStorageAllocationSpec, out *v1alpha5.NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha6_NnfNodeBlockStorageAllocationSpec(in *NnfNodeBlockStorageAllocationSpec, out *v1alpha6.NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
 	out.Capacity = in.Capacity
 	out.Access = *(*[]string)(unsafe.Pointer(&in.Access))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha5_NnfNodeBlockStorageAllocationSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha5_NnfNodeBlockStorageAllocationSpec(in *NnfNodeBlockStorageAllocationSpec, out *v1alpha5.NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha5_NnfNodeBlockStorageAllocationSpec(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha6_NnfNodeBlockStorageAllocationSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha6_NnfNodeBlockStorageAllocationSpec(in *NnfNodeBlockStorageAllocationSpec, out *v1alpha6.NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageAllocationSpec_To_v1alpha6_NnfNodeBlockStorageAllocationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in *v1alpha5.NnfNodeBlockStorageAllocationSpec, out *NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in *v1alpha6.NnfNodeBlockStorageAllocationSpec, out *NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
 	out.Capacity = in.Capacity
 	out.Access = *(*[]string)(unsafe.Pointer(&in.Access))
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in *v1alpha5.NnfNodeBlockStorageAllocationSpec, out *NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in *v1alpha6.NnfNodeBlockStorageAllocationSpec, out *NnfNodeBlockStorageAllocationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageAllocationSpec_To_v1alpha4_NnfNodeBlockStorageAllocationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha5_NnfNodeBlockStorageAllocationStatus(in *NnfNodeBlockStorageAllocationStatus, out *v1alpha5.NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
-	out.Accesses = *(*map[string]v1alpha5.NnfNodeBlockStorageAccessStatus)(unsafe.Pointer(&in.Accesses))
-	out.Devices = *(*[]v1alpha5.NnfNodeBlockStorageDeviceStatus)(unsafe.Pointer(&in.Devices))
+func autoConvert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha6_NnfNodeBlockStorageAllocationStatus(in *NnfNodeBlockStorageAllocationStatus, out *v1alpha6.NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
+	out.Accesses = *(*map[string]v1alpha6.NnfNodeBlockStorageAccessStatus)(unsafe.Pointer(&in.Accesses))
+	out.Devices = *(*[]v1alpha6.NnfNodeBlockStorageDeviceStatus)(unsafe.Pointer(&in.Devices))
 	out.CapacityAllocated = in.CapacityAllocated
 	out.StoragePoolId = in.StoragePoolId
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha5_NnfNodeBlockStorageAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha5_NnfNodeBlockStorageAllocationStatus(in *NnfNodeBlockStorageAllocationStatus, out *v1alpha5.NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha5_NnfNodeBlockStorageAllocationStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha6_NnfNodeBlockStorageAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha6_NnfNodeBlockStorageAllocationStatus(in *NnfNodeBlockStorageAllocationStatus, out *v1alpha6.NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageAllocationStatus_To_v1alpha6_NnfNodeBlockStorageAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in *v1alpha5.NnfNodeBlockStorageAllocationStatus, out *NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in *v1alpha6.NnfNodeBlockStorageAllocationStatus, out *NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
 	out.Accesses = *(*map[string]NnfNodeBlockStorageAccessStatus)(unsafe.Pointer(&in.Accesses))
 	out.Devices = *(*[]NnfNodeBlockStorageDeviceStatus)(unsafe.Pointer(&in.Devices))
 	out.CapacityAllocated = in.CapacityAllocated
@@ -1847,261 +1948,285 @@ func autoConvert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNod
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in *v1alpha5.NnfNodeBlockStorageAllocationStatus, out *NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in *v1alpha6.NnfNodeBlockStorageAllocationStatus, out *NnfNodeBlockStorageAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageAllocationStatus_To_v1alpha4_NnfNodeBlockStorageAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockStorageDeviceStatus(in *NnfNodeBlockStorageDeviceStatus, out *v1alpha5.NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha6_NnfNodeBlockStorageDeviceStatus(in *NnfNodeBlockStorageDeviceStatus, out *v1alpha6.NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
 	out.NQN = in.NQN
 	out.NamespaceId = in.NamespaceId
 	out.CapacityAllocated = in.CapacityAllocated
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockStorageDeviceStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockStorageDeviceStatus(in *NnfNodeBlockStorageDeviceStatus, out *v1alpha5.NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockStorageDeviceStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha6_NnfNodeBlockStorageDeviceStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha6_NnfNodeBlockStorageDeviceStatus(in *NnfNodeBlockStorageDeviceStatus, out *v1alpha6.NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageDeviceStatus_To_v1alpha6_NnfNodeBlockStorageDeviceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in *v1alpha5.NnfNodeBlockStorageDeviceStatus, out *NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in *v1alpha6.NnfNodeBlockStorageDeviceStatus, out *NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
 	out.NQN = in.NQN
 	out.NamespaceId = in.NamespaceId
 	out.CapacityAllocated = in.CapacityAllocated
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in *v1alpha5.NnfNodeBlockStorageDeviceStatus, out *NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in *v1alpha6.NnfNodeBlockStorageDeviceStatus, out *NnfNodeBlockStorageDeviceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageDeviceStatus_To_v1alpha4_NnfNodeBlockStorageDeviceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList(in *NnfNodeBlockStorageList, out *v1alpha5.NnfNodeBlockStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha6_NnfNodeBlockStorageList(in *NnfNodeBlockStorageList, out *v1alpha6.NnfNodeBlockStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfNodeBlockStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfNodeBlockStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfNodeBlockStorage_To_v1alpha6_NnfNodeBlockStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList(in *NnfNodeBlockStorageList, out *v1alpha5.NnfNodeBlockStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha6_NnfNodeBlockStorageList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha6_NnfNodeBlockStorageList(in *NnfNodeBlockStorageList, out *v1alpha6.NnfNodeBlockStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageList_To_v1alpha6_NnfNodeBlockStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in *v1alpha5.NnfNodeBlockStorageList, out *NnfNodeBlockStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in *v1alpha6.NnfNodeBlockStorageList, out *NnfNodeBlockStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfNodeBlockStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfNodeBlockStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfNodeBlockStorage_To_v1alpha4_NnfNodeBlockStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in *v1alpha5.NnfNodeBlockStorageList, out *NnfNodeBlockStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in *v1alpha6.NnfNodeBlockStorageList, out *NnfNodeBlockStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageList_To_v1alpha4_NnfNodeBlockStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec(in *NnfNodeBlockStorageSpec, out *v1alpha5.NnfNodeBlockStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec(in *NnfNodeBlockStorageSpec, out *v1alpha6.NnfNodeBlockStorageSpec, s conversion.Scope) error {
 	out.SharedAllocation = in.SharedAllocation
-	out.Allocations = *(*[]v1alpha5.NnfNodeBlockStorageAllocationSpec)(unsafe.Pointer(&in.Allocations))
+	out.Allocations = *(*[]v1alpha6.NnfNodeBlockStorageAllocationSpec)(unsafe.Pointer(&in.Allocations))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec(in *NnfNodeBlockStorageSpec, out *v1alpha5.NnfNodeBlockStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpec(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec(in *NnfNodeBlockStorageSpec, out *v1alpha6.NnfNodeBlockStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageSpec_To_v1alpha6_NnfNodeBlockStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in *v1alpha5.NnfNodeBlockStorageSpec, out *NnfNodeBlockStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in *v1alpha6.NnfNodeBlockStorageSpec, out *NnfNodeBlockStorageSpec, s conversion.Scope) error {
 	out.SharedAllocation = in.SharedAllocation
 	out.Allocations = *(*[]NnfNodeBlockStorageAllocationSpec)(unsafe.Pointer(&in.Allocations))
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in *v1alpha5.NnfNodeBlockStorageSpec, out *NnfNodeBlockStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in *v1alpha6.NnfNodeBlockStorageSpec, out *NnfNodeBlockStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageSpec_To_v1alpha4_NnfNodeBlockStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha5.NnfNodeBlockStorageStatus, s conversion.Scope) error {
-	out.Allocations = *(*[]v1alpha5.NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	out.ResourceError = in.ResourceError
+func autoConvert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha6.NnfNodeBlockStorageStatus, s conversion.Scope) error {
+	out.Allocations = *(*[]v1alpha6.NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha5.NnfNodeBlockStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha6.NnfNodeBlockStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeBlockStorageStatus_To_v1alpha6_NnfNodeBlockStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in *v1alpha5.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in *v1alpha6.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in *v1alpha5.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in *v1alpha6.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeBlockStorageStatus_To_v1alpha4_NnfNodeBlockStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeECData_To_v1alpha5_NnfNodeECData(in *NnfNodeECData, out *v1alpha5.NnfNodeECData, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeECData_To_v1alpha6_NnfNodeECData(in *NnfNodeECData, out *v1alpha6.NnfNodeECData, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeECData_To_v1alpha5_NnfNodeECData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeECData_To_v1alpha5_NnfNodeECData(in *NnfNodeECData, out *v1alpha5.NnfNodeECData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeECData_To_v1alpha5_NnfNodeECData(in, out, s)
+// Convert_v1alpha4_NnfNodeECData_To_v1alpha6_NnfNodeECData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeECData_To_v1alpha6_NnfNodeECData(in *NnfNodeECData, out *v1alpha6.NnfNodeECData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeECData_To_v1alpha6_NnfNodeECData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeECData_To_v1alpha4_NnfNodeECData(in *v1alpha5.NnfNodeECData, out *NnfNodeECData, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeECData_To_v1alpha4_NnfNodeECData(in *v1alpha6.NnfNodeECData, out *NnfNodeECData, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeECData_To_v1alpha4_NnfNodeECData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeECData_To_v1alpha4_NnfNodeECData(in *v1alpha5.NnfNodeECData, out *NnfNodeECData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeECData_To_v1alpha4_NnfNodeECData(in, out, s)
+// Convert_v1alpha6_NnfNodeECData_To_v1alpha4_NnfNodeECData is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeECData_To_v1alpha4_NnfNodeECData(in *v1alpha6.NnfNodeECData, out *NnfNodeECData, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeECData_To_v1alpha4_NnfNodeECData(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeECDataList_To_v1alpha5_NnfNodeECDataList(in *NnfNodeECDataList, out *v1alpha5.NnfNodeECDataList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeECDataList_To_v1alpha6_NnfNodeECDataList(in *NnfNodeECDataList, out *v1alpha6.NnfNodeECDataList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfNodeECData)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha6.NnfNodeECData)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeECDataList_To_v1alpha5_NnfNodeECDataList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeECDataList_To_v1alpha5_NnfNodeECDataList(in *NnfNodeECDataList, out *v1alpha5.NnfNodeECDataList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeECDataList_To_v1alpha5_NnfNodeECDataList(in, out, s)
+// Convert_v1alpha4_NnfNodeECDataList_To_v1alpha6_NnfNodeECDataList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeECDataList_To_v1alpha6_NnfNodeECDataList(in *NnfNodeECDataList, out *v1alpha6.NnfNodeECDataList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeECDataList_To_v1alpha6_NnfNodeECDataList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in *v1alpha5.NnfNodeECDataList, out *NnfNodeECDataList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in *v1alpha6.NnfNodeECDataList, out *NnfNodeECDataList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]NnfNodeECData)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in *v1alpha5.NnfNodeECDataList, out *NnfNodeECDataList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in, out, s)
+// Convert_v1alpha6_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in *v1alpha6.NnfNodeECDataList, out *NnfNodeECDataList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeECDataList_To_v1alpha4_NnfNodeECDataList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec(in *NnfNodeECDataSpec, out *v1alpha5.NnfNodeECDataSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec(in *NnfNodeECDataSpec, out *v1alpha6.NnfNodeECDataSpec, s conversion.Scope) error {
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec(in *NnfNodeECDataSpec, out *v1alpha5.NnfNodeECDataSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeECDataSpec_To_v1alpha5_NnfNodeECDataSpec(in, out, s)
+// Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec(in *NnfNodeECDataSpec, out *v1alpha6.NnfNodeECDataSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeECDataSpec_To_v1alpha6_NnfNodeECDataSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in *v1alpha5.NnfNodeECDataSpec, out *NnfNodeECDataSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in *v1alpha6.NnfNodeECDataSpec, out *NnfNodeECDataSpec, s conversion.Scope) error {
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in *v1alpha5.NnfNodeECDataSpec, out *NnfNodeECDataSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in, out, s)
+// Convert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in *v1alpha6.NnfNodeECDataSpec, out *NnfNodeECDataSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeECDataSpec_To_v1alpha4_NnfNodeECDataSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus(in *NnfNodeECDataStatus, out *v1alpha5.NnfNodeECDataStatus, s conversion.Scope) error {
-	out.Data = *(*map[string]v1alpha5.NnfNodeECPrivateData)(unsafe.Pointer(&in.Data))
+func autoConvert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus(in *NnfNodeECDataStatus, out *v1alpha6.NnfNodeECDataStatus, s conversion.Scope) error {
+	out.Data = *(*map[string]v1alpha6.NnfNodeECPrivateData)(unsafe.Pointer(&in.Data))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus(in *NnfNodeECDataStatus, out *v1alpha5.NnfNodeECDataStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeECDataStatus_To_v1alpha5_NnfNodeECDataStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus(in *NnfNodeECDataStatus, out *v1alpha6.NnfNodeECDataStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeECDataStatus_To_v1alpha6_NnfNodeECDataStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in *v1alpha5.NnfNodeECDataStatus, out *NnfNodeECDataStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in *v1alpha6.NnfNodeECDataStatus, out *NnfNodeECDataStatus, s conversion.Scope) error {
 	out.Data = *(*map[string]NnfNodeECPrivateData)(unsafe.Pointer(&in.Data))
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in *v1alpha5.NnfNodeECDataStatus, out *NnfNodeECDataStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in *v1alpha6.NnfNodeECDataStatus, out *NnfNodeECDataStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeECDataStatus_To_v1alpha4_NnfNodeECDataStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeList_To_v1alpha5_NnfNodeList(in *NnfNodeList, out *v1alpha5.NnfNodeList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeList_To_v1alpha6_NnfNodeList(in *NnfNodeList, out *v1alpha6.NnfNodeList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfNode)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha6.NnfNode)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeList_To_v1alpha5_NnfNodeList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeList_To_v1alpha5_NnfNodeList(in *NnfNodeList, out *v1alpha5.NnfNodeList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeList_To_v1alpha5_NnfNodeList(in, out, s)
+// Convert_v1alpha4_NnfNodeList_To_v1alpha6_NnfNodeList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeList_To_v1alpha6_NnfNodeList(in *NnfNodeList, out *v1alpha6.NnfNodeList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeList_To_v1alpha6_NnfNodeList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeList_To_v1alpha4_NnfNodeList(in *v1alpha5.NnfNodeList, out *NnfNodeList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeList_To_v1alpha4_NnfNodeList(in *v1alpha6.NnfNodeList, out *NnfNodeList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]NnfNode)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeList_To_v1alpha4_NnfNodeList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeList_To_v1alpha4_NnfNodeList(in *v1alpha5.NnfNodeList, out *NnfNodeList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeList_To_v1alpha4_NnfNodeList(in, out, s)
+// Convert_v1alpha6_NnfNodeList_To_v1alpha4_NnfNodeList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeList_To_v1alpha4_NnfNodeList(in *v1alpha6.NnfNodeList, out *NnfNodeList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeList_To_v1alpha4_NnfNodeList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec(in *NnfNodeSpec, out *v1alpha5.NnfNodeSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec(in *NnfNodeSpec, out *v1alpha6.NnfNodeSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Pod = in.Pod
-	out.State = v1alpha5.NnfResourceStateType(in.State)
+	out.State = v1alpha6.NnfResourceStateType(in.State)
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec(in *NnfNodeSpec, out *v1alpha5.NnfNodeSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeSpec_To_v1alpha5_NnfNodeSpec(in, out, s)
+// Convert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec(in *NnfNodeSpec, out *v1alpha6.NnfNodeSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeSpec_To_v1alpha6_NnfNodeSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in *v1alpha5.NnfNodeSpec, out *NnfNodeSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in *v1alpha6.NnfNodeSpec, out *NnfNodeSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Pod = in.Pod
 	out.State = NnfResourceStateType(in.State)
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in *v1alpha5.NnfNodeSpec, out *NnfNodeSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in, out, s)
+// Convert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in *v1alpha6.NnfNodeSpec, out *NnfNodeSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeSpec_To_v1alpha4_NnfNodeSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus(in *NnfNodeStatus, out *v1alpha5.NnfNodeStatus, s conversion.Scope) error {
-	out.Status = v1alpha5.NnfResourceStatusType(in.Status)
-	out.Health = v1alpha5.NnfResourceHealthType(in.Health)
+func autoConvert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus(in *NnfNodeStatus, out *v1alpha6.NnfNodeStatus, s conversion.Scope) error {
+	out.Status = v1alpha6.NnfResourceStatusType(in.Status)
+	out.Health = v1alpha6.NnfResourceHealthType(in.Health)
 	out.Fenced = in.Fenced
 	out.LNetNid = in.LNetNid
 	out.Capacity = in.Capacity
 	out.CapacityAllocated = in.CapacityAllocated
-	out.Servers = *(*[]v1alpha5.NnfServerStatus)(unsafe.Pointer(&in.Servers))
-	out.Drives = *(*[]v1alpha5.NnfDriveStatus)(unsafe.Pointer(&in.Drives))
+	out.Servers = *(*[]v1alpha6.NnfServerStatus)(unsafe.Pointer(&in.Servers))
+	out.Drives = *(*[]v1alpha6.NnfDriveStatus)(unsafe.Pointer(&in.Drives))
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus(in *NnfNodeStatus, out *v1alpha5.NnfNodeStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStatus_To_v1alpha5_NnfNodeStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus(in *NnfNodeStatus, out *v1alpha6.NnfNodeStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStatus_To_v1alpha6_NnfNodeStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in *v1alpha5.NnfNodeStatus, out *NnfNodeStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in *v1alpha6.NnfNodeStatus, out *NnfNodeStatus, s conversion.Scope) error {
 	out.Status = NnfResourceStatusType(in.Status)
 	out.Health = NnfResourceHealthType(in.Health)
 	out.Fenced = in.Fenced
@@ -2113,74 +2238,74 @@ func autoConvert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in *v1alpha5.N
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in *v1alpha5.NnfNodeStatus, out *NnfNodeStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in *v1alpha6.NnfNodeStatus, out *NnfNodeStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeStatus_To_v1alpha4_NnfNodeStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(in *NnfNodeStorage, out *v1alpha5.NnfNodeStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage(in *NnfNodeStorage, out *v1alpha6.NnfNodeStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(in *NnfNodeStorage, out *v1alpha5.NnfNodeStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(in, out, s)
+// Convert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage(in *NnfNodeStorage, out *v1alpha6.NnfNodeStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in *v1alpha5.NnfNodeStorage, out *NnfNodeStorage, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in *v1alpha6.NnfNodeStorage, out *NnfNodeStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in *v1alpha5.NnfNodeStorage, out *NnfNodeStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in, out, s)
+// Convert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in *v1alpha6.NnfNodeStorage, out *NnfNodeStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageAllocationStatus(in *NnfNodeStorageAllocationStatus, out *v1alpha5.NnfNodeStorageAllocationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in *NnfNodeStorageAllocationStatus, out *v1alpha6.NnfNodeStorageAllocationStatus, s conversion.Scope) error {
 	out.VolumeGroup = in.VolumeGroup
 	out.LogicalVolume = in.LogicalVolume
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageAllocationStatus(in *NnfNodeStorageAllocationStatus, out *v1alpha5.NnfNodeStorageAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageAllocationStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in *NnfNodeStorageAllocationStatus, out *v1alpha6.NnfNodeStorageAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in *v1alpha5.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in *v1alpha6.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
 	out.VolumeGroup = in.VolumeGroup
 	out.LogicalVolume = in.LogicalVolume
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in *v1alpha5.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in *v1alpha6.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha4_NnfNodeStorageAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha5.NnfNodeStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeStorageList_To_v1alpha6_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha6.NnfNodeStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]v1alpha5.NnfNodeStorage, len(*in))
+		*out = make([]v1alpha6.NnfNodeStorage, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha4_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha4_NnfNodeStorage_To_v1alpha6_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2190,18 +2315,18 @@ func autoConvert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(in *
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha5.NnfNodeStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(in, out, s)
+// Convert_v1alpha4_NnfNodeStorageList_To_v1alpha6_NnfNodeStorageList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStorageList_To_v1alpha6_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha6.NnfNodeStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStorageList_To_v1alpha6_NnfNodeStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in *v1alpha5.NnfNodeStorageList, out *NnfNodeStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in *v1alpha6.NnfNodeStorageList, out *NnfNodeStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]NnfNodeStorage, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha5_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha6_NnfNodeStorage_To_v1alpha4_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2211,31 +2336,31 @@ func autoConvert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in *
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in *v1alpha5.NnfNodeStorageList, out *NnfNodeStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in, out, s)
+// Convert_v1alpha6_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in *v1alpha6.NnfNodeStorageList, out *NnfNodeStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeStorageList_To_v1alpha4_NnfNodeStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(in *NnfNodeStorageSpec, out *v1alpha5.NnfNodeStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(in *NnfNodeStorageSpec, out *v1alpha6.NnfNodeStorageSpec, s conversion.Scope) error {
 	out.Count = in.Count
 	out.SharedAllocation = in.SharedAllocation
 	out.Capacity = in.Capacity
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
 	out.FileSystemType = in.FileSystemType
-	if err := Convert_v1alpha4_LustreStorageSpec_To_v1alpha5_LustreStorageSpec(&in.LustreStorage, &out.LustreStorage, s); err != nil {
+	if err := Convert_v1alpha4_LustreStorageSpec_To_v1alpha6_LustreStorageSpec(&in.LustreStorage, &out.LustreStorage, s); err != nil {
 		return err
 	}
 	out.BlockReference = in.BlockReference
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(in *NnfNodeStorageSpec, out *v1alpha5.NnfNodeStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(in, out, s)
+// Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(in *NnfNodeStorageSpec, out *v1alpha6.NnfNodeStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *v1alpha5.NnfNodeStorageSpec, out *NnfNodeStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *v1alpha6.NnfNodeStorageSpec, out *NnfNodeStorageSpec, s conversion.Scope) error {
 	out.Count = in.Count
 	out.SharedAllocation = in.SharedAllocation
 	out.Capacity = in.Capacity
@@ -2243,105 +2368,109 @@ func autoConvert_v1alpha5_NnfNodeStorageSpec_To_v1alpha4_NnfNodeStorageSpec(in *
 	out.GroupID = in.GroupID
 	// WARNING: in.CommandVariables requires manual conversion: does not exist in peer-type
 	out.FileSystemType = in.FileSystemType
-	if err := Convert_v1alpha5_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(&in.LustreStorage, &out.LustreStorage, s); err != nil {
+	if err := Convert_v1alpha6_LustreStorageSpec_To_v1alpha4_LustreStorageSpec(&in.LustreStorage, &out.LustreStorage, s); err != nil {
 		return err
 	}
 	out.BlockReference = in.BlockReference
 	return nil
 }
 
-func autoConvert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha5.NnfNodeStorageStatus, s conversion.Scope) error {
-	out.Allocations = *(*[]v1alpha5.NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
+func autoConvert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha6.NnfNodeStorageStatus, s conversion.Scope) error {
+	out.Allocations = *(*[]v1alpha6.NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha5.NnfNodeStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(in, out, s)
+// Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha6.NnfNodeStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in *v1alpha5.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in *v1alpha6.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in *v1alpha5.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in, out, s)
+// Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in *v1alpha6.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfNodeStorageStatus_To_v1alpha4_NnfNodeStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManager_To_v1alpha5_NnfPortManager(in *NnfPortManager, out *v1alpha5.NnfPortManager, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfPortManager_To_v1alpha6_NnfPortManager(in *NnfPortManager, out *v1alpha6.NnfPortManager, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManager_To_v1alpha5_NnfPortManager is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManager_To_v1alpha5_NnfPortManager(in *NnfPortManager, out *v1alpha5.NnfPortManager, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManager_To_v1alpha5_NnfPortManager(in, out, s)
+// Convert_v1alpha4_NnfPortManager_To_v1alpha6_NnfPortManager is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManager_To_v1alpha6_NnfPortManager(in *NnfPortManager, out *v1alpha6.NnfPortManager, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManager_To_v1alpha6_NnfPortManager(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManager_To_v1alpha4_NnfPortManager(in *v1alpha5.NnfPortManager, out *NnfPortManager, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManager_To_v1alpha4_NnfPortManager(in *v1alpha6.NnfPortManager, out *NnfPortManager, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManager_To_v1alpha4_NnfPortManager is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManager_To_v1alpha4_NnfPortManager(in *v1alpha5.NnfPortManager, out *NnfPortManager, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManager_To_v1alpha4_NnfPortManager(in, out, s)
+// Convert_v1alpha6_NnfPortManager_To_v1alpha4_NnfPortManager is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManager_To_v1alpha4_NnfPortManager(in *v1alpha6.NnfPortManager, out *NnfPortManager, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManager_To_v1alpha4_NnfPortManager(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha5_NnfPortManagerAllocationSpec(in *NnfPortManagerAllocationSpec, out *v1alpha5.NnfPortManagerAllocationSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha6_NnfPortManagerAllocationSpec(in *NnfPortManagerAllocationSpec, out *v1alpha6.NnfPortManagerAllocationSpec, s conversion.Scope) error {
 	out.Requester = in.Requester
 	out.Count = in.Count
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha5_NnfPortManagerAllocationSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha5_NnfPortManagerAllocationSpec(in *NnfPortManagerAllocationSpec, out *v1alpha5.NnfPortManagerAllocationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha5_NnfPortManagerAllocationSpec(in, out, s)
+// Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha6_NnfPortManagerAllocationSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha6_NnfPortManagerAllocationSpec(in *NnfPortManagerAllocationSpec, out *v1alpha6.NnfPortManagerAllocationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManagerAllocationSpec_To_v1alpha6_NnfPortManagerAllocationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in *v1alpha5.NnfPortManagerAllocationSpec, out *NnfPortManagerAllocationSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in *v1alpha6.NnfPortManagerAllocationSpec, out *NnfPortManagerAllocationSpec, s conversion.Scope) error {
 	out.Requester = in.Requester
 	out.Count = in.Count
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in *v1alpha5.NnfPortManagerAllocationSpec, out *NnfPortManagerAllocationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in, out, s)
+// Convert_v1alpha6_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in *v1alpha6.NnfPortManagerAllocationSpec, out *NnfPortManagerAllocationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManagerAllocationSpec_To_v1alpha4_NnfPortManagerAllocationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha5_NnfPortManagerAllocationStatus(in *NnfPortManagerAllocationStatus, out *v1alpha5.NnfPortManagerAllocationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha6_NnfPortManagerAllocationStatus(in *NnfPortManagerAllocationStatus, out *v1alpha6.NnfPortManagerAllocationStatus, s conversion.Scope) error {
 	out.Requester = (*v1.ObjectReference)(unsafe.Pointer(in.Requester))
 	out.Ports = *(*[]uint16)(unsafe.Pointer(&in.Ports))
-	out.Status = v1alpha5.NnfPortManagerAllocationStatusStatus(in.Status)
+	out.Status = v1alpha6.NnfPortManagerAllocationStatusStatus(in.Status)
 	out.TimeUnallocated = (*metav1.Time)(unsafe.Pointer(in.TimeUnallocated))
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha5_NnfPortManagerAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha5_NnfPortManagerAllocationStatus(in *NnfPortManagerAllocationStatus, out *v1alpha5.NnfPortManagerAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha5_NnfPortManagerAllocationStatus(in, out, s)
+// Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha6_NnfPortManagerAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha6_NnfPortManagerAllocationStatus(in *NnfPortManagerAllocationStatus, out *v1alpha6.NnfPortManagerAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManagerAllocationStatus_To_v1alpha6_NnfPortManagerAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in *v1alpha5.NnfPortManagerAllocationStatus, out *NnfPortManagerAllocationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in *v1alpha6.NnfPortManagerAllocationStatus, out *NnfPortManagerAllocationStatus, s conversion.Scope) error {
 	out.Requester = (*v1.ObjectReference)(unsafe.Pointer(in.Requester))
 	out.Ports = *(*[]uint16)(unsafe.Pointer(&in.Ports))
 	out.Status = NnfPortManagerAllocationStatusStatus(in.Status)
@@ -2349,91 +2478,91 @@ func autoConvert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortMana
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in *v1alpha5.NnfPortManagerAllocationStatus, out *NnfPortManagerAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in, out, s)
+// Convert_v1alpha6_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in *v1alpha6.NnfPortManagerAllocationStatus, out *NnfPortManagerAllocationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManagerAllocationStatus_To_v1alpha4_NnfPortManagerAllocationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManagerList_To_v1alpha5_NnfPortManagerList(in *NnfPortManagerList, out *v1alpha5.NnfPortManagerList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfPortManagerList_To_v1alpha6_NnfPortManagerList(in *NnfPortManagerList, out *v1alpha6.NnfPortManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfPortManager)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha6.NnfPortManager)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManagerList_To_v1alpha5_NnfPortManagerList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManagerList_To_v1alpha5_NnfPortManagerList(in *NnfPortManagerList, out *v1alpha5.NnfPortManagerList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManagerList_To_v1alpha5_NnfPortManagerList(in, out, s)
+// Convert_v1alpha4_NnfPortManagerList_To_v1alpha6_NnfPortManagerList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManagerList_To_v1alpha6_NnfPortManagerList(in *NnfPortManagerList, out *v1alpha6.NnfPortManagerList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManagerList_To_v1alpha6_NnfPortManagerList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in *v1alpha5.NnfPortManagerList, out *NnfPortManagerList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in *v1alpha6.NnfPortManagerList, out *NnfPortManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]NnfPortManager)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManagerList_To_v1alpha4_NnfPortManagerList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in *v1alpha5.NnfPortManagerList, out *NnfPortManagerList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in, out, s)
+// Convert_v1alpha6_NnfPortManagerList_To_v1alpha4_NnfPortManagerList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in *v1alpha6.NnfPortManagerList, out *NnfPortManagerList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManagerList_To_v1alpha4_NnfPortManagerList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec(in *NnfPortManagerSpec, out *v1alpha5.NnfPortManagerSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec(in *NnfPortManagerSpec, out *v1alpha6.NnfPortManagerSpec, s conversion.Scope) error {
 	out.SystemConfiguration = in.SystemConfiguration
-	out.Allocations = *(*[]v1alpha5.NnfPortManagerAllocationSpec)(unsafe.Pointer(&in.Allocations))
+	out.Allocations = *(*[]v1alpha6.NnfPortManagerAllocationSpec)(unsafe.Pointer(&in.Allocations))
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec(in *NnfPortManagerSpec, out *v1alpha5.NnfPortManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManagerSpec_To_v1alpha5_NnfPortManagerSpec(in, out, s)
+// Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec(in *NnfPortManagerSpec, out *v1alpha6.NnfPortManagerSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManagerSpec_To_v1alpha6_NnfPortManagerSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in *v1alpha5.NnfPortManagerSpec, out *NnfPortManagerSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in *v1alpha6.NnfPortManagerSpec, out *NnfPortManagerSpec, s conversion.Scope) error {
 	out.SystemConfiguration = in.SystemConfiguration
 	out.Allocations = *(*[]NnfPortManagerAllocationSpec)(unsafe.Pointer(&in.Allocations))
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in *v1alpha5.NnfPortManagerSpec, out *NnfPortManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in, out, s)
+// Convert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in *v1alpha6.NnfPortManagerSpec, out *NnfPortManagerSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManagerSpec_To_v1alpha4_NnfPortManagerSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus(in *NnfPortManagerStatus, out *v1alpha5.NnfPortManagerStatus, s conversion.Scope) error {
-	out.Allocations = *(*[]v1alpha5.NnfPortManagerAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	out.Status = v1alpha5.NnfPortManagerStatusStatus(in.Status)
+func autoConvert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus(in *NnfPortManagerStatus, out *v1alpha6.NnfPortManagerStatus, s conversion.Scope) error {
+	out.Allocations = *(*[]v1alpha6.NnfPortManagerAllocationStatus)(unsafe.Pointer(&in.Allocations))
+	out.Status = v1alpha6.NnfPortManagerStatusStatus(in.Status)
 	return nil
 }
 
-// Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus(in *NnfPortManagerStatus, out *v1alpha5.NnfPortManagerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfPortManagerStatus_To_v1alpha5_NnfPortManagerStatus(in, out, s)
+// Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus(in *NnfPortManagerStatus, out *v1alpha6.NnfPortManagerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfPortManagerStatus_To_v1alpha6_NnfPortManagerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in *v1alpha5.NnfPortManagerStatus, out *NnfPortManagerStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in *v1alpha6.NnfPortManagerStatus, out *NnfPortManagerStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfPortManagerAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Status = NnfPortManagerStatusStatus(in.Status)
 	return nil
 }
 
-// Convert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in *v1alpha5.NnfPortManagerStatus, out *NnfPortManagerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in, out, s)
+// Convert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in *v1alpha6.NnfPortManagerStatus, out *NnfPortManagerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfPortManagerStatus_To_v1alpha4_NnfPortManagerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(in *NnfResourceStatus, out *v1alpha5.NnfResourceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(in *NnfResourceStatus, out *v1alpha6.NnfResourceStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
-	out.Status = v1alpha5.NnfResourceStatusType(in.Status)
-	out.Health = v1alpha5.NnfResourceHealthType(in.Health)
+	out.Status = v1alpha6.NnfResourceStatusType(in.Status)
+	out.Health = v1alpha6.NnfResourceHealthType(in.Health)
 	return nil
 }
 
-// Convert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(in *NnfResourceStatus, out *v1alpha5.NnfResourceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(in, out, s)
+// Convert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(in *NnfResourceStatus, out *v1alpha6.NnfResourceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in *v1alpha5.NnfResourceStatus, out *NnfResourceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in *v1alpha6.NnfResourceStatus, out *NnfResourceStatus, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
 	out.Status = NnfResourceStatusType(in.Status)
@@ -2441,111 +2570,111 @@ func autoConvert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in *v1
 	return nil
 }
 
-// Convert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in *v1alpha5.NnfResourceStatus, out *NnfResourceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in, out, s)
+// Convert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in *v1alpha6.NnfResourceStatus, out *NnfResourceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfServerStatus_To_v1alpha5_NnfServerStatus(in *NnfServerStatus, out *v1alpha5.NnfServerStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfServerStatus_To_v1alpha6_NnfServerStatus(in *NnfServerStatus, out *v1alpha6.NnfServerStatus, s conversion.Scope) error {
 	out.Hostname = in.Hostname
-	if err := Convert_v1alpha4_NnfResourceStatus_To_v1alpha5_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
+	if err := Convert_v1alpha4_NnfResourceStatus_To_v1alpha6_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfServerStatus_To_v1alpha5_NnfServerStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfServerStatus_To_v1alpha5_NnfServerStatus(in *NnfServerStatus, out *v1alpha5.NnfServerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfServerStatus_To_v1alpha5_NnfServerStatus(in, out, s)
+// Convert_v1alpha4_NnfServerStatus_To_v1alpha6_NnfServerStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfServerStatus_To_v1alpha6_NnfServerStatus(in *NnfServerStatus, out *v1alpha6.NnfServerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfServerStatus_To_v1alpha6_NnfServerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfServerStatus_To_v1alpha4_NnfServerStatus(in *v1alpha5.NnfServerStatus, out *NnfServerStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfServerStatus_To_v1alpha4_NnfServerStatus(in *v1alpha6.NnfServerStatus, out *NnfServerStatus, s conversion.Scope) error {
 	out.Hostname = in.Hostname
-	if err := Convert_v1alpha5_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
+	if err := Convert_v1alpha6_NnfResourceStatus_To_v1alpha4_NnfResourceStatus(&in.NnfResourceStatus, &out.NnfResourceStatus, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfServerStatus_To_v1alpha4_NnfServerStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfServerStatus_To_v1alpha4_NnfServerStatus(in *v1alpha5.NnfServerStatus, out *NnfServerStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfServerStatus_To_v1alpha4_NnfServerStatus(in, out, s)
+// Convert_v1alpha6_NnfServerStatus_To_v1alpha4_NnfServerStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfServerStatus_To_v1alpha4_NnfServerStatus(in *v1alpha6.NnfServerStatus, out *NnfServerStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfServerStatus_To_v1alpha4_NnfServerStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage(in *NnfStorage, out *v1alpha5.NnfStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage(in *NnfStorage, out *v1alpha6.NnfStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage(in *NnfStorage, out *v1alpha5.NnfStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage(in, out, s)
+// Convert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage(in *NnfStorage, out *v1alpha6.NnfStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage(in *v1alpha5.NnfStorage, out *NnfStorage, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage(in *v1alpha6.NnfStorage, out *NnfStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage(in *v1alpha5.NnfStorage, out *NnfStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage(in, out, s)
+// Convert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage(in *v1alpha6.NnfStorage, out *NnfStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha5_NnfStorageAllocationNodes(in *NnfStorageAllocationNodes, out *v1alpha5.NnfStorageAllocationNodes, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha6_NnfStorageAllocationNodes(in *NnfStorageAllocationNodes, out *v1alpha6.NnfStorageAllocationNodes, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Count = in.Count
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha5_NnfStorageAllocationNodes is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha5_NnfStorageAllocationNodes(in *NnfStorageAllocationNodes, out *v1alpha5.NnfStorageAllocationNodes, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha5_NnfStorageAllocationNodes(in, out, s)
+// Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha6_NnfStorageAllocationNodes is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha6_NnfStorageAllocationNodes(in *NnfStorageAllocationNodes, out *v1alpha6.NnfStorageAllocationNodes, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageAllocationNodes_To_v1alpha6_NnfStorageAllocationNodes(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in *v1alpha5.NnfStorageAllocationNodes, out *NnfStorageAllocationNodes, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in *v1alpha6.NnfStorageAllocationNodes, out *NnfStorageAllocationNodes, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Count = in.Count
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in *v1alpha5.NnfStorageAllocationNodes, out *NnfStorageAllocationNodes, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in, out, s)
+// Convert_v1alpha6_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in *v1alpha6.NnfStorageAllocationNodes, out *NnfStorageAllocationNodes, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageAllocationNodes_To_v1alpha4_NnfStorageAllocationNodes(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec(in *NnfStorageAllocationSetSpec, out *v1alpha5.NnfStorageAllocationSetSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec(in *NnfStorageAllocationSetSpec, out *v1alpha6.NnfStorageAllocationSetSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Capacity = in.Capacity
-	if err := Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(&in.NnfStorageLustreSpec, &out.NnfStorageLustreSpec, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec(&in.NnfStorageLustreSpec, &out.NnfStorageLustreSpec, s); err != nil {
 		return err
 	}
 	out.SharedAllocation = in.SharedAllocation
-	out.Nodes = *(*[]v1alpha5.NnfStorageAllocationNodes)(unsafe.Pointer(&in.Nodes))
+	out.Nodes = *(*[]v1alpha6.NnfStorageAllocationNodes)(unsafe.Pointer(&in.Nodes))
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec(in *NnfStorageAllocationSetSpec, out *v1alpha5.NnfStorageAllocationSetSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec(in, out, s)
+// Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec(in *NnfStorageAllocationSetSpec, out *v1alpha6.NnfStorageAllocationSetSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in *v1alpha5.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(in *v1alpha6.NnfStorageAllocationSetSpec, out *NnfStorageAllocationSetSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Capacity = in.Capacity
-	if err := Convert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(&in.NnfStorageLustreSpec, &out.NnfStorageLustreSpec, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(&in.NnfStorageLustreSpec, &out.NnfStorageLustreSpec, s); err != nil {
 		return err
 	}
 	out.SharedAllocation = in.SharedAllocation
@@ -2554,35 +2683,35 @@ func autoConvert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllo
 	return nil
 }
 
-func autoConvert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAllocationSetStatus(in *NnfStorageAllocationSetStatus, out *v1alpha5.NnfStorageAllocationSetStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in *NnfStorageAllocationSetStatus, out *v1alpha6.NnfStorageAllocationSetStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.AllocationCount = in.AllocationCount
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAllocationSetStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAllocationSetStatus(in *NnfStorageAllocationSetStatus, out *v1alpha5.NnfStorageAllocationSetStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAllocationSetStatus(in, out, s)
+// Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in *NnfStorageAllocationSetStatus, out *v1alpha6.NnfStorageAllocationSetStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in *v1alpha5.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in *v1alpha6.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.AllocationCount = in.AllocationCount
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in *v1alpha5.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in, out, s)
+// Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in *v1alpha6.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha4_NnfStorageAllocationSetStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList(in *NnfStorageList, out *v1alpha5.NnfStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageList_To_v1alpha6_NnfStorageList(in *NnfStorageList, out *v1alpha6.NnfStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]v1alpha5.NnfStorage, len(*in))
+		*out = make([]v1alpha6.NnfStorage, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha4_NnfStorage_To_v1alpha5_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha4_NnfStorage_To_v1alpha6_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2592,18 +2721,18 @@ func autoConvert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList(in *NnfStora
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList(in *NnfStorageList, out *v1alpha5.NnfStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageList_To_v1alpha5_NnfStorageList(in, out, s)
+// Convert_v1alpha4_NnfStorageList_To_v1alpha6_NnfStorageList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageList_To_v1alpha6_NnfStorageList(in *NnfStorageList, out *v1alpha6.NnfStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageList_To_v1alpha6_NnfStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList(in *v1alpha5.NnfStorageList, out *NnfStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageList_To_v1alpha4_NnfStorageList(in *v1alpha6.NnfStorageList, out *NnfStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]NnfStorage, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha5_NnfStorage_To_v1alpha4_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha6_NnfStorage_To_v1alpha4_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2613,12 +2742,12 @@ func autoConvert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList(in *v1alpha5
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList(in *v1alpha5.NnfStorageList, out *NnfStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageList_To_v1alpha4_NnfStorageList(in, out, s)
+// Convert_v1alpha6_NnfStorageList_To_v1alpha4_NnfStorageList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageList_To_v1alpha4_NnfStorageList(in *v1alpha6.NnfStorageList, out *NnfStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageList_To_v1alpha4_NnfStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(in *NnfStorageLustreComponents, out *v1alpha5.NnfStorageLustreComponents, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(in *NnfStorageLustreComponents, out *v1alpha6.NnfStorageLustreComponents, s conversion.Scope) error {
 	out.MDTs = *(*[]string)(unsafe.Pointer(&in.MDTs))
 	out.MGTs = *(*[]string)(unsafe.Pointer(&in.MGTs))
 	out.MGTMDTs = *(*[]string)(unsafe.Pointer(&in.MGTMDTs))
@@ -2627,12 +2756,12 @@ func autoConvert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustr
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(in *NnfStorageLustreComponents, out *v1alpha5.NnfStorageLustreComponents, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(in, out, s)
+// Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(in *NnfStorageLustreComponents, out *v1alpha6.NnfStorageLustreComponents, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in *v1alpha5.NnfStorageLustreComponents, out *NnfStorageLustreComponents, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in *v1alpha6.NnfStorageLustreComponents, out *NnfStorageLustreComponents, s conversion.Scope) error {
 	out.MDTs = *(*[]string)(unsafe.Pointer(&in.MDTs))
 	out.MGTs = *(*[]string)(unsafe.Pointer(&in.MGTs))
 	out.MGTMDTs = *(*[]string)(unsafe.Pointer(&in.MGTMDTs))
@@ -2641,12 +2770,12 @@ func autoConvert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustr
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in *v1alpha5.NnfStorageLustreComponents, out *NnfStorageLustreComponents, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in, out, s)
+// Convert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in *v1alpha6.NnfStorageLustreComponents, out *NnfStorageLustreComponents, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(in *NnfStorageLustreSpec, out *v1alpha5.NnfStorageLustreSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec(in *NnfStorageLustreSpec, out *v1alpha6.NnfStorageLustreSpec, s conversion.Scope) error {
 	out.TargetType = in.TargetType
 	out.BackFs = in.BackFs
 	out.MgsAddress = in.MgsAddress
@@ -2654,12 +2783,12 @@ func autoConvert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(in *NnfStorageLustreSpec, out *v1alpha5.NnfStorageLustreSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageLustreSpec_To_v1alpha5_NnfStorageLustreSpec(in, out, s)
+// Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec(in *NnfStorageLustreSpec, out *v1alpha6.NnfStorageLustreSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageLustreSpec_To_v1alpha6_NnfStorageLustreSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in *v1alpha5.NnfStorageLustreSpec, out *NnfStorageLustreSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in *v1alpha6.NnfStorageLustreSpec, out *NnfStorageLustreSpec, s conversion.Scope) error {
 	out.TargetType = in.TargetType
 	out.BackFs = in.BackFs
 	out.MgsAddress = in.MgsAddress
@@ -2667,79 +2796,79 @@ func autoConvert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in *v1alpha5.NnfStorageLustreSpec, out *NnfStorageLustreSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in, out, s)
+// Convert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in *v1alpha6.NnfStorageLustreSpec, out *NnfStorageLustreSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageLustreSpec_To_v1alpha4_NnfStorageLustreSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus(in *NnfStorageLustreStatus, out *v1alpha5.NnfStorageLustreStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(in *NnfStorageLustreStatus, out *v1alpha6.NnfStorageLustreStatus, s conversion.Scope) error {
 	out.MgsAddress = in.MgsAddress
 	out.FileSystemName = in.FileSystemName
 	out.LustreMgtReference = in.LustreMgtReference
-	if err := Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha5_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageLustreComponents_To_v1alpha6_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus(in *NnfStorageLustreStatus, out *v1alpha5.NnfStorageLustreStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus(in, out, s)
+// Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(in *NnfStorageLustreStatus, out *v1alpha6.NnfStorageLustreStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in *v1alpha5.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in *v1alpha6.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s conversion.Scope) error {
 	out.MgsAddress = in.MgsAddress
 	out.FileSystemName = in.FileSystemName
 	out.LustreMgtReference = in.LustreMgtReference
-	if err := Convert_v1alpha5_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageLustreComponents_To_v1alpha4_NnfStorageLustreComponents(&in.LustreComponents, &out.LustreComponents, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in *v1alpha5.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in, out, s)
+// Convert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in *v1alpha6.NnfStorageLustreStatus, out *NnfStorageLustreStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(in *NnfStorageProfile, out *v1alpha5.NnfStorageProfile, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile(in *NnfStorageProfile, out *v1alpha6.NnfStorageProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData(&in.Data, &out.Data, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData(&in.Data, &out.Data, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfile_To_v1alpha5_NnfStorageProfile is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(in *NnfStorageProfile, out *v1alpha5.NnfStorageProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(in, out, s)
+// Convert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile(in *NnfStorageProfile, out *v1alpha6.NnfStorageProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in *v1alpha5.NnfStorageProfile, out *NnfStorageProfile, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in *v1alpha6.NnfStorageProfile, out *NnfStorageProfile, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(&in.Data, &out.Data, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(&in.Data, &out.Data, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfile_To_v1alpha4_NnfStorageProfile is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in *v1alpha5.NnfStorageProfile, out *NnfStorageProfile, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in, out, s)
+// Convert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in *v1alpha6.NnfStorageProfile, out *NnfStorageProfile, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(in *NnfStorageProfileCmdLines, out *v1alpha5.NnfStorageProfileCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(in *NnfStorageProfileCmdLines, out *v1alpha6.NnfStorageProfileCmdLines, s conversion.Scope) error {
 	out.Mkfs = in.Mkfs
 	out.SharedVg = in.SharedVg
 	out.PvCreate = in.PvCreate
 	out.PvRemove = in.PvRemove
 	out.VgCreate = in.VgCreate
-	if err := Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines(&in.VgChange, &out.VgChange, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines(&in.VgChange, &out.VgChange, s); err != nil {
 		return err
 	}
 	out.VgRemove = in.VgRemove
 	out.LvCreate = in.LvCreate
-	if err := Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines(&in.LvChange, &out.LvChange, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines(&in.LvChange, &out.LvChange, s); err != nil {
 		return err
 	}
 	out.LvRemove = in.LvRemove
@@ -2750,23 +2879,23 @@ func autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfil
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(in *NnfStorageProfileCmdLines, out *v1alpha5.NnfStorageProfileCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(in *NnfStorageProfileCmdLines, out *v1alpha6.NnfStorageProfileCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in *v1alpha5.NnfStorageProfileCmdLines, out *NnfStorageProfileCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in *v1alpha6.NnfStorageProfileCmdLines, out *NnfStorageProfileCmdLines, s conversion.Scope) error {
 	out.Mkfs = in.Mkfs
 	out.SharedVg = in.SharedVg
 	out.PvCreate = in.PvCreate
 	out.PvRemove = in.PvRemove
 	out.VgCreate = in.VgCreate
-	if err := Convert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(&in.VgChange, &out.VgChange, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(&in.VgChange, &out.VgChange, s); err != nil {
 		return err
 	}
 	out.VgRemove = in.VgRemove
 	out.LvCreate = in.LvCreate
-	if err := Convert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(&in.LvChange, &out.LvChange, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(&in.LvChange, &out.LvChange, s); err != nil {
 		return err
 	}
 	out.LvRemove = in.LvRemove
@@ -2777,59 +2906,59 @@ func autoConvert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfil
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in *v1alpha5.NnfStorageProfileCmdLines, out *NnfStorageProfileCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in *v1alpha6.NnfStorageProfileCmdLines, out *NnfStorageProfileCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData(in *NnfStorageProfileData, out *v1alpha5.NnfStorageProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData(in *NnfStorageProfileData, out *v1alpha6.NnfStorageProfileData, s conversion.Scope) error {
 	out.Default = in.Default
 	out.Pinned = in.Pinned
-	if err := Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(&in.LustreStorage, &out.LustreStorage, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha6_NnfStorageProfileLustreData(&in.LustreStorage, &out.LustreStorage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data(&in.GFS2Storage, &out.GFS2Storage, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data(&in.GFS2Storage, &out.GFS2Storage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData(&in.XFSStorage, &out.XFSStorage, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData(&in.XFSStorage, &out.XFSStorage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData(&in.RawStorage, &out.RawStorage, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData(&in.RawStorage, &out.RawStorage, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData(in *NnfStorageProfileData, out *v1alpha5.NnfStorageProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileData_To_v1alpha5_NnfStorageProfileData(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData(in *NnfStorageProfileData, out *v1alpha6.NnfStorageProfileData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileData_To_v1alpha6_NnfStorageProfileData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in *v1alpha5.NnfStorageProfileData, out *NnfStorageProfileData, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in *v1alpha6.NnfStorageProfileData, out *NnfStorageProfileData, s conversion.Scope) error {
 	out.Default = in.Default
 	out.Pinned = in.Pinned
-	if err := Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(&in.LustreStorage, &out.LustreStorage, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(&in.LustreStorage, &out.LustreStorage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(&in.GFS2Storage, &out.GFS2Storage, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(&in.GFS2Storage, &out.GFS2Storage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(&in.XFSStorage, &out.XFSStorage, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(&in.XFSStorage, &out.XFSStorage, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(&in.RawStorage, &out.RawStorage, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(&in.RawStorage, &out.RawStorage, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in *v1alpha5.NnfStorageProfileData, out *NnfStorageProfileData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in *v1alpha6.NnfStorageProfileData, out *NnfStorageProfileData, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileData_To_v1alpha4_NnfStorageProfileData(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data(in *NnfStorageProfileGFS2Data, out *v1alpha5.NnfStorageProfileGFS2Data, s conversion.Scope) error {
-	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data(in *NnfStorageProfileGFS2Data, out *v1alpha6.NnfStorageProfileGFS2Data, s conversion.Scope) error {
+	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -2837,13 +2966,13 @@ func autoConvert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfil
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data(in *NnfStorageProfileGFS2Data, out *v1alpha5.NnfStorageProfileGFS2Data, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha5_NnfStorageProfileGFS2Data(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data(in *NnfStorageProfileGFS2Data, out *v1alpha6.NnfStorageProfileGFS2Data, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileGFS2Data_To_v1alpha6_NnfStorageProfileGFS2Data(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in *v1alpha5.NnfStorageProfileGFS2Data, out *NnfStorageProfileGFS2Data, s conversion.Scope) error {
-	if err := Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in *v1alpha6.NnfStorageProfileGFS2Data, out *NnfStorageProfileGFS2Data, s conversion.Scope) error {
+	if err := Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -2851,110 +2980,123 @@ func autoConvert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfil
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in *v1alpha5.NnfStorageProfileGFS2Data, out *NnfStorageProfileGFS2Data, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in *v1alpha6.NnfStorageProfileGFS2Data, out *NnfStorageProfileGFS2Data, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileGFS2Data_To_v1alpha4_NnfStorageProfileGFS2Data(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines(in *NnfStorageProfileLVMLvChangeCmdLines, out *v1alpha5.NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines(in *NnfStorageProfileLVMLvChangeCmdLines, out *v1alpha6.NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
 	out.Activate = in.Activate
 	out.Deactivate = in.Deactivate
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines(in *NnfStorageProfileLVMLvChangeCmdLines, out *v1alpha5.NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines(in *NnfStorageProfileLVMLvChangeCmdLines, out *v1alpha6.NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in *v1alpha5.NnfStorageProfileLVMLvChangeCmdLines, out *NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in *v1alpha6.NnfStorageProfileLVMLvChangeCmdLines, out *NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
 	out.Activate = in.Activate
 	out.Deactivate = in.Deactivate
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in *v1alpha5.NnfStorageProfileLVMLvChangeCmdLines, out *NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in *v1alpha6.NnfStorageProfileLVMLvChangeCmdLines, out *NnfStorageProfileLVMLvChangeCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileLVMLvChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMLvChangeCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines(in *NnfStorageProfileLVMVgChangeCmdLines, out *v1alpha5.NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines(in *NnfStorageProfileLVMVgChangeCmdLines, out *v1alpha6.NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
 	out.LockStart = in.LockStart
 	out.LockStop = in.LockStop
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines(in *NnfStorageProfileLVMVgChangeCmdLines, out *v1alpha5.NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines(in *NnfStorageProfileLVMVgChangeCmdLines, out *v1alpha6.NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in *v1alpha5.NnfStorageProfileLVMVgChangeCmdLines, out *NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in *v1alpha6.NnfStorageProfileLVMVgChangeCmdLines, out *NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
 	out.LockStart = in.LockStart
 	out.LockStop = in.LockStop
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in *v1alpha5.NnfStorageProfileLVMVgChangeCmdLines, out *NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in *v1alpha6.NnfStorageProfileLVMVgChangeCmdLines, out *NnfStorageProfileLVMVgChangeCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileLVMVgChangeCmdLines_To_v1alpha4_NnfStorageProfileLVMVgChangeCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileList_To_v1alpha5_NnfStorageProfileList(in *NnfStorageProfileList, out *v1alpha5.NnfStorageProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileList_To_v1alpha6_NnfStorageProfileList(in *NnfStorageProfileList, out *v1alpha6.NnfStorageProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfStorageProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfStorageProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfStorageProfile_To_v1alpha6_NnfStorageProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileList_To_v1alpha5_NnfStorageProfileList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileList_To_v1alpha5_NnfStorageProfileList(in *NnfStorageProfileList, out *v1alpha5.NnfStorageProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileList_To_v1alpha5_NnfStorageProfileList(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileList_To_v1alpha6_NnfStorageProfileList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileList_To_v1alpha6_NnfStorageProfileList(in *NnfStorageProfileList, out *v1alpha6.NnfStorageProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileList_To_v1alpha6_NnfStorageProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in *v1alpha5.NnfStorageProfileList, out *NnfStorageProfileList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in *v1alpha6.NnfStorageProfileList, out *NnfStorageProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfStorageProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfStorageProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfStorageProfile_To_v1alpha4_NnfStorageProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in *v1alpha5.NnfStorageProfileList, out *NnfStorageProfileList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in *v1alpha6.NnfStorageProfileList, out *NnfStorageProfileList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileList_To_v1alpha4_NnfStorageProfileList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *v1alpha5.NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *v1alpha6.NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
 	out.ZpoolCreate = in.ZpoolCreate
 	out.Mkfs = in.Mkfs
 	out.MountTarget = in.MountTarget
 	out.PostActivate = *(*[]string)(unsafe.Pointer(&in.PostActivate))
-	out.PostMount = *(*[]string)(unsafe.Pointer(&in.PostMount))
-	out.PreUnmount = *(*[]string)(unsafe.Pointer(&in.PreUnmount))
+	// WARNING: in.PostMount requires manual conversion: does not exist in peer-type
+	// WARNING: in.PreUnmount requires manual conversion: does not exist in peer-type
 	out.PreDeactivate = *(*[]string)(unsafe.Pointer(&in.PreDeactivate))
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *v1alpha5.NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(in, out, s)
-}
-
-func autoConvert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in *v1alpha5.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in *v1alpha6.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
 	out.ZpoolCreate = in.ZpoolCreate
 	out.Mkfs = in.Mkfs
 	out.MountTarget = in.MountTarget
 	out.PostActivate = *(*[]string)(unsafe.Pointer(&in.PostActivate))
-	out.PostMount = *(*[]string)(unsafe.Pointer(&in.PostMount))
-	out.PreUnmount = *(*[]string)(unsafe.Pointer(&in.PreUnmount))
 	out.PreDeactivate = *(*[]string)(unsafe.Pointer(&in.PreDeactivate))
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in *v1alpha5.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in *v1alpha6.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *v1alpha5.NnfStorageProfileLustreData, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha6_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *v1alpha6.NnfStorageProfileLustreData, s conversion.Scope) error {
 	out.CombinedMGTMDT = in.CombinedMGTMDT
 	out.ExternalMGS = in.ExternalMGS
 	out.CapacityMGT = in.CapacityMGT
@@ -2962,41 +3104,36 @@ func autoConvert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProf
 	out.ExclusiveMDT = in.ExclusiveMDT
 	out.CapacityScalingFactor = in.CapacityScalingFactor
 	out.StandaloneMGTPoolName = in.StandaloneMGTPoolName
-	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha5_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
+	if err := Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
 		return err
 	}
-	out.MountRabbit = in.MountRabbit
-	out.MountCompute = in.MountCompute
+	// WARNING: in.MountRabbit requires manual conversion: does not exist in peer-type
+	// WARNING: in.MountCompute requires manual conversion: does not exist in peer-type
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *v1alpha5.NnfStorageProfileLustreData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in, out, s)
-}
-
-func autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(in *v1alpha5.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(in *v1alpha6.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s conversion.Scope) error {
 	out.CombinedMGTMDT = in.CombinedMGTMDT
 	out.ExternalMGS = in.ExternalMGS
 	out.CapacityMGT = in.CapacityMGT
@@ -3004,41 +3141,36 @@ func autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProf
 	out.ExclusiveMDT = in.ExclusiveMDT
 	out.CapacityScalingFactor = in.CapacityScalingFactor
 	out.StandaloneMGTPoolName = in.StandaloneMGTPoolName
-	if err := Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreCmdLines_To_v1alpha4_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
+	if err := Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
 		return err
 	}
-	out.MountRabbit = in.MountRabbit
-	out.MountCompute = in.MountCompute
+	// WARNING: in.ClientCmdLines requires manual conversion: does not exist in peer-type
+	// WARNING: in.PreMountMGTCmds requires manual conversion: does not exist in peer-type
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(in *v1alpha5.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha4_NnfStorageProfileLustreData(in, out, s)
-}
-
-func autoConvert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha5.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha6.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
 	out.ColocateComputes = in.ColocateComputes
 	out.Count = in.Count
 	out.Scale = in.Scale
@@ -3046,12 +3178,12 @@ func autoConvert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStor
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha5.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha5_NnfStorageProfileLustreMiscOptions(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha6.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileLustreMiscOptions_To_v1alpha6_NnfStorageProfileLustreMiscOptions(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in *v1alpha5.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in *v1alpha6.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
 	out.ColocateComputes = in.ColocateComputes
 	out.Count = in.Count
 	out.Scale = in.Scale
@@ -3059,13 +3191,13 @@ func autoConvert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStor
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in *v1alpha5.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in *v1alpha6.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileLustreMiscOptions_To_v1alpha4_NnfStorageProfileLustreMiscOptions(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData(in *NnfStorageProfileRawData, out *v1alpha5.NnfStorageProfileRawData, s conversion.Scope) error {
-	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData(in *NnfStorageProfileRawData, out *v1alpha6.NnfStorageProfileRawData, s conversion.Scope) error {
+	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -3073,13 +3205,13 @@ func autoConvert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfile
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData(in *NnfStorageProfileRawData, out *v1alpha5.NnfStorageProfileRawData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileRawData_To_v1alpha5_NnfStorageProfileRawData(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData(in *NnfStorageProfileRawData, out *v1alpha6.NnfStorageProfileRawData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileRawData_To_v1alpha6_NnfStorageProfileRawData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in *v1alpha5.NnfStorageProfileRawData, out *NnfStorageProfileRawData, s conversion.Scope) error {
-	if err := Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in *v1alpha6.NnfStorageProfileRawData, out *NnfStorageProfileRawData, s conversion.Scope) error {
+	if err := Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -3087,13 +3219,13 @@ func autoConvert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfile
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in *v1alpha5.NnfStorageProfileRawData, out *NnfStorageProfileRawData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in *v1alpha6.NnfStorageProfileRawData, out *NnfStorageProfileRawData, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileRawData_To_v1alpha4_NnfStorageProfileRawData(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData(in *NnfStorageProfileXFSData, out *v1alpha5.NnfStorageProfileXFSData, s conversion.Scope) error {
-	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha5_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData(in *NnfStorageProfileXFSData, out *v1alpha6.NnfStorageProfileXFSData, s conversion.Scope) error {
+	if err := Convert_v1alpha4_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -3101,13 +3233,13 @@ func autoConvert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfile
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData(in *NnfStorageProfileXFSData, out *v1alpha5.NnfStorageProfileXFSData, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha5_NnfStorageProfileXFSData(in, out, s)
+// Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData(in *NnfStorageProfileXFSData, out *v1alpha6.NnfStorageProfileXFSData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageProfileXFSData_To_v1alpha6_NnfStorageProfileXFSData(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in *v1alpha5.NnfStorageProfileXFSData, out *NnfStorageProfileXFSData, s conversion.Scope) error {
-	if err := Convert_v1alpha5_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
+func autoConvert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in *v1alpha6.NnfStorageProfileXFSData, out *NnfStorageProfileXFSData, s conversion.Scope) error {
+	if err := Convert_v1alpha6_NnfStorageProfileCmdLines_To_v1alpha4_NnfStorageProfileCmdLines(&in.CmdLines, &out.CmdLines, s); err != nil {
 		return err
 	}
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
@@ -3115,20 +3247,20 @@ func autoConvert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfile
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in *v1alpha5.NnfStorageProfileXFSData, out *NnfStorageProfileXFSData, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in, out, s)
+// Convert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in *v1alpha6.NnfStorageProfileXFSData, out *NnfStorageProfileXFSData, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageProfileXFSData_To_v1alpha4_NnfStorageProfileXFSData(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(in *NnfStorageSpec, out *v1alpha5.NnfStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec(in *NnfStorageSpec, out *v1alpha6.NnfStorageSpec, s conversion.Scope) error {
 	out.FileSystemType = in.FileSystemType
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
 	if in.AllocationSets != nil {
 		in, out := &in.AllocationSets, &out.AllocationSets
-		*out = make([]v1alpha5.NnfStorageAllocationSetSpec, len(*in))
+		*out = make([]v1alpha6.NnfStorageAllocationSetSpec, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha5_NnfStorageAllocationSetSpec(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha4_NnfStorageAllocationSetSpec_To_v1alpha6_NnfStorageAllocationSetSpec(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -3138,12 +3270,12 @@ func autoConvert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(in *NnfStora
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(in *NnfStorageSpec, out *v1alpha5.NnfStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageSpec_To_v1alpha5_NnfStorageSpec(in, out, s)
+// Convert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec(in *NnfStorageSpec, out *v1alpha6.NnfStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageSpec_To_v1alpha6_NnfStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha5.NnfStorageSpec, out *NnfStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha6.NnfStorageSpec, out *NnfStorageSpec, s conversion.Scope) error {
 	out.FileSystemType = in.FileSystemType
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
@@ -3151,7 +3283,7 @@ func autoConvert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha5
 		in, out := &in.AllocationSets, &out.AllocationSets
 		*out = make([]NnfStorageAllocationSetSpec, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha5_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha6_NnfStorageAllocationSetSpec_To_v1alpha4_NnfStorageAllocationSetSpec(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -3161,103 +3293,127 @@ func autoConvert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha5
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha5.NnfStorageSpec, out *NnfStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in, out, s)
+// Convert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in *v1alpha6.NnfStorageSpec, out *NnfStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageSpec_To_v1alpha4_NnfStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(in *NnfStorageStatus, out *v1alpha5.NnfStorageStatus, s conversion.Scope) error {
-	if err := Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha5_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
+func autoConvert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in *NnfStorageStatus, out *v1alpha6.NnfStorageStatus, s conversion.Scope) error {
+	if err := Convert_v1alpha4_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
 		return err
 	}
-	out.AllocationSets = *(*[]v1alpha5.NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	out.ResourceError = in.ResourceError
+	out.AllocationSets = *(*[]v1alpha6.NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(in *NnfStorageStatus, out *v1alpha5.NnfStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(in, out, s)
+// Convert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in *NnfStorageStatus, out *v1alpha6.NnfStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in *v1alpha5.NnfStorageStatus, out *NnfStorageStatus, s conversion.Scope) error {
-	if err := Convert_v1alpha5_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
+func autoConvert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in *v1alpha6.NnfStorageStatus, out *NnfStorageStatus, s conversion.Scope) error {
+	if err := Convert_v1alpha6_NnfStorageLustreStatus_To_v1alpha4_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
 		return err
 	}
 	out.AllocationSets = *(*[]NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in *v1alpha5.NnfStorageStatus, out *NnfStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in, out, s)
+// Convert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in *v1alpha6.NnfStorageStatus, out *NnfStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfStorageStatus_To_v1alpha4_NnfStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(in *NnfSystemStorage, out *v1alpha5.NnfSystemStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage(in *NnfSystemStorage, out *v1alpha6.NnfSystemStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfSystemStorage_To_v1alpha5_NnfSystemStorage is an autogenerated conversion function.
-func Convert_v1alpha4_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(in *NnfSystemStorage, out *v1alpha5.NnfSystemStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(in, out, s)
+// Convert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage is an autogenerated conversion function.
+func Convert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage(in *NnfSystemStorage, out *v1alpha6.NnfSystemStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in *v1alpha5.NnfSystemStorage, out *NnfSystemStorage, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in *v1alpha6.NnfSystemStorage, out *NnfSystemStorage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfSystemStorage_To_v1alpha4_NnfSystemStorage is an autogenerated conversion function.
-func Convert_v1alpha5_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in *v1alpha5.NnfSystemStorage, out *NnfSystemStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in, out, s)
+// Convert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage is an autogenerated conversion function.
+func Convert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in *v1alpha6.NnfSystemStorage, out *NnfSystemStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList(in *NnfSystemStorageList, out *v1alpha5.NnfSystemStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfSystemStorageList_To_v1alpha6_NnfSystemStorageList(in *NnfSystemStorageList, out *v1alpha6.NnfSystemStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.NnfSystemStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha6.NnfSystemStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha4_NnfSystemStorage_To_v1alpha6_NnfSystemStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList is an autogenerated conversion function.
-func Convert_v1alpha4_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList(in *NnfSystemStorageList, out *v1alpha5.NnfSystemStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList(in, out, s)
+// Convert_v1alpha4_NnfSystemStorageList_To_v1alpha6_NnfSystemStorageList is an autogenerated conversion function.
+func Convert_v1alpha4_NnfSystemStorageList_To_v1alpha6_NnfSystemStorageList(in *NnfSystemStorageList, out *v1alpha6.NnfSystemStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfSystemStorageList_To_v1alpha6_NnfSystemStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in *v1alpha5.NnfSystemStorageList, out *NnfSystemStorageList, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in *v1alpha6.NnfSystemStorageList, out *NnfSystemStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfSystemStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfSystemStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfSystemStorage_To_v1alpha4_NnfSystemStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList is an autogenerated conversion function.
-func Convert_v1alpha5_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in *v1alpha5.NnfSystemStorageList, out *NnfSystemStorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in, out, s)
+// Convert_v1alpha6_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList is an autogenerated conversion function.
+func Convert_v1alpha6_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in *v1alpha6.NnfSystemStorageList, out *NnfSystemStorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfSystemStorageList_To_v1alpha4_NnfSystemStorageList(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(in *NnfSystemStorageSpec, out *v1alpha5.NnfSystemStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec(in *NnfSystemStorageSpec, out *v1alpha6.NnfSystemStorageSpec, s conversion.Scope) error {
 	out.SystemConfiguration = in.SystemConfiguration
 	out.ExcludeRabbits = *(*[]string)(unsafe.Pointer(&in.ExcludeRabbits))
 	out.IncludeRabbits = *(*[]string)(unsafe.Pointer(&in.IncludeRabbits))
 	out.ExcludeDisabledRabbits = in.ExcludeDisabledRabbits
 	out.ExcludeComputes = *(*[]string)(unsafe.Pointer(&in.ExcludeComputes))
 	out.IncludeComputes = *(*[]string)(unsafe.Pointer(&in.IncludeComputes))
-	out.ComputesTarget = v1alpha5.NnfSystemStorageComputesTarget(in.ComputesTarget)
+	out.ComputesTarget = v1alpha6.NnfSystemStorageComputesTarget(in.ComputesTarget)
 	out.ComputesPattern = *(*[]int)(unsafe.Pointer(&in.ComputesPattern))
 	out.Capacity = in.Capacity
 	out.Type = in.Type
@@ -3269,12 +3425,12 @@ func autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(
 	return nil
 }
 
-// Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(in *NnfSystemStorageSpec, out *v1alpha5.NnfSystemStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(in, out, s)
+// Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec(in *NnfSystemStorageSpec, out *v1alpha6.NnfSystemStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfSystemStorageSpec_To_v1alpha6_NnfSystemStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in *v1alpha5.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in *v1alpha6.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s conversion.Scope) error {
 	out.SystemConfiguration = in.SystemConfiguration
 	out.ExcludeRabbits = *(*[]string)(unsafe.Pointer(&in.ExcludeRabbits))
 	out.IncludeRabbits = *(*[]string)(unsafe.Pointer(&in.IncludeRabbits))
@@ -3293,29 +3449,33 @@ func autoConvert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(
 	return nil
 }
 
-// Convert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in *v1alpha5.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in, out, s)
+// Convert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec is an autogenerated conversion function.
+func Convert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in *v1alpha6.NnfSystemStorageSpec, out *NnfSystemStorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfSystemStorageSpec_To_v1alpha4_NnfSystemStorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha5.NnfSystemStorageStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha6.NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha5.NnfSystemStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha4_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(in, out, s)
+// Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha6.NnfSystemStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_NnfSystemStorageStatus_To_v1alpha6_NnfSystemStorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in *v1alpha5.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
+func autoConvert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in *v1alpha6.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	out.ResourceError = in.ResourceError
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in *v1alpha5.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in, out, s)
+// Convert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus is an autogenerated conversion function.
+func Convert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in *v1alpha6.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha6_NnfSystemStorageStatus_To_v1alpha4_NnfSystemStorageStatus(in, out, s)
 }

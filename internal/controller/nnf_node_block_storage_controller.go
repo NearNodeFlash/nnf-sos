@@ -53,11 +53,12 @@ import (
 	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
+	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
+	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
+	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 )
 
 const (
@@ -106,7 +107,7 @@ func (r *NnfNodeBlockStorageReconciler) EventHandler(e nnfevent.Event) error {
 
 	log.Info("triggering watch")
 
-	r.Events <- event.GenericEvent{Object: &nnfv1alpha5.NnfNodeBlockStorage{
+	r.Events <- event.GenericEvent{Object: &nnfv1alpha6.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-ec-event",
 			Namespace: "nnf-ec-event",
@@ -159,7 +160,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	metrics.NnfNodeBlockStorageReconcilesTotal.Inc()
 
-	nodeBlockStorage := &nnfv1alpha5.NnfNodeBlockStorage{}
+	nodeBlockStorage := &nnfv1alpha6.NnfNodeBlockStorage{}
 	if err := r.Get(ctx, req.NamespacedName, nodeBlockStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -178,7 +179,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha5.NnfNodeBlockStorageStatus](nodeBlockStorage)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha6.NnfNodeBlockStorageStatus](nodeBlockStorage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nodeBlockStorage.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -226,9 +227,9 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// Initialize the status section with empty allocation statuses.
 	if len(nodeBlockStorage.Status.Allocations) == 0 {
-		nodeBlockStorage.Status.Allocations = make([]nnfv1alpha5.NnfNodeBlockStorageAllocationStatus, len(nodeBlockStorage.Spec.Allocations))
+		nodeBlockStorage.Status.Allocations = make([]nnfv1alpha6.NnfNodeBlockStorageAllocationStatus, len(nodeBlockStorage.Spec.Allocations))
 		for i := range nodeBlockStorage.Status.Allocations {
-			nodeBlockStorage.Status.Allocations[i].Accesses = make(map[string]nnfv1alpha5.NnfNodeBlockStorageAccessStatus)
+			nodeBlockStorage.Status.Allocations[i].Accesses = make(map[string]nnfv1alpha6.NnfNodeBlockStorageAccessStatus)
 		}
 
 		return ctrl.Result{}, nil
@@ -239,7 +240,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Allocate physical storage
 		result, err := r.allocateStorage(nodeBlockStorage, i)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to allocate NVMe namespaces for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to allocate NVMe namespaces for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
 			return *result, nil
@@ -248,7 +249,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Create a block device in /dev that is accessible on the Rabbit node
 		result, err = r.createBlockDevice(ctx, nodeBlockStorage, i)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha2.NewResourceError("unable to attache NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to attache NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
 			return *result, nil
@@ -264,7 +265,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
-			return ctrl.Result{}, dwsv1alpha2.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+			return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
 		}
 
 		// Set the start time of the pod that did the reconcile. This allows us to detect when the Rabbit node has
@@ -275,7 +276,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 
 			if container.State.Running == nil {
-				return ctrl.Result{}, dwsv1alpha2.NewResourceError("pod not in state running: %v", client.ObjectKeyFromObject(pod)).WithError(err).WithMajor()
+				return ctrl.Result{}, dwsv1alpha3.NewResourceError("pod not in state running: %v", client.ObjectKeyFromObject(pod)).WithError(err).WithMajor()
 			}
 
 			nodeBlockStorage.Status.PodStartTime = container.State.Running.StartedAt
@@ -287,7 +288,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1alpha5.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1alpha6.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
@@ -298,7 +299,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	storagePoolID := getStoragePoolID(nodeBlockStorage, index)
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeBlockStorage.Spec.Allocations[index].Capacity)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not create storage pool").WithError(err).WithMajor()
+		return nil, dwsv1alpha3.NewResourceError("could not create storage pool").WithError(err).WithMajor()
 	}
 
 	vc := &sf.VolumeCollectionVolumeCollection{}
@@ -307,11 +308,11 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	}
 
 	if len(allocationStatus.Devices) == 0 {
-		allocationStatus.Devices = make([]nnfv1alpha5.NnfNodeBlockStorageDeviceStatus, len(vc.Members))
+		allocationStatus.Devices = make([]nnfv1alpha6.NnfNodeBlockStorageDeviceStatus, len(vc.Members))
 	}
 
 	if len(allocationStatus.Devices) != len(vc.Members) {
-		return nil, dwsv1alpha2.NewResourceError("unexpected number of namespaces").WithFatal()
+		return nil, dwsv1alpha3.NewResourceError("unexpected number of namespaces").WithFatal()
 	}
 
 	for i, member := range vc.Members {
@@ -345,7 +346,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	return nil, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, nodeBlockStorage *nnfv1alpha5.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, nodeBlockStorage *nnfv1alpha6.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
 
@@ -359,7 +360,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 	// Retrieve the collection of endpoints for us to map
 	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
 	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not get service endpoint").WithError(err).WithFatal()
+		return nil, dwsv1alpha3.NewResourceError("could not get service endpoint").WithError(err).WithFatal()
 	}
 
 	// Get the Storage resource to map between compute node name and
@@ -369,10 +370,10 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		Namespace: "default",
 	}
 
-	storage := &dwsv1alpha2.Storage{}
+	storage := &dwsv1alpha3.Storage{}
 	err := r.Get(ctx, namespacedName, storage)
 	if err != nil {
-		return nil, dwsv1alpha2.NewResourceError("could not read storage resource").WithError(err)
+		return nil, dwsv1alpha3.NewResourceError("could not read storage resource").WithError(err)
 	}
 
 	// Build a list of all nodes with access to the storage
@@ -410,7 +411,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			}
 
 			if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+				return nil, dwsv1alpha3.NewResourceError("could not delete storage group").WithError(err).WithMajor()
 			}
 
 			for oldNodeName, accessStatus := range allocationStatus.Accesses {
@@ -423,33 +424,33 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		} else {
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
-				allocationStatus.Accesses[nodeName] = nnfv1alpha5.NnfNodeBlockStorageAccessStatus{StorageGroupId: "fake-storage-group"}
+				allocationStatus.Accesses[nodeName] = nnfv1alpha6.NnfNodeBlockStorageAccessStatus{StorageGroupId: "fake-storage-group"}
 				continue
 			}
 
 			endPoint, err := r.getEndpoint(ss, endpointID)
 			if err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not get endpoint").WithError(err).WithFatal()
+				return nil, dwsv1alpha3.NewResourceError("could not get endpoint").WithError(err).WithFatal()
 			}
 
 			// Skip the endpoints that are not ready
-			if nnfv1alpha5.StaticResourceStatus(endPoint.Status) != nnfv1alpha5.ResourceReady {
+			if nnfv1alpha6.StaticResourceStatus(endPoint.Status) != nnfv1alpha6.ResourceReady {
 				continue
 			}
 
 			sg, err := r.createStorageGroup(ss, storageGroupId, allocationStatus.StoragePoolId, endpointID)
 			if err != nil {
-				return nil, dwsv1alpha2.NewResourceError("could not create storage group").WithError(err).WithMajor()
+				return nil, dwsv1alpha3.NewResourceError("could not create storage group").WithError(err).WithMajor()
 			}
 
 			if allocationStatus.Accesses == nil {
-				allocationStatus.Accesses = make(map[string]nnfv1alpha5.NnfNodeBlockStorageAccessStatus)
+				allocationStatus.Accesses = make(map[string]nnfv1alpha6.NnfNodeBlockStorageAccessStatus)
 			}
 
 			// If the access status doesn't exist then we just created the resource. Save the ID in the NnfNodeBlockStorage
 			if _, ok := allocationStatus.Accesses[nodeName]; !ok {
 				log.Info("Created storage group", "Id", storageGroupId)
-				allocationStatus.Accesses[nodeName] = nnfv1alpha5.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
+				allocationStatus.Accesses[nodeName] = nnfv1alpha6.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
 			}
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
@@ -491,10 +492,10 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				if path == "" {
 					err := nvme.NvmeRescanDevices(log)
 					if err != nil {
-						return nil, dwsv1alpha2.NewResourceError("could not rescan devices after failing to find device path for %v", allocatedDevice).WithError(err).WithMajor()
+						return nil, dwsv1alpha3.NewResourceError("could not rescan devices after failing to find device path for %v", allocatedDevice).WithError(err).WithMajor()
 					}
 
-					return nil, dwsv1alpha2.NewResourceError("could not find device path for %v", allocatedDevice).WithMajor()
+					return nil, dwsv1alpha3.NewResourceError("could not find device path for %v", allocatedDevice).WithMajor()
 				}
 
 				allocationStatus.Accesses[nodeName].DevicePaths[i] = path
@@ -506,7 +507,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 }
 
-func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alpha5.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alpha6.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
@@ -521,7 +522,7 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 		// If the error is from a 404 error, then there's nothing to clean up and we
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
-			nodeBlockStorage.Status.Error = dwsv1alpha2.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
+			nodeBlockStorage.Status.Error = dwsv1alpha3.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
 			log.Info(nodeBlockStorage.Status.Error.Error())
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -531,7 +532,7 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 	return nil, nil
 }
 
-func getStoragePoolID(nodeBlockStorage *nnfv1alpha5.NnfNodeBlockStorage, index int) string {
+func getStoragePoolID(nodeBlockStorage *nnfv1alpha6.NnfNodeBlockStorage, index int) string {
 	return fmt.Sprintf("%s-%d", nodeBlockStorage.Name, index)
 }
 
@@ -546,12 +547,26 @@ func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceA
 	}
 
 	if err := ss.StorageServiceIdStoragePoolIdPut(ss.Id(), id, sp); err != nil {
-		resourceErr := dwsv1alpha2.NewResourceError("could not allocate storage pool").WithError(err)
+		resourceErr := dwsv1alpha3.NewResourceError("could not allocate storage pool").WithError(err)
 		ecErr, ok := err.(*ec.ControllerError)
 		if ok {
 			switch ecErr.Cause() {
 			case "Insufficient capacity available":
-				return nil, resourceErr.WithUserMessage("insufficient capacity available").WithWLM().WithFatal()
+				// log which VGs and zpools exist to make it easier to tell why we ran out of space
+				log := r.Log.WithValues("StoragePool ID", id)
+
+				vgsOutput, err := command.Run("vgs -o vg_name,vg_tags,vg_size,vg_attr,pv_count,lv_count, --reportformat json", log)
+				if err != nil {
+					log.Info("vgs failed", "error", err)
+				}
+				zpoolOutput, err := command.Run("zfs list -H -o space,nnf:jobid", log)
+				if err != nil {
+					log.Info("zfs list failed", "error", err)
+				}
+
+				log.Info("insufficient capacity", "LVM volume groups", vgsOutput, "zfs datasets", zpoolOutput)
+
+				return nil, resourceErr.WithUserMessage("%s: insufficient capacity available", os.Getenv("NNF_NODE_NAME")).WithWLM().WithFatal()
 			default:
 				return nil, resourceErr
 			}
@@ -643,7 +658,7 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 		client.InNamespace(os.Getenv("NNF_NODE_NAME")),
 	}
 
-	nnfNodeBlockStorageList := &nnfv1alpha5.NnfNodeBlockStorageList{}
+	nnfNodeBlockStorageList := &nnfv1alpha6.NnfNodeBlockStorageList{}
 	if err := r.List(context.TODO(), nnfNodeBlockStorageList, listOptions...); err != nil {
 		log.Error(err, "Could not list block storages")
 
@@ -652,7 +667,7 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 			time.Sleep(time.Second * 10)
 
 			log.Info("triggering watch after List() error")
-			r.Events <- event.GenericEvent{Object: &nnfv1alpha5.NnfNodeBlockStorage{
+			r.Events <- event.GenericEvent{Object: &nnfv1alpha6.NnfNodeBlockStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-ec-event",
 					Namespace: "nnf-ec-event",
@@ -681,7 +696,7 @@ func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error
 	// nnf-ec is not thread safe, so we are limited to a single reconcile thread.
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		For(&nnfv1alpha5.NnfNodeBlockStorage{}).
+		For(&nnfv1alpha6.NnfNodeBlockStorage{}).
 		WatchesRawSource(&source.Channel{Source: r.Events}, handler.EnqueueRequestsFromMapFunc(r.NnfEcEventEnqueueHandler)).
 		Complete(r)
 }

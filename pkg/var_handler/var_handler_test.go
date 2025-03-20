@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022, 2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -21,6 +21,8 @@ package var_handler
 
 import (
 	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
 )
 
 func TestVarHandler(t *testing.T) {
@@ -71,3 +73,7 @@ func TestVarHandler(t *testing.T) {
 		}
 	}
 }
+
+// Just touch ginkgo, so it's here to interpret any ginkgo args from
+// "make test", so that doesn't fail on this test file.
+var _ = BeforeSuite(func() {})
