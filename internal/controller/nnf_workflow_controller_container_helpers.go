@@ -192,8 +192,8 @@ func (c *nnfUserContainer) createMPIJob() error {
 
 	c.addNnfVolumes(launcherSpec)
 	c.addNnfVolumes(workerSpec)
-	c.addEnvVars(launcherSpec, true)
-	c.addEnvVars(workerSpec, true)
+	c.addEnvVars(*c.workflow, launcherSpec, true)
+	c.addEnvVars(*c.workflow, workerSpec, true)
 
 	// Any server that uses TLS/token when communicating with the compute node
 	// will be in the launcher, so mount any secrets there.
@@ -255,7 +255,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	c.applyPermissions(podSpec, nil, false)
 	c.addNnfVolumes(podSpec)
 	c.addSecrets(podSpec)
-	c.addEnvVars(podSpec, false)
+	c.addEnvVars(*c.workflow, podSpec, false)
 
 	// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
 	for _, nnfNode := range c.nnfNodes {
@@ -682,7 +682,7 @@ func (c *nnfUserContainer) addSecrets(spec *corev1.PodSpec) {
 	}
 }
 
-func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
+func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, mpi bool) {
 	// Add in non-volume environment variables for all containers
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
@@ -708,6 +708,12 @@ func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
 			hosts = append(hosts, c.nnfNodes...)
 		}
 
+		// Add env variables to workflow
+		workflow.Status.Env["NNF_CONTAINER_SUBDOMAIN"] = subdomain
+		workflow.Status.Env["NNF_CONTAINER_DOMAIN"] = domain
+		workflow.Status.Env["NNF_CONTAINER_HOSTNAMES"] = strings.Join(hosts, " ")
+
+		// Add env variables to container
 		container.Env = append(container.Env,
 			corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
 			corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},
