@@ -10,4 +10,3 @@ spec:
       targetPort: 9443
   selector:
     control-plane: webhook
-  type: LoadBalancer
