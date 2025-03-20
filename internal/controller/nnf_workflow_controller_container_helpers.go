@@ -589,7 +589,7 @@ func addPortsEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, ports 
 		// Add env var for each container name
 		for containerName, containerPorts := range portMap {
 			env := corev1.EnvVar{
-				Name:  "NNF_CONTAINER_PORTS_" + containerName,
+				Name:  "NNF_CONTAINER_PORTS_" + strings.Replace(containerName, "-", "_", -1),
 				Value: getContainerPortsList(containerPorts),
 			}
 			container.Env = append(container.Env, env)
