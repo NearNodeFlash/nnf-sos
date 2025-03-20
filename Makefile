@@ -53,7 +53,7 @@ IMAGE_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-sos
 
 # The NNF-MFU container image to use in NNFContainerProfile resources.
 NNFMFU_TAG_BASE ?= ghcr.io/nearnodeflash/nnf-mfu
-NNFMFU_VERSION ?= 0.1.5
+NNFMFU_VERSION ?= 0.1.6
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
