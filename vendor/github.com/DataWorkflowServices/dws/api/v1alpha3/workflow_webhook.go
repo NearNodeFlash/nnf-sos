@@ -82,6 +82,7 @@ var _ webhook.Validator = &Workflow{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateCreate() (admission.Warnings, error) {
+	workflowlog.Info("validate-create", "name", w.Name)
 
 	specPath := field.NewPath("Spec")
 
@@ -101,6 +102,7 @@ func (w *Workflow) ValidateCreate() (admission.Warnings, error) {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (w *Workflow) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+	// workflowlog.Info("validate-update", "name", w.Name)  // Too chatty.
 
 	oldWorkflow, ok := old.(*Workflow)
 	if !ok {
