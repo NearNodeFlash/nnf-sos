@@ -171,29 +171,29 @@ func (c *nnfUserContainer) createMPIJob() error {
 	// passwd Init Container.
 	c.addInitContainerWorkerWait(launcherSpec, len(c.nnfNodes))
 
-	// Get the ports from the port manager
+	// Get the ports from the port manager and map them to each container
 	ports, err := c.getHostPorts()
 	if err != nil {
 		return err
 	}
-
-	// Add the ports to the worker spec and add environment variable for both launcher/worker. For
-	// copy offload we want the ports on the launcher, so the copy offload server can be contacted
-	// from the computes.
-	// FIXME: For user-containers, we're opening the ports on the workers - but is that what we
-	// actually want?
-	if c.copyOffload {
-		addHostPorts(launcherSpec, ports)
-	} else {
-		addHostPorts(workerSpec, ports)
+	portMap, err := mapPorts(launcherSpec, ports)
+	if err != nil {
+		return err
 	}
-	addPortsEnvVars(launcherSpec, ports)
-	addPortsEnvVars(workerSpec, ports)
+
+	// Add host ports for only the launcher's containers
+	if err := addHostPorts(launcherSpec, portMap); err != nil {
+		return err
+	}
+
+	// Add env variables for those ports to both launcher and worker containers
+	addPortsEnvVars(*c.workflow, launcherSpec, ports, portMap)
+	addPortsEnvVars(*c.workflow, workerSpec, ports, portMap)
 
 	c.addNnfVolumes(launcherSpec)
 	c.addNnfVolumes(workerSpec)
-	c.addEnvVars(launcherSpec, true)
-	c.addEnvVars(workerSpec, true)
+	c.addEnvVars(*c.workflow, launcherSpec, true)
+	c.addEnvVars(*c.workflow, workerSpec, true)
 
 	// Any server that uses TLS/token when communicating with the compute node
 	// will be in the launcher, so mount any secrets there.
@@ -236,19 +236,26 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	podSpec.RestartPolicy = corev1.RestartPolicyNever
 	podSpec.Subdomain = c.workflow.Name // service name == workflow name
 
-	// Get the ports from the port manager
+	// Get the ports from the port manager and map them to container
 	ports, err := c.getHostPorts()
 	if err != nil {
 		return err
 	}
-	addHostPorts(podSpec, ports)
-	addPortsEnvVars(podSpec, ports)
+	portMap, err := mapPorts(podSpec, ports)
+	if err != nil {
+		return err
+	}
+
+	if err := addHostPorts(podSpec, portMap); err != nil {
+		return err
+	}
+	addPortsEnvVars(*c.workflow, podSpec, ports, portMap)
 
 	c.applyTolerations(podSpec)
 	c.applyPermissions(podSpec, nil, false)
 	c.addNnfVolumes(podSpec)
 	c.addSecrets(podSpec)
-	c.addEnvVars(podSpec, false)
+	c.addEnvVars(*c.workflow, podSpec, false)
 
 	// Using the base job, create a job for each nnfNode. Only the name, hostname, and node selector is different for each node
 	for _, nnfNode := range c.nnfNodes {
@@ -304,7 +311,7 @@ func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	})
 }
 
-func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image string) {
+func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image string, idx int) {
 	// This script creates an entry in /etc/passwd to map the user to the given UID/GID using an
 	// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
 	// worker nodes. ssh itself requires that the UID is tied to a username in the container.
@@ -323,7 +330,7 @@ exit 0
 	script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", c.gid))
 
 	spec.InitContainers = append(spec.InitContainers, corev1.Container{
-		Name:  "mpi-init-passwd",
+		Name:  fmt.Sprintf("%s-init-passwd-%d", c.username, idx),
 		Image: image,
 		Command: []string{
 			"/bin/sh",
@@ -420,7 +427,7 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 		container := &spec.Containers[idx]
 
 		// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd
-		c.addInitContainerPasswd(spec, container.Image)
+		c.addInitContainerPasswd(spec, container.Image, idx)
 
 		// Add a mount to copy the modified /etc/passwd to
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
@@ -459,9 +466,11 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 
 func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 	ports := []uint16{}
-	expectedPorts := int(c.profile.Data.NumPorts)
 
-	if expectedPorts < 1 {
+	// Each container gets NumPorts ports
+	expectedPorts := countContainersInProfile(c.profile) * int(c.profile.Data.NumPorts)
+
+	if expectedPorts <= 0 {
 		return ports, nil
 	}
 
@@ -488,41 +497,83 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 	return ports, nil
 }
 
-// Given a list of ports, add HostPort entries for all containers in a PodSpec
-func addHostPorts(spec *corev1.PodSpec, ports []uint16) {
+// mapPorts distributes a given list of ports across all containers in the PodSpec. Each container
+// is assigned an equal number of ports from the list. If the number of ports is not evenly
+// divisible by the number of containers, an error is returned. The keys in the map are the
+// container names.
+func mapPorts(spec *corev1.PodSpec, ports []uint16) (map[string][]uint16, error) {
+	portMap := make(map[string][]uint16)
 
-	// Nothing to add
-	if len(ports) < 1 {
-		return
+	if len(ports) == 0 {
+		return portMap, nil
 	}
 
-	// Add the ports to the containers
-	// FIXME: this adds the same ports to all containers. Is that what we actually want? Doesn't
-	// each container need it's own port?
+	numContainers := len(spec.Containers)
+	if numContainers == 0 {
+		return nil, fmt.Errorf("no containers found in the PodSpec")
+	}
+	if len(ports)%numContainers != 0 {
+		return nil, fmt.Errorf("number of ports (%d) must be a multiple of the number of containers (%d)", len(ports), numContainers)
+	}
+
+	// Distribute ports to each container
+	portsPerContainer := len(ports) / numContainers
+	for idx, container := range spec.Containers {
+		// Assign the next slice of ports to the current container
+		startIdx := idx * portsPerContainer
+		endIdx := startIdx + portsPerContainer
+		portMap[container.Name] = make([]uint16, portsPerContainer)
+
+		for i, port := range ports[startIdx:endIdx] {
+			portMap[container.Name][i] = port
+		}
+	}
+
+	return portMap, nil
+}
+
+// addHostPorts adds HostPort entries to all containers in a PodSpec using map of container names to
+// a list of ports.
+func addHostPorts(spec *corev1.PodSpec, portMap map[string][]uint16) error {
+
+	// Add the ports to the containers based on the portMap
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
-		for _, port := range ports {
+		// Get the ports assigned to this container from the portMap
+		containerPorts, exists := portMap[container.Name]
+		if !exists {
+			continue // Skip if no ports are assigned to this container
+		}
+
+		// Assign the ports to the container
+		for _, port := range containerPorts {
 			container.Ports = append(container.Ports, corev1.ContainerPort{
 				ContainerPort: int32(port),
 				HostPort:      int32(port),
 			})
 		}
 	}
+
+	return nil
 }
 
 // Given a list of ports, convert it into an environment variable name and comma separated value
-func getContainerPortsEnvVar(ports []uint16) (string, string) {
+func getContainerPortsList(ports []uint16) string {
 	portStr := []string{}
 	for _, port := range ports {
 		portStr = append(portStr, strconv.Itoa(int(port)))
 	}
 
-	return "NNF_CONTAINER_PORTS", strings.Join(portStr, ",")
+	return strings.Join(portStr, ",")
 }
 
-// Add a environment variable for the container ports to all containers in a PodSpec
-func addPortsEnvVars(spec *corev1.PodSpec, ports []uint16) {
+// Add environment variables for the container ports to all containers in a PodSpec.
+// Ex:
+// NNF_CONTAINER_PORTS - all the ports assigned to all containers
+// NNF_CONTAINER_PORTS_my_container1 - ports assigned to container named my_container1
+// NNF_CONTAINER_PORTS_my_container2 - ports assigned to container named my_container2
+func addPortsEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, ports []uint16, portMap map[string][]uint16) {
 	if len(ports) < 1 {
 		return
 	}
@@ -531,12 +582,36 @@ func addPortsEnvVars(spec *corev1.PodSpec, ports []uint16) {
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
-		name, val := getContainerPortsEnvVar(ports)
-		container.Env = append(container.Env, corev1.EnvVar{
-			Name:  name,
-			Value: val,
-		})
+		// Add env var for all the ports
+		env := corev1.EnvVar{
+			Name:  "NNF_CONTAINER_PORTS",
+			Value: getContainerPortsList(ports),
+		}
+		container.Env = append(container.Env, env)
+		workflow.Status.Env[env.Name] = env.Value
+
+		// Add env var for each container name
+		for containerName, containerPorts := range portMap {
+			env := corev1.EnvVar{
+				Name:  "NNF_CONTAINER_PORTS_" + strings.Replace(containerName, "-", "_", -1),
+				Value: getContainerPortsList(containerPorts),
+			}
+			container.Env = append(container.Env, env)
+			workflow.Status.Env[env.Name] = env.Value
+		}
 	}
+}
+
+// Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
+// containers
+func countContainersInProfile(profile *nnfv1alpha6.NnfContainerProfile) int {
+	if profile.Data.MPISpec != nil {
+		return len(profile.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.Containers)
+	} else if profile.Data.Spec != nil {
+		return len(profile.Data.Spec.Containers)
+	}
+
+	return 0
 }
 
 func (c *nnfUserContainer) addNnfVolumes(spec *corev1.PodSpec) {
@@ -611,32 +686,35 @@ func (c *nnfUserContainer) addSecrets(spec *corev1.PodSpec) {
 	}
 }
 
-func (c *nnfUserContainer) addEnvVars(spec *corev1.PodSpec, mpi bool) {
+func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, mpi bool) {
 	// Add in non-volume environment variables for all containers
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
-		// Jobs/hostnames and services/subdomains are named differently based on mpi or not. For
-		// MPI, there are launcher/worker pods and the service is named after the worker. For
-		// non-MPI, the jobs are named after the rabbit node.
-		subdomain := ""
+		// Jobs/hostnames are named differently based on mpi or not. For MPI, there are
+		// launcher/worker pods. For non-MPI, the jobs are named after the rabbit node.
+		subdomain := c.workflow.Name // service name == workflow name
 		domain := c.workflow.Namespace + ".svc.cluster.local"
 		hosts := []string{}
 
 		if mpi {
 			launcher := c.workflow.Name + "-launcher"
 			worker := c.workflow.Name + "-worker"
-			subdomain = worker
 
 			hosts = append(hosts, launcher)
 			for i := range c.nnfNodes {
 				hosts = append(hosts, fmt.Sprintf("%s-%d", worker, i))
 			}
 		} else {
-			subdomain = spec.Subdomain
 			hosts = append(hosts, c.nnfNodes...)
 		}
 
+		// Add env variables to workflow
+		workflow.Status.Env["NNF_CONTAINER_SUBDOMAIN"] = subdomain
+		workflow.Status.Env["NNF_CONTAINER_DOMAIN"] = domain
+		workflow.Status.Env["NNF_CONTAINER_HOSTNAMES"] = strings.Join(hosts, " ")
+
+		// Add env variables to container
 		container.Env = append(container.Env,
 			corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
 			corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},

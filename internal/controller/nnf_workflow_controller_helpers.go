@@ -2110,40 +2110,45 @@ func (r *NnfWorkflowReconciler) getContainerPorts(ctx context.Context, workflow 
 	}
 
 	// Nothing to do here if ports are not requested
-	if profile.Data.NumPorts > 0 {
-		pm, err := getContainerPortManager(ctx, r.Client)
-		if err != nil {
+	if profile.Data.NumPorts <= 0 {
+		return nil, nil
+	}
+
+	// Request NumPorts ports for each conatiner
+	numPortsToRequest := countContainersInProfile(profile) * int(profile.Data.NumPorts)
+
+	pm, err := getContainerPortManager(ctx, r.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check to see if we've already made an allocation
+	for _, alloc := range pm.Spec.Allocations {
+		if alloc.Requester.UID == workflow.UID {
+			return nil, nil
+		}
+	}
+
+	// Add a port allocation request to the manager for the number of ports specified by the
+	// container profile
+	pm.Spec.Allocations = append(pm.Spec.Allocations, nnfv1alpha6.NnfPortManagerAllocationSpec{
+		Requester: corev1.ObjectReference{
+			Name:      workflow.Name,
+			Namespace: workflow.Namespace,
+			Kind:      reflect.TypeOf(dwsv1alpha3.Workflow{}).Name(),
+			UID:       workflow.UID,
+		},
+		Count: numPortsToRequest,
+	})
+
+	if err := r.Update(ctx, pm); err != nil {
+		if !apierrors.IsConflict(err) {
 			return nil, err
 		}
-
-		// Check to see if we've already made an allocation
-		for _, alloc := range pm.Spec.Allocations {
-			if alloc.Requester.UID == workflow.UID {
-				return nil, nil
-			}
-		}
-
-		// Add a port allocation request to the manager for the number of ports specified by the
-		// container profile
-		pm.Spec.Allocations = append(pm.Spec.Allocations, nnfv1alpha6.NnfPortManagerAllocationSpec{
-			Requester: corev1.ObjectReference{
-				Name:      workflow.Name,
-				Namespace: workflow.Namespace,
-				Kind:      reflect.TypeOf(dwsv1alpha3.Workflow{}).Name(),
-				UID:       workflow.UID,
-			},
-			Count: int(profile.Data.NumPorts),
-		})
-
-		if err := r.Update(ctx, pm); err != nil {
-			if !apierrors.IsConflict(err) {
-				return nil, err
-			}
-			return Requeue("update port manager allocation"), nil
-		}
-
-		r.Log.Info("Ports Requested", "numPorts", profile.Data.NumPorts)
+		return Requeue("update port manager allocation"), nil
 	}
+
+	r.Log.Info("Ports Requested", "numPorts", numPortsToRequest)
 
 	return nil, nil
 }
@@ -2157,32 +2162,35 @@ func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflo
 	}
 
 	// Nothing to do here if ports are not requested
-	r.Log.Info("Checking for requested ports", "numPorts", profile.Data.NumPorts)
-	if profile.Data.NumPorts > 0 {
-		pm, err := getContainerPortManager(ctx, r.Client)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, alloc := range pm.Status.Allocations {
-			if alloc.Requester != nil && alloc.Requester.UID == workflow.UID {
-				if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInUse && len(alloc.Ports) == int(profile.Data.NumPorts) {
-					// Add workflow env var for the ports
-					name, val := getContainerPortsEnvVar(alloc.Ports)
-					workflow.Status.Env[name] = val
-					return nil, nil // done
-				} else if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInvalidConfiguration {
-					return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("could not request ports for container workflow: Invalid NnfPortManager configuration").WithFatal().WithUser()
-				} else if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInsufficientResources {
-					return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("could not request ports for container workflow: InsufficientResources").WithFatal()
-				}
-			}
-		}
-
-		return Requeue("NnfPortManager allocation not ready").after(2 * time.Second).withObject(pm), nil
+	if profile.Data.NumPorts <= 0 {
+		return nil, nil
 	}
 
-	return nil, nil
+	// Request NumPorts ports for each conatiner
+	numPortsToRequest := countContainersInProfile(profile) * int(profile.Data.NumPorts)
+	r.Log.Info("Checking for requested ports", "numPorts", numPortsToRequest)
+
+	pm, err := getContainerPortManager(ctx, r.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, alloc := range pm.Status.Allocations {
+		if alloc.Requester != nil && alloc.Requester.UID == workflow.UID {
+			if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInUse && len(alloc.Ports) == numPortsToRequest {
+				// // Add workflow env var for the ports
+				// name, val := getContainerPortsEnvVar(alloc.Ports)
+				// workflow.Status.Env[name] = val
+				return nil, nil // done
+			} else if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInvalidConfiguration {
+				return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("could not request ports for container workflow: Invalid NnfPortManager configuration").WithFatal().WithUser()
+			} else if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInsufficientResources {
+				return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("could not request ports for container workflow: InsufficientResources").WithFatal()
+			}
+		}
+	}
+
+	return Requeue("NnfPortManager allocation not ready").after(2 * time.Second).withObject(pm), nil
 }
 
 // Retrieve the default NnfPortManager for user containers. Allow a client to be passed in as this
