@@ -323,7 +323,7 @@ func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	})
 }
 
-func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image string, idx int) {
+func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image string) {
 	// This script creates an entry in /etc/passwd to map the user to the given UID/GID using an
 	// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
 	// worker nodes. ssh itself requires that the UID is tied to a username in the container.
@@ -342,7 +342,7 @@ exit 0
 	script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", c.gid))
 
 	spec.InitContainers = append(spec.InitContainers, corev1.Container{
-		Name:  fmt.Sprintf("%s-init-passwd-%d", c.username, idx),
+		Name:  fmt.Sprintf("%s-init-passwd", c.username),
 		Image: image,
 		Command: []string{
 			"/bin/sh",
@@ -384,7 +384,7 @@ exit 1
 	script = strings.ReplaceAll(script, "$HOSTS", strings.Join(workers, ","))
 
 	spec.InitContainers = append(spec.InitContainers, corev1.Container{
-		Name:  fmt.Sprintf("mpi-wait-for-worker-%d", numWorkers),
+		Name:  fmt.Sprintf("mpi-wait-for-%d-workers", numWorkers),
 		Image: spec.Containers[0].Image,
 		Command: []string{
 			"/bin/sh",
@@ -438,8 +438,11 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
 
-		// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd
-		c.addInitContainerPasswd(spec, container.Image, idx)
+		// Add an InitContainer to map the user to the provided uid/gid using /etc/passwd. This only
+		// needs to happen once.
+		if idx == 0 {
+			c.addInitContainerPasswd(spec, container.Image)
+		}
 
 		// Add a mount to copy the modified /etc/passwd to
 		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
