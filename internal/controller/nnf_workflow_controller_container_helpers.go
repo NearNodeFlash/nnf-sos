@@ -712,13 +712,13 @@ func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha3.Workflow, spec *corev
 		// Add env variables to workflow
 		workflow.Status.Env["NNF_CONTAINER_SUBDOMAIN"] = subdomain
 		workflow.Status.Env["NNF_CONTAINER_DOMAIN"] = domain
-		workflow.Status.Env["NNF_CONTAINER_HOSTNAMES"] = strings.Join(hosts, " ")
+		workflow.Status.Env["NNF_CONTAINER_HOSTNAMES"] = strings.Join(hosts, ",")
 
 		// Add env variables to container
 		container.Env = append(container.Env,
 			corev1.EnvVar{Name: "NNF_CONTAINER_SUBDOMAIN", Value: subdomain},
 			corev1.EnvVar{Name: "NNF_CONTAINER_DOMAIN", Value: domain},
-			corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, " ")},
+			corev1.EnvVar{Name: "NNF_CONTAINER_HOSTNAMES", Value: strings.Join(hosts, ",")},
 			corev1.EnvVar{Name: "ENVIRONMENT", Value: os.Getenv("ENVIRONMENT")},
 			corev1.EnvVar{
 				Name: "NNF_NODE_NAME",
