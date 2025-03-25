@@ -97,7 +97,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
 	c.username = nnfv1alpha6.ContainerMPIUser
 
-	if err := c.applyLabels(&mpiJob.ObjectMeta, true); err != nil {
+	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
 	}
 
@@ -114,10 +114,10 @@ func (c *nnfUserContainer) createMPIJob() error {
 	workerSpec := &worker.Template.Spec
 
 	// Add workflow labels to the launcher and worker pods themselves
-	if err := c.applyLabels(&launcher.Template.ObjectMeta, false); err != nil {
+	if err := c.applyLabels(&launcher.Template.ObjectMeta, false /* applyOwner */); err != nil {
 		return err
 	}
-	if err := c.applyLabels(&worker.Template.ObjectMeta, false); err != nil {
+	if err := c.applyLabels(&worker.Template.ObjectMeta, false /* applyOwner */); err != nil {
 		return err
 	}
 
