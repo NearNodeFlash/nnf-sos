@@ -2178,9 +2178,6 @@ func (r *NnfWorkflowReconciler) checkContainerPorts(ctx context.Context, workflo
 	for _, alloc := range pm.Status.Allocations {
 		if alloc.Requester != nil && alloc.Requester.UID == workflow.UID {
 			if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInUse && len(alloc.Ports) == numPortsToRequest {
-				// // Add workflow env var for the ports
-				// name, val := getContainerPortsEnvVar(alloc.Ports)
-				// workflow.Status.Env[name] = val
 				return nil, nil // done
 			} else if alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInvalidConfiguration {
 				return nil, dwsv1alpha3.NewResourceError("").WithUserMessage("could not request ports for container workflow: Invalid NnfPortManager configuration").WithFatal().WithUser()
