@@ -232,7 +232,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	c.profile.Data.Spec.DeepCopyInto(&job.Spec.Template.Spec)
 	podSpec := &job.Spec.Template.Spec
 
-	if err := c.applyLabels(&job.ObjectMeta, true); err != nil {
+	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
 	}
 
