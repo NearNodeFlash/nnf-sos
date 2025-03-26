@@ -97,7 +97,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
 	c.username = nnfv1alpha6.ContainerMPIUser
 
-	if err := c.applyLabels(&mpiJob.ObjectMeta); err != nil {
+	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
 	}
 
@@ -112,6 +112,14 @@ func (c *nnfUserContainer) createMPIJob() error {
 	launcherSpec := &launcher.Template.Spec
 	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
 	workerSpec := &worker.Template.Spec
+
+	// Add workflow labels to the launcher and worker pods themselves
+	if err := c.applyLabels(&launcher.Template.ObjectMeta, false /* applyOwner */); err != nil {
+		return err
+	}
+	if err := c.applyLabels(&worker.Template.ObjectMeta, false /* applyOwner */); err != nil {
+		return err
+	}
 
 	// Keep failed pods around for log inspection
 	launcher.RestartPolicy = mpicommonv1.RestartPolicyNever
@@ -224,7 +232,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	c.profile.Data.Spec.DeepCopyInto(&job.Spec.Template.Spec)
 	podSpec := &job.Spec.Template.Spec
 
-	if err := c.applyLabels(&job.ObjectMeta); err != nil {
+	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
 	}
 
@@ -282,21 +290,25 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 	return nil
 }
 
-func (c *nnfUserContainer) applyLabels(job metav1.Object) error {
+func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error {
 	// Apply Job Labels/Owners
-	dwsv1alpha3.InheritParentLabels(job, c.workflow)
-	dwsv1alpha3.AddOwnerLabels(job, c.workflow)
-	dwsv1alpha3.AddWorkflowLabels(job, c.workflow)
+	dwsv1alpha3.InheritParentLabels(obj, c.workflow)
+	dwsv1alpha3.AddWorkflowLabels(obj, c.workflow)
+	if applyOwner {
+		dwsv1alpha3.AddOwnerLabels(obj, c.workflow)
+	}
 
-	labels := job.GetLabels()
+	labels := obj.GetLabels()
 	labels[nnfv1alpha6.ContainerLabel] = c.workflow.Name
 	labels[nnfv1alpha6.PinnedContainerProfileLabelName] = c.profile.GetName()
 	labels[nnfv1alpha6.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
 	labels[nnfv1alpha6.DirectiveIndexLabel] = strconv.Itoa(c.index)
-	job.SetLabels(labels)
+	obj.SetLabels(labels)
 
-	if err := ctrl.SetControllerReference(c.workflow, job, c.scheme); err != nil {
-		return err
+	if applyOwner {
+		if err := ctrl.SetControllerReference(c.workflow, obj, c.scheme); err != nil {
+			return err
+		}
 	}
 
 	return nil
