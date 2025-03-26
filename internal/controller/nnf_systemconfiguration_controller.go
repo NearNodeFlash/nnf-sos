@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -220,12 +220,12 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			taint := &corev1.Taint{
-				Key:   nnfv1alpha6.RabbitNodeTaintKey,
+				Key:   nnfv1alpha7.RabbitNodeTaintKey,
 				Value: "true",
 			}
 
 			staleLabel := false
-			_, hasCompletedLabel := labels[nnfv1alpha6.TaintsAndLabelsCompletedLabel]
+			_, hasCompletedLabel := labels[nnfv1alpha7.TaintsAndLabelsCompletedLabel]
 			if effect == corev1.TaintEffectNoSchedule && hasCompletedLabel {
 				// We're in pass 1.
 				// The presence of the label means that the taint state has been
@@ -251,7 +251,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					continue
 				}
 				// Clear the label and continue working on this node.
-				delete(labels, nnfv1alpha6.TaintsAndLabelsCompletedLabel)
+				delete(labels, nnfv1alpha7.TaintsAndLabelsCompletedLabel)
 				node.SetLabels(labels)
 			} else if hasCompletedLabel {
 				// All other passes honor the label.
@@ -267,7 +267,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 					return false, err
 				}
 				// All passes completed on this node.
-				labels[nnfv1alpha6.TaintsAndLabelsCompletedLabel] = "true"
+				labels[nnfv1alpha7.TaintsAndLabelsCompletedLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			} else {
@@ -281,8 +281,8 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			}
 
 			// Add the label.
-			if _, present := labels[nnfv1alpha6.RabbitNodeSelectorLabel]; !present {
-				labels[nnfv1alpha6.RabbitNodeSelectorLabel] = "true"
+			if _, present := labels[nnfv1alpha7.RabbitNodeSelectorLabel]; !present {
+				labels[nnfv1alpha7.RabbitNodeSelectorLabel] = "true"
 				doUpdate = true
 				node.SetLabels(labels)
 			}

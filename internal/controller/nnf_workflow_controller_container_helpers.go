@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	nnftoken "github.com/NearNodeFlash/nnf-sos/pkg/token"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -44,7 +44,7 @@ import (
 
 type nnfUserContainer struct {
 	workflow    *dwsv1alpha3.Workflow
-	profile     *nnfv1alpha6.NnfContainerProfile
+	profile     *nnfv1alpha7.NnfContainerProfile
 	nnfNodes    []string
 	volumes     []nnfContainerVolume
 	secrets     []nnfContainerSecret
@@ -95,7 +95,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	}
 
 	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
-	c.username = nnfv1alpha6.ContainerMPIUser
+	c.username = nnfv1alpha7.ContainerMPIUser
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
@@ -299,10 +299,10 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 	}
 
 	labels := obj.GetLabels()
-	labels[nnfv1alpha6.ContainerLabel] = c.workflow.Name
-	labels[nnfv1alpha6.PinnedContainerProfileLabelName] = c.profile.GetName()
-	labels[nnfv1alpha6.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
-	labels[nnfv1alpha6.DirectiveIndexLabel] = strconv.Itoa(c.index)
+	labels[nnfv1alpha7.ContainerLabel] = c.workflow.Name
+	labels[nnfv1alpha7.PinnedContainerProfileLabelName] = c.profile.GetName()
+	labels[nnfv1alpha7.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
+	labels[nnfv1alpha7.DirectiveIndexLabel] = strconv.Itoa(c.index)
 	obj.SetLabels(labels)
 
 	if applyOwner {
@@ -317,7 +317,7 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
 		Effect:   corev1.TaintEffectNoSchedule,
-		Key:      nnfv1alpha6.RabbitNodeTaintKey,
+		Key:      nnfv1alpha7.RabbitNodeTaintKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    "true",
 	})
@@ -493,7 +493,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Get the ports from the port manager for this workflow
 	for _, alloc := range pm.Status.Allocations {
-		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha6.NnfPortManagerAllocationStatusInUse {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha7.NnfPortManagerAllocationStatusInUse {
 			ports = append(ports, alloc.Ports...)
 		}
 	}
@@ -616,7 +616,7 @@ func addPortsEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, ports 
 
 // Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
 // containers
-func countContainersInProfile(profile *nnfv1alpha6.NnfContainerProfile) int {
+func countContainersInProfile(profile *nnfv1alpha7.NnfContainerProfile) int {
 	if profile.Data.MPISpec != nil {
 		return len(profile.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.Containers)
 	} else if profile.Data.Spec != nil {

@@ -34,7 +34,7 @@ import (
 	nnfec "github.com/NearNodeFlash/nnf-ec/pkg"
 	ec "github.com/NearNodeFlash/nnf-ec/pkg/ec"
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/go-logr/logr"
@@ -71,14 +71,14 @@ func (r *NnfNodeECDataReconciler) Start(ctx context.Context) error {
 	if !testing {
 
 		// Create the resource if necessary
-		data := nnfv1alpha6.NnfNodeECData{}
+		data := nnfv1alpha7.NnfNodeECData{}
 		if err := r.Get(ctx, r.NamespacedName, &data); err != nil {
 
 			if !errors.IsNotFound(err) {
 				return err
 			}
 
-			data := nnfv1alpha6.NnfNodeECData{
+			data := nnfv1alpha7.NnfNodeECData{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      r.Name,
 					Namespace: r.Namespace,
@@ -172,7 +172,7 @@ func (*crdPersistentStorageInterface) Close() error {
 }
 
 func (psi *crdPersistentStorageInterface) View(fn func(persistent.PersistentStorageTransactionApi) error) error {
-	data := nnfv1alpha6.NnfNodeECData{}
+	data := nnfv1alpha7.NnfNodeECData{}
 	if err := psi.reconciler.Get(context.TODO(), psi.reconciler.NamespacedName, &data); err != nil {
 		return err
 	}
@@ -184,17 +184,17 @@ func (psi *crdPersistentStorageInterface) Update(fn func(persistent.PersistentSt
 
 Retry:
 
-	data := nnfv1alpha6.NnfNodeECData{}
+	data := nnfv1alpha7.NnfNodeECData{}
 	if err := psi.reconciler.Get(context.TODO(), psi.reconciler.NamespacedName, &data); err != nil {
 		return err
 	}
 
 	if data.Status.Data == nil {
-		data.Status.Data = make(map[string]nnfv1alpha6.NnfNodeECPrivateData)
+		data.Status.Data = make(map[string]nnfv1alpha7.NnfNodeECPrivateData)
 	}
 
 	if _, found := data.Status.Data[psi.name]; !found {
-		data.Status.Data[psi.name] = make(nnfv1alpha6.NnfNodeECPrivateData)
+		data.Status.Data[psi.name] = make(nnfv1alpha7.NnfNodeECPrivateData)
 	}
 
 	if err := fn(persistent.NewBase64PersistentStorageTransaction(data.Status.Data[psi.name])); err != nil {
@@ -216,7 +216,7 @@ func (psi *crdPersistentStorageInterface) Delete(key string) error {
 
 Retry:
 
-	data := nnfv1alpha6.NnfNodeECData{}
+	data := nnfv1alpha7.NnfNodeECData{}
 	if err := psi.reconciler.Get(context.TODO(), psi.reconciler.NamespacedName, &data); err != nil {
 		return err
 	}
@@ -241,6 +241,6 @@ func (r *NnfNodeECDataReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nnfv1alpha6.NnfNodeECData{}).
+		For(&nnfv1alpha7.NnfNodeECData{}).
 		Complete(r)
 }
