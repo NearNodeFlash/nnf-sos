@@ -52,6 +52,7 @@ import (
 	nnfv1alpha4 "github.com/NearNodeFlash/nnf-sos/api/v1alpha4"
 	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 
 	_ "github.com/DataWorkflowServices/dws/config/crd/bases"
 	_ "github.com/DataWorkflowServices/dws/config/webhook"
@@ -150,6 +151,9 @@ var _ = BeforeSuite(func() {
 	err = nnfv1alpha6.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = nnfv1alpha7.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:scheme
 
 	webhookPaths := []string{}
@@ -214,46 +218,46 @@ var _ = BeforeSuite(func() {
 	err = (&lusv1beta1.LustreFileSystem{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfAccess{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfAccess{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfDataMovement{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfDataMovement{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfDataMovementManager{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfDataMovementManager{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfLustreMGT{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfLustreMGT{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfNode{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfNode{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfNodeBlockStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfNodeBlockStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfNodeECData{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfNodeECData{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfNodeStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfNodeStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfPortManager{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfPortManager{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha6.NnfSystemStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha7.NnfSystemStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	// +crdbumper:scaffold:builder

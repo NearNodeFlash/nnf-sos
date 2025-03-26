@@ -30,12 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 )
 
 var _ = Describe("DirectiveBreakdown test", func() {
 	var (
-		storageProfile *nnfv1alpha6.NnfStorageProfile
+		storageProfile *nnfv1alpha7.NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha6.NnfStorageProfile{}
+		profExpected := &nnfv1alpha7.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
@@ -81,7 +81,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
 		}).Should(Succeed(), "Create the DWS Servers Resource")
 
-		pinnedStorageProfile := &nnfv1alpha6.NnfStorageProfile{
+		pinnedStorageProfile := &nnfv1alpha7.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      directiveBreakdown.GetName(),
 				Namespace: directiveBreakdown.GetNamespace(),
