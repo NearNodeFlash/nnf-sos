@@ -1,3 +1,6 @@
+configurations:
+- kustomizeconfig.yaml
+
 resources:
 # All RBAC will be applied under this service account in
 # the deployment namespace. You may comment out this resource
@@ -24,80 +27,35 @@ resources:
 - auth_proxy_role_binding.yaml
 - auth_proxy_client_clusterrole.yaml
 - auth_proxy_client_clusterrole_binding.yaml
-- nnfstorageprofile_editor_role.yaml
-- nnfstorageprofile_viewer_role.yaml
-- nnfstorage_editor_role.yaml
-- nnfstorage_viewer_role.yaml
-- nnfportmanager_editor_role.yaml
-- nnfportmanager_viewer_role.yaml
-- nnfnodestorage_editor_role.yaml
-- nnfnodestorage_viewer_role.yaml
-- nnfnodeecdata_editor_role.yaml
-- nnfnodeecdata_viewer_role.yaml
-- nnfnodeblockstorage_editor_role.yaml
-- nnfnodeblockstorage_viewer_role.yaml
-- nnfnode_editor_role.yaml
-- nnfnode_viewer_role.yaml
-- nnfdatamovementprofile_editor_role.yaml
-- nnfdatamovementprofile_viewer_role.yaml
-- nnfdatamovementmanager_editor_role.yaml
-- nnfdatamovementmanager_viewer_role.yaml
-- nnfdatamovement_editor_role.yaml
-- nnfdatamovement_viewer_role.yaml
-- nnfcontainerprofile_editor_role.yaml
-- nnfcontainerprofile_viewer_role.yaml
-- nnfaccess_editor_role.yaml
-- nnfaccess_viewer_role.yaml
-- nnfsystemstorage_editor_role.yaml
-- nnfsystemstorage_viewer_role.yaml
-- nnflustremgt_editor_role.yaml
-- nnflustremgt_viewer_role.yaml
-
-configurations:
-- kustomizeconfig.yaml
 # For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
 # default, aiding admins in cluster management. Those roles are
 # not used by the {{ .ProjectName }} itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
-- nnfsystemstorage_admin_role.yaml
-- nnfsystemstorage_editor_role.yaml
-- nnfsystemstorage_viewer_role.yaml
-- nnfstorageprofile_admin_role.yaml
 - nnfstorageprofile_editor_role.yaml
 - nnfstorageprofile_viewer_role.yaml
-- nnfstorage_admin_role.yaml
 - nnfstorage_editor_role.yaml
 - nnfstorage_viewer_role.yaml
-- nnfportmanager_admin_role.yaml
 - nnfportmanager_editor_role.yaml
 - nnfportmanager_viewer_role.yaml
-- nnfnodestorage_admin_role.yaml
 - nnfnodestorage_editor_role.yaml
 - nnfnodestorage_viewer_role.yaml
-- nnfnodeecdata_admin_role.yaml
 - nnfnodeecdata_editor_role.yaml
 - nnfnodeecdata_viewer_role.yaml
-- nnfnodeblockstorage_admin_role.yaml
 - nnfnodeblockstorage_editor_role.yaml
 - nnfnodeblockstorage_viewer_role.yaml
-- nnfnode_admin_role.yaml
 - nnfnode_editor_role.yaml
 - nnfnode_viewer_role.yaml
-- nnflustremgt_admin_role.yaml
-- nnflustremgt_editor_role.yaml
-- nnflustremgt_viewer_role.yaml
-- nnfdatamovementprofile_admin_role.yaml
 - nnfdatamovementprofile_editor_role.yaml
 - nnfdatamovementprofile_viewer_role.yaml
-- nnfdatamovementmanager_admin_role.yaml
 - nnfdatamovementmanager_editor_role.yaml
 - nnfdatamovementmanager_viewer_role.yaml
-- nnfdatamovement_admin_role.yaml
 - nnfdatamovement_editor_role.yaml
 - nnfdatamovement_viewer_role.yaml
-- nnfcontainerprofile_admin_role.yaml
 - nnfcontainerprofile_editor_role.yaml
 - nnfcontainerprofile_viewer_role.yaml
-- nnfaccess_admin_role.yaml
 - nnfaccess_editor_role.yaml
 - nnfaccess_viewer_role.yaml
+- nnfsystemstorage_editor_role.yaml
+- nnfsystemstorage_viewer_role.yaml
+- nnflustremgt_editor_role.yaml
+- nnflustremgt_viewer_role.yaml
