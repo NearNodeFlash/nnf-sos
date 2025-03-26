@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -48,6 +49,12 @@ func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha7-nnfcontainerprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=create;update,versions=v1alpha7,name=vnnfcontainerprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfContainerProfile{}
+
+// expected name of the service account used for copy offload containers
+var copyOffloadServiceAccountName = "nnf-dm-copy-offload"
+
+// look for the string "copy offload" in the container name, with or without a hyphen/space
+var copyOffloadRegex = regexp.MustCompile(`(?i)\bcopy[- ]?offload\b`)
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfContainerProfile) ValidateCreate() (admission.Warnings, error) {
@@ -113,6 +120,10 @@ func (r *NnfContainerProfile) validateContent() error {
 		return fmt.Errorf("either Spec or MPISpec must be provided")
 	}
 
+	isCopyOffloadContainer := func(name string) bool {
+		return copyOffloadRegex.MatchString(name)
+	}
+
 	if mpiJob {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
 		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
@@ -135,6 +146,22 @@ func (r *NnfContainerProfile) validateContent() error {
 		if !workerOk || len(worker.Template.Spec.Containers) < 1 {
 			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
 		}
+
+		// When it looks like we have a copy offload Launcher container, ensure the service account is correct
+		for _, c := range launcher.Template.Spec.Containers {
+			if isCopyOffloadContainer(c.Name) {
+
+				if launcher.Template.Spec.ServiceAccountName != copyOffloadServiceAccountName {
+					return fmt.Errorf(
+						"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
+							"Launcher containers used for Copy Offload must use the service account name '%s'",
+						c.Name,
+						copyOffloadServiceAccountName,
+					)
+				}
+			}
+		}
+
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
 		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
@@ -148,6 +175,26 @@ func (r *NnfContainerProfile) validateContent() error {
 		if len(r.Data.Spec.Containers) < 1 {
 			return fmt.Errorf("at least 1 container must be defined in Spec")
 		}
+
+		// When it looks like we have a copy offload container based on the service account name, let the user know an MPISpec is required
+		if r.Data.Spec.ServiceAccountName == copyOffloadServiceAccountName {
+			return fmt.Errorf(
+				"the specified service account name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
+					"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
+				copyOffloadServiceAccountName,
+			)
+		}
+		// When it looks like we have a copy offload container, let the user know an MPISpec is required
+		for _, c := range r.Data.Spec.Containers {
+			if isCopyOffloadContainer(c.Name) {
+				return fmt.Errorf(
+					"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
+						"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
+					c.Name,
+				)
+			}
+		}
+
 	}
 
 	// Ensure only DW_GLOBAL_ storages have PVCMode

@@ -403,4 +403,65 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("should pass when DW_GLOBAL has no mode (defaults)", "DW_GLOBAL_storage", corev1.PersistentVolumeAccessMode(""), true),
 		Entry("should pass when DW_GLOBAL has a mode", "DW_GLOBAL_storage", corev1.ReadWriteMany, true),
 	)
+
+	DescribeTable("MPI Containers with copy offload in the name should have a valid service account name",
+		func(cName, sName string, result bool) {
+			nnfProfile.Data.Spec = nil
+			nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+				MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+					mpiv2beta1.MPIReplicaTypeLauncher: {
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{Name: cName},
+								},
+								ServiceAccountName: sName,
+							},
+						},
+					},
+					mpiv2beta1.MPIReplicaTypeWorker: {
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{Name: "test"},
+								},
+							},
+						},
+					},
+				},
+			}
+			if result {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		Entry("should pass when container name suggests copy offload and service account is valid", "copy-offload-server", copyOffloadServiceAccountName, true),
+		Entry("should pass container name suggests copy offload and service account is valid", "copy-offload", copyOffloadServiceAccountName, true),
+		Entry("should pass container name suggests copy offload and service account is valid", "copyoffload", copyOffloadServiceAccountName, true),
+		Entry("should fail container name suggests copy offload and service account is valid", "copyoffload", "badservice", false),
+		Entry("should pass container name does not suggest copy offload and service account is invalid", "offload", "", true),
+		Entry("should pass container name does not suggest copy offload and service account is invalid", "copy", "", true),
+	)
+
+	DescribeTable("non-mpi containers with copy offload in the name should fail",
+		func(cName, sName string) {
+			nnfProfile.Data.MPISpec = nil
+			nnfProfile.Data.Spec = &corev1.PodSpec{
+				Containers: []corev1.Container{
+					{Name: cName},
+				},
+				ServiceAccountName: sName,
+			}
+
+			Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+			nnfProfile = nil
+		},
+		Entry("container name suggests copy offload", "copy-offload-server", ""),
+		Entry("container name suggests copy offload", "copy-offload", ""),
+		Entry("container name suggests copy offload", "copyoffload", ""),
+		Entry("service account name suggests copy offload", "ior", copyOffloadServiceAccountName),
+	)
 })
