@@ -441,8 +441,9 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload-server", copyOffloadServiceAccountName, true),
 		Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload", copyOffloadServiceAccountName, true),
 		Entry("should pass when the container name suggests copy offload and service account is valid", "copyoffload", copyOffloadServiceAccountName, true),
-		Entry("should fail when the container name suggests copy offload and service account is valid", "copyoffload", "badservice", false),
+		Entry("should fail when the container name suggests copy offload and service account is invalid", "copy offload", "badservice", false),
 		Entry("should pass when the container name does not suggest copy offload and service account is invalid", "offload", "", true),
+		Entry("should pass when the container name does not suggest copy offload and service account is invalid", "copy", "", true),
 		Entry("should fail when the container name does not suggest copy offload and service account is referenced", "sawbill", copyOffloadServiceAccountName, false),
 	)
 
@@ -462,6 +463,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("when the container name suggests copy offload", "copy-offload-server", ""),
 		Entry("when the container name suggests copy offload", "copy-offload", ""),
 		Entry("when the container name suggests copy offload", "copyoffload", ""),
+		Entry("when the container name suggests copy offload", "copy offload", ""),
 		Entry("when the service account name suggests copy offload", "ior", copyOffloadServiceAccountName),
 	)
 })
