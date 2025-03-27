@@ -2052,7 +2052,7 @@ func (r *NnfWorkflowReconciler) getContainerSecrets(workflow *dwsv1alpha3.Workfl
 			vol1 := nnfContainerSecret{
 				name:       "usercontainer-tls",
 				mountPath:  "/etc/usercontainer-tls",
-				secretName: "nnf-dm-usercontainer-server-tls",
+				secretName: userContainerTLSSecretName,
 				envVarsToFileNames: map[string]string{
 					"TLS_CERT_PATH": "tls.crt",
 					"TLS_KEY_PATH":  "tls.key",

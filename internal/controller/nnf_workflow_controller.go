@@ -308,7 +308,10 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 		return nil, createPinnedContainerProfileIfNecessary(ctx, r.Client, r.Scheme, workflow, index, r.Log)
 	case "jobdw", "persistentdw", "create_persistent":
 		if _, present := dwArgs["requires"]; present {
-			intepretRequiresKeyword(workflow, dwArgs["requires"])
+			err := r.intepretRequiresKeyword(ctx, workflow, dwArgs["requires"])
+			if err != nil {
+				return nil, err
+			}
 		}
 	case "copy_in", "copy_out":
 		pinnedDMProfile, err := createPinnedDMProfile(ctx, r.Client, r.Scheme, dwArgs, workflow, indexedResourceName(workflow, index))
@@ -357,7 +360,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 // and determines whether it's a keyword that needs some internal action in a
 // later workflow state. If so, then add a keyword to the workflow's status that
 // has meaning for that internal action.
-func intepretRequiresKeyword(workflow *dwsv1alpha3.Workflow, requiresList string) {
+func (r *NnfWorkflowReconciler) intepretRequiresKeyword(ctx context.Context, workflow *dwsv1alpha3.Workflow, requiresList string) error {
 
 	addWord := func(word string) {
 		found := false
@@ -372,15 +375,24 @@ func intepretRequiresKeyword(workflow *dwsv1alpha3.Workflow, requiresList string
 		}
 	}
 
+	found := false
 	for _, value := range strings.Split(requiresList, ",") {
 		switch value {
 		case "copy-offload":
 			addWord(requiresCopyOffload)
 			addWord(requiresContainerAuth)
+			found = true
 		case "user-container-auth":
 			addWord(requiresContainerAuth)
+			found = true
 		}
 	}
+	if found {
+		if err := verifyUserContainerTLSSecretName(r.Client, ctx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha3.Workflow, index int) (*result, error) {

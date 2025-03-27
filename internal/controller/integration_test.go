@@ -58,13 +58,14 @@ var _ = Describe("Integration Test", func() {
 	blockOwnerDeletion := true
 
 	var (
-		workflow           *dwsv1alpha3.Workflow
-		persistentInstance *dwsv1alpha3.PersistentStorageInstance
-		nodeNames          []string
-		setup              sync.Once
-		storageProfile     *nnfv1alpha7.NnfStorageProfile
-		dmProfile          *nnfv1alpha7.NnfDataMovementProfile
-		dmm                *nnfv1alpha7.NnfDataMovementManager
+		workflow               *dwsv1alpha3.Workflow
+		persistentInstance     *dwsv1alpha3.PersistentStorageInstance
+		nodeNames              []string
+		setup                  sync.Once
+		storageProfile         *nnfv1alpha7.NnfStorageProfile
+		dmProfile              *nnfv1alpha7.NnfDataMovementProfile
+		dmm                    *nnfv1alpha7.NnfDataMovementManager
+		userContainerTLSSecret *corev1.Secret
 	)
 
 	advanceState := func(state dwsv1alpha3.WorkflowState, w *dwsv1alpha3.Workflow, testStackOffset int) {
@@ -410,6 +411,8 @@ var _ = Describe("Integration Test", func() {
 		// Create a default NnfDataMovementProfile for the unit tests.
 		dmProfile = createBasicDefaultNnfDataMovementProfile()
 
+		userContainerTLSSecret = makeUserContainerTLSSecret()
+
 		DeferCleanup(os.Setenv, "RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK", os.Getenv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"))
 	})
 
@@ -435,6 +438,15 @@ var _ = Describe("Integration Test", func() {
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dmProfile), dmProfExpected)
 		}).ShouldNot(Succeed())
+
+		if userContainerTLSSecret != nil {
+			By("delete user container TLS secret")
+			Expect(k8sClient.Delete(context.TODO(), userContainerTLSSecret)).Should(Succeed())
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(userContainerTLSSecret), userContainerTLSSecret)
+			}).ShouldNot(Succeed())
+			userContainerTLSSecret = nil
+		}
 
 		for _, nodeName := range nodeNames {
 			nnfNode := &nnfv1alpha7.NnfNode{
