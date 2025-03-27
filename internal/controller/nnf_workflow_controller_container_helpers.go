@@ -83,6 +83,13 @@ const (
 	requiresCopyOffload   = "copy-offload"
 )
 
+const (
+	// The name of the secret that holds the TLS certificate and signing key for
+	// containers that use "requiresContainerAuth" or "requiresCopyOffload".
+	userContainerTLSSecretName      = "nnf-dm-usercontainer-server-tls"
+	userContainerTLSSecretNamespace = corev1.NamespaceDefault
+)
+
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
 // a job for the launcher (to run mpirun) and a replicaset for the worker pods. The worker nodes
 // run an ssh server tn listen for mpirun operations from the launcher pod.
@@ -747,6 +754,20 @@ func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha3.Workflow, spec *corev
 				},
 			})
 	}
+}
+
+func verifyUserContainerTLSSecretName(clnt client.Client, ctx context.Context) error {
+	// Check if the user container TLS secret exists.
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userContainerTLSSecretName,
+			Namespace: userContainerTLSSecretNamespace,
+		},
+	}
+	if err := clnt.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return dwsv1alpha3.NewResourceError("the administrator must configure the user container TLS secret for the system. See the copy-offload docs").WithError(err).WithFatal()
+	}
+	return nil
 }
 
 func (r *NnfWorkflowReconciler) setupContainerAuth(ctx context.Context, workflow *dwsv1alpha3.Workflow, log logr.Logger) (*dwsv1alpha3.WorkflowTokenSecret, error) {

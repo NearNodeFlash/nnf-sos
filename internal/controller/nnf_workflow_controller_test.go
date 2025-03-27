@@ -52,6 +52,21 @@ var (
 	altWorkflowGroupID uint32 = 1045
 )
 
+func makeUserContainerTLSSecret() *corev1.Secret {
+	// Just an empty opaque secret. We're only interested in its existence,
+	// not its content.
+	someSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userContainerTLSSecretName,
+			Namespace: userContainerTLSSecretNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: make(map[string][]byte),
+	}
+	Expect(k8sClient.Create(context.TODO(), someSecret)).To(Succeed())
+	return someSecret
+}
+
 var _ = Describe("NNF Workflow Unit Tests", func() {
 
 	var (
@@ -1381,6 +1396,8 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			containerProfile         *nnfv1alpha7.NnfContainerProfile
 			containerProfileStorages []nnfv1alpha7.NnfContainerProfileStorage
 			createContainerProfile   bool
+
+			userContainerTLSSecret *corev1.Secret
 		)
 
 		BeforeEach(func() {
@@ -1436,6 +1453,16 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Eventually(func() error {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(containerProfile), containerProfile)
 				}).ShouldNot(Succeed())
+				containerProfile = nil
+			}
+
+			if userContainerTLSSecret != nil {
+				By("delete user container TLS secret")
+				Expect(k8sClient.Delete(context.TODO(), userContainerTLSSecret)).Should(Succeed())
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(userContainerTLSSecret), userContainerTLSSecret)
+				}).ShouldNot(Succeed())
+				userContainerTLSSecret = nil
 			}
 
 			if createPersistent {
@@ -1519,8 +1546,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			)
 
 			DescribeTable("should go to Proposal Ready with interpreted Requires in the workflow",
-				func(requiresList string, wantList []string) {
+				func(requiresList string, wantList []string, createSecret bool) {
 					buildRestrictedContainerProfile(nil, nil)
+					if createSecret {
+						userContainerTLSSecret = makeUserContainerTLSSecret()
+					}
 					buildWorkflowWithCorrectDirectives(requiresList)
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
@@ -1533,13 +1563,30 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						Expect(workflow.Status.Requires).To(HaveLen(len(wantList)))
 					}
 				},
-				// The 'requiresList' content is constrained by the nnf-ruleset, while the
+				// The 'requiresList' content is constrained by config/dws/nnf-ruleset.yaml, while the
 				// 'wantList' content is not.
-				Entry("when requires list is empty", "", []string{}),
-				Entry("when requires list has one", "user-container-auth", []string{requiresContainerAuth}),
+				Entry("when requires list is empty", "", []string{}, true),
+				Entry("when requires list is empty", "", []string{}, false),
+				Entry("when requires list has one", "user-container-auth", []string{requiresContainerAuth}, true),
 				// copy-offload adds two words: one for itself and one for container auth
+				Entry("when requires list has copy-offload", "copy-offload", []string{requiresContainerAuth, requiresCopyOffload}, true),
+				Entry("when requires list has multiple matches", "copy-offload,user-container-auth", []string{requiresContainerAuth, requiresCopyOffload}, true),
+			)
+
+			DescribeTable("when missing TLS secret, should not go to Proposal Ready when asking for user container auth",
+				func(requiresList string, wantList []string) {
+					buildRestrictedContainerProfile(nil, nil)
+					buildWorkflowWithCorrectDirectives(requiresList)
+					Eventually(func(g Gomega) bool {
+						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+						return workflow.Status.Ready == false && workflow.Status.Status == dwsv1alpha3.StatusError && workflow.Status.State == dwsv1alpha3.StateProposal
+					}).Should(BeTrue(), "did not reach desired Proposal state")
+					Expect(workflow.Status.Drivers[0].Error).Should(ContainSubstring("administrator must configure the user container TLS secret"))
+				},
+				// The 'requiresList' content is constrained by config/dws/nnf-ruleset.yaml, while the
+				// 'wantList' content is not.
+				Entry("when requires list has one", "user-container-auth", []string{requiresContainerAuth}),
 				Entry("when requires list has copy-offload", "copy-offload", []string{requiresContainerAuth, requiresCopyOffload}),
-				Entry("when requires list has multiple matches", "copy-offload,user-container-auth", []string{requiresContainerAuth, requiresCopyOffload}),
 			)
 		})
 
@@ -1722,7 +1769,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				createPersistent = false
 			})
 
-			buildContainerWorkflowWithPersistentDWType := func(fsType string) {
+			buildContainerWorkflowWithPersistentDWType := func() {
 				By("creating the workflow")
 				workflow.Spec.DWDirectives = []string{
 					fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
@@ -1735,7 +1782,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			DescribeTable("should reach the desired Proposal state",
 				func(fsType string, shouldError bool) {
 					createPersistentStorageInstance(persistentStorageName, fsType)
-					buildContainerWorkflowWithPersistentDWType(fsType)
+					buildContainerWorkflowWithPersistentDWType()
 					Eventually(func(g Gomega) bool {
 						g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
 						if shouldError {
