@@ -159,6 +159,16 @@ func (r *NnfContainerProfile) validateContent() error {
 						copyOffloadServiceAccountName,
 					)
 				}
+			} else {
+				if launcher.Template.Spec.ServiceAccountName == copyOffloadServiceAccountName {
+					return fmt.Errorf(
+						"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. "+
+							"but the Copy Offload service account name '%s' is being used",
+						c.Name,
+						copyOffloadServiceAccountName,
+					)
+				}
+
 			}
 		}
 
