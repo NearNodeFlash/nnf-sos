@@ -56,6 +56,7 @@ type NnfDataMovementProfileData struct {
 	//   SRC: source for the data movement
 	//   DEST destination for the data movement
 	// +kubebuilder:default:="ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --uid $UID --gid $GID $SRC $DEST"
+	// +kubebuilder:validation:XValidation:rule=`!self.contains("dcp") || (self.contains("$HOSTFILE") && self.contains("$UID") && self.contains("$GID") && self.contains("$SRC") && self.contains("$DEST"))`
 	Command string `json:"command"`
 
 	// If true, enable the command's stdout to be saved in the log when the command completes
@@ -93,6 +94,7 @@ type NnfDataMovementProfileData struct {
 	//   		  inherited from the workflow.
 	//   PATH: Path to stat
 	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV stat --cached never -c '%F' $PATH"
+	// +kubebuilder:validation:XValidation:rule=`!self.contains("stat") || (self.contains("$HOSTFILE") && self.contains("$SETPRIV") && self.contains("$PATH"))`
 	StatCommand string `json:"statCommand"`
 
 	// If CreateDestDir is true, then use MkdirCommand to perform the mkdir commands.
@@ -105,6 +107,7 @@ type NnfDataMovementProfileData struct {
 	//   		  inherited from the workflow.
 	//   PATH: Path to stat
 	// +kubebuilder:default:="mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV mkdir -p $PATH"
+	// +kubebuilder:validation:XValidation:rule=`!self.contains("mkdir") || (self.contains("$HOSTFILE") && self.contains("$SETPRIV") && self.contains("$PATH"))`
 	MkdirCommand string `json:"mkdirCommand"`
 
 	// The full setpriv command that is used to become the user and group specified in the workflow.
@@ -113,6 +116,7 @@ type NnfDataMovementProfileData struct {
 	//   UID: User ID that is inherited from the Workflow
 	//   GID: Group ID that is inherited from the Workflow
 	// +kubebuilder:default:="setpriv --euid $UID --egid $GID --clear-groups"
+	// +kubebuilder:validation:XValidation:rule=`!self.contains("setpriv") || (self.contains("$UID") && self.contains("$GID"))`
 	SetprivCommand string `json:"setprivCommand"`
 }
 

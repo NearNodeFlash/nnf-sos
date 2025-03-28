@@ -22,6 +22,7 @@ package v1alpha7
 import (
 	"context"
 	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -210,4 +211,77 @@ var _ = Describe("NnfDataMovementProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
+	DescribeTable("should not allow missing $VARS in Command",
+		func(command string, shouldPass bool) {
+			nnfProfile.Data.Command = command
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		Entry("missing $HOSTFILE", strings.Replace(defaultDMCommand, "$HOSTFILE", "", 1), false),
+		Entry("missing $UID", strings.Replace(defaultDMCommand, "$UID", "", 1), false),
+		Entry("missing $GID", strings.Replace(defaultDMCommand, "$GID", "", 1), false),
+		Entry("missing $SRC", strings.Replace(defaultDMCommand, "$SRC", "", 1), false),
+		Entry("missing $DEST", strings.Replace(defaultDMCommand, "$DEST", "", 1), false),
+		Entry("valid command", defaultDMCommand, true),
+		Entry("empty command", "", true),
+		Entry("not dcp", "sleep 5", true),
+	)
+
+	DescribeTable("should not allow missing $VARS in StatCommand",
+		func(command string, shouldPass bool) {
+			nnfProfile.Data.StatCommand = command
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+			}
+			nnfProfile = nil
+		},
+		Entry("missing $SETPRIV", strings.Replace(defaultDMStatCommand, "$SETPRIV", "", 1), false),
+		Entry("missing $HOSTFILE", strings.Replace(defaultDMStatCommand, "$HOSTFILE", "", 1), false),
+		Entry("missing $PATH", strings.Replace(defaultDMStatCommand, "$PATH", "", 1), false),
+		Entry("valid command", defaultDMStatCommand, true),
+		Entry("empty command", "", true),
+		Entry("not stat", "sleep 5", true),
+	)
+
+	DescribeTable("should not allow missing $VARS in mkdirCommand",
+		func(command string, shouldPass bool) {
+			nnfProfile.Data.MkdirCommand = command
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+			}
+			nnfProfile = nil
+		},
+		Entry("missing $SETPRIV", strings.Replace(defaultDMMkdirCommand, "$SETPRIV", "", 1), false),
+		Entry("missing $HOSTFILE", strings.Replace(defaultDMMkdirCommand, "$HOSTFILE", "", 1), false),
+		Entry("missing $PATH", strings.Replace(defaultDMMkdirCommand, "$PATH", "", 1), false),
+		Entry("valid command", defaultDMMkdirCommand, true),
+		Entry("empty command", "", true),
+		Entry("not mkdir", "sleep 5", true),
+	)
+
+	DescribeTable("should not allow missing $VARS in SetprivCommand",
+		func(command string, shouldPass bool) {
+			nnfProfile.Data.SetprivCommand = command
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+			}
+			nnfProfile = nil
+		},
+		Entry("missing setpriv", strings.Replace(defaultDMSetprivCommand, "setpriv", "", 1), true), // Should succeed
+		Entry("missing $UID", strings.Replace(defaultDMSetprivCommand, "$UID", "", 1), false),
+		Entry("missing $GID", strings.Replace(defaultDMSetprivCommand, "$GID", "", 1), false),
+		Entry("valid command", defaultDMSetprivCommand, true),
+		Entry("empty command", "", true),
+		Entry("not setpriv", "sleep 5", true),
+	)
 })

@@ -41,6 +41,13 @@ func (r *NnfDataMovementProfile) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
+var (
+	defaultDMCommand        = "ulimit -n 2048 && mpirun --allow-run-as-root --hostfile $HOSTFILE dcp --progress 1 --uid $UID --gid $GID $SRC $DEST"
+	defaultDMStatCommand    = "mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV stat --cached never -c '%F' $PATH"
+	defaultDMMkdirCommand   = "mpirun --allow-run-as-root -np 1 --hostfile $HOSTFILE -- $SETPRIV mkdir -p $PATH"
+	defaultDMSetprivCommand = "setpriv --euid $UID --egid $GID --clear-groups"
+)
+
 // NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 // +kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha7-nnfdatamovementprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfdatamovementprofiles,verbs=create;update,versions=v1alpha7,name=vnnfdatamovementprofile.kb.io,admissionReviewVersions=v1
