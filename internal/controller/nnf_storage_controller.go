@@ -1242,13 +1242,14 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		return nodeStoragesExist, nil
 	}
 
-	if storage.Spec.FileSystemType == "lustre" {
-		childObjects := []dwsv1alpha3.ObjectList{
-			&nnfv1alpha7.NnfNodeStorageList{},
-		}
+	childObjects := []dwsv1alpha3.ObjectList{
+		&nnfv1alpha7.NnfNodeStorageList{},
+		&nnfv1alpha7.NnfNodeBlockStorageList{},
+	}
 
+	if storage.Spec.FileSystemType == "lustre" {
 		// Delete OST0 first so that PreUnmount commands can happen
-		ost0DeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetOST0Label: "true"})
+		ost0DeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetOST0Label: "true"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1269,7 +1270,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 
 		// Then, delete the rest of the OSTs and MDTs so we can drop the claim on the NnfLustreMgt
 		// resource. This will trigger an lctl command to run to remove the fsname from the MGT.
-		ostDeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "ost"})
+		ostDeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "ost"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1287,7 +1288,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			return nodeStoragesExist, nil
 		}
 
-		mdtDeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabels(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "mdt"})
+		mdtDeleteStatus, err := dwsv1alpha3.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "mdt"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1325,6 +1326,15 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 				}
 			}
 		}
+	}
+
+	nodeStorageDeleteStatus, err := dwsv1alpha3.DeleteChildrenParallel(ctx, r.Client, childObjects, storage)
+	if err != nil {
+		return nodeStoragesExist, err
+	}
+
+	if !nodeStorageDeleteStatus.Complete() {
+		return nodeStoragesExist, nil
 	}
 
 	// Delete any remaining child objects including the MGT allocation set for Lustre
