@@ -1565,8 +1565,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				},
 				// The 'requiresList' content is constrained by config/dws/nnf-ruleset.yaml, while the
 				// 'wantList' content is not.
+				// In these first two cases, we don't care whether or not the
+				// TLS secret exists because we're not using it anyway. The workflow
+				// still has to get to Proposal-ready.
 				Entry("when requires list is empty", "", []string{}, true),
-				Entry("when requires list is empty", "", []string{}, false),
+				Entry("when requires list is empty and user-container TLS secret does not exist", "", []string{}, false),
 				Entry("when requires list has one", "user-container-auth", []string{requiresContainerAuth}, true),
 				// copy-offload adds two words: one for itself and one for container auth
 				Entry("when requires list has copy-offload", "copy-offload", []string{requiresContainerAuth, requiresCopyOffload}, true),
