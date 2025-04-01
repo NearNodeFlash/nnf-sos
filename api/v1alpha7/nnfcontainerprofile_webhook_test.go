@@ -24,8 +24,6 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
-	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.openly.dev/pointy"
@@ -57,8 +55,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 				Namespace: namespaceName,
 			},
 			Data: NnfContainerProfileData{
-				Spec: &corev1.PodSpec{
-					Containers: []corev1.Container{
+				Spec: &NnfContainerSpec{
+					Containers: []NnfContainer{
 						{Name: "test"},
 					},
 				},
@@ -127,8 +125,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	})
 
 	It("Should not allow setting both Spec and MPISpec", func() {
-		nnfProfile.Data.Spec = &corev1.PodSpec{}
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+		nnfProfile.Data.Spec = &NnfContainerSpec{}
+		nnfProfile.Data.MPISpec = &NnfMPIContainerSpec{}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
@@ -140,80 +138,14 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow an empty MPIReplicaSpecs", func() {
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow both an empty Launcher and Worker ReplicaSpecs", func() {
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-				mpiv2beta1.MPIReplicaTypeLauncher: nil,
-				mpiv2beta1.MPIReplicaTypeWorker:   nil,
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow an empty Launcher ReplicaSpec", func() {
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-				mpiv2beta1.MPIReplicaTypeLauncher: nil,
-				mpiv2beta1.MPIReplicaTypeWorker: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{},
-					},
-				},
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow an empty Worker ReplicaSpec", func() {
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-				mpiv2beta1.MPIReplicaTypeLauncher: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{},
-					},
-				},
-				mpiv2beta1.MPIReplicaTypeWorker: nil,
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow an empty Launcher and Worker PodSpecs", func() {
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-				mpiv2beta1.MPIReplicaTypeLauncher: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{},
-					},
-				},
-				mpiv2beta1.MPIReplicaTypeWorker: {
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{},
-					},
-				},
-			},
-		}
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
 	DescribeTable("Should allow a user to set PreRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.Spec = &corev1.PodSpec{Containers: []corev1.Container{
-				{Name: "test", Image: "alpine:latest"},
-			}}
+			nnfProfile.Data.Spec = &NnfContainerSpec{
+				Containers: []NnfContainer{
+					{Name: "test", Image: "alpine:latest"},
+				},
+			}
 			nnfProfile.Data.MPISpec = nil
 
 			nnfProfile.Data.PreRunTimeoutSeconds = timeout
@@ -235,9 +167,11 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	DescribeTable("Should allow a user to set PostRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.Spec = &corev1.PodSpec{Containers: []corev1.Container{
-				{Name: "test", Image: "alpine:latest"},
-			}}
+			nnfProfile.Data.Spec = &NnfContainerSpec{
+				Containers: []NnfContainer{
+					{Name: "test", Image: "alpine:latest"},
+				},
+			}
 			nnfProfile.Data.MPISpec = nil
 
 			nnfProfile.Data.PostRunTimeoutSeconds = timeout
@@ -255,59 +189,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("to nil and get the default(300)", nil, pointy.Int64(300), true),
 		Entry("to -1 and fail", pointy.Int64(-1), nil, false),
 	)
-
-	It("Should not allow setting both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
-		nnfProfile.Data.Spec = nil
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
-
-		timeout := int64(10)
-		nnfProfile.Data.PostRunTimeoutSeconds = &timeout
-		nnfProfile.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds = &timeout
-
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow setting both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
-		timeout := int64(10)
-		nnfProfile.Data.PostRunTimeoutSeconds = &timeout
-		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
-
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow setting both PreRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds", func() {
-		nnfProfile.Data.Spec = nil
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
-
-		timeout := int64(10)
-		nnfProfile.Data.PreRunTimeoutSeconds = &timeout
-		nnfProfile.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds = &timeout
-
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow setting both PreRunTimeoutSeconds and Spec.ActiveDeadlineSeconds", func() {
-		timeout := int64(10)
-		nnfProfile.Data.PreRunTimeoutSeconds = &timeout
-		nnfProfile.Data.Spec.ActiveDeadlineSeconds = &timeout
-
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
-
-	It("Should not allow setting MPISpec.RunPolicy.BackoffLimit directly", func() {
-		nnfProfile.Data.Spec = nil
-		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
-
-		limit := int32(10)
-		nnfProfile.Data.MPISpec.RunPolicy.BackoffLimit = &limit
-
-		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-		nnfProfile = nil
-	})
 
 	It("Should allow a zero postRunTimeoutSeconds", func() {
 		nnfProfile.Data.PostRunTimeoutSeconds = pointy.Int64(0)
@@ -404,58 +285,58 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("should pass when DW_GLOBAL has a mode", "DW_GLOBAL_storage", corev1.ReadWriteMany, true),
 	)
 
-	DescribeTable("MPI Containers with copy offload in the name should have a valid service account name",
-		func(cName, sName string, shouldPass bool) {
-			nnfProfile.Data.Spec = nil
-			nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-				MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-					mpiv2beta1.MPIReplicaTypeLauncher: {
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{Name: cName},
-								},
-								ServiceAccountName: sName,
-							},
-						},
-					},
-					mpiv2beta1.MPIReplicaTypeWorker: {
-						Template: corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{Name: "test"},
-								},
-							},
-						},
-					},
-				},
-			}
-			if shouldPass {
-				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	// DescribeTable("MPI Containers with copy offload in the name should have a valid service account name",
+	// 	func(cName, sName string, shouldPass bool) {
+	// 		nnfProfile.Data.Spec = nil
+	// 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
+	// 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+	// 				mpiv2beta1.MPIReplicaTypeLauncher: {
+	// 					Template: corev1.PodTemplateSpec{
+	// 						Spec: corev1.PodSpec{
+	// 							Containers: []corev1.Container{
+	// 								{Name: cName},
+	// 							},
+	// 							ServiceAccountName: sName,
+	// 						},
+	// 					},
+	// 				},
+	// 				mpiv2beta1.MPIReplicaTypeWorker: {
+	// 					Template: corev1.PodTemplateSpec{
+	// 						Spec: corev1.PodSpec{
+	// 							Containers: []corev1.Container{
+	// 								{Name: "test"},
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		}
+	// 		if shouldPass {
+	// 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 
-			} else {
-				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-				nnfProfile = nil
-			}
-		},
-		Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload-server", copyOffloadServiceAccountName, true),
-		Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload", copyOffloadServiceAccountName, true),
-		Entry("should pass when the container name suggests copy offload and service account is valid", "copyoffload", copyOffloadServiceAccountName, true),
-		Entry("should fail when the container name suggests copy offload and service account is invalid", "copy offload", "badservice", false),
-		Entry("should pass when the container name does not suggest copy offload and service account is invalid", "offload", "", true),
-		Entry("should pass when the container name does not suggest copy offload and service account is invalid", "copy", "", true),
-		Entry("should fail when the container name does not suggest copy offload and service account is referenced", "sawbill", copyOffloadServiceAccountName, false),
-	)
+	// 		} else {
+	// 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+	// 			nnfProfile = nil
+	// 		}
+	// 	},
+	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload-server", copyOffloadServiceAccountName, true),
+	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload", copyOffloadServiceAccountName, true),
+	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copyoffload", copyOffloadServiceAccountName, true),
+	// 	Entry("should fail when the container name suggests copy offload and service account is invalid", "copy offload", "badservice", false),
+	// 	Entry("should pass when the container name does not suggest copy offload and service account is invalid", "offload", "", true),
+	// 	Entry("should pass when the container name does not suggest copy offload and service account is invalid", "copy", "", true),
+	// 	Entry("should fail when the container name does not suggest copy offload and service account is referenced", "sawbill", copyOffloadServiceAccountName, false),
+	// )
 
 	DescribeTable("non-mpi containers with copy offload in the name should fail",
 		func(cName, sName string) {
 			nnfProfile.Data.MPISpec = nil
-			nnfProfile.Data.Spec = &corev1.PodSpec{
-				Containers: []corev1.Container{
+			nnfProfile.Data.Spec = &NnfContainerSpec{
+				Containers: []NnfContainer{
 					{Name: cName},
 				},
-				ServiceAccountName: sName,
 			}
+			// ServiceAccountName: sName,
 
 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 			nnfProfile = nil
@@ -464,6 +345,6 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("when the container name suggests copy offload", "copy-offload", ""),
 		Entry("when the container name suggests copy offload", "copyoffload", ""),
 		Entry("when the container name suggests copy offload", "copy offload", ""),
-		Entry("when the service account name suggests copy offload", "ior", copyOffloadServiceAccountName),
+		// Entry("when the service account name suggests copy offload", "ior", copyOffloadServiceAccountName),
 	)
 })
