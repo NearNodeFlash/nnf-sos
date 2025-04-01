@@ -20,7 +20,6 @@
 package v1alpha7
 
 import (
-	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -76,26 +75,37 @@ type NnfContainerProfileData struct {
 	NumPorts int32 `json:"numPorts,omitempty"`
 
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
-	// Refer to the K8s documentation for `PodSpec` for more definition:
-	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
 	// Either this or MPISpec must be provided, but not both.
-	Spec *corev1.PodSpec `json:"spec,omitempty"`
+	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
+	Spec *NnfContainerSpec `json:"spec,omitempty"`
 
-	// MPIJobSpec to define the MPI containers created from this profile. This functionality is
-	// provided via mpi-operator, a 3rd party tool to assist in running MPI applications across
-	// worker containers.
+	// MPIJobSpec to define the MPI containers created from this profile.
 	// Either this or Spec must be provided, but not both.
-	//
-	// All the fields defined drive mpi-operator behavior. See the type definition of MPISpec for
-	// more detail:
-	// https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
-	//
-	// Note: most of these fields are fully customizable with a few exceptions. These fields are
-	// overridden by NNF software to ensure proper behavior to interface with the DWS workflow
-	// - Replicas
-	// - RunPolicy.BackoffLimit (this is set above by `RetryLimit`)
-	// - Worker/Launcher.RestartPolicy
-	MPISpec *mpiv2beta1.MPIJobSpec `json:"mpiSpec,omitempty"`
+	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
+	MPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
+}
+
+// TODO: Add validation for NnfContainerSpec
+type NnfContainerSpec struct {
+	Containers     []NnfContainer  `json:"containers"`
+	InitContainers []NnfContainer  `json:"initContainers,omitempty"`
+	Volumes        []corev1.Volume `json:"volumes,omitempty"`
+}
+
+type NnfMPIContainerSpec struct {
+	Launcher    NnfContainerSpec `json:"launcher"`
+	Worker      NnfContainerSpec `json:"worker"`
+	CopyOffload bool             `json:"copyOffload,omitempty"`
+}
+
+type NnfContainer struct {
+	Name         string                 `json:"name"`
+	Image        string                 `json:"image"`
+	Command      []string               `json:"command"`
+	Args         []string               `json:"args,omitempty"`
+	Env          []corev1.EnvVar        `json:"env,omitempty"`
+	EnvFrom      []corev1.EnvFromSource `json:"envFrom,omitempty"`
+	VolumeMounts []corev1.VolumeMount   `json:"volumeMounts,omitempty"`
 }
 
 // NnfContainerProfileStorage defines the mount point information that will be available to the
@@ -138,4 +148,49 @@ type NnfContainerProfileList struct {
 
 func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
+}
+
+// Copy an NnfContainerSpec into a corev1.PodSpec
+func (s *NnfContainerSpec) DeepCopyIntoCore(out *corev1.PodSpec) {
+	out.Containers = make([]corev1.Container, len(s.Containers))
+	for i := range s.Containers {
+		s.Containers[i].DeepCopyIntoCore(&out.Containers[i])
+	}
+
+	out.InitContainers = make([]corev1.Container, len(s.InitContainers))
+	for i := range s.InitContainers {
+		s.InitContainers[i].DeepCopyIntoCore(&out.InitContainers[i])
+	}
+
+	out.Volumes = make([]corev1.Volume, len(s.Volumes))
+	for i := range s.Volumes {
+		s.Volumes[i].DeepCopyInto(&out.Volumes[i])
+	}
+}
+
+// Copy an NnfContainer into a corev1.Container
+func (s *NnfContainer) DeepCopyIntoCore(out *corev1.Container) {
+	out.Name = s.Name
+	out.Image = s.Image
+
+	out.Command = make([]string, len(s.Command))
+	copy(out.Command, s.Command)
+
+	out.Args = make([]string, len(s.Args))
+	copy(out.Args, s.Args)
+
+	out.Env = make([]corev1.EnvVar, len(s.Env))
+	for i := range s.Env {
+		s.Env[i].DeepCopyInto(&out.Env[i])
+	}
+
+	out.EnvFrom = make([]corev1.EnvFromSource, len(s.EnvFrom))
+	for i := range s.EnvFrom {
+		s.EnvFrom[i].DeepCopyInto(&out.EnvFrom[i])
+	}
+
+	out.VolumeMounts = make([]corev1.VolumeMount, len(s.VolumeMounts))
+	for i := range s.VolumeMounts {
+		s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
+	}
 }

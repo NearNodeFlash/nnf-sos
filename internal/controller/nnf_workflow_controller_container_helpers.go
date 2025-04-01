@@ -87,14 +87,29 @@ const (
 // a job for the launcher (to run mpirun) and a replicaset for the worker pods. The worker nodes
 // run an ssh server tn listen for mpirun operations from the launcher pod.
 func (c *nnfUserContainer) createMPIJob() error {
+
+	// Create a new MPIJob object
 	mpiJob := &mpiv2beta1.MPIJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.workflow.Name,
 			Namespace: c.workflow.Namespace,
 		},
+		Spec: mpiv2beta1.MPIJobSpec{
+			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
+				mpiv2beta1.MPIReplicaTypeLauncher: {},
+				mpiv2beta1.MPIReplicaTypeWorker:   {},
+			},
+		},
 	}
+	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
+	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
+	launcherSpec := &launcher.Template.Spec
+	workerSpec := &worker.Template.Spec
 
-	c.profile.Data.MPISpec.DeepCopyInto(&mpiJob.Spec)
+	// Copy the NNFContainerProfile spec into the MPIJob spec
+	c.profile.Data.MPISpec.Launcher.DeepCopyIntoCore(launcherSpec)
+	c.profile.Data.MPISpec.Worker.DeepCopyIntoCore(workerSpec)
+
 	c.username = nnfv1alpha7.ContainerMPIUser
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
@@ -105,13 +120,6 @@ func (c *nnfUserContainer) createMPIJob() error {
 	if mpiJob.Spec.RunPolicy.BackoffLimit == nil {
 		mpiJob.Spec.RunPolicy.BackoffLimit = &c.profile.Data.RetryLimit
 	}
-
-	// MPIJobs have two pod specs: one for the launcher and one for the workers. The webhook ensures
-	// that the launcher/worker specs exist
-	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
-	launcherSpec := &launcher.Template.Spec
-	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
-	workerSpec := &worker.Template.Spec
 
 	// Add workflow labels to the launcher and worker pods themselves
 	if err := c.applyLabels(&launcher.Template.ObjectMeta, false /* applyOwner */); err != nil {
@@ -229,7 +237,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 			Namespace: c.workflow.Namespace,
 		},
 	}
-	c.profile.Data.Spec.DeepCopyInto(&job.Spec.Template.Spec)
+	c.profile.Data.Spec.DeepCopyIntoCore(&job.Spec.Template.Spec)
 	podSpec := &job.Spec.Template.Spec
 
 	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {
@@ -621,7 +629,7 @@ func addPortsEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, ports 
 // containers
 func countContainersInProfile(profile *nnfv1alpha7.NnfContainerProfile) int {
 	if profile.Data.MPISpec != nil {
-		return len(profile.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.Containers)
+		return len(profile.Data.MPISpec.Launcher.Containers)
 	} else if profile.Data.Spec != nil {
 		return len(profile.Data.Spec.Containers)
 	}
