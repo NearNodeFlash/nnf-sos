@@ -715,10 +715,10 @@ func Convert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProf
 	return autoConvert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
 }
 
-func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *nnfv1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
 }
 
-func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *nnfv1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
 }
