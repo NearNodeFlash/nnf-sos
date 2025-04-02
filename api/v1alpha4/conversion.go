@@ -727,26 +727,21 @@ func Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dwsv1a
 // End of DWS ResourceError conversion routines.
 
 // Container Profile Spec/MPISpec conversion routines.
-func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+
+func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	//return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
 	out.Spec.DeepCopyIntoCore(in.Spec)
 	out.MPISpec.Launcher.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
 	out.MPISpec.Worker.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
 	return nil
 }
 
-func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
-}
-
-func autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	//return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
 	in.Spec.ConvertFromCore(out.Spec)
 	in.MPISpec.Launcher.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
 	in.MPISpec.Worker.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
 	return nil
-}
-
-func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
 }
 
 // End of Container Profile Spec/MPISpec conversion routines.
