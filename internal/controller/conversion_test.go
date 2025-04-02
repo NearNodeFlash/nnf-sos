@@ -128,7 +128,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Data: nnfv1alpha7.NnfContainerProfileData{
-					Spec: &nnfv1alpha7.NnfContainerSpec{
+					NNFSpec: &nnfv1alpha7.NnfContainerSpec{
 						// TODO: is NodeName needed? If so, this needs to be added
 						// NodeName:   "rabbit-1",
 						Containers: []nnfv1alpha7.NnfContainer{{Name: "one"}},

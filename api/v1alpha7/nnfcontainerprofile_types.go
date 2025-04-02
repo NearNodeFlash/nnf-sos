@@ -77,12 +77,12 @@ type NnfContainerProfileData struct {
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
 	// Either this or MPISpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	Spec *NnfContainerSpec `json:"spec,omitempty"`
+	NNFSpec *NnfContainerSpec `json:"spec,omitempty"`
 
 	// MPIJobSpec to define the MPI containers created from this profile.
 	// Either this or Spec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	MPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
+	NNFMPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
 }
 
 // TODO: Add validation for NnfContainerSpec
