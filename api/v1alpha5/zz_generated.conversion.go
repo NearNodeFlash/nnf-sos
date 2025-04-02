@@ -864,6 +864,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*v1alpha2.ResourceErrorInfo)(nil), (*v1alpha3.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(a.(*v1alpha2.ResourceErrorInfo), b.(*v1alpha3.ResourceErrorInfo), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha2.ResourceError)(nil), (*v1alpha3.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(a.(*v1alpha2.ResourceError), b.(*v1alpha3.ResourceError), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha3.ResourceErrorInfo)(nil), (*v1alpha2.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(a.(*v1alpha3.ResourceErrorInfo), b.(*v1alpha2.ResourceErrorInfo), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha3.ResourceError)(nil), (*v1alpha2.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(a.(*v1alpha3.ResourceError), b.(*v1alpha2.ResourceError), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*NnfStorageProfileLustreCmdLines)(nil), (*v1alpha7.NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(a.(*NnfStorageProfileLustreCmdLines), b.(*v1alpha7.NnfStorageProfileLustreCmdLines), scope)
 	}); err != nil {
@@ -991,7 +1011,17 @@ func Convert_v1alpha7_NnfAccess_To_v1alpha5_NnfAccess(in *v1alpha7.NnfAccess, ou
 
 func autoConvert_v1alpha5_NnfAccessList_To_v1alpha7_NnfAccessList(in *NnfAccessList, out *v1alpha7.NnfAccessList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfAccess)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfAccess, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfAccess_To_v1alpha7_NnfAccess(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1002,7 +1032,17 @@ func Convert_v1alpha5_NnfAccessList_To_v1alpha7_NnfAccessList(in *NnfAccessList,
 
 func autoConvert_v1alpha7_NnfAccessList_To_v1alpha5_NnfAccessList(in *v1alpha7.NnfAccessList, out *NnfAccessList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfAccess)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfAccess, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfAccess_To_v1alpha5_NnfAccess(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1054,8 +1094,9 @@ func Convert_v1alpha7_NnfAccessSpec_To_v1alpha5_NnfAccessSpec(in *v1alpha7.NnfAc
 func autoConvert_v1alpha5_NnfAccessStatus_To_v1alpha7_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha7.NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1067,8 +1108,9 @@ func Convert_v1alpha5_NnfAccessStatus_To_v1alpha7_NnfAccessStatus(in *NnfAccessS
 func autoConvert_v1alpha7_NnfAccessStatus_To_v1alpha5_NnfAccessStatus(in *v1alpha7.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1295,7 +1337,17 @@ func Convert_v1alpha7_NnfDataMovementConfig_To_v1alpha5_NnfDataMovementConfig(in
 
 func autoConvert_v1alpha5_NnfDataMovementList_To_v1alpha7_NnfDataMovementList(in *NnfDataMovementList, out *v1alpha7.NnfDataMovementList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfDataMovement)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfDataMovement, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfDataMovement_To_v1alpha7_NnfDataMovement(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1306,7 +1358,17 @@ func Convert_v1alpha5_NnfDataMovementList_To_v1alpha7_NnfDataMovementList(in *Nn
 
 func autoConvert_v1alpha7_NnfDataMovementList_To_v1alpha5_NnfDataMovementList(in *v1alpha7.NnfDataMovementList, out *NnfDataMovementList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfDataMovement)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfDataMovement, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfDataMovement_To_v1alpha5_NnfDataMovement(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1583,8 +1645,9 @@ func autoConvert_v1alpha5_NnfDataMovementStatus_To_v1alpha7_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*v1alpha7.NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1601,8 +1664,9 @@ func autoConvert_v1alpha7_NnfDataMovementStatus_To_v1alpha5_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1748,8 +1812,9 @@ func autoConvert_v1alpha7_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *v1al
 func autoConvert_v1alpha5_NnfLustreMGTStatus_To_v1alpha7_NnfLustreMGTStatus(in *NnfLustreMGTStatus, out *v1alpha7.NnfLustreMGTStatus, s conversion.Scope) error {
 	out.FsNameNext = in.FsNameNext
 	out.ClaimList = *(*[]v1alpha7.NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1762,8 +1827,9 @@ func autoConvert_v1alpha7_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *
 	out.FsNameNext = in.FsNameNext
 	out.ClaimList = *(*[]NnfLustreMGTStatusClaim)(unsafe.Pointer(&in.ClaimList))
 	// WARNING: in.CommandList requires manual conversion: does not exist in peer-type
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1949,7 +2015,17 @@ func Convert_v1alpha7_NnfNodeBlockStorageDeviceStatus_To_v1alpha5_NnfNodeBlockSt
 
 func autoConvert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha7_NnfNodeBlockStorageList(in *NnfNodeBlockStorageList, out *v1alpha7.NnfNodeBlockStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfNodeBlockStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfNodeBlockStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha7_NnfNodeBlockStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1960,7 +2036,17 @@ func Convert_v1alpha5_NnfNodeBlockStorageList_To_v1alpha7_NnfNodeBlockStorageLis
 
 func autoConvert_v1alpha7_NnfNodeBlockStorageList_To_v1alpha5_NnfNodeBlockStorageList(in *v1alpha7.NnfNodeBlockStorageList, out *NnfNodeBlockStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfNodeBlockStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfNodeBlockStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1993,8 +2079,9 @@ func Convert_v1alpha7_NnfNodeBlockStorageSpec_To_v1alpha5_NnfNodeBlockStorageSpe
 
 func autoConvert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha7_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha7.NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]v1alpha7.NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
@@ -2007,8 +2094,9 @@ func Convert_v1alpha5_NnfNodeBlockStorageStatus_To_v1alpha7_NnfNodeBlockStorageS
 
 func autoConvert_v1alpha7_NnfNodeBlockStorageStatus_To_v1alpha5_NnfNodeBlockStorageStatus(in *v1alpha7.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.PodStartTime = in.PodStartTime
 	out.Ready = in.Ready
 	return nil
@@ -2249,7 +2337,17 @@ func Convert_v1alpha7_NnfNodeStorageAllocationStatus_To_v1alpha5_NnfNodeStorageA
 
 func autoConvert_v1alpha5_NnfNodeStorageList_To_v1alpha7_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha7.NnfNodeStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfNodeStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfNodeStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfNodeStorage_To_v1alpha7_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2260,7 +2358,17 @@ func Convert_v1alpha5_NnfNodeStorageList_To_v1alpha7_NnfNodeStorageList(in *NnfN
 
 func autoConvert_v1alpha7_NnfNodeStorageList_To_v1alpha5_NnfNodeStorageList(in *v1alpha7.NnfNodeStorageList, out *NnfNodeStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfNodeStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfNodeStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2312,8 +2420,9 @@ func Convert_v1alpha7_NnfNodeStorageSpec_To_v1alpha5_NnfNodeStorageSpec(in *v1al
 func autoConvert_v1alpha5_NnfNodeStorageStatus_To_v1alpha7_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha7.NnfNodeStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]v1alpha7.NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -2325,8 +2434,9 @@ func Convert_v1alpha5_NnfNodeStorageStatus_To_v1alpha7_NnfNodeStorageStatus(in *
 func autoConvert_v1alpha7_NnfNodeStorageStatus_To_v1alpha5_NnfNodeStorageStatus(in *v1alpha7.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -2645,7 +2755,17 @@ func Convert_v1alpha7_NnfStorageAllocationSetStatus_To_v1alpha5_NnfStorageAlloca
 
 func autoConvert_v1alpha5_NnfStorageList_To_v1alpha7_NnfStorageList(in *NnfStorageList, out *v1alpha7.NnfStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfStorage_To_v1alpha7_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2656,7 +2776,17 @@ func Convert_v1alpha5_NnfStorageList_To_v1alpha7_NnfStorageList(in *NnfStorageLi
 
 func autoConvert_v1alpha7_NnfStorageList_To_v1alpha5_NnfStorageList(in *v1alpha7.NnfStorageList, out *NnfStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfStorage_To_v1alpha5_NnfStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -3201,8 +3331,9 @@ func autoConvert_v1alpha5_NnfStorageStatus_To_v1alpha7_NnfStorageStatus(in *NnfS
 		return err
 	}
 	out.AllocationSets = *(*[]v1alpha7.NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.Ready = in.Ready
 	return nil
 }
@@ -3217,8 +3348,9 @@ func autoConvert_v1alpha7_NnfStorageStatus_To_v1alpha5_NnfStorageStatus(in *v1al
 		return err
 	}
 	out.AllocationSets = *(*[]NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	out.Ready = in.Ready
 	return nil
 }
@@ -3262,7 +3394,17 @@ func Convert_v1alpha7_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(in *v1alpha7
 
 func autoConvert_v1alpha5_NnfSystemStorageList_To_v1alpha7_NnfSystemStorageList(in *NnfSystemStorageList, out *v1alpha7.NnfSystemStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfSystemStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfSystemStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfSystemStorage_To_v1alpha7_NnfSystemStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -3273,7 +3415,17 @@ func Convert_v1alpha5_NnfSystemStorageList_To_v1alpha7_NnfSystemStorageList(in *
 
 func autoConvert_v1alpha7_NnfSystemStorageList_To_v1alpha5_NnfSystemStorageList(in *v1alpha7.NnfSystemStorageList, out *NnfSystemStorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfSystemStorage)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfSystemStorage, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -3332,8 +3484,9 @@ func Convert_v1alpha7_NnfSystemStorageSpec_To_v1alpha5_NnfSystemStorageSpec(in *
 
 func autoConvert_v1alpha5_NnfSystemStorageStatus_To_v1alpha7_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha7.NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha2.ResourceError to v1alpha3.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -3344,8 +3497,9 @@ func Convert_v1alpha5_NnfSystemStorageStatus_To_v1alpha7_NnfSystemStorageStatus(
 
 func autoConvert_v1alpha7_NnfSystemStorageStatus_To_v1alpha5_NnfSystemStorageStatus(in *v1alpha7.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	// FIXME: Provide conversion function to convert v1alpha3.ResourceError to v1alpha2.ResourceError
-	compileErrorOnMissingConversion()
+	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+		return err
+	}
 	return nil
 }
 
