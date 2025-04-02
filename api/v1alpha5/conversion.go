@@ -27,6 +27,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	v1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 )
 
@@ -629,6 +630,9 @@ func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
 }
 
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
 func Convert_v1alpha7_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *nnfv1alpha7.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s apiconversion.Scope) error {
 	return autoConvert_v1alpha7_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in, out, s)
 }
@@ -651,4 +655,12 @@ func Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProf
 
 func Convert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *nnfv1alpha7.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
+}
+
+func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+}
+
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
 }

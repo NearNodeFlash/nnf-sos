@@ -31,6 +31,7 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	v1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 )
 
@@ -733,4 +734,12 @@ func Convert_v1alpha4_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProf
 
 func Convert_v1alpha7_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in *nnfv1alpha7.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha7_NnfDataMovementProfileData_To_v1alpha4_NnfDataMovementProfileData(in, out, s)
+}
+
+func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+}
+
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
 }
