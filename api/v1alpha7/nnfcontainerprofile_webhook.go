@@ -108,15 +108,15 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) (admission.Warn
 }
 
 func (r *NnfContainerProfile) validateContent() error {
-	mpiJob := r.Data.MPISpec != nil
-	nonmpiJob := r.Data.Spec != nil
+	mpiJob := r.Data.NNFMPISpec != nil
+	nonmpiJob := r.Data.NNFSpec != nil
 
 	// Either Spec or MPISpec must be set, but not both
 	if mpiJob && nonmpiJob {
-		return fmt.Errorf("both Spec and MPISpec are provided - only 1 can be set")
+		return fmt.Errorf("both NNFSpec and NNFMPISpec are provided - only 1 can be set")
 	}
 	if !mpiJob && !nonmpiJob {
-		return fmt.Errorf("either Spec or MPISpec must be provided")
+		return fmt.Errorf("either NNFSpec or NNFMPISpec must be provided")
 	}
 
 	// isCopyOffloadContainer := func(name string) bool {
@@ -124,13 +124,13 @@ func (r *NnfContainerProfile) validateContent() error {
 	// }
 
 	if mpiJob {
-		launcher := r.Data.MPISpec.Launcher
+		launcher := r.Data.NNFMPISpec.Launcher
 		if len(launcher.Containers) < 1 {
-			return fmt.Errorf("MPISpec.Launcher must be present with at least 1 container defined")
+			return fmt.Errorf("NNFMPISpec.Launcher must be present with at least 1 container defined")
 		}
-		worker := r.Data.MPISpec.Worker
+		worker := r.Data.NNFMPISpec.Worker
 		if len(worker.Containers) < 1 {
-			return fmt.Errorf("MPISpec.Worker must be present with at least 1 container defined")
+			return fmt.Errorf("NNFMPISpec.Worker must be present with at least 1 container defined")
 		}
 
 		// When it looks like we have a copy offload Launcher container, ensure the service account is correct
@@ -160,7 +160,7 @@ func (r *NnfContainerProfile) validateContent() error {
 
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
-		if len(r.Data.Spec.Containers) < 1 {
+		if len(r.Data.NNFSpec.Containers) < 1 {
 			return fmt.Errorf("at least 1 container must be defined in Spec")
 		}
 

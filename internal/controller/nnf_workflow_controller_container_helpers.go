@@ -107,8 +107,8 @@ func (c *nnfUserContainer) createMPIJob() error {
 	workerSpec := &worker.Template.Spec
 
 	// Copy the NNFContainerProfile spec into the MPIJob spec
-	c.profile.Data.MPISpec.Launcher.DeepCopyIntoCore(launcherSpec)
-	c.profile.Data.MPISpec.Worker.DeepCopyIntoCore(workerSpec)
+	c.profile.Data.NNFMPISpec.Launcher.DeepCopyIntoCore(launcherSpec)
+	c.profile.Data.NNFMPISpec.Worker.DeepCopyIntoCore(workerSpec)
 
 	c.username = nnfv1alpha7.ContainerMPIUser
 
@@ -628,10 +628,10 @@ func addPortsEnvVars(workflow dwsv1alpha3.Workflow, spec *corev1.PodSpec, ports 
 // Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
 // containers
 func countContainersInProfile(profile *nnfv1alpha7.NnfContainerProfile) int {
-	if profile.Data.MPISpec != nil {
-		return len(profile.Data.MPISpec.Launcher.Containers)
-	} else if profile.Data.Spec != nil {
-		return len(profile.Data.Spec.Containers)
+	if profile.Data.NNFMPISpec != nil {
+		return len(profile.Data.NNFMPISpec.Launcher.Containers)
+	} else if profile.Data.NNFSpec != nil {
+		return len(profile.Data.NNFSpec.Containers)
 	}
 
 	return 0
