@@ -67,7 +67,7 @@ var _ = Describe("NnfContainerSpec", func() {
 		})
 
 		It("should copy containers correctly", func() {
-			sourceSpec.DeepCopyIntoCore(targetSpec)
+			sourceSpec.ToCorePodSpec(targetSpec)
 
 			Expect(targetSpec.Containers).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].Name).To(Equal("test-container"))
@@ -83,7 +83,7 @@ var _ = Describe("NnfContainerSpec", func() {
 		})
 
 		It("should copy init containers correctly", func() {
-			sourceSpec.DeepCopyIntoCore(targetSpec)
+			sourceSpec.ToCorePodSpec(targetSpec)
 
 			Expect(targetSpec.InitContainers).To(HaveLen(1))
 			Expect(targetSpec.InitContainers[0].Name).To(Equal("init-container"))
@@ -92,7 +92,7 @@ var _ = Describe("NnfContainerSpec", func() {
 		})
 
 		It("should copy volumes correctly", func() {
-			sourceSpec.DeepCopyIntoCore(targetSpec)
+			sourceSpec.ToCorePodSpec(targetSpec)
 
 			Expect(targetSpec.Volumes).To(HaveLen(1))
 			Expect(targetSpec.Volumes[0].Name).To(Equal("test-volume"))

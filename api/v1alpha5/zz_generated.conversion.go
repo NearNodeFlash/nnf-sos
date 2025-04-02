@@ -113,16 +113,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileData)(nil), (*v1alpha7.NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(a.(*NnfContainerProfileData), b.(*v1alpha7.NnfContainerProfileData), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha7.NnfContainerProfileData)(nil), (*NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(a.(*v1alpha7.NnfContainerProfileData), b.(*NnfContainerProfileData), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfContainerProfileList)(nil), (*v1alpha7.NnfContainerProfileList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfContainerProfileList_To_v1alpha7_NnfContainerProfileList(a.(*NnfContainerProfileList), b.(*v1alpha7.NnfContainerProfileList), scope)
 	}); err != nil {
@@ -883,6 +873,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*NnfContainerProfileData)(nil), (*v1alpha7.NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(a.(*NnfContainerProfileData), b.(*v1alpha7.NnfContainerProfileData), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*NnfStorageProfileLustreCmdLines)(nil), (*v1alpha7.NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(a.(*NnfStorageProfileLustreCmdLines), b.(*v1alpha7.NnfStorageProfileLustreCmdLines), scope)
 	}); err != nil {
@@ -890,6 +885,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*NnfStorageProfileLustreData)(nil), (*v1alpha7.NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(a.(*NnfStorageProfileLustreData), b.(*v1alpha7.NnfStorageProfileLustreData), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha7.NnfContainerProfileData)(nil), (*NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(a.(*v1alpha7.NnfContainerProfileData), b.(*NnfContainerProfileData), scope)
 	}); err != nil {
 		return err
 	}

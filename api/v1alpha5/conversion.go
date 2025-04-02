@@ -32,6 +32,8 @@ import (
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
+	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var convertlog = logf.Log.V(2).WithName("convert-v1alpha5")
@@ -78,12 +80,38 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha7.NnfContainerProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		if src.Data.Spec != nil {
+			dst.Data.NNFSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.Containers...)
+			dst.Data.NNFSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.InitContainers...)
+			dst.Data.NNFSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NNFSpec.Volumes...)
+		}
+		if src.Data.MPISpec != nil {
+			dst.Data.NNFMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.Containers...)
+			dst.Data.NNFMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.InitContainers...)
+			dst.Data.NNFMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Launcher.Volumes...)
+
+			dst.Data.NNFMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.Containers...)
+			dst.Data.NNFMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.InitContainers...)
+			dst.Data.NNFMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Worker.Volumes...)
+		}
+	} else {
+		if src.Data.Spec != nil {
+			dst.Data.NNFSpec.FromCorePodSpec(src.Data.Spec)
+		}
+		if src.Data.MPISpec != nil {
+			dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+			dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+		}
+	}
 
 	return nil
 }
@@ -94,6 +122,15 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
+	}
+
+	if src.Data.NNFSpec != nil {
+		src.Data.NNFSpec.ToCorePodSpec(dst.Data.Spec)
+	}
+
+	if src.Data.NNFMPISpec != nil {
+		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.
