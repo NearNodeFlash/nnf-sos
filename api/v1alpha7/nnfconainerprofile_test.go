@@ -99,4 +99,5 @@ var _ = Describe("NnfContainerSpec", func() {
 			Expect(targetSpec.Volumes[0].VolumeSource.EmptyDir).ToNot(BeNil())
 		})
 	})
+
 })

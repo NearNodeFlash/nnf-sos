@@ -1139,8 +1139,22 @@ func autoConvert_v1alpha6_NnfContainerProfileData_To_v1alpha7_NnfContainerProfil
 	out.UserID = (*uint32)(unsafe.Pointer(in.UserID))
 	out.GroupID = (*uint32)(unsafe.Pointer(in.GroupID))
 	out.NumPorts = in.NumPorts
-	out.Spec = (*v1.PodSpec)(unsafe.Pointer(in.Spec))
-	out.MPISpec = (*v2beta1.MPIJobSpec)(unsafe.Pointer(in.MPISpec))
+	if in.Spec != nil {
+		in, out := &in.Spec, &out.Spec
+		*out = new(v1alpha7.NnfContainerSpec)
+		// FIXME: Provide conversion function to convert v1.PodSpec to v1alpha7.NnfContainerSpec
+		compileErrorOnMissingConversion()
+	} else {
+		out.Spec = nil
+	}
+	if in.MPISpec != nil {
+		in, out := &in.MPISpec, &out.MPISpec
+		*out = new(v1alpha7.NnfMPIContainerSpec)
+		// FIXME: Provide conversion function to convert v2beta1.MPIJobSpec to v1alpha7.NnfMPIContainerSpec
+		compileErrorOnMissingConversion()
+	} else {
+		out.MPISpec = nil
+	}
 	return nil
 }
 
@@ -1158,8 +1172,22 @@ func autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfil
 	out.UserID = (*uint32)(unsafe.Pointer(in.UserID))
 	out.GroupID = (*uint32)(unsafe.Pointer(in.GroupID))
 	out.NumPorts = in.NumPorts
-	out.Spec = (*v1.PodSpec)(unsafe.Pointer(in.Spec))
-	out.MPISpec = (*v2beta1.MPIJobSpec)(unsafe.Pointer(in.MPISpec))
+	if in.Spec != nil {
+		in, out := &in.Spec, &out.Spec
+		*out = new(v1.PodSpec)
+		// FIXME: Provide conversion function to convert v1alpha7.NnfContainerSpec to v1.PodSpec
+		compileErrorOnMissingConversion()
+	} else {
+		out.Spec = nil
+	}
+	if in.MPISpec != nil {
+		in, out := &in.MPISpec, &out.MPISpec
+		*out = new(v2beta1.MPIJobSpec)
+		// FIXME: Provide conversion function to convert v1alpha7.NnfMPIContainerSpec to v2beta1.MPIJobSpec
+		compileErrorOnMissingConversion()
+	} else {
+		out.MPISpec = nil
+	}
 	return nil
 }
 
@@ -1170,7 +1198,17 @@ func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileDat
 
 func autoConvert_v1alpha6_NnfContainerProfileList_To_v1alpha7_NnfContainerProfileList(in *NnfContainerProfileList, out *v1alpha7.NnfContainerProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfContainerProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfContainerProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfContainerProfile_To_v1alpha7_NnfContainerProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1181,7 +1219,17 @@ func Convert_v1alpha6_NnfContainerProfileList_To_v1alpha7_NnfContainerProfileLis
 
 func autoConvert_v1alpha7_NnfContainerProfileList_To_v1alpha6_NnfContainerProfileList(in *v1alpha7.NnfContainerProfileList, out *NnfContainerProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfContainerProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfContainerProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 

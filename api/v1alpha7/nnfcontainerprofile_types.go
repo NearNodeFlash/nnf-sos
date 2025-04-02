@@ -86,6 +86,7 @@ type NnfContainerProfileData struct {
 }
 
 // TODO: Add validation for NnfContainerSpec
+// TODO: Rename to NnfPodSpec?
 type NnfContainerSpec struct {
 	Containers     []NnfContainer  `json:"containers"`
 	InitContainers []NnfContainer  `json:"initContainers,omitempty"`
@@ -150,6 +151,12 @@ func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
 }
 
+// TODO: Rename these:
+// CopyToCorePodSpec
+// CopyToCoreContainer
+// CopyFromCorePodSpec
+// CopyFromCoreContainer
+
 // Copy an NnfContainerSpec into a corev1.PodSpec
 func (s *NnfContainerSpec) DeepCopyIntoCore(out *corev1.PodSpec) {
 	out.Containers = make([]corev1.Container, len(s.Containers))
@@ -193,4 +200,31 @@ func (s *NnfContainer) DeepCopyIntoCore(out *corev1.Container) {
 	for i := range s.VolumeMounts {
 		s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
 	}
+}
+
+func (s *NnfContainerSpec) ConvertFromCore(in *corev1.PodSpec) {
+	s.Containers = make([]NnfContainer, len(in.Containers))
+	for i := range in.Containers {
+		s.Containers[i].ConvertFromCore(&in.Containers[i])
+	}
+
+	s.InitContainers = make([]NnfContainer, len(in.InitContainers))
+	for i := range in.InitContainers {
+		s.InitContainers[i].ConvertFromCore(&in.InitContainers[i])
+	}
+
+	s.Volumes = make([]corev1.Volume, len(in.Volumes))
+	for i := range in.Volumes {
+		s.Volumes[i].DeepCopyInto(&s.Volumes[i])
+	}
+}
+
+func (s *NnfContainer) ConvertFromCore(in *corev1.Container) {
+	s.Name = in.Name
+	s.Image = in.Image
+	s.Command = in.Command
+	s.Args = in.Args
+	s.Env = in.Env
+	s.EnvFrom = in.EnvFrom
+	s.VolumeMounts = in.VolumeMounts
 }

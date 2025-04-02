@@ -31,7 +31,10 @@ import (
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	v1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
+	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var convertlog = logf.Log.V(2).WithName("convert-v1alpha4")
@@ -78,12 +81,32 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha7.NnfContainerProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
+
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	if hasAnno {
+		dst.Data.Spec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.Containers...)
+		dst.Data.Spec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.InitContainers...)
+		dst.Data.Spec.Volumes = append([]corev1.Volume(nil), restored.Data.Spec.Volumes...)
+
+		dst.Data.MPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Launcher.Containers...)
+		dst.Data.MPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Launcher.InitContainers...)
+		dst.Data.MPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.MPISpec.Launcher.Volumes...)
+		dst.Data.MPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Worker.Containers...)
+		dst.Data.MPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Worker.InitContainers...)
+		dst.Data.MPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.MPISpec.Worker.Volumes...)
+
+	} else {
+		dst.Data.Spec.ConvertFromCore(src.Data.Spec)
+		dst.Data.MPISpec.Launcher.ConvertFromCore(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		dst.Data.MPISpec.Worker.ConvertFromCore(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+
+	}
 
 	return nil
 }
@@ -95,6 +118,10 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
 	}
+
+	src.Data.Spec.DeepCopyIntoCore(dst.Data.Spec)
+	src.Data.MPISpec.Launcher.DeepCopyIntoCore(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+	src.Data.MPISpec.Worker.DeepCopyIntoCore(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
 
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
@@ -698,6 +725,31 @@ func Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dwsv1a
 }
 
 // End of DWS ResourceError conversion routines.
+
+// Container Profile Spec/MPISpec conversion routines.
+func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	out.Spec.DeepCopyIntoCore(in.Spec)
+	out.MPISpec.Launcher.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+	out.MPISpec.Worker.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	return nil
+}
+
+func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+}
+
+func autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	in.Spec.ConvertFromCore(out.Spec)
+	in.MPISpec.Launcher.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+	in.MPISpec.Worker.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	return nil
+}
+
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
+}
+
+// End of Container Profile Spec/MPISpec conversion routines.
 // +crdbumper:carryforward:end
 
 // The conversion-gen tool dropped these from zz_generated.conversion.go to
