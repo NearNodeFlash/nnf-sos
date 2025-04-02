@@ -244,7 +244,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 			Namespace: c.workflow.Namespace,
 		},
 	}
-	c.profile.Data.Spec.DeepCopyIntoCore(&job.Spec.Template.Spec)
+	c.profile.Data.NNFSpec.DeepCopyIntoCore(&job.Spec.Template.Spec)
 	podSpec := &job.Spec.Template.Spec
 
 	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {

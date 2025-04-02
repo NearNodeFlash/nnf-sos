@@ -21,11 +21,13 @@ package v1alpha6
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	v1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 )
 
@@ -598,4 +600,15 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
+func Convert_v1alpha6_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+}
+
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in, out, s)
 }
