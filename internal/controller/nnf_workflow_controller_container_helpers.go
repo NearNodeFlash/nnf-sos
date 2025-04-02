@@ -107,8 +107,8 @@ func (c *nnfUserContainer) createMPIJob() error {
 	workerSpec := &worker.Template.Spec
 
 	// Copy the NNFContainerProfile spec into the MPIJob spec
-	c.profile.Data.NNFMPISpec.Launcher.DeepCopyIntoCore(launcherSpec)
-	c.profile.Data.NNFMPISpec.Worker.DeepCopyIntoCore(workerSpec)
+	c.profile.Data.NNFMPISpec.Launcher.ToCorePodSpec(launcherSpec)
+	c.profile.Data.NNFMPISpec.Worker.ToCorePodSpec(workerSpec)
 
 	c.username = nnfv1alpha7.ContainerMPIUser
 
@@ -237,7 +237,7 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 			Namespace: c.workflow.Namespace,
 		},
 	}
-	c.profile.Data.NNFSpec.DeepCopyIntoCore(&job.Spec.Template.Spec)
+	c.profile.Data.NNFSpec.ToCorePodSpec(&job.Spec.Template.Spec)
 	podSpec := &job.Spec.Template.Spec
 
 	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {
