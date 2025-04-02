@@ -90,6 +90,15 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 	if hasAnno {
+		dst.Data.Pinned = restored.Data.Pinned
+		dst.Data.Storages = *(*[]v1alpha7.NnfContainerProfileStorage)(unsafe.Pointer(&restored.Data.Storages))
+		dst.Data.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(restored.Data.PreRunTimeoutSeconds))
+		dst.Data.PostRunTimeoutSeconds = (*int64)(unsafe.Pointer(restored.Data.PostRunTimeoutSeconds))
+		dst.Data.RetryLimit = restored.Data.RetryLimit
+		dst.Data.UserID = (*uint32)(unsafe.Pointer(restored.Data.UserID))
+		dst.Data.GroupID = (*uint32)(unsafe.Pointer(restored.Data.GroupID))
+		dst.Data.NumPorts = restored.Data.NumPorts
+
 		dst.Data.Spec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.Containers...)
 		dst.Data.Spec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.InitContainers...)
 		dst.Data.Spec.Volumes = append([]corev1.Volume(nil), restored.Data.Spec.Volumes...)
@@ -118,6 +127,15 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha4_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
 	}
+
+	dst.Data.Pinned = src.Data.Pinned
+	dst.Data.Storages = *(*[]NnfContainerProfileStorage)(unsafe.Pointer(&src.Data.Storages))
+	dst.Data.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(src.Data.PreRunTimeoutSeconds))
+	dst.Data.PostRunTimeoutSeconds = (*int64)(unsafe.Pointer(src.Data.PostRunTimeoutSeconds))
+	dst.Data.RetryLimit = src.Data.RetryLimit
+	dst.Data.UserID = (*uint32)(unsafe.Pointer(src.Data.UserID))
+	dst.Data.GroupID = (*uint32)(unsafe.Pointer(src.Data.GroupID))
+	dst.Data.NumPorts = src.Data.NumPorts
 
 	src.Data.Spec.DeepCopyIntoCore(dst.Data.Spec)
 	src.Data.MPISpec.Launcher.DeepCopyIntoCore(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
@@ -728,19 +746,77 @@ func Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dwsv1a
 
 // Container Profile Spec/MPISpec conversion routines.
 
+func autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return nil
+}
+
 func Convert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
 	//return autoConvert_v1alpha4_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
-	out.Spec.DeepCopyIntoCore(in.Spec)
-	out.MPISpec.Launcher.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
-	out.MPISpec.Worker.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	// out.Spec.DeepCopyIntoCore(in.Spec)
+	// out.MPISpec.Launcher.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+	// out.MPISpec.Worker.DeepCopyIntoCore(&in.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	// return nil
+
+	out.Pinned = in.Pinned
+	out.Storages = *(*[]v1alpha7.NnfContainerProfileStorage)(unsafe.Pointer(&in.Storages))
+	out.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PreRunTimeoutSeconds))
+	out.PostRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PostRunTimeoutSeconds))
+	out.RetryLimit = in.RetryLimit
+	out.UserID = (*uint32)(unsafe.Pointer(in.UserID))
+	out.GroupID = (*uint32)(unsafe.Pointer(in.GroupID))
+	out.NumPorts = in.NumPorts
+	if in.Spec != nil {
+		in, out := &in.Spec, &out.Spec
+		*out = new(v1alpha7.NnfContainerSpec)
+		(*out).DeepCopyIntoCore((*in))
+	} else {
+		out.Spec = nil
+	}
+	if in.MPISpec != nil {
+		in, out := &in.MPISpec, &out.MPISpec
+		*out = new(v1alpha7.NnfMPIContainerSpec)
+		(*out).Launcher.DeepCopyIntoCore(&(*in).MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		(*out).Worker.DeepCopyIntoCore(&(*in).MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	} else {
+		out.MPISpec = nil
+	}
+	return nil
+}
+
+func autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	return nil
 }
 
 func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	//return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha4_NnfContainerProfileData(in, out, s)
-	in.Spec.ConvertFromCore(out.Spec)
-	in.MPISpec.Launcher.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
-	in.MPISpec.Worker.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	//in.Spec.ConvertFromCore(out.Spec)
+	//in.MPISpec.Launcher.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+	//in.MPISpec.Worker.ConvertFromCore(&out.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	//return nil
+
+	out.Pinned = in.Pinned
+	out.Storages = *(*[]NnfContainerProfileStorage)(unsafe.Pointer(&in.Storages))
+	out.PreRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PreRunTimeoutSeconds))
+	out.PostRunTimeoutSeconds = (*int64)(unsafe.Pointer(in.PostRunTimeoutSeconds))
+	out.RetryLimit = in.RetryLimit
+	out.UserID = (*uint32)(unsafe.Pointer(in.UserID))
+	out.GroupID = (*uint32)(unsafe.Pointer(in.GroupID))
+	out.NumPorts = in.NumPorts
+	if in.Spec != nil {
+		in, out := &in.Spec, &out.Spec
+		*out = new(corev1.PodSpec)
+		(*in).ConvertFromCore((*out))
+	} else {
+		out.Spec = nil
+	}
+	if in.MPISpec != nil {
+		in, out := &in.MPISpec, &out.MPISpec
+		*out = new(v2beta1.MPIJobSpec)
+		(*in).Launcher.ConvertFromCore(&(*out).MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		(*in).Worker.ConvertFromCore(&(*out).MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+	} else {
+		out.MPISpec = nil
+	}
 	return nil
 }
 
