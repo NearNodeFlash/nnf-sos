@@ -157,19 +157,23 @@ func (s *NnfContainerSpec) ToCorePodSpec(out *corev1.PodSpec) {
 		out = &corev1.PodSpec{}
 	}
 
-	out.Containers = make([]corev1.Container, len(s.Containers))
-	for i := range s.Containers {
-		s.Containers[i].ToCoreContainer(&out.Containers[i])
+	if len(s.Containers) > 0 {
+		out.Containers = make([]corev1.Container, len(s.Containers))
+		for i := range s.Containers {
+			s.Containers[i].ToCoreContainer(&out.Containers[i])
+		}
 	}
-
-	out.InitContainers = make([]corev1.Container, len(s.InitContainers))
-	for i := range s.InitContainers {
-		s.InitContainers[i].ToCoreContainer(&out.InitContainers[i])
+	if len(s.InitContainers) > 0 {
+		out.InitContainers = make([]corev1.Container, len(s.InitContainers))
+		for i := range s.InitContainers {
+			s.InitContainers[i].ToCoreContainer(&out.InitContainers[i])
+		}
 	}
-
-	out.Volumes = make([]corev1.Volume, len(s.Volumes))
-	for i := range s.Volumes {
-		s.Volumes[i].DeepCopyInto(&out.Volumes[i])
+	if len(s.Volumes) > 0 {
+		out.Volumes = make([]corev1.Volume, len(s.Volumes))
+		for i := range s.Volumes {
+			s.Volumes[i].DeepCopyInto(&out.Volumes[i])
+		}
 	}
 }
 

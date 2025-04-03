@@ -20,8 +20,9 @@
 package v1alpha5
 
 import (
-	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	unsafe "unsafe"
+
+	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiconversion "k8s.io/apimachinery/pkg/conversion"
