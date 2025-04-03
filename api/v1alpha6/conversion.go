@@ -20,6 +20,9 @@
 package v1alpha6
 
 import (
+	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -75,12 +78,57 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha7.NnfContainerProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		if restored.Data.NNFSpec != nil {
+			if dst.Data.NNFSpec == nil {
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+			}
+			dst.Data.NNFSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.Containers...)
+			dst.Data.NNFSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.InitContainers...)
+			dst.Data.NNFSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NNFSpec.Volumes...)
+		}
+		if restored.Data.NNFMPISpec != nil {
+			if dst.Data.NNFMPISpec == nil {
+				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+			}
+
+			dst.Data.NNFMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.Containers...)
+			dst.Data.NNFMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.InitContainers...)
+			dst.Data.NNFMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Launcher.Volumes...)
+
+			dst.Data.NNFMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.Containers...)
+			dst.Data.NNFMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.InitContainers...)
+			dst.Data.NNFMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Worker.Volumes...)
+
+			dst.Data.NNFMPISpec.CopyOffload = restored.Data.NNFMPISpec.CopyOffload
+		}
+	} else {
+		if src.Data.Spec != nil {
+			if dst.Data.NNFSpec == nil {
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+			}
+			dst.Data.NNFSpec.FromCorePodSpec(src.Data.Spec)
+		}
+		if src.Data.MPISpec != nil {
+			if dst.Data.NNFMPISpec == nil {
+				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] != nil {
+				dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] != nil {
+				dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
+			}
+		}
+	}
 
 	return nil
 }
@@ -91,6 +139,32 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
+	}
+
+	if src.Data.NNFSpec != nil {
+		if dst.Data.Spec == nil {
+			dst.Data.Spec = &corev1.PodSpec{}
+		}
+		src.Data.NNFSpec.ToCorePodSpec(dst.Data.Spec)
+	}
+	if src.Data.NNFMPISpec != nil {
+		if dst.Data.MPISpec == nil {
+			dst.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs = make(map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec)
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
+		}
+		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+
+		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
+		}
+		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.

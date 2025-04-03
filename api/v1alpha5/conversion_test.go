@@ -113,7 +113,6 @@ func TestFuzzyConversion(t *testing.T) {
 func NnfContainerProfileFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		NnfContainerProfilev5Fuzzer,
-		NnfContainerProfilev6Fuzzer,
 	}
 }
 
@@ -231,15 +230,9 @@ func NnfContainerProfilev5Fuzzer(in *NnfContainerProfileData, c fuzz.Continue) {
 	}
 }
 
-func NnfContainerProfilev6Fuzzer(in *nnfv1alpha7.NnfContainerProfileData, c fuzz.Continue) {
-	// Tell the fuzzer to begin by fuzzing everything in the object.
-	c.FuzzNoCustom(in)
-}
-
 func NnfStorageProfileFuzzFunc(_ runtimeserializer.CodecFactory) []interface{} {
 	return []interface{}{
 		NnfStorageProfilev5Fuzzer,
-		NnfStorageProfilev6Fuzzer,
 	}
 }
 
@@ -255,11 +248,6 @@ func NnfStorageProfilev5Fuzzer(in *NnfStorageProfileData, c fuzz.Continue) {
 	in.LustreStorage.MgtCmdLines.PreUnmount = []string{}
 	in.LustreStorage.MgtMdtCmdLines.PostMount = []string{}
 	in.LustreStorage.MgtMdtCmdLines.PreUnmount = []string{}
-}
-
-func NnfStorageProfilev6Fuzzer(in *nnfv1alpha7.NnfStorageProfileData, c fuzz.Continue) {
-	// Tell the fuzzer to begin by fuzzing everything in the object.
-	c.FuzzNoCustom(in)
 }
 
 // Just touch ginkgo, so it's here to interpret any ginkgo args from

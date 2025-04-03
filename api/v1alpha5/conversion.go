@@ -34,7 +34,7 @@ import (
 	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
-	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -125,11 +125,11 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 			if dst.Data.NNFMPISpec == nil {
 				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
 			}
-			if src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] != nil {
-				dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] != nil {
+				dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
 			}
-			if src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] != nil {
-				dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] != nil {
+				dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 			}
 		}
 	}
@@ -153,22 +153,22 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 	if src.Data.NNFMPISpec != nil {
 		if dst.Data.MPISpec == nil {
-			dst.Data.MPISpec = &v2beta1.MPIJobSpec{}
+			dst.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 		}
 
 		if dst.Data.MPISpec.MPIReplicaSpecs == nil {
-			dst.Data.MPISpec.MPIReplicaSpecs = make(map[v2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec)
+			dst.Data.MPISpec.MPIReplicaSpecs = make(map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec)
 		}
 
-		if dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] == nil {
-			dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
+		if dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
 
-		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] == nil {
-			dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
+		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.
