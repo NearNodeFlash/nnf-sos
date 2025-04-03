@@ -20,13 +20,13 @@
 package v1alpha5
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
 	common "github.com/kubeflow/common/pkg/apis/common/v1"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	. "github.com/onsi/ginkgo/v2"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/apitesting/fuzzer"
 	runtimeserializer "k8s.io/apimachinery/pkg/runtime/serializer"
 
@@ -122,6 +122,12 @@ func NnfContainerProfilev5Fuzzer(in *NnfContainerProfileData, c fuzz.Continue) {
 	c.FuzzNoCustom(in)
 
 	if in.Spec != nil {
+
+		// All these fields are not used in v1alpha7 and later, so we set them to nil or default values. We only use:
+		// - Containers
+		// - InitContainers
+		// - Volumes
+		// Don't fuzz anything else:
 		in.Spec.EphemeralContainers = nil
 		in.Spec.ActiveDeadlineSeconds = nil
 		in.Spec.TerminationGracePeriodSeconds = nil
@@ -153,19 +159,45 @@ func NnfContainerProfilev5Fuzzer(in *NnfContainerProfileData, c fuzz.Continue) {
 		in.Spec.PreemptionPolicy = nil
 		in.Spec.Overhead = nil
 		in.Spec.TopologySpreadConstraints = nil
+		in.Spec.DeprecatedServiceAccount = ""
+		in.Spec.SetHostnameAsFQDN = nil
+		in.Spec.OS = nil
+		in.Spec.SchedulingGates = nil
+		in.Spec.HostUsers = nil
+		in.Spec.ResourceClaims = nil
 
-		noFuzzContainer := func(inC []corev1.Container) {
-			for _, c := range inC {
-				c.Resources = corev1.ResourceRequirements{}
-				c.ResizePolicy = nil
-				c.VolumeDevices = nil
-				c.ReadinessProbe = nil
-				c.StartupProbe = nil
-				c.Lifecycle = nil
-				c.TerminationMessagePath = ""
-				c.TerminationMessagePolicy = ""
+		noFuzzContainer := func(containers []corev1.Container) {
+			for i := range containers {
+				// Same as above. We only use the following fields:
+				// - Name
+				// - Image
+				// - Command
+				// - Args
+				// - Env
+				// - EnvFrom
+				// - VolumeMounts
+				containers[i].Resources = corev1.ResourceRequirements{}
+				containers[i].RestartPolicy = nil
+				containers[i].ResizePolicy = nil
+				containers[i].VolumeDevices = nil
+				containers[i].ReadinessProbe = nil
+				containers[i].StartupProbe = nil
+				containers[i].LivenessProbe = nil
+				containers[i].Lifecycle = nil
+				containers[i].TerminationMessagePath = ""
+				containers[i].TerminationMessagePolicy = ""
+				containers[i].ImagePullPolicy = ""
+				containers[i].SecurityContext = nil
+				containers[i].Stdin = false
+				containers[i].StdinOnce = false
+				containers[i].TTY = false
+				containers[i].WorkingDir = ""
+				containers[i].Lifecycle = nil
+				containers[i].VolumeDevices = nil
+				containers[i].Ports = nil
 			}
 		}
+
 		noFuzzContainer(in.Spec.Containers)
 		noFuzzContainer(in.Spec.InitContainers)
 	}
@@ -197,8 +229,6 @@ func NnfContainerProfilev5Fuzzer(in *NnfContainerProfileData, c fuzz.Continue) {
 			spec.Template.Spec.EnableServiceLinks = nil
 		}
 	}
-
-	// Add any specific fuzzing logic for NnfContainerProfileData here if needed.
 }
 
 func NnfContainerProfilev6Fuzzer(in *nnfv1alpha7.NnfContainerProfileData, c fuzz.Continue) {
