@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("NnfContainerSpec", func() {
-	Describe("DeepCopyIntoCore", func() {
+	Describe("ToCorePodSpec", func() {
 		var (
 			sourceSpec *NnfContainerSpec
 			targetSpec *corev1.PodSpec
@@ -93,6 +93,81 @@ var _ = Describe("NnfContainerSpec", func() {
 
 		It("should copy volumes correctly", func() {
 			sourceSpec.ToCorePodSpec(targetSpec)
+
+			Expect(targetSpec.Volumes).To(HaveLen(1))
+			Expect(targetSpec.Volumes[0].Name).To(Equal("test-volume"))
+			Expect(targetSpec.Volumes[0].VolumeSource.EmptyDir).ToNot(BeNil())
+		})
+	})
+
+	Describe("FromCorePodSpec", func() {
+		var (
+			sourceSpec *corev1.PodSpec
+			targetSpec *NnfContainerSpec
+		)
+
+		BeforeEach(func() {
+			sourceSpec = &corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:    "test-container",
+						Image:   "test-image",
+						Command: []string{"echo", "hello"},
+						Args:    []string{"arg1", "arg2"},
+						Env: []corev1.EnvVar{
+							{Name: "ENV_VAR", Value: "value"},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{Name: "test-volume", MountPath: "/mnt"},
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name:    "init-container",
+						Image:   "init-image",
+						Command: []string{"init-command"},
+					},
+				},
+				Volumes: []corev1.Volume{
+					{
+						Name: "test-volume",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+				},
+			}
+			targetSpec = &NnfContainerSpec{}
+		})
+
+		It("should copy containers correctly", func() {
+			targetSpec.FromCorePodSpec(sourceSpec)
+
+			Expect(targetSpec.Containers).To(HaveLen(1))
+			Expect(targetSpec.Containers[0].Name).To(Equal("test-container"))
+			Expect(targetSpec.Containers[0].Image).To(Equal("test-image"))
+			Expect(targetSpec.Containers[0].Command).To(Equal([]string{"echo", "hello"}))
+			Expect(targetSpec.Containers[0].Args).To(Equal([]string{"arg1", "arg2"}))
+			Expect(targetSpec.Containers[0].Env).To(HaveLen(1))
+			Expect(targetSpec.Containers[0].Env[0].Name).To(Equal("ENV_VAR"))
+			Expect(targetSpec.Containers[0].Env[0].Value).To(Equal("value"))
+			Expect(targetSpec.Containers[0].VolumeMounts).To(HaveLen(1))
+			Expect(targetSpec.Containers[0].VolumeMounts[0].Name).To(Equal("test-volume"))
+			Expect(targetSpec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/mnt"))
+		})
+
+		It("should copy init containers correctly", func() {
+			targetSpec.FromCorePodSpec(sourceSpec)
+
+			Expect(targetSpec.InitContainers).To(HaveLen(1))
+			Expect(targetSpec.InitContainers[0].Name).To(Equal("init-container"))
+			Expect(targetSpec.InitContainers[0].Image).To(Equal("init-image"))
+			Expect(targetSpec.InitContainers[0].Command).To(Equal([]string{"init-command"}))
+		})
+
+		It("should copy volumes correctly", func() {
+			targetSpec.FromCorePodSpec(sourceSpec)
 
 			Expect(targetSpec.Volumes).To(HaveLen(1))
 			Expect(targetSpec.Volumes[0].Name).To(Equal("test-volume"))

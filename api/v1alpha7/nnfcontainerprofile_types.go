@@ -77,12 +77,12 @@ type NnfContainerProfileData struct {
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
 	// Either this or MPISpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	NNFSpec *NnfContainerSpec `json:"nnfSpec,omitempty"`
+	NNFSpec *NnfContainerSpec `json:"spec,omitempty"`
 
 	// MPIJobSpec to define the MPI containers created from this profile.
 	// Either this or Spec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	NNFMPISpec *NnfMPIContainerSpec `json:"nnfMPISpec,omitempty"`
+	NNFMPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
 }
 
 // TODO: Add validation for NnfContainerSpec
@@ -152,6 +152,11 @@ func init() {
 
 // Copy an NnfContainerSpec into a corev1.PodSpec
 func (s *NnfContainerSpec) ToCorePodSpec(out *corev1.PodSpec) {
+
+	if out == nil {
+		out = &corev1.PodSpec{}
+	}
+
 	out.Containers = make([]corev1.Container, len(s.Containers))
 	for i := range s.Containers {
 		s.Containers[i].ToCoreContainer(&out.Containers[i])
@@ -170,6 +175,11 @@ func (s *NnfContainerSpec) ToCorePodSpec(out *corev1.PodSpec) {
 
 // Copy an NnfContainer into a corev1.Container
 func (s *NnfContainer) ToCoreContainer(out *corev1.Container) {
+
+	if out == nil {
+		out = &corev1.Container{}
+	}
+
 	out.Name = s.Name
 	out.Image = s.Image
 
@@ -197,6 +207,11 @@ func (s *NnfContainer) ToCoreContainer(out *corev1.Container) {
 
 // Copy a corev1.PodSpec into an NnfContainer
 func (s *NnfContainerSpec) FromCorePodSpec(in *corev1.PodSpec) {
+
+	if in == nil {
+		return
+	}
+
 	s.Containers = make([]NnfContainer, len(in.Containers))
 	for i := range in.Containers {
 		s.Containers[i].FromCoreContainer(&in.Containers[i])
@@ -209,17 +224,31 @@ func (s *NnfContainerSpec) FromCorePodSpec(in *corev1.PodSpec) {
 
 	s.Volumes = make([]corev1.Volume, len(in.Volumes))
 	for i := range in.Volumes {
-		s.Volumes[i].DeepCopyInto(&s.Volumes[i])
+		in.Volumes[i].DeepCopyInto(&s.Volumes[i])
 	}
 }
 
 // Copy a corev1.Container into an NnfContainer
 func (s *NnfContainer) FromCoreContainer(in *corev1.Container) {
+	if in == nil {
+		return
+	}
+
 	s.Name = in.Name
 	s.Image = in.Image
-	s.Command = in.Command
-	s.Args = in.Args
-	s.Env = in.Env
-	s.EnvFrom = in.EnvFrom
-	s.VolumeMounts = in.VolumeMounts
+
+	s.Command = make([]string, len(in.Command))
+	copy(s.Command, in.Command)
+
+	s.Args = make([]string, len(in.Args))
+	copy(s.Args, in.Args)
+
+	s.Env = make([]corev1.EnvVar, len(in.Env))
+	copy(s.Env, in.Env)
+
+	s.EnvFrom = make([]corev1.EnvFromSource, len(in.EnvFrom))
+	copy(s.EnvFrom, in.EnvFrom)
+
+	s.VolumeMounts = make([]corev1.VolumeMount, len(in.VolumeMounts))
+	copy(s.VolumeMounts, in.VolumeMounts)
 }

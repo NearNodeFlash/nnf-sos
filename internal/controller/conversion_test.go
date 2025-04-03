@@ -131,7 +131,7 @@ var _ = Describe("Conversion Webhook Test", func() {
 					NNFSpec: &nnfv1alpha7.NnfContainerSpec{
 						// TODO: is NodeName needed? If so, this needs to be added
 						// NodeName:   "rabbit-1",
-						Containers: []nnfv1alpha7.NnfContainer{{Name: "one"}},
+						Containers: []nnfv1alpha7.NnfContainer{{Name: "one", Image: "nginx:latest", Command: []string{"echo", "hello"}}},
 					},
 				},
 			}

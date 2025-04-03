@@ -20,6 +20,7 @@
 package v1alpha5
 
 import (
+	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
 	unsafe "unsafe"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -89,12 +90,19 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 
 	if hasAnno {
-		if src.Data.Spec != nil {
+		if restored.Data.NNFSpec != nil {
+			if dst.Data.NNFSpec == nil {
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+			}
 			dst.Data.NNFSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.Containers...)
 			dst.Data.NNFSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.InitContainers...)
 			dst.Data.NNFSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NNFSpec.Volumes...)
 		}
-		if src.Data.MPISpec != nil {
+		if restored.Data.NNFMPISpec != nil {
+			if dst.Data.NNFMPISpec == nil {
+				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+			}
+
 			dst.Data.NNFMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.Containers...)
 			dst.Data.NNFMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.InitContainers...)
 			dst.Data.NNFMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Launcher.Volumes...)
@@ -102,14 +110,26 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 			dst.Data.NNFMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.Containers...)
 			dst.Data.NNFMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.InitContainers...)
 			dst.Data.NNFMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Worker.Volumes...)
+
+			dst.Data.NNFMPISpec.CopyOffload = restored.Data.NNFMPISpec.CopyOffload
 		}
 	} else {
 		if src.Data.Spec != nil {
+			if dst.Data.NNFSpec == nil {
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+			}
 			dst.Data.NNFSpec.FromCorePodSpec(src.Data.Spec)
 		}
 		if src.Data.MPISpec != nil {
-			dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
-			dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+			if dst.Data.NNFMPISpec == nil {
+				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] != nil {
+				dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] != nil {
+				dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
+			}
 		}
 	}
 
@@ -125,11 +145,28 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 
 	if src.Data.NNFSpec != nil {
+		if dst.Data.Spec == nil {
+			dst.Data.Spec = &corev1.PodSpec{}
+		}
 		src.Data.NNFSpec.ToCorePodSpec(dst.Data.Spec)
 	}
-
 	if src.Data.NNFMPISpec != nil {
+		if dst.Data.MPISpec == nil {
+			dst.Data.MPISpec = &v2beta1.MPIJobSpec{}
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs = make(map[v2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec)
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
+		}
 		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher].Template.Spec)
+
+		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
+		}
 		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker].Template.Spec)
 	}
 

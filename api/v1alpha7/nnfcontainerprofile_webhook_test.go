@@ -57,7 +57,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 			Data: NnfContainerProfileData{
 				NNFSpec: &NnfContainerSpec{
 					Containers: []NnfContainer{
-						{Name: "test"},
+						{Name: "test", Image: "test", Command: []string{"test"}},
 					},
 				},
 				Storages: []NnfContainerProfileStorage{
@@ -143,7 +143,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		func(timeout, expected *int64, succeed bool) {
 			nnfProfile.Data.NNFSpec = &NnfContainerSpec{
 				Containers: []NnfContainer{
-					{Name: "test", Image: "alpine:latest"},
+					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
 			nnfProfile.Data.NNFMPISpec = nil
@@ -169,7 +169,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		func(timeout, expected *int64, succeed bool) {
 			nnfProfile.Data.NNFSpec = &NnfContainerSpec{
 				Containers: []NnfContainer{
-					{Name: "test", Image: "alpine:latest"},
+					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
 			nnfProfile.Data.NNFMPISpec = nil
@@ -333,7 +333,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 			nnfProfile.Data.NNFMPISpec = nil
 			nnfProfile.Data.NNFSpec = &NnfContainerSpec{
 				Containers: []NnfContainer{
-					{Name: cName},
+					{Name: cName, Image: cName, Command: []string{"test"}},
 				},
 			}
 			// ServiceAccountName: sName,

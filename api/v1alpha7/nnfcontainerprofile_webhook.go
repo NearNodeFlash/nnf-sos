@@ -119,9 +119,9 @@ func (r *NnfContainerProfile) validateContent() error {
 		return fmt.Errorf("either NNFSpec or NNFMPISpec must be provided")
 	}
 
-	// isCopyOffloadContainer := func(name string) bool {
-	// 	return copyOffloadRegex.MatchString(name)
-	// }
+	isCopyOffloadContainer := func(name string) bool {
+		return copyOffloadRegex.MatchString(name)
+	}
 
 	if mpiJob {
 		launcher := r.Data.NNFMPISpec.Launcher
@@ -173,15 +173,15 @@ func (r *NnfContainerProfile) validateContent() error {
 		// 	)
 		// }
 		// When it looks like we have a copy offload container, let the user know an MPISpec is required
-		// for _, c := range r.Data.Spec.Containers {
-		// 	if isCopyOffloadContainer(c.Name) {
-		// 		return fmt.Errorf(
-		// 			"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-		// 				"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
-		// 			c.Name,
-		// 		)
-		// 	}
-		// }
+		for _, c := range r.Data.NNFSpec.Containers {
+			if isCopyOffloadContainer(c.Name) {
+				return fmt.Errorf(
+					"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
+						"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
+					c.Name,
+				)
+			}
+		}
 
 	}
 
