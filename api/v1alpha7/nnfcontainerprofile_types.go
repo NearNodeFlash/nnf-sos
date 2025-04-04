@@ -125,7 +125,7 @@ type NnfMPISpec struct {
 type NnfContainer struct {
 	// Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
 	// name (DNS_LABEL).
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9_.]*)$`
+	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Required

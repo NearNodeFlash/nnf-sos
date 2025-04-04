@@ -29667,7 +29667,7 @@ spec:
                                 name (DNS_LABEL).
                               maxLength: 253
                               minLength: 1
-                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             volumeMounts:
                               description: |-
@@ -29927,7 +29927,7 @@ spec:
                                 name (DNS_LABEL).
                               maxLength: 253
                               minLength: 1
-                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             volumeMounts:
                               description: |-
@@ -31785,7 +31785,7 @@ spec:
                                 name (DNS_LABEL).
                               maxLength: 253
                               minLength: 1
-                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             volumeMounts:
                               description: |-
@@ -32045,7 +32045,7 @@ spec:
                                 name (DNS_LABEL).
                               maxLength: 253
                               minLength: 1
-                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             volumeMounts:
                               description: |-
@@ -33944,7 +33944,7 @@ spec:
                             name (DNS_LABEL).
                           maxLength: 253
                           minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         volumeMounts:
                           description: |-
@@ -34201,7 +34201,7 @@ spec:
                             name (DNS_LABEL).
                           maxLength: 253
                           minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9_.]*)$
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         volumeMounts:
                           description: |-

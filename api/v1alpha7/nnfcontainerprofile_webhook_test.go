@@ -57,8 +57,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 			Data: NnfContainerProfileData{
 				Spec: &NnfPodSpec{
 					Containers: []NnfContainer{
-						{Name: "test", Image: "ghcr.io/nearnodeflash/nnf-mfu-debug:master",
-							Command: []string{"test"}},
+						{Name: "test", Image: "test:latest", Command: []string{"test"}},
 					},
 				},
 				Storages: []NnfContainerProfileStorage{
