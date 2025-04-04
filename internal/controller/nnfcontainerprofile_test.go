@@ -80,7 +80,7 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha7.NnfContainerPr
 		Data: nnfv1alpha7.NnfContainerProfileData{
 			Pinned:   false,
 			Storages: storages,
-			NNFSpec: &nnfv1alpha7.NnfContainerSpec{
+			NNFSpec: &nnfv1alpha7.NnfPodSpec{
 				Containers: []nnfv1alpha7.NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"true"}},
 				},

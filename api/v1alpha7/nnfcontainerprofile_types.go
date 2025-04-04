@@ -77,7 +77,7 @@ type NnfContainerProfileData struct {
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
 	// Either this or MPISpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	NNFSpec *NnfContainerSpec `json:"spec,omitempty"`
+	NNFSpec *NnfPodSpec `json:"spec,omitempty"`
 
 	// MPIJobSpec to define the MPI containers created from this profile.
 	// Either this or Spec must be provided, but not both.
@@ -85,17 +85,17 @@ type NnfContainerProfileData struct {
 	NNFMPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
 }
 
-// TODO: Add validation for NnfContainerSpec
-type NnfContainerSpec struct {
+// TODO: Add validation for NnfPodSpec
+type NnfPodSpec struct {
 	Containers     []NnfContainer  `json:"containers"`
 	InitContainers []NnfContainer  `json:"initContainers,omitempty"`
 	Volumes        []corev1.Volume `json:"volumes,omitempty"`
 }
 
 type NnfMPIContainerSpec struct {
-	Launcher    NnfContainerSpec `json:"launcher"`
-	Worker      NnfContainerSpec `json:"worker"`
-	CopyOffload bool             `json:"copyOffload,omitempty"`
+	Launcher    NnfPodSpec `json:"launcher"`
+	Worker      NnfPodSpec `json:"worker"`
+	CopyOffload bool       `json:"copyOffload,omitempty"`
 }
 
 type NnfContainer struct {
@@ -150,8 +150,8 @@ func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
 }
 
-// Copy an NnfContainerSpec into a corev1.PodSpec
-func (s *NnfContainerSpec) ToCorePodSpec(out *corev1.PodSpec) {
+// Copy an NnfPodSpec into a corev1.PodSpec
+func (s *NnfPodSpec) ToCorePodSpec(out *corev1.PodSpec) {
 
 	if out == nil {
 		out = &corev1.PodSpec{}
@@ -210,7 +210,7 @@ func (s *NnfContainer) ToCoreContainer(out *corev1.Container) {
 }
 
 // Copy a corev1.PodSpec into an NnfContainer
-func (s *NnfContainerSpec) FromCorePodSpec(in *corev1.PodSpec) {
+func (s *NnfPodSpec) FromCorePodSpec(in *corev1.PodSpec) {
 
 	if in == nil {
 		return

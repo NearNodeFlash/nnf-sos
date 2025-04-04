@@ -24,15 +24,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("NnfContainerSpec", func() {
+var _ = Describe("NnfPodSpec", func() {
 	Describe("ToCorePodSpec", func() {
 		var (
-			sourceSpec *NnfContainerSpec
+			sourceSpec *NnfPodSpec
 			targetSpec *corev1.PodSpec
 		)
 
 		BeforeEach(func() {
-			sourceSpec = &NnfContainerSpec{
+			sourceSpec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{
 						Name:    "test-container",
@@ -103,7 +103,7 @@ var _ = Describe("NnfContainerSpec", func() {
 	Describe("FromCorePodSpec", func() {
 		var (
 			sourceSpec *corev1.PodSpec
-			targetSpec *NnfContainerSpec
+			targetSpec *NnfPodSpec
 		)
 
 		BeforeEach(func() {
@@ -138,7 +138,7 @@ var _ = Describe("NnfContainerSpec", func() {
 					},
 				},
 			}
-			targetSpec = &NnfContainerSpec{}
+			targetSpec = &NnfPodSpec{}
 		})
 
 		It("should copy containers correctly", func() {

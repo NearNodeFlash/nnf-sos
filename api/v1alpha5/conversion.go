@@ -93,7 +93,7 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	if hasAnno {
 		if restored.Data.NNFSpec != nil {
 			if dst.Data.NNFSpec == nil {
-				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfPodSpec{}
 			}
 			dst.Data.NNFSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.Containers...)
 			dst.Data.NNFSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.InitContainers...)
@@ -117,7 +117,7 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	} else {
 		if src.Data.Spec != nil {
 			if dst.Data.NNFSpec == nil {
-				dst.Data.NNFSpec = &nnfv1alpha7.NnfContainerSpec{}
+				dst.Data.NNFSpec = &nnfv1alpha7.NnfPodSpec{}
 			}
 			dst.Data.NNFSpec.FromCorePodSpec(src.Data.Spec)
 		}
