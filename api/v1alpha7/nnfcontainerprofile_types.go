@@ -118,6 +118,11 @@ type NnfMPISpec struct {
 	// serviceAccount).
 	// +kubebuilder:default:=false
 	CopyOffload bool `json:"copyOffload,omitempty"`
+
+	// TODO: Work this back in and include in conversion
+	// Specifies the number of slots per worker used in hostfile. Defaults to 1.
+	// +kubebuilder:default:=1
+	//SlotsPerWorker *int32 `json:"slotsPerWorker,omitempty"`
 }
 
 // NnfContainer defines the specification of a container that can be used in a container profile.
@@ -145,6 +150,7 @@ type NnfContainer struct {
 	// will never be expanded, regardless of whether the variable exists or not.
 	// More info:
 	// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	// +kubebuilder:validation:Optional
 	Command []string `json:"command"`
 
 	// Arguments to the entrypoint. The container image's CMD is used if this is not provided.

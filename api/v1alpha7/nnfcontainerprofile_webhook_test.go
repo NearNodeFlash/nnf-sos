@@ -285,66 +285,111 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		Entry("should pass when DW_GLOBAL has a mode", "DW_GLOBAL_storage", corev1.ReadWriteMany, true),
 	)
 
-	// DescribeTable("MPI Containers with copy offload in the name should have a valid service account name",
-	// 	func(cName, sName string, shouldPass bool) {
-	// 		nnfProfile.Data.Spec = nil
-	// 		nnfProfile.Data.MPISpec = &mpiv2beta1.MPIJobSpec{
-	// 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
-	// 				mpiv2beta1.MPIReplicaTypeLauncher: {
-	// 					Template: corev1.PodTemplateSpec{
-	// 						Spec: corev1.PodSpec{
-	// 							Containers: []corev1.Container{
-	// 								{Name: cName},
-	// 							},
-	// 							ServiceAccountName: sName,
-	// 						},
-	// 					},
-	// 				},
-	// 				mpiv2beta1.MPIReplicaTypeWorker: {
-	// 					Template: corev1.PodTemplateSpec{
-	// 						Spec: corev1.PodSpec{
-	// 							Containers: []corev1.Container{
-	// 								{Name: "test"},
-	// 							},
-	// 						},
-	// 					},
-	// 				},
-	// 			},
-	// 		}
-	// 		if shouldPass {
-	// 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+	DescribeTable("MPI Containers with copy offload in the name should have the copy offload flag set",
+		func(cName string, copyOffload bool, shouldPass bool) {
+			nnfProfile.Data.Spec = nil
+			nnfProfile.Data.MPISpec = &NnfMPISpec{
+				Launcher: NnfPodSpec{
+					Containers: []NnfContainer{
+						{Name: cName, Image: "test-image"},
+					},
+				},
+				Worker: NnfPodSpec{
+					Containers: []NnfContainer{
+						{Name: "test", Image: "test-image"},
+					},
+				},
+				CopyOffload: copyOffload,
+			}
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		Entry("should pass when the container name suggests copy offload and the flag is set", "copy-offload-server", true, true),
+		Entry("should pass when the container name suggests copy offload and the flag is set", "copy-offload", true, true),
+		Entry("should pass when the container name suggests copy offload and the flag is set", "copyoffload", true, true),
+		Entry("should fail when the container name suggests copy offload and flag is not set", "copy offload", false, false),
 
-	// 		} else {
-	// 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
-	// 			nnfProfile = nil
-	// 		}
-	// 	},
-	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload-server", copyOffloadServiceAccountName, true),
-	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copy-offload", copyOffloadServiceAccountName, true),
-	// 	Entry("should pass when the container name suggests copy offload and service account is valid", "copyoffload", copyOffloadServiceAccountName, true),
-	// 	Entry("should fail when the container name suggests copy offload and service account is invalid", "copy offload", "badservice", false),
-	// 	Entry("should pass when the container name does not suggest copy offload and service account is invalid", "offload", "", true),
-	// 	Entry("should pass when the container name does not suggest copy offload and service account is invalid", "copy", "", true),
-	// 	Entry("should fail when the container name does not suggest copy offload and service account is referenced", "sawbill", copyOffloadServiceAccountName, false),
-	// )
+		Entry("should pass when the container name does not suggest copy offload and the flag is not set", "offload", false, true),
+		Entry("should pass when the container name does not suggest copy offload and the flag is not set", "copy", false, true),
+		Entry("should fail when the container name does not suggest copy offload and the flag is set", "sawbill", true, false),
+	)
 
 	DescribeTable("non-mpi containers with copy offload in the name should fail",
-		func(cName, sName string) {
+		func(cName string) {
 			nnfProfile.Data.MPISpec = nil
 			nnfProfile.Data.Spec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: cName, Image: cName, Command: []string{"test"}},
 				},
 			}
-			// ServiceAccountName: sName,
 
 			Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 			nnfProfile = nil
 		},
-		Entry("when the container name suggests copy offload", "copy-offload-server", ""),
-		Entry("when the container name suggests copy offload", "copy-offload", ""),
-		Entry("when the container name suggests copy offload", "copyoffload", ""),
-		Entry("when the container name suggests copy offload", "copy offload", ""),
-		// Entry("when the service account name suggests copy offload", "ior", copyOffloadServiceAccountName),
+		Entry("when the container name suggests copy offload", "copy-offload-server"),
+		Entry("when the container name suggests copy offload", "copy-offload"),
+		Entry("when the container name suggests copy offload", "copyoffload"),
+		Entry("when the container name suggests copy offload", "copy offload"),
+	)
+
+	DescribeTable("MPI Containers validation",
+		func(launcherContainers, workerContainers []NnfContainer, shouldPass bool) {
+			nnfProfile.Data.Spec = nil
+			nnfProfile.Data.MPISpec = &NnfMPISpec{
+				Launcher: NnfPodSpec{
+					Containers: launcherContainers,
+				},
+				Worker: NnfPodSpec{
+					Containers: workerContainers,
+				},
+			}
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		Entry("should pass when both Launcher and Worker have containers",
+			[]NnfContainer{{Name: "launcher", Image: "test-image"}},
+			[]NnfContainer{{Name: "worker", Image: "test-image"}},
+			true),
+		Entry("should fail when Launcher has no containers",
+			[]NnfContainer{},
+			[]NnfContainer{{Name: "worker", Image: "test-image"}},
+			false),
+		Entry("should fail when Worker has no containers",
+			[]NnfContainer{{Name: "launcher", Image: "test-image"}},
+			[]NnfContainer{},
+			false),
+		Entry("should fail when both Launcher and Worker have no containers",
+			[]NnfContainer{},
+			[]NnfContainer{},
+			false),
+	)
+
+	DescribeTable("Spec Containers validation",
+		func(containers []NnfContainer, shouldPass bool) {
+			nnfProfile.Data.MPISpec = nil
+			nnfProfile.Data.Spec = &NnfPodSpec{
+				Containers: containers,
+			}
+			if shouldPass {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
+			} else {
+				Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
+				nnfProfile = nil
+			}
+		},
+		Entry("should pass when Spec has containers",
+			[]NnfContainer{{Name: "test", Image: "test-image"}},
+			true),
+		Entry("should fail when Spec has no containers",
+			[]NnfContainer{},
+			false),
 	)
 })

@@ -29715,7 +29715,6 @@ spec:
                                 type: object
                               type: array
                           required:
-                          - command
                           - image
                           - name
                           type: object
@@ -29975,7 +29974,6 @@ spec:
                                 type: object
                               type: array
                           required:
-                          - command
                           - image
                           - name
                           type: object
@@ -31833,7 +31831,6 @@ spec:
                                 type: object
                               type: array
                           required:
-                          - command
                           - image
                           - name
                           type: object
@@ -32093,7 +32090,6 @@ spec:
                                 type: object
                               type: array
                           required:
-                          - command
                           - image
                           - name
                           type: object
@@ -33992,7 +33988,6 @@ spec:
                             type: object
                           type: array
                       required:
-                      - command
                       - image
                       - name
                       type: object
@@ -34249,7 +34244,6 @@ spec:
                             type: object
                           type: array
                       required:
-                      - command
                       - image
                       - name
                       type: object

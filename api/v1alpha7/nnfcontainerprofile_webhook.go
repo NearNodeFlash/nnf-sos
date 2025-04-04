@@ -125,38 +125,25 @@ func (r *NnfContainerProfile) validateContent() error {
 
 	if mpiJob {
 		launcher := r.Data.MPISpec.Launcher
-		if len(launcher.Containers) < 1 {
-			return fmt.Errorf("MPISpec.Launcher must be present with at least 1 container defined")
+		for _, c := range launcher.Containers {
+			if isCopyOffloadContainer(c.Name) {
+				// When it looks like we have a copy offload Launcher container, ensure the CopyOffload flag is set
+				if !r.Data.MPISpec.CopyOffload {
+					return fmt.Errorf(
+						"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
+							"Set the CopyOffload flag to true in the MPISpec to use this container profile with the Copy Offload API",
+						c.Name,
+					)
+				}
+			} else if r.Data.MPISpec.CopyOffload {
+				// When the container doesn't looke like copy offload, ensure the CopyOffload flag is not set
+				return fmt.Errorf(
+					"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. " +
+						"but the CopyOffload flag is set to true in the MPISpec" +
+						c.Name,
+				)
+			}
 		}
-		worker := r.Data.MPISpec.Worker
-		if len(worker.Containers) < 1 {
-			return fmt.Errorf("MPISpec.Worker must be present with at least 1 container defined")
-		}
-
-		// When it looks like we have a copy offload Launcher container, ensure the service account is correct
-		// for _, c := range launcher.Containers {
-		// 	if isCopyOffloadContainer(c.Name) {
-
-		// 		if launcher.Template.Spec.ServiceAccountName != copyOffloadServiceAccountName {
-		// 			return fmt.Errorf(
-		// 				"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-		// 					"Launcher containers used for Copy Offload must use the service account name '%s'",
-		// 				c.Name,
-		// 				copyOffloadServiceAccountName,
-		// 			)
-		// 		}
-		// 	} else {
-		// 		if launcher.Template.Spec.ServiceAccountName == copyOffloadServiceAccountName {
-		// 			return fmt.Errorf(
-		// 				"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. "+
-		// 					"but the Copy Offload service account name '%s' is being used",
-		// 				c.Name,
-		// 				copyOffloadServiceAccountName,
-		// 			)
-		// 		}
-
-		// 	}
-		// }
 
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
@@ -164,14 +151,6 @@ func (r *NnfContainerProfile) validateContent() error {
 			return fmt.Errorf("at least 1 container must be defined in Spec")
 		}
 
-		// When it looks like we have a copy offload container based on the service account name, let the user know an MPISpec is required
-		// if r.Data.Spec.ServiceAccountName == copyOffloadServiceAccountName {
-		// 	return fmt.Errorf(
-		// 		"the specified service account name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-		// 			"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
-		// 		copyOffloadServiceAccountName,
-		// 	)
-		// }
 		// When it looks like we have a copy offload container, let the user know an MPISpec is required
 		for _, c := range r.Data.Spec.Containers {
 			if isCopyOffloadContainer(c.Name) {
