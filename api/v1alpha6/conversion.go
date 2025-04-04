@@ -87,45 +87,45 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 
 	if hasAnno {
-		if restored.Data.NNFSpec != nil {
-			if dst.Data.NNFSpec == nil {
-				dst.Data.NNFSpec = &nnfv1alpha7.NnfPodSpec{}
+		if restored.Data.Spec != nil {
+			if dst.Data.Spec == nil {
+				dst.Data.Spec = &nnfv1alpha7.NnfPodSpec{}
 			}
-			dst.Data.NNFSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.Containers...)
-			dst.Data.NNFSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFSpec.InitContainers...)
-			dst.Data.NNFSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NNFSpec.Volumes...)
+			dst.Data.Spec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.Containers...)
+			dst.Data.Spec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.Spec.InitContainers...)
+			dst.Data.Spec.Volumes = append([]corev1.Volume(nil), restored.Data.Spec.Volumes...)
 		}
-		if restored.Data.NNFMPISpec != nil {
-			if dst.Data.NNFMPISpec == nil {
-				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+		if restored.Data.MPISpec != nil {
+			if dst.Data.MPISpec == nil {
+				dst.Data.MPISpec = &nnfv1alpha7.NnfMPISpec{}
 			}
 
-			dst.Data.NNFMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.Containers...)
-			dst.Data.NNFMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Launcher.InitContainers...)
-			dst.Data.NNFMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Launcher.Volumes...)
+			dst.Data.MPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Launcher.Containers...)
+			dst.Data.MPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Launcher.InitContainers...)
+			dst.Data.MPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.MPISpec.Launcher.Volumes...)
 
-			dst.Data.NNFMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.Containers...)
-			dst.Data.NNFMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NNFMPISpec.Worker.InitContainers...)
-			dst.Data.NNFMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NNFMPISpec.Worker.Volumes...)
+			dst.Data.MPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Worker.Containers...)
+			dst.Data.MPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.MPISpec.Worker.InitContainers...)
+			dst.Data.MPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.MPISpec.Worker.Volumes...)
 
-			dst.Data.NNFMPISpec.CopyOffload = restored.Data.NNFMPISpec.CopyOffload
+			dst.Data.MPISpec.CopyOffload = restored.Data.MPISpec.CopyOffload
 		}
 	} else {
 		if src.Data.Spec != nil {
-			if dst.Data.NNFSpec == nil {
-				dst.Data.NNFSpec = &nnfv1alpha7.NnfPodSpec{}
+			if dst.Data.Spec == nil {
+				dst.Data.Spec = &nnfv1alpha7.NnfPodSpec{}
 			}
-			dst.Data.NNFSpec.FromCorePodSpec(src.Data.Spec)
+			dst.Data.Spec.FromCorePodSpec(src.Data.Spec)
 		}
 		if src.Data.MPISpec != nil {
-			if dst.Data.NNFMPISpec == nil {
-				dst.Data.NNFMPISpec = &nnfv1alpha7.NnfMPIContainerSpec{}
+			if dst.Data.MPISpec == nil {
+				dst.Data.MPISpec = &nnfv1alpha7.NnfMPISpec{}
 			}
 			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] != nil {
-				dst.Data.NNFMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+				dst.Data.MPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
 			}
 			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] != nil {
-				dst.Data.NNFMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
+				dst.Data.MPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 			}
 		}
 	}
@@ -141,13 +141,13 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 		return err
 	}
 
-	if src.Data.NNFSpec != nil {
+	if src.Data.Spec != nil {
 		if dst.Data.Spec == nil {
 			dst.Data.Spec = &corev1.PodSpec{}
 		}
-		src.Data.NNFSpec.ToCorePodSpec(dst.Data.Spec)
+		src.Data.Spec.ToCorePodSpec(dst.Data.Spec)
 	}
-	if src.Data.NNFMPISpec != nil {
+	if src.Data.MPISpec != nil {
 		if dst.Data.MPISpec == nil {
 			dst.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
 		}
@@ -159,12 +159,12 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 		if dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] == nil {
 			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NNFMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		src.Data.MPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
 
 		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] == nil {
 			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NNFMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
+		src.Data.MPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.

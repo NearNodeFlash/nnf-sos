@@ -68,44 +68,107 @@ type NnfContainerProfileData struct {
 	// only Workflows that have a matching group ID can select this profile.
 	GroupID *uint32 `json:"groupID,omitempty"`
 
-	// Number of ports to open for communication with the user container. These ports are opened on
-	// the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
-	// The requested ports are made available as environment variables inside the container and in
-	// the DWS workflow (NNF_CONTAINER_PORTS).
+	// Number of ports to open for each container specified in the PodSpec. For MPI Jobs, this is
+	// only for the Launcher container(s) listed in the MPIReplicaSet's PodSpec. These ports are
+	// opened on the targeted NNF nodes and can be accessed outside the k8s cluster (e.g. compute
+	// nodes). The requested ports are made available as environment variables inside the container
+	// and in the DWS workflow (NNF_CONTAINER_PORTS).
 	NumPorts int32 `json:"numPorts,omitempty"`
 
 	// Spec to define the containers created from this profile. This is used for non-MPI containers.
 	// Either this or MPISpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	NNFSpec *NnfPodSpec `json:"spec,omitempty"`
+	Spec *NnfPodSpec `json:"spec,omitempty"`
 
 	// MPIJobSpec to define the MPI containers created from this profile.
 	// Either this or Spec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	NNFMPISpec *NnfMPIContainerSpec `json:"mpiSpec,omitempty"`
+	MPISpec *NnfMPISpec `json:"mpiSpec,omitempty"`
 }
 
-// TODO: Add validation for NnfPodSpec
+// NnfPodSpec represents the specification of a pod that can be used in a container profile. This is
+// a slimmed down version of a corev1.PodSpec to reduce the size of the CRD.
 type NnfPodSpec struct {
-	Containers     []NnfContainer  `json:"containers"`
-	InitContainers []NnfContainer  `json:"initContainers,omitempty"`
-	Volumes        []corev1.Volume `json:"volumes,omitempty"`
+	// Containers are the list of containers that will be created in the pod.
+	// +kubebuilder:validation:MinItems=1
+	Containers []NnfContainer `json:"containers"`
+
+	// InitContainers are the list of init containers that will be created in the pod before the
+	// main containers.
+	InitContainers []NnfContainer `json:"initContainers,omitempty"`
+
+	// Volumes are the list of volumes that will be available to the pod
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 }
 
-type NnfMPIContainerSpec struct {
-	Launcher    NnfPodSpec `json:"launcher"`
-	Worker      NnfPodSpec `json:"worker"`
-	CopyOffload bool       `json:"copyOffload,omitempty"`
+// NnfMPISpec represents the specification of an MPI job that can be used in a container profile.
+type NnfMPISpec struct {
+
+	// Launcher is the specification for the launcher container in the MPI job. In a typical MPI
+	// job, the launcher runs an MPI application with mpirun and contacts the workers to distribute
+	// the job.
+	Launcher NnfPodSpec `json:"launcher"`
+
+	// Worker is the specification for the worker containers in the MPI job. In a typical MPI job,
+	// the workers are running sshd and listening for the launcher to connect.
+	Worker NnfPodSpec `json:"worker"`
+
+	// CopyOffload indicates that this profile is configured to drive the NNF Copy Offload API. This
+	// instructions the NNF software to configure specifies for the Copy Offload API (e.g.
+	// serviceAccount).
+	// +kubebuilder:default:=false
+	CopyOffload bool `json:"copyOffload,omitempty"`
 }
 
+// NnfContainer defines the specification of a container that can be used in a container profile.
+// This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
 type NnfContainer struct {
-	Name         string                 `json:"name"`
-	Image        string                 `json:"image"`
-	Command      []string               `json:"command"`
-	Args         []string               `json:"args,omitempty"`
-	Env          []corev1.EnvVar        `json:"env,omitempty"`
-	EnvFrom      []corev1.EnvFromSource `json:"envFrom,omitempty"`
-	VolumeMounts []corev1.VolumeMount   `json:"volumeMounts,omitempty"`
+	// Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+	// name (DNS_LABEL).
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9_.]*)$`
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Container image name. More info: https://kubernetes.io/docs/concepts/containers/images
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
+
+	// Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+	// this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+	// environment. If a variable cannot be resolved, the reference in the input string will be
+	// unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+	// syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+	// will never be expanded, regardless of whether the variable exists or not.
+	// More info:
+	// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	Command []string `json:"command"`
+
+	// Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+	// reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+	// will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+	// regardless of whether the variable exists or not. More info:
+	// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	Args []string `json:"args,omitempty"`
+
+	// List of environment variables to set in the container.
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// List of sources to populate environment variables in the container. The keys defined within a
+	// source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+	// container is starting. When a key exists in multiple sources, the value associated with the
+	// last source will take precedence. Values defined by an Env with a duplicate key will take
+	// precedence.
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+	// Storages field.
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // NnfContainerProfileStorage defines the mount point information that will be available to the

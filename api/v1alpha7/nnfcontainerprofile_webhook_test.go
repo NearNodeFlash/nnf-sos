@@ -55,9 +55,10 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 				Namespace: namespaceName,
 			},
 			Data: NnfContainerProfileData{
-				NNFSpec: &NnfPodSpec{
+				Spec: &NnfPodSpec{
 					Containers: []NnfContainer{
-						{Name: "test", Image: "test", Command: []string{"test"}},
+						{Name: "test", Image: "ghcr.io/nearnodeflash/nnf-mfu-debug:master",
+							Command: []string{"test"}},
 					},
 				},
 				Storages: []NnfContainerProfileStorage{
@@ -124,16 +125,16 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow setting both NNFSpec and NNFMPISpec", func() {
-		nnfProfile.Data.NNFSpec = &NnfPodSpec{}
-		nnfProfile.Data.NNFMPISpec = &NnfMPIContainerSpec{}
+	It("Should not allow setting both Spec and MPISpec", func() {
+		nnfProfile.Data.Spec = &NnfPodSpec{}
+		nnfProfile.Data.MPISpec = &NnfMPISpec{}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
-	It("Should fail when both NNFSpec and NNFMPISpec are unset", func() {
-		nnfProfile.Data.NNFSpec = nil
-		nnfProfile.Data.NNFMPISpec = nil
+	It("Should fail when both Spec and MPISpec are unset", func() {
+		nnfProfile.Data.Spec = nil
+		nnfProfile.Data.MPISpec = nil
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
@@ -141,12 +142,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	DescribeTable("Should allow a user to set PreRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.NNFSpec = &NnfPodSpec{
+			nnfProfile.Data.Spec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
-			nnfProfile.Data.NNFMPISpec = nil
+			nnfProfile.Data.MPISpec = nil
 
 			nnfProfile.Data.PreRunTimeoutSeconds = timeout
 			if succeed {
@@ -167,12 +168,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	DescribeTable("Should allow a user to set PostRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.NNFSpec = &NnfPodSpec{
+			nnfProfile.Data.Spec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
-			nnfProfile.Data.NNFMPISpec = nil
+			nnfProfile.Data.MPISpec = nil
 
 			nnfProfile.Data.PostRunTimeoutSeconds = timeout
 			if succeed {
@@ -330,8 +331,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	DescribeTable("non-mpi containers with copy offload in the name should fail",
 		func(cName, sName string) {
-			nnfProfile.Data.NNFMPISpec = nil
-			nnfProfile.Data.NNFSpec = &NnfPodSpec{
+			nnfProfile.Data.MPISpec = nil
+			nnfProfile.Data.Spec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: cName, Image: cName, Command: []string{"test"}},
 				},

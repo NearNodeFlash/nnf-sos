@@ -1812,8 +1812,8 @@ var _ = Describe("NnfContainerProfile Webhook test", func() {
 	// the controller tests.
 	It("fails to create an invalid profile to verify that the webhook is installed", func() {
 		profileInvalid := basicNnfContainerProfile("invalid-"+uuid.NewString()[:8], nil)
-		profileInvalid.Data.NNFSpec = nil
-		profileInvalid.Data.NNFMPISpec = nil
+		profileInvalid.Data.Spec = nil
+		profileInvalid.Data.MPISpec = nil
 		Expect(createNnfContainerProfile(profileInvalid, false)).To(BeNil())
 	})
 })

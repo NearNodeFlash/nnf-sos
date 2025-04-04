@@ -29450,21 +29450,54 @@ spec:
                   Either this or Spec must be provided, but not both.
                 properties:
                   copyOffload:
+                    default: false
+                    description: |-
+                      CopyOffload indicates that this profile is configured to drive the NNF Copy Offload API. This
+                      instructions the NNF software to configure specifies for the Copy Offload API (e.g.
+                      serviceAccount).
                     type: boolean
                   launcher:
+                    description: |-
+                      Launcher is the specification for the launcher container in the MPI job. In a typical MPI
+                      job, the launcher runs an MPI application with mpirun and contacts the workers to distribute
+                      the job.
                     properties:
                       containers:
+                        description: Containers are the list of containers that will
+                          be created in the pod.
                         items:
+                          description: |-
+                            NnfContainer defines the specification of a container that can be used in a container profile.
+                            This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                           properties:
                             args:
+                              description: |-
+                                Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                                Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                                cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                                reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                                will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                                regardless of whether the variable exists or not. More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             command:
+                              description: |-
+                                Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                                this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                                environment. If a variable cannot be resolved, the reference in the input string will be
+                                unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                                syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                                will never be expanded, regardless of whether the variable exists or not.
+                                More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             env:
+                              description: List of environment variables to set in
+                                the container.
                               items:
                                 description: EnvVar represents an environment variable
                                   present in a Container.
@@ -29579,6 +29612,12 @@ spec:
                                 type: object
                               type: array
                             envFrom:
+                              description: |-
+                                List of sources to populate environment variables in the container. The keys defined within a
+                                source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                                container is starting. When a key exists in multiple sources, the value associated with the
+                                last source will take precedence. Values defined by an Env with a duplicate key will take
+                                precedence.
                               items:
                                 description: EnvFromSource represents the source of
                                   a set of ConfigMaps
@@ -29618,10 +29657,22 @@ spec:
                                 type: object
                               type: array
                             image:
+                              description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                              maxLength: 253
+                              minLength: 1
                               type: string
                             name:
+                              description: |-
+                                Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                                name (DNS_LABEL).
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                               type: string
                             volumeMounts:
+                              description: |-
+                                Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                                Storages field.
                               items:
                                 description: VolumeMount describes a mounting of a
                                   Volume within a container.
@@ -29668,19 +29719,45 @@ spec:
                           - image
                           - name
                           type: object
+                        minItems: 1
                         type: array
                       initContainers:
+                        description: |-
+                          InitContainers are the list of init containers that will be created in the pod before the
+                          main containers.
                         items:
+                          description: |-
+                            NnfContainer defines the specification of a container that can be used in a container profile.
+                            This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                           properties:
                             args:
+                              description: |-
+                                Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                                Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                                cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                                reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                                will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                                regardless of whether the variable exists or not. More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             command:
+                              description: |-
+                                Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                                this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                                environment. If a variable cannot be resolved, the reference in the input string will be
+                                unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                                syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                                will never be expanded, regardless of whether the variable exists or not.
+                                More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             env:
+                              description: List of environment variables to set in
+                                the container.
                               items:
                                 description: EnvVar represents an environment variable
                                   present in a Container.
@@ -29795,6 +29872,12 @@ spec:
                                 type: object
                               type: array
                             envFrom:
+                              description: |-
+                                List of sources to populate environment variables in the container. The keys defined within a
+                                source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                                container is starting. When a key exists in multiple sources, the value associated with the
+                                last source will take precedence. Values defined by an Env with a duplicate key will take
+                                precedence.
                               items:
                                 description: EnvFromSource represents the source of
                                   a set of ConfigMaps
@@ -29834,10 +29917,22 @@ spec:
                                 type: object
                               type: array
                             image:
+                              description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                              maxLength: 253
+                              minLength: 1
                               type: string
                             name:
+                              description: |-
+                                Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                                name (DNS_LABEL).
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                               type: string
                             volumeMounts:
+                              description: |-
+                                Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                                Storages field.
                               items:
                                 description: VolumeMount describes a mounting of a
                                   Volume within a container.
@@ -29886,6 +29981,8 @@ spec:
                           type: object
                         type: array
                       volumes:
+                        description: Volumes are the list of volumes that will be
+                          available to the pod
                         items:
                           description: Volume represents a named volume in a pod that
                             may be accessed by any container in the pod.
@@ -31479,19 +31576,46 @@ spec:
                     - containers
                     type: object
                   worker:
+                    description: |-
+                      Worker is the specification for the worker containers in the MPI job. In a typical MPI job,
+                      the workers are running sshd and listening for the launcher to connect.
                     properties:
                       containers:
+                        description: Containers are the list of containers that will
+                          be created in the pod.
                         items:
+                          description: |-
+                            NnfContainer defines the specification of a container that can be used in a container profile.
+                            This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                           properties:
                             args:
+                              description: |-
+                                Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                                Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                                cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                                reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                                will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                                regardless of whether the variable exists or not. More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             command:
+                              description: |-
+                                Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                                this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                                environment. If a variable cannot be resolved, the reference in the input string will be
+                                unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                                syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                                will never be expanded, regardless of whether the variable exists or not.
+                                More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             env:
+                              description: List of environment variables to set in
+                                the container.
                               items:
                                 description: EnvVar represents an environment variable
                                   present in a Container.
@@ -31606,6 +31730,12 @@ spec:
                                 type: object
                               type: array
                             envFrom:
+                              description: |-
+                                List of sources to populate environment variables in the container. The keys defined within a
+                                source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                                container is starting. When a key exists in multiple sources, the value associated with the
+                                last source will take precedence. Values defined by an Env with a duplicate key will take
+                                precedence.
                               items:
                                 description: EnvFromSource represents the source of
                                   a set of ConfigMaps
@@ -31645,10 +31775,22 @@ spec:
                                 type: object
                               type: array
                             image:
+                              description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                              maxLength: 253
+                              minLength: 1
                               type: string
                             name:
+                              description: |-
+                                Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                                name (DNS_LABEL).
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                               type: string
                             volumeMounts:
+                              description: |-
+                                Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                                Storages field.
                               items:
                                 description: VolumeMount describes a mounting of a
                                   Volume within a container.
@@ -31695,19 +31837,45 @@ spec:
                           - image
                           - name
                           type: object
+                        minItems: 1
                         type: array
                       initContainers:
+                        description: |-
+                          InitContainers are the list of init containers that will be created in the pod before the
+                          main containers.
                         items:
+                          description: |-
+                            NnfContainer defines the specification of a container that can be used in a container profile.
+                            This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                           properties:
                             args:
+                              description: |-
+                                Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                                Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                                cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                                reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                                will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                                regardless of whether the variable exists or not. More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             command:
+                              description: |-
+                                Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                                this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                                environment. If a variable cannot be resolved, the reference in the input string will be
+                                unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                                syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                                will never be expanded, regardless of whether the variable exists or not.
+                                More info:
+                                https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                               items:
                                 type: string
                               type: array
                             env:
+                              description: List of environment variables to set in
+                                the container.
                               items:
                                 description: EnvVar represents an environment variable
                                   present in a Container.
@@ -31822,6 +31990,12 @@ spec:
                                 type: object
                               type: array
                             envFrom:
+                              description: |-
+                                List of sources to populate environment variables in the container. The keys defined within a
+                                source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                                container is starting. When a key exists in multiple sources, the value associated with the
+                                last source will take precedence. Values defined by an Env with a duplicate key will take
+                                precedence.
                               items:
                                 description: EnvFromSource represents the source of
                                   a set of ConfigMaps
@@ -31861,10 +32035,22 @@ spec:
                                 type: object
                               type: array
                             image:
+                              description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                              maxLength: 253
+                              minLength: 1
                               type: string
                             name:
+                              description: |-
+                                Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                                name (DNS_LABEL).
+                              maxLength: 253
+                              minLength: 1
+                              pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                               type: string
                             volumeMounts:
+                              description: |-
+                                Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                                Storages field.
                               items:
                                 description: VolumeMount describes a mounting of a
                                   Volume within a container.
@@ -31913,6 +32099,8 @@ spec:
                           type: object
                         type: array
                       volumes:
+                        description: Volumes are the list of volumes that will be
+                          available to the pod
                         items:
                           description: Volume represents a named volume in a pod that
                             may be accessed by any container in the pod.
@@ -33511,10 +33699,11 @@ spec:
                 type: object
               numPorts:
                 description: |-
-                  Number of ports to open for communication with the user container. These ports are opened on
-                  the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
-                  The requested ports are made available as environment variables inside the container and in
-                  the DWS workflow (NNF_CONTAINER_PORTS).
+                  Number of ports to open for each container specified in the PodSpec. For MPI Jobs, this is
+                  only for the Launcher container(s) listed in the MPIReplicaSet's PodSpec. These ports are
+                  opened on the targeted NNF nodes and can be accessed outside the k8s cluster (e.g. compute
+                  nodes). The requested ports are made available as environment variables inside the container
+                  and in the DWS workflow (NNF_CONTAINER_PORTS).
                 format: int32
                 type: integer
               pinned:
@@ -33554,17 +33743,41 @@ spec:
                   Either this or MPISpec must be provided, but not both.
                 properties:
                   containers:
+                    description: Containers are the list of containers that will be
+                      created in the pod.
                     items:
+                      description: |-
+                        NnfContainer defines the specification of a container that can be used in a container profile.
+                        This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                       properties:
                         args:
+                          description: |-
+                            Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                            Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                            cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                            reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                            will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                            regardless of whether the variable exists or not. More info:
+                            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                           items:
                             type: string
                           type: array
                         command:
+                          description: |-
+                            Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                            this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                            environment. If a variable cannot be resolved, the reference in the input string will be
+                            unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                            syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                            will never be expanded, regardless of whether the variable exists or not.
+                            More info:
+                            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                           items:
                             type: string
                           type: array
                         env:
+                          description: List of environment variables to set in the
+                            container.
                           items:
                             description: EnvVar represents an environment variable
                               present in a Container.
@@ -33676,6 +33889,12 @@ spec:
                             type: object
                           type: array
                         envFrom:
+                          description: |-
+                            List of sources to populate environment variables in the container. The keys defined within a
+                            source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                            container is starting. When a key exists in multiple sources, the value associated with the
+                            last source will take precedence. Values defined by an Env with a duplicate key will take
+                            precedence.
                           items:
                             description: EnvFromSource represents the source of a
                               set of ConfigMaps
@@ -33715,10 +33934,22 @@ spec:
                             type: object
                           type: array
                         image:
+                          description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                          maxLength: 253
+                          minLength: 1
                           type: string
                         name:
+                          description: |-
+                            Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                            name (DNS_LABEL).
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                           type: string
                         volumeMounts:
+                          description: |-
+                            Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                            Storages field.
                           items:
                             description: VolumeMount describes a mounting of a Volume
                               within a container.
@@ -33765,19 +33996,45 @@ spec:
                       - image
                       - name
                       type: object
+                    minItems: 1
                     type: array
                   initContainers:
+                    description: |-
+                      InitContainers are the list of init containers that will be created in the pod before the
+                      main containers.
                     items:
+                      description: |-
+                        NnfContainer defines the specification of a container that can be used in a container profile.
+                        This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
                       properties:
                         args:
+                          description: |-
+                            Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+                            Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+                            cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+                            reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+                            will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+                            regardless of whether the variable exists or not. More info:
+                            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                           items:
                             type: string
                           type: array
                         command:
+                          description: |-
+                            Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+                            this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+                            environment. If a variable cannot be resolved, the reference in the input string will be
+                            unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+                            syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+                            will never be expanded, regardless of whether the variable exists or not.
+                            More info:
+                            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
                           items:
                             type: string
                           type: array
                         env:
+                          description: List of environment variables to set in the
+                            container.
                           items:
                             description: EnvVar represents an environment variable
                               present in a Container.
@@ -33889,6 +34146,12 @@ spec:
                             type: object
                           type: array
                         envFrom:
+                          description: |-
+                            List of sources to populate environment variables in the container. The keys defined within a
+                            source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+                            container is starting. When a key exists in multiple sources, the value associated with the
+                            last source will take precedence. Values defined by an Env with a duplicate key will take
+                            precedence.
                           items:
                             description: EnvFromSource represents the source of a
                               set of ConfigMaps
@@ -33928,10 +34191,22 @@ spec:
                             type: object
                           type: array
                         image:
+                          description: 'Container image name. More info: https://kubernetes.io/docs/concepts/containers/images'
+                          maxLength: 253
+                          minLength: 1
                           type: string
                         name:
+                          description: |-
+                            Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+                            name (DNS_LABEL).
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9_.]*)$
                           type: string
                         volumeMounts:
+                          description: |-
+                            Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+                            Storages field.
                           items:
                             description: VolumeMount describes a mounting of a Volume
                               within a container.
@@ -33980,6 +34255,8 @@ spec:
                       type: object
                     type: array
                   volumes:
+                    description: Volumes are the list of volumes that will be available
+                      to the pod
                     items:
                       description: Volume represents a named volume in a pod that
                         may be accessed by any container in the pod.
