@@ -95,7 +95,7 @@ data:
       optional: true
       pvcMode: ReadWriteMany
   mpiSpec:
-    Launcher:
+    launcher:
       containers:
         - name: example-mpi
           image: nnf-mfu:latest
@@ -104,7 +104,7 @@ data:
             - dcmp
             - '$(DW_JOB_foo_local_storage)/0'
             - '$(DW_JOB_foo_local_storage)/1'
-    Worker:
+    worker:
       containers:
         - name: example-mpi
           image: nnf-mfu:latest
@@ -117,7 +117,7 @@ metadata:
 data:
   numPorts: 1
   mpiSpec:
-    Launcher:
+    launcher:
       containers:
         - name: example-mpi-fail
           image: nnf-mfu:latest
@@ -126,7 +126,7 @@ data:
             - /bin/sh
             - -c
             - 'sleep 10 && exit 1'
-    Worker:
+    worker:
       containers:
         - name: example-mpi-fail
           image: nnf-mfu:latest
@@ -147,7 +147,7 @@ data:
       optional: true
       pvcMode: ReadWriteMany
   mpiSpec:
-    Launcher:
+    launcher:
       containers:
         - name: example-mpi-webserver
           image: ghcr.io/nearnodeflash/nnf-container-example:master
@@ -157,7 +157,7 @@ data:
             - -m
             - http.server
             - $(NNF_CONTAINER_PORTS)
-    Worker:
+    worker:
       containers:
         - name: example-mpi-webserver
           image: ghcr.io/nearnodeflash/nnf-container-example:master
