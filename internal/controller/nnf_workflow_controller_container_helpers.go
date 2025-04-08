@@ -100,6 +100,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	}
 
 	// Create a new MPIJob object
+	cleanPodPolicy := mpiv2beta1.CleanPodPolicyRunning
 	mpiJob := &mpiv2beta1.MPIJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      c.workflow.Name,
@@ -109,6 +110,10 @@ func (c *nnfUserContainer) createMPIJob() error {
 			MPIReplicaSpecs: map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec{
 				mpiv2beta1.MPIReplicaTypeLauncher: {},
 				mpiv2beta1.MPIReplicaTypeWorker:   {},
+			},
+			RunPolicy: mpiv2beta1.RunPolicy{
+				CleanPodPolicy: &cleanPodPolicy,            // Don't keep failed pods around
+				BackoffLimit:   &c.profile.Data.RetryLimit, // Retry limit for the launcher
 			},
 		},
 	}
@@ -125,11 +130,6 @@ func (c *nnfUserContainer) createMPIJob() error {
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
-	}
-
-	// Use the profile's backoff limit if not set
-	if mpiJob.Spec.RunPolicy.BackoffLimit == nil {
-		mpiJob.Spec.RunPolicy.BackoffLimit = &c.profile.Data.RetryLimit
 	}
 
 	// Add workflow labels to the launcher and worker pods themselves
@@ -252,6 +252,9 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: c.workflow.Namespace,
 		},
+		Spec: batchv1.JobSpec{
+			BackoffLimit: &c.profile.Data.RetryLimit,
+		},
 	}
 
 	// Copy the NNFContainerProfile spec into the Job spec
@@ -264,8 +267,6 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 
 	// Use the same labels as the job for the pods
 	job.Spec.Template.Labels = job.DeepCopy().Labels
-
-	job.Spec.BackoffLimit = &c.profile.Data.RetryLimit
 
 	podSpec.RestartPolicy = corev1.RestartPolicyNever
 	podSpec.Subdomain = c.workflow.Name // service name == workflow name
