@@ -119,10 +119,12 @@ type NnfMPISpec struct {
 	// +kubebuilder:default:=false
 	CopyOffload bool `json:"copyOffload,omitempty"`
 
-	// TODO: Work this back in and include in conversion
 	// Specifies the number of slots per worker used in hostfile. Defaults to 1.
+	// Note: This is only for container directives that do not use Copy Offload. For Copy Offload
+	// API, the slots field in the specific Data Movement profile will be used instead of this
+	// value.
 	// +kubebuilder:default:=1
-	//SlotsPerWorker *int32 `json:"slotsPerWorker,omitempty"`
+	SlotsPerWorker *int32 `json:"slotsPerWorker,omitempty"`
 }
 
 // NnfContainer defines the specification of a container that can be used in a container profile.

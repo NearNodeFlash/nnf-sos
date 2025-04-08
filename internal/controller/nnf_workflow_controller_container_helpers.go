@@ -115,6 +115,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 				CleanPodPolicy: &cleanPodPolicy,            // Don't keep failed pods around
 				BackoffLimit:   &c.profile.Data.RetryLimit, // Retry limit for the launcher
 			},
+			SlotsPerWorker: c.profile.Data.NnfMPISpec.SlotsPerWorker,
 		},
 	}
 	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
