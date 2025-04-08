@@ -42,6 +42,13 @@ var _ = Describe("NnfPodSpec", func() {
 						Env: []corev1.EnvVar{
 							{Name: "ENV_VAR", Value: "value"},
 						},
+						EnvFrom: []corev1.EnvFromSource{{
+							ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-configmap",
+								},
+							}},
+						},
 						VolumeMounts: []corev1.VolumeMount{
 							{Name: "test-volume", MountPath: "/mnt"},
 						},
@@ -63,11 +70,11 @@ var _ = Describe("NnfPodSpec", func() {
 					},
 				},
 			}
-			targetSpec = &corev1.PodSpec{}
+			targetSpec = nil
 		})
 
 		It("should copy containers correctly", func() {
-			sourceSpec.ToCorePodSpec(targetSpec)
+			targetSpec = sourceSpec.ToCorePodSpec()
 
 			Expect(targetSpec.Containers).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].Name).To(Equal("test-container"))
@@ -77,13 +84,15 @@ var _ = Describe("NnfPodSpec", func() {
 			Expect(targetSpec.Containers[0].Env).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].Env[0].Name).To(Equal("ENV_VAR"))
 			Expect(targetSpec.Containers[0].Env[0].Value).To(Equal("value"))
+			Expect(targetSpec.Containers[0].EnvFrom).To(HaveLen(1))
+			Expect(targetSpec.Containers[0].EnvFrom[0].ConfigMapRef.Name).To(Equal("test-configmap"))
 			Expect(targetSpec.Containers[0].VolumeMounts).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].VolumeMounts[0].Name).To(Equal("test-volume"))
 			Expect(targetSpec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/mnt"))
 		})
 
 		It("should copy init containers correctly", func() {
-			sourceSpec.ToCorePodSpec(targetSpec)
+			targetSpec = sourceSpec.ToCorePodSpec()
 
 			Expect(targetSpec.InitContainers).To(HaveLen(1))
 			Expect(targetSpec.InitContainers[0].Name).To(Equal("init-container"))
@@ -92,7 +101,7 @@ var _ = Describe("NnfPodSpec", func() {
 		})
 
 		It("should copy volumes correctly", func() {
-			sourceSpec.ToCorePodSpec(targetSpec)
+			targetSpec = sourceSpec.ToCorePodSpec()
 
 			Expect(targetSpec.Volumes).To(HaveLen(1))
 			Expect(targetSpec.Volumes[0].Name).To(Equal("test-volume"))
@@ -116,6 +125,13 @@ var _ = Describe("NnfPodSpec", func() {
 						Args:    []string{"arg1", "arg2"},
 						Env: []corev1.EnvVar{
 							{Name: "ENV_VAR", Value: "value"},
+						},
+						EnvFrom: []corev1.EnvFromSource{{
+							ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-configmap",
+								},
+							}},
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{Name: "test-volume", MountPath: "/mnt"},
@@ -152,6 +168,8 @@ var _ = Describe("NnfPodSpec", func() {
 			Expect(targetSpec.Containers[0].Env).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].Env[0].Name).To(Equal("ENV_VAR"))
 			Expect(targetSpec.Containers[0].Env[0].Value).To(Equal("value"))
+			Expect(targetSpec.Containers[0].EnvFrom).To(HaveLen(1))
+			Expect(targetSpec.Containers[0].EnvFrom[0].ConfigMapRef.Name).To(Equal("test-configmap"))
 			Expect(targetSpec.Containers[0].VolumeMounts).To(HaveLen(1))
 			Expect(targetSpec.Containers[0].VolumeMounts[0].Name).To(Equal("test-volume"))
 			Expect(targetSpec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/mnt"))

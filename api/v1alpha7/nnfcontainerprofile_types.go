@@ -219,63 +219,81 @@ func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
 }
 
-// Copy an NnfPodSpec into a corev1.PodSpec
-func (s *NnfPodSpec) ToCorePodSpec(out *corev1.PodSpec) {
-
-	if out == nil {
-		out = &corev1.PodSpec{}
+// Convert an NnfPodSpec into a corev1.PodSpec and return it
+func (s *NnfPodSpec) ToCorePodSpec() *corev1.PodSpec {
+	if s == nil {
+		return nil
 	}
+
+	out := &corev1.PodSpec{}
 
 	if len(s.Containers) > 0 {
 		out.Containers = make([]corev1.Container, len(s.Containers))
 		for i := range s.Containers {
-			s.Containers[i].ToCoreContainer(&out.Containers[i])
+			out.Containers[i] = *s.Containers[i].ToCoreContainer()
 		}
 	}
+
 	if len(s.InitContainers) > 0 {
 		out.InitContainers = make([]corev1.Container, len(s.InitContainers))
 		for i := range s.InitContainers {
-			s.InitContainers[i].ToCoreContainer(&out.InitContainers[i])
+			out.InitContainers[i] = *s.InitContainers[i].ToCoreContainer()
 		}
 	}
+
 	if len(s.Volumes) > 0 {
 		out.Volumes = make([]corev1.Volume, len(s.Volumes))
 		for i := range s.Volumes {
 			s.Volumes[i].DeepCopyInto(&out.Volumes[i])
 		}
 	}
+
+	return out
 }
 
-// Copy an NnfContainer into a corev1.Container
-func (s *NnfContainer) ToCoreContainer(out *corev1.Container) {
-
-	if out == nil {
-		out = &corev1.Container{}
+// Convert an NnfContainer into a corev1.Container and return it
+func (s *NnfContainer) ToCoreContainer() *corev1.Container {
+	if s == nil {
+		return nil
 	}
 
-	out.Name = s.Name
-	out.Image = s.Image
-
-	out.Command = make([]string, len(s.Command))
-	copy(out.Command, s.Command)
-
-	out.Args = make([]string, len(s.Args))
-	copy(out.Args, s.Args)
-
-	out.Env = make([]corev1.EnvVar, len(s.Env))
-	for i := range s.Env {
-		s.Env[i].DeepCopyInto(&out.Env[i])
+	out := &corev1.Container{
+		Name:  s.Name,
+		Image: s.Image,
 	}
 
-	out.EnvFrom = make([]corev1.EnvFromSource, len(s.EnvFrom))
-	for i := range s.EnvFrom {
-		s.EnvFrom[i].DeepCopyInto(&out.EnvFrom[i])
+	if len(s.Command) > 0 {
+		out.Command = make([]string, len(s.Command))
+		copy(out.Command, s.Command)
 	}
 
-	out.VolumeMounts = make([]corev1.VolumeMount, len(s.VolumeMounts))
-	for i := range s.VolumeMounts {
-		s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
+	if len(s.Args) > 0 {
+		out.Args = make([]string, len(s.Args))
+		copy(out.Args, s.Args)
 	}
+
+	if len(s.Env) > 0 {
+		out.Env = make([]corev1.EnvVar, len(s.Env))
+		for i := range s.Env {
+			s.Env[i].DeepCopyInto(&out.Env[i])
+		}
+	}
+
+	if len(s.EnvFrom) > 0 {
+		out.EnvFrom = make([]corev1.EnvFromSource, len(s.EnvFrom))
+		for i := range s.EnvFrom {
+			s.EnvFrom[i].DeepCopyInto(&out.EnvFrom[i])
+		}
+	}
+
+	if len(s.VolumeMounts) > 0 {
+		out.VolumeMounts = make([]corev1.VolumeMount, len(s.VolumeMounts))
+		for i := range s.VolumeMounts {
+			s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
+		}
+	}
+
+	return out
 }
 
 // Copy a corev1.PodSpec into an NnfContainer

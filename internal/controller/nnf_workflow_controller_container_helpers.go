@@ -95,6 +95,10 @@ const (
 // run an ssh server tn listen for mpirun operations from the launcher pod.
 func (c *nnfUserContainer) createMPIJob() error {
 
+	if c.profile.Data.NnfMPISpec == nil {
+		return fmt.Errorf("MPI spec is nil")
+	}
+
 	// Create a new MPIJob object
 	mpiJob := &mpiv2beta1.MPIJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,12 +114,12 @@ func (c *nnfUserContainer) createMPIJob() error {
 	}
 	launcher := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher]
 	worker := mpiJob.Spec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker]
-	launcherSpec := &launcher.Template.Spec
-	workerSpec := &worker.Template.Spec
 
 	// Copy the NNFContainerProfile spec into the MPIJob spec
-	c.profile.Data.NnfMPISpec.Launcher.ToCorePodSpec(launcherSpec)
-	c.profile.Data.NnfMPISpec.Worker.ToCorePodSpec(workerSpec)
+	launcher.Template.Spec = *c.profile.Data.NnfMPISpec.Launcher.ToCorePodSpec()
+	worker.Template.Spec = *c.profile.Data.NnfMPISpec.Worker.ToCorePodSpec()
+	launcherSpec := &launcher.Template.Spec
+	workerSpec := &worker.Template.Spec
 
 	c.username = nnfv1alpha7.ContainerMPIUser
 
@@ -238,13 +242,20 @@ func (c *nnfUserContainer) createMPIJob() error {
 // that a pod is executed successfully (or the backOffLimit) is hit. Each container in this model
 // runs the same image.
 func (c *nnfUserContainer) createNonMPIJob() error {
+
+	if c.profile.Data.NnfSpec == nil {
+		return fmt.Errorf("NNF spec is nil")
+	}
+
 	// Use one job that we'll use as a base to create all jobs. Each NNF node will get its own job.
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: c.workflow.Namespace,
 		},
 	}
-	c.profile.Data.NnfSpec.ToCorePodSpec(&job.Spec.Template.Spec)
+
+	// Copy the NNFContainerProfile spec into the Job spec
+	job.Spec.Template.Spec = *c.profile.Data.NnfSpec.ToCorePodSpec()
 	podSpec := &job.Spec.Template.Spec
 
 	if err := c.applyLabels(&job.ObjectMeta, true /* applyOwner */); err != nil {

@@ -149,7 +149,7 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 		if dst.Data.Spec == nil {
 			dst.Data.Spec = &corev1.PodSpec{}
 		}
-		src.Data.NnfSpec.ToCorePodSpec(dst.Data.Spec)
+		dst.Data.Spec = src.Data.NnfSpec.ToCorePodSpec()
 	}
 	if src.Data.NnfMPISpec != nil {
 		if dst.Data.MPISpec == nil {
@@ -163,12 +163,12 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 		if dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] == nil {
 			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NnfMPISpec.Launcher.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+		dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec = *src.Data.NnfMPISpec.Launcher.ToCorePodSpec()
 
 		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] == nil {
 			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
 		}
-		src.Data.NnfMPISpec.Worker.ToCorePodSpec(&dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
+		dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec = *src.Data.NnfMPISpec.Worker.ToCorePodSpec()
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.
