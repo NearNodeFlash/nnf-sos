@@ -48,7 +48,7 @@ var _ = Describe("NnfLustreMGT Controller Test", func() {
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfLustreMgt)).To(Succeed())
 
-		By("Verify that the Status.FsNameNext field gets set from the value in Spec.FsNameStart")
+		By("Verify that the Status.FsNameNext field gets set from the value in NnfSpec.FsNameStart")
 		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfLustreMgt), nnfLustreMgt)).To(Succeed())
 			return nnfLustreMgt.Status.FsNameNext != nnfLustreMgt.Spec.FsNameStart
@@ -100,7 +100,7 @@ var _ = Describe("NnfLustreMGT Controller Test", func() {
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfLustreMgt)).To(Succeed())
 
-		By("Verify that the Status.FsNameNext field gets set from the value in Spec.FsNameStart")
+		By("Verify that the Status.FsNameNext field gets set from the value in NnfSpec.FsNameStart")
 		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfLustreMgt), nnfLustreMgt)).To(Succeed())
 			return nnfLustreMgt.Status.FsNameNext != nnfLustreMgt.Spec.FsNameStart
@@ -182,7 +182,7 @@ var _ = Describe("NnfLustreMGT Controller Test", func() {
 		}
 		Expect(k8sClient.Create(context.TODO(), nnfLustreMgt)).To(Succeed())
 
-		By("Verify that the Status.FsNameNext field gets set from the value in Spec.FsNameStart")
+		By("Verify that the Status.FsNameNext field gets set from the value in NnfSpec.FsNameStart")
 		Eventually(func(g Gomega) bool {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfLustreMgt), nnfLustreMgt)).To(Succeed())
 			return nnfLustreMgt.Status.FsNameNext != "abcdefgh"

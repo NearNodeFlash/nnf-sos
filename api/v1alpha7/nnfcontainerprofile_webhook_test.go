@@ -55,7 +55,7 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 				Namespace: namespaceName,
 			},
 			Data: NnfContainerProfileData{
-				Spec: &NnfPodSpec{
+				NnfSpec: &NnfPodSpec{
 					Containers: []NnfContainer{
 						{Name: "test", Image: "test:latest", Command: []string{"test"}},
 					},
@@ -124,16 +124,16 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 		nnfProfile = nil
 	})
 
-	It("Should not allow setting both Spec and MPISpec", func() {
-		nnfProfile.Data.Spec = &NnfPodSpec{}
-		nnfProfile.Data.MPISpec = &NnfMPISpec{}
+	It("Should not allow setting both NnfSpec and NnfMPISpec", func() {
+		nnfProfile.Data.NnfSpec = &NnfPodSpec{}
+		nnfProfile.Data.NnfMPISpec = &NnfMPISpec{}
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
-	It("Should fail when both Spec and MPISpec are unset", func() {
-		nnfProfile.Data.Spec = nil
-		nnfProfile.Data.MPISpec = nil
+	It("Should fail when both NnfSpec and NnfMPISpec are unset", func() {
+		nnfProfile.Data.NnfSpec = nil
+		nnfProfile.Data.NnfMPISpec = nil
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
@@ -141,12 +141,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	DescribeTable("Should allow a user to set PreRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.Spec = &NnfPodSpec{
+			nnfProfile.Data.NnfSpec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
-			nnfProfile.Data.MPISpec = nil
+			nnfProfile.Data.NnfMPISpec = nil
 
 			nnfProfile.Data.PreRunTimeoutSeconds = timeout
 			if succeed {
@@ -167,12 +167,12 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 	DescribeTable("Should allow a user to set PostRunTimeoutSeconds",
 
 		func(timeout, expected *int64, succeed bool) {
-			nnfProfile.Data.Spec = &NnfPodSpec{
+			nnfProfile.Data.NnfSpec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"test"}},
 				},
 			}
-			nnfProfile.Data.MPISpec = nil
+			nnfProfile.Data.NnfMPISpec = nil
 
 			nnfProfile.Data.PostRunTimeoutSeconds = timeout
 			if succeed {
@@ -287,8 +287,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	DescribeTable("MPI Containers with copy offload in the name should have the copy offload flag set",
 		func(cName string, copyOffload bool, shouldPass bool) {
-			nnfProfile.Data.Spec = nil
-			nnfProfile.Data.MPISpec = &NnfMPISpec{
+			nnfProfile.Data.NnfSpec = nil
+			nnfProfile.Data.NnfMPISpec = &NnfMPISpec{
 				Launcher: NnfPodSpec{
 					Containers: []NnfContainer{
 						{Name: cName, Image: "test-image"},
@@ -320,8 +320,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	DescribeTable("non-mpi containers with copy offload in the name should fail",
 		func(cName string) {
-			nnfProfile.Data.MPISpec = nil
-			nnfProfile.Data.Spec = &NnfPodSpec{
+			nnfProfile.Data.NnfMPISpec = nil
+			nnfProfile.Data.NnfSpec = &NnfPodSpec{
 				Containers: []NnfContainer{
 					{Name: cName, Image: cName, Command: []string{"test"}},
 				},
@@ -338,8 +338,8 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 
 	DescribeTable("MPI Containers validation",
 		func(launcherContainers, workerContainers []NnfContainer, shouldPass bool) {
-			nnfProfile.Data.Spec = nil
-			nnfProfile.Data.MPISpec = &NnfMPISpec{
+			nnfProfile.Data.NnfSpec = nil
+			nnfProfile.Data.NnfMPISpec = &NnfMPISpec{
 				Launcher: NnfPodSpec{
 					Containers: launcherContainers,
 				},
@@ -372,10 +372,10 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 			false),
 	)
 
-	DescribeTable("Spec Containers validation",
+	DescribeTable("NnfSpec Containers validation",
 		func(containers []NnfContainer, shouldPass bool) {
-			nnfProfile.Data.MPISpec = nil
-			nnfProfile.Data.Spec = &NnfPodSpec{
+			nnfProfile.Data.NnfMPISpec = nil
+			nnfProfile.Data.NnfSpec = &NnfPodSpec{
 				Containers: containers,
 			}
 			if shouldPass {
@@ -385,10 +385,10 @@ var _ = Describe("NnfContainerProfile Webhook", func() {
 				nnfProfile = nil
 			}
 		},
-		Entry("should pass when Spec has containers",
+		Entry("should pass when NnfSpec has containers",
 			[]NnfContainer{{Name: "test", Image: "test-image"}},
 			true),
-		Entry("should fail when Spec has no containers",
+		Entry("should fail when NnfSpec has no containers",
 			[]NnfContainer{},
 			false),
 	)

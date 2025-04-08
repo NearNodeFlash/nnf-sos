@@ -297,7 +297,7 @@ func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt
 	return nil, nil
 }
 
-// HandleNewClaims looks for any new claims in Spec.ClaimList and assigns them
+// HandleNewClaims looks for any new claims in NnfSpec.ClaimList and assigns them
 // an fsname
 func (r *NnfLustreMGTReconciler) HandleNewClaims(ctx context.Context, nnfLustreMgt *nnfv1alpha7.NnfLustreMGT) (*ctrl.Result, error) {
 	claimMap := map[corev1.ObjectReference]string{}
@@ -377,7 +377,7 @@ func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha7.NnfLus
 	return nil
 }
 
-// HandleNewCommands looks for new commands in the Spec section and runs them
+// HandleNewCommands looks for new commands in the NnfSpec section and runs them
 func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha7.NnfLustreMGT) (*ctrl.Result, error) {
 	commandMap := map[corev1.ObjectReference]*nnfv1alpha7.NnfLustreMGTStatusCommand{}
 	for _, command := range nnfLustreMgt.Status.CommandList {

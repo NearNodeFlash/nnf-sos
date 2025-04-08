@@ -50,7 +50,7 @@ type DWSStorageReconciler struct {
 const taintCrayNnfNodeDrainPrefix string = "cray.nnf.node.drain"
 
 type K8sNodeState struct {
-	// nnfTaint is the name of any "cray.nnf.node.drain*" taint found in Node.Spec.Taints.
+	// nnfTaint is the name of any "cray.nnf.node.drain*" taint found in Node.NnfSpec.Taints.
 	nnfTaint string
 
 	// nodeReady indicates whether Node.Status.Conditions shows Ready or NotReady.

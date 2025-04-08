@@ -194,7 +194,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 			Spec: dwsv1alpha3.PersistentStorageInstanceSpec{
 				Name:   name,
 				FsType: fsType,
-				// DWDirective: workflow.Spec.DWDirectives[0],
+				// DWDirective: workflow.NnfSpec.DWDirectives[0],
 				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
 				State:       dwsv1alpha3.PSIStateActive,
 			},
@@ -1812,8 +1812,8 @@ var _ = Describe("NnfContainerProfile Webhook test", func() {
 	// the controller tests.
 	It("fails to create an invalid profile to verify that the webhook is installed", func() {
 		profileInvalid := basicNnfContainerProfile("invalid-"+uuid.NewString()[:8], nil)
-		profileInvalid.Data.Spec = nil
-		profileInvalid.Data.MPISpec = nil
+		profileInvalid.Data.NnfSpec = nil
+		profileInvalid.Data.NnfMPISpec = nil
 		Expect(createNnfContainerProfile(profileInvalid, false)).To(BeNil())
 	})
 })

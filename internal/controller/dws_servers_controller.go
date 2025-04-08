@@ -140,7 +140,7 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// In the case where WLM has not filled in Servers Spec information generate a status update
+	// In the case where WLM has not filled in Servers NnfSpec information generate a status update
 	// to initialize the LastUpdate timestamp but don't proceed to create the Status section
 	// since there is nothing to report status on.
 	if len(servers.Spec.AllocationSets) == 0 {

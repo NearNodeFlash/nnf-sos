@@ -96,7 +96,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Free any unused allocations
 	r.cleanupUnusedAllocations(log, mgr, config.Spec.PortsCooldownInSeconds)
 
-	// For each "requester" in the mgr.Spec.Allocations, try to satisfy the request by
+	// For each "requester" in the mgr.NnfSpec.Allocations, try to satisfy the request by
 	// allocating the desired ports.
 	for _, spec := range mgr.Spec.Allocations {
 		var ports []uint16
@@ -179,7 +179,7 @@ func (r *NnfPortManagerReconciler) isAllocationNeeded(mgr *nnfv1alpha7.NnfPortMa
 func (r *NnfPortManagerReconciler) cleanupUnusedAllocations(log logr.Logger, mgr *nnfv1alpha7.NnfPortManager, cooldown int) {
 
 	// Free unused allocations. This will check if the Status.Allocations exist in
-	// the list of desired allocations in the Spec field and mark any unused allocations
+	// the list of desired allocations in the NnfSpec field and mark any unused allocations
 	// as freed.
 	allocsToRemove := make([]int, 0)
 	for idx := range mgr.Status.Allocations {

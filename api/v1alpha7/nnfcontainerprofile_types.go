@@ -75,15 +75,15 @@ type NnfContainerProfileData struct {
 	// and in the DWS workflow (NNF_CONTAINER_PORTS).
 	NumPorts int32 `json:"numPorts,omitempty"`
 
-	// Spec to define the containers created from this profile. This is used for non-MPI containers.
-	// Either this or MPISpec must be provided, but not both.
+	// NnfSpec to define the containers created from this profile. This is used for non-MPI containers.
+	// Either this or NnfMPISpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	Spec *NnfPodSpec `json:"spec,omitempty"`
+	NnfSpec *NnfPodSpec `json:"spec,omitempty"`
 
 	// MPIJobSpec to define the MPI containers created from this profile.
-	// Either this or Spec must be provided, but not both.
+	// Either this or NnfSpec must be provided, but not both.
 	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
-	MPISpec *NnfMPISpec `json:"mpiSpec,omitempty"`
+	NnfMPISpec *NnfMPISpec `json:"mpiSpec,omitempty"`
 }
 
 // NnfPodSpec represents the specification of a pod that can be used in a container profile. This is

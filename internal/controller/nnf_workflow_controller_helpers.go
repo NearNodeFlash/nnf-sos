@@ -1351,7 +1351,7 @@ func (r *NnfWorkflowReconciler) userContainerHandler(ctx context.Context, workfl
 	if err != nil {
 		return nil, err
 	}
-	mpiJob := profile.Data.MPISpec != nil
+	mpiJob := profile.Data.NnfMPISpec != nil
 
 	// Get the targeted NNF nodes for the container jobs
 	nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
@@ -1507,7 +1507,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	if err != nil {
 		return nil, err
 	}
-	isMPIJob := profile.Data.MPISpec != nil
+	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
 	// up to the workflow in every one of our return cases. Each return path will check for
@@ -1764,7 +1764,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	if err != nil {
 		return nil, err
 	}
-	isMPIJob := profile.Data.MPISpec != nil
+	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	timeout := time.Duration(0)
 	if profile.Data.PostRunTimeoutSeconds != nil {
@@ -1825,7 +1825,7 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	if err != nil {
 		return nil, err
 	}
-	isMPIJob := profile.Data.MPISpec != nil
+	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	timeout := time.Duration(0)
 	if profile.Data.PostRunTimeoutSeconds != nil {
@@ -1981,7 +1981,7 @@ func (r *NnfWorkflowReconciler) getContainerVolumes(ctx context.Context, workflo
 		}
 
 		// For global lustre, a namespace that matches the workflow's namespace must be present in
-		// the LustreFilesystem's Spec.Namespaces list. This results in a matching PVC that can
+		// the LustreFilesystem's NnfSpec.Namespaces list. This results in a matching PVC that can
 		// then be mounted into containers in that namespace.
 		if cmd == "globaldw" {
 			globalLustre := r.findLustreFileSystemForPath(ctx, val, r.Log)
@@ -2232,7 +2232,7 @@ func (r *NnfWorkflowReconciler) releaseContainerPorts(ctx context.Context, workf
 	}
 
 	if found {
-		// Remove the allocation request from the Spec
+		// Remove the allocation request from the NnfSpec
 		// TODO: For cooldowns, change the status to cooldown/time_wait rather than delete. Can we
 		// even do that from here?
 		for idx, alloc := range pm.Spec.Allocations {

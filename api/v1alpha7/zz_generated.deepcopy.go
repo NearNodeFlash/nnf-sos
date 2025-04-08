@@ -256,13 +256,13 @@ func (in *NnfContainerProfileData) DeepCopyInto(out *NnfContainerProfileData) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
+	if in.NnfSpec != nil {
+		in, out := &in.NnfSpec, &out.NnfSpec
 		*out = new(NnfPodSpec)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.MPISpec != nil {
-		in, out := &in.MPISpec, &out.MPISpec
+	if in.NnfMPISpec != nil {
+		in, out := &in.NnfMPISpec, &out.NnfMPISpec
 		*out = new(NnfMPISpec)
 		(*in).DeepCopyInto(*out)
 	}

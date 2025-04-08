@@ -917,7 +917,7 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 		}
 	}
 
-	// Check whether the claim already exists in the Spec claim list
+	// Check whether the claim already exists in the NnfSpec claim list
 	for _, existingClaim := range nnfLustreMgt.Spec.ClaimList {
 		if existingClaim == reference {
 			return "", nil
@@ -989,7 +989,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 		}
 	}
 
-	// Check if the command has already been requested in the Spec.
+	// Check if the command has already been requested in the NnfSpec.
 	for _, command := range nnfLustreMgt.Spec.CommandList {
 		if command.Reference == reference {
 			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil

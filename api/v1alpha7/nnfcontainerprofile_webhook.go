@@ -108,15 +108,15 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) (admission.Warn
 }
 
 func (r *NnfContainerProfile) validateContent() error {
-	mpiJob := r.Data.MPISpec != nil
-	nonmpiJob := r.Data.Spec != nil
+	mpiJob := r.Data.NnfMPISpec != nil
+	nonmpiJob := r.Data.NnfSpec != nil
 
-	// Either Spec or MPISpec must be set, but not both
+	// Either NnfSpec or NnfMPISpec must be set, but not both
 	if mpiJob && nonmpiJob {
-		return fmt.Errorf("both Spec and MPISpec are provided - only 1 can be set")
+		return fmt.Errorf("both NnfSpec and NnfMPISpec are provided - only 1 can be set")
 	}
 	if !mpiJob && !nonmpiJob {
-		return fmt.Errorf("either Spec or MPISpec must be provided")
+		return fmt.Errorf("either NnfSpec or NnfMPISpec must be provided")
 	}
 
 	isCopyOffloadContainer := func(name string) bool {
@@ -124,22 +124,22 @@ func (r *NnfContainerProfile) validateContent() error {
 	}
 
 	if mpiJob {
-		launcher := r.Data.MPISpec.Launcher
+		launcher := r.Data.NnfMPISpec.Launcher
 		for _, c := range launcher.Containers {
 			if isCopyOffloadContainer(c.Name) {
 				// When it looks like we have a copy offload Launcher container, ensure the CopyOffload flag is set
-				if !r.Data.MPISpec.CopyOffload {
+				if !r.Data.NnfMPISpec.CopyOffload {
 					return fmt.Errorf(
 						"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-							"Set the CopyOffload flag to true in the MPISpec to use this container profile with the Copy Offload API",
+							"Set the CopyOffload flag to true in the NnfMPISpec to use this container profile with the Copy Offload API",
 						c.Name,
 					)
 				}
-			} else if r.Data.MPISpec.CopyOffload {
+			} else if r.Data.NnfMPISpec.CopyOffload {
 				// When the container doesn't looke like copy offload, ensure the CopyOffload flag is not set
 				return fmt.Errorf(
 					"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. " +
-						"but the CopyOffload flag is set to true in the MPISpec" +
+						"but the CopyOffload flag is set to true in the NnfMPISpec" +
 						c.Name,
 				)
 			}
@@ -147,16 +147,16 @@ func (r *NnfContainerProfile) validateContent() error {
 
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
-		if len(r.Data.Spec.Containers) < 1 {
-			return fmt.Errorf("at least 1 container must be defined in Spec")
+		if len(r.Data.NnfSpec.Containers) < 1 {
+			return fmt.Errorf("at least 1 container must be defined in NnfSpec")
 		}
 
-		// When it looks like we have a copy offload container, let the user know an MPISpec is required
-		for _, c := range r.Data.Spec.Containers {
+		// When it looks like we have a copy offload container, let the user know an NnfMPISpec is required
+		for _, c := range r.Data.NnfSpec.Containers {
 			if isCopyOffloadContainer(c.Name) {
 				return fmt.Errorf(
 					"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-						"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
+						"Container profiles used for Copy Offload must use the NnfMPISpec to define the Launcher and Worker containers",
 					c.Name,
 				)
 			}

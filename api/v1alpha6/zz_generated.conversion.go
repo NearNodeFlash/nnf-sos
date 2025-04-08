@@ -1152,8 +1152,8 @@ func autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfil
 	out.UserID = (*uint32)(unsafe.Pointer(in.UserID))
 	out.GroupID = (*uint32)(unsafe.Pointer(in.GroupID))
 	out.NumPorts = in.NumPorts
-	// WARNING: in.Spec requires manual conversion: does not exist in peer-type
-	// WARNING: in.MPISpec requires manual conversion: does not exist in peer-type
+	// WARNING: in.NnfSpec requires manual conversion: does not exist in peer-type
+	// WARNING: in.NnfMPISpec requires manual conversion: does not exist in peer-type
 	return nil
 }
 
