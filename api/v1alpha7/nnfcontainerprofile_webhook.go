@@ -49,9 +49,6 @@ func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Validator = &NnfContainerProfile{}
 
-// expected name of the service account used for copy offload containers
-var copyOffloadServiceAccountName = "nnf-dm-copy-offload"
-
 // look for the string "copy offload" in the container name, with or without a hyphen/space
 var copyOffloadRegex = regexp.MustCompile(`(?i)\bcopy[- ]?offload\b`)
 

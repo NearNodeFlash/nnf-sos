@@ -81,9 +81,9 @@ type nnfContainerSecret struct {
 const (
 	requiresContainerAuth = "container-auth"
 	requiresCopyOffload   = "copy-offload"
-)
 
-const (
+	copyOffloadServiceAccountName = "nnf-dm-copy-offload"
+
 	// The name of the secret that holds the TLS certificate and signing key for
 	// containers that use "requiresContainerAuth" or "requiresCopyOffload".
 	userContainerTLSSecretName      = "nnf-dm-usercontainer-server-tls"
@@ -225,6 +225,11 @@ func (c *nnfUserContainer) createMPIJob() error {
 	// Any server that uses TLS/token when communicating with the compute node
 	// will be in the launcher, so mount any secrets there.
 	c.addSecrets(launcherSpec)
+
+	// Copy offload containers need to use the copy offload service account
+	if c.profile.Data.NnfMPISpec.CopyOffload {
+		launcherSpec.ServiceAccountName = copyOffloadServiceAccountName
+	}
 
 	err = c.client.Create(c.ctx, mpiJob)
 	if err != nil {
