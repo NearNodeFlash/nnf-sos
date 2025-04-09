@@ -20,15 +20,15 @@
 package v1alpha7
 
 import (
-	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	ContainerLabel   = "nnf.cray.hpe.com/container"
-	ContainerUser    = "user"
-	ContainerMPIUser = "mpiuser"
+	ContainerLabel                = "nnf.cray.hpe.com/container"
+	ContainerUser                 = "user"
+	ContainerMPIUser              = "mpiuser"
+	CopyOffloadServiceAccountName = "nnf-dm-copy-offload"
 )
 
 // NnfContainerProfileSpec defines the desired state of NnfContainerProfile
@@ -69,33 +69,114 @@ type NnfContainerProfileData struct {
 	// only Workflows that have a matching group ID can select this profile.
 	GroupID *uint32 `json:"groupID,omitempty"`
 
-	// Number of ports to open for communication with the user container. These ports are opened on
-	// the targeted NNF nodes and can be accessed outside of the k8s cluster (e.g. compute nodes).
-	// The requested ports are made available as environment variables inside the container and in
-	// the DWS workflow (NNF_CONTAINER_PORTS).
+	// Number of ports to open for each container specified in the PodSpec. For MPI Jobs, this is
+	// only for the Launcher container(s) listed in the MPIReplicaSet's PodSpec. These ports are
+	// opened on the targeted NNF nodes and can be accessed outside the k8s cluster (e.g. compute
+	// nodes). The requested ports are made available as environment variables inside the container
+	// and in the DWS workflow (NNF_CONTAINER_PORTS).
 	NumPorts int32 `json:"numPorts,omitempty"`
 
-	// Spec to define the containers created from this profile. This is used for non-MPI containers.
-	// Refer to the K8s documentation for `PodSpec` for more definition:
-	// https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec
-	// Either this or MPISpec must be provided, but not both.
-	Spec *corev1.PodSpec `json:"spec,omitempty"`
+	// NnfSpec to define the containers created from this profile. This is used for non-MPI containers.
+	// Either this or NnfMPISpec must be provided, but not both.
+	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
+	NnfSpec *NnfPodSpec `json:"spec,omitempty"`
 
-	// MPIJobSpec to define the MPI containers created from this profile. This functionality is
-	// provided via mpi-operator, a 3rd party tool to assist in running MPI applications across
-	// worker containers.
-	// Either this or Spec must be provided, but not both.
-	//
-	// All the fields defined drive mpi-operator behavior. See the type definition of MPISpec for
-	// more detail:
-	// https://github.com/kubeflow/mpi-operator/blob/v0.4.0/pkg/apis/kubeflow/v2beta1/types.go#L137
-	//
-	// Note: most of these fields are fully customizable with a few exceptions. These fields are
-	// overridden by NNF software to ensure proper behavior to interface with the DWS workflow
-	// - Replicas
-	// - RunPolicy.BackoffLimit (this is set above by `RetryLimit`)
-	// - Worker/Launcher.RestartPolicy
-	MPISpec *mpiv2beta1.MPIJobSpec `json:"mpiSpec,omitempty"`
+	// MPIJobSpec to define the MPI containers created from this profile.
+	// Either this or NnfSpec must be provided, but not both.
+	// +kubebuilder:validation:Rule="(self.spec != null) != (self.mpiSpec != null)",Message="Exactly one of 'spec' or 'mpiSpec' must be set."
+	NnfMPISpec *NnfMPISpec `json:"mpiSpec,omitempty"`
+}
+
+// NnfPodSpec represents the specification of a pod that can be used in a container profile. This is
+// a slimmed down version of a corev1.PodSpec to reduce the size of the CRD.
+type NnfPodSpec struct {
+	// Containers are the list of containers that will be created in the pod.
+	// +kubebuilder:validation:MinItems=1
+	Containers []NnfContainer `json:"containers"`
+
+	// InitContainers are the list of init containers that will be created in the pod before the
+	// main containers.
+	InitContainers []NnfContainer `json:"initContainers,omitempty"`
+
+	// Volumes are the list of volumes that will be available to the pod
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+}
+
+// NnfMPISpec represents the specification of an MPI job that can be used in a container profile.
+type NnfMPISpec struct {
+
+	// Launcher is the specification for the launcher container in the MPI job. In a typical MPI
+	// job, the launcher runs an MPI application with mpirun and contacts the workers to distribute
+	// the job.
+	Launcher NnfPodSpec `json:"launcher"`
+
+	// Worker is the specification for the worker containers in the MPI job. In a typical MPI job,
+	// the workers are running sshd and listening for the launcher to connect.
+	Worker NnfPodSpec `json:"worker"`
+
+	// CopyOffload indicates that this profile is configured to drive the NNF Copy Offload API. This
+	// instructions the NNF software to configure specifies for the Copy Offload API (e.g.
+	// serviceAccount).
+	// +kubebuilder:default:=false
+	CopyOffload bool `json:"copyOffload,omitempty"`
+
+	// Specifies the number of slots per worker used in hostfile.
+	// Note: This is only for container directives that do not use Copy Offload. For Copy Offload
+	// API, the slots field in the specific Data Movement profile will be used instead of this
+	// value.
+	SlotsPerWorker *int32 `json:"slotsPerWorker,omitempty"`
+}
+
+// NnfContainer defines the specification of a container that can be used in a container profile.
+// This is a slimmed down version of a corev1.Container to reduce the size of the CRD.
+type NnfContainer struct {
+	// Name of the container specified as a DNS_LABEL. Each container in a pod must have a unique
+	// name (DNS_LABEL).
+	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// Container image name. More info: https://kubernetes.io/docs/concepts/containers/images
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
+
+	// Entrypoint array. Not executed within a shell. The container image's ENTRYPOINT is used if
+	// this is not provided. Variable references $(VAR_NAME) are expanded using the container's
+	// environment. If a variable cannot be resolved, the reference in the input string will be
+	// unchanged. Double $$ are reduced to a single $, which allows for escaping the $(VAR_NAME)
+	// syntax: i.e. "$$(VAR_NAME)" will produce the string literal "$(VAR_NAME)". Escaped references
+	// will never be expanded, regardless of whether the variable exists or not.
+	// More info:
+	// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	// +kubebuilder:validation:Optional
+	Command []string `json:"command"`
+
+	// Arguments to the entrypoint. The container image's CMD is used if this is not provided.
+	// Variable references $(VAR_NAME) are expanded using the container's environment. If a variable
+	// cannot be resolved, the reference in the input string will be unchanged. Double $$ are
+	// reduced to a single $, which allows for escaping the $(VAR_NAME) syntax: i.e. "$$(VAR_NAME)"
+	// will produce the string literal "$(VAR_NAME)". Escaped references will never be expanded,
+	// regardless of whether the variable exists or not. More info:
+	// https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
+	Args []string `json:"args,omitempty"`
+
+	// List of environment variables to set in the container.
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// List of sources to populate environment variables in the container. The keys defined within a
+	// source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the
+	// container is starting. When a key exists in multiple sources, the value associated with the
+	// last source will take precedence. Values defined by an Env with a duplicate key will take
+	// precedence.
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
+	// Storages field.
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // NnfContainerProfileStorage defines the mount point information that will be available to the
@@ -138,4 +219,129 @@ type NnfContainerProfileList struct {
 
 func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
+}
+
+// Convert an NnfPodSpec into a corev1.PodSpec and return it
+func (s *NnfPodSpec) ToCorePodSpec() *corev1.PodSpec {
+	if s == nil {
+		return nil
+	}
+
+	out := &corev1.PodSpec{}
+
+	if len(s.Containers) > 0 {
+		out.Containers = make([]corev1.Container, len(s.Containers))
+		for i := range s.Containers {
+			out.Containers[i] = *s.Containers[i].ToCoreContainer()
+		}
+	}
+
+	if len(s.InitContainers) > 0 {
+		out.InitContainers = make([]corev1.Container, len(s.InitContainers))
+		for i := range s.InitContainers {
+			out.InitContainers[i] = *s.InitContainers[i].ToCoreContainer()
+		}
+	}
+
+	if len(s.Volumes) > 0 {
+		out.Volumes = make([]corev1.Volume, len(s.Volumes))
+		for i := range s.Volumes {
+			s.Volumes[i].DeepCopyInto(&out.Volumes[i])
+		}
+	}
+
+	return out
+}
+
+// Convert an NnfContainer into a corev1.Container and return it
+func (s *NnfContainer) ToCoreContainer() *corev1.Container {
+	if s == nil {
+		return nil
+	}
+
+	out := &corev1.Container{
+		Name:  s.Name,
+		Image: s.Image,
+	}
+
+	if len(s.Command) > 0 {
+		out.Command = make([]string, len(s.Command))
+		copy(out.Command, s.Command)
+	}
+
+	if len(s.Args) > 0 {
+		out.Args = make([]string, len(s.Args))
+		copy(out.Args, s.Args)
+	}
+
+	if len(s.Env) > 0 {
+		out.Env = make([]corev1.EnvVar, len(s.Env))
+		for i := range s.Env {
+			s.Env[i].DeepCopyInto(&out.Env[i])
+		}
+	}
+
+	if len(s.EnvFrom) > 0 {
+		out.EnvFrom = make([]corev1.EnvFromSource, len(s.EnvFrom))
+		for i := range s.EnvFrom {
+			s.EnvFrom[i].DeepCopyInto(&out.EnvFrom[i])
+		}
+	}
+
+	if len(s.VolumeMounts) > 0 {
+		out.VolumeMounts = make([]corev1.VolumeMount, len(s.VolumeMounts))
+		for i := range s.VolumeMounts {
+			s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
+		}
+	}
+
+	return out
+}
+
+// Copy a corev1.PodSpec into an NnfContainer
+func (s *NnfPodSpec) FromCorePodSpec(in *corev1.PodSpec) {
+
+	if in == nil {
+		return
+	}
+
+	s.Containers = make([]NnfContainer, len(in.Containers))
+	for i := range in.Containers {
+		s.Containers[i].FromCoreContainer(&in.Containers[i])
+	}
+
+	s.InitContainers = make([]NnfContainer, len(in.InitContainers))
+	for i := range in.InitContainers {
+		s.InitContainers[i].FromCoreContainer(&in.InitContainers[i])
+	}
+
+	s.Volumes = make([]corev1.Volume, len(in.Volumes))
+	for i := range in.Volumes {
+		in.Volumes[i].DeepCopyInto(&s.Volumes[i])
+	}
+}
+
+// Copy a corev1.Container into an NnfContainer
+func (s *NnfContainer) FromCoreContainer(in *corev1.Container) {
+	if in == nil {
+		return
+	}
+
+	s.Name = in.Name
+	s.Image = in.Image
+
+	s.Command = make([]string, len(in.Command))
+	copy(s.Command, in.Command)
+
+	s.Args = make([]string, len(in.Args))
+	copy(s.Args, in.Args)
+
+	s.Env = make([]corev1.EnvVar, len(in.Env))
+	copy(s.Env, in.Env)
+
+	s.EnvFrom = make([]corev1.EnvFromSource, len(in.EnvFrom))
+	copy(s.EnvFrom, in.EnvFrom)
+
+	s.VolumeMounts = make([]corev1.VolumeMount, len(in.VolumeMounts))
+	copy(s.VolumeMounts, in.VolumeMounts)
 }

@@ -128,9 +128,10 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Data: nnfv1alpha7.NnfContainerProfileData{
-					Spec: &corev1.PodSpec{
-						NodeName:   "rabbit-1",
-						Containers: []corev1.Container{{Name: "one"}},
+					NnfSpec: &nnfv1alpha7.NnfPodSpec{
+						Containers: []nnfv1alpha7.NnfContainer{
+							{Name: "one", Image: "nginx:latest", Command: []string{"echo", "hello"}},
+						},
 					},
 				},
 			}

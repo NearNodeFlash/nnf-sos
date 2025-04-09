@@ -20,12 +20,17 @@
 package v1alpha6
 
 import (
+	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	v1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 )
 
@@ -73,12 +78,73 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha7.NnfContainerProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		if restored.Data.NnfSpec != nil {
+			if dst.Data.NnfSpec == nil {
+				dst.Data.NnfSpec = &nnfv1alpha7.NnfPodSpec{}
+			}
+			dst.Data.NnfSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.Containers...)
+			dst.Data.NnfSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.InitContainers...)
+			dst.Data.NnfSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NnfSpec.Volumes...)
+		}
+		if restored.Data.NnfMPISpec != nil {
+			if dst.Data.NnfMPISpec == nil {
+				dst.Data.NnfMPISpec = &nnfv1alpha7.NnfMPISpec{}
+			}
+
+			dst.Data.NnfMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.Containers...)
+			dst.Data.NnfMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.InitContainers...)
+			dst.Data.NnfMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Launcher.Volumes...)
+
+			dst.Data.NnfMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.Containers...)
+			dst.Data.NnfMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.InitContainers...)
+			dst.Data.NnfMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Worker.Volumes...)
+
+			dst.Data.NnfMPISpec.CopyOffload = restored.Data.NnfMPISpec.CopyOffload
+
+			if restored.Data.NnfMPISpec.SlotsPerWorker != nil {
+				if dst.Data.NnfMPISpec.SlotsPerWorker == nil {
+					dst.Data.NnfMPISpec.SlotsPerWorker = new(int32)
+				}
+				*dst.Data.NnfMPISpec.SlotsPerWorker = *restored.Data.NnfMPISpec.SlotsPerWorker
+			}
+		}
+	} else {
+		if src.Data.Spec != nil {
+			if dst.Data.NnfSpec == nil {
+				dst.Data.NnfSpec = &nnfv1alpha7.NnfPodSpec{}
+			}
+			dst.Data.NnfSpec.FromCorePodSpec(src.Data.Spec)
+		}
+		if src.Data.MPISpec != nil {
+			if dst.Data.NnfMPISpec == nil {
+				dst.Data.NnfMPISpec = &nnfv1alpha7.NnfMPISpec{}
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] != nil {
+				dst.Data.NnfMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
+			}
+			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] != nil {
+				dst.Data.NnfMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
+			}
+
+			dst.Data.NnfMPISpec.CopyOffload = src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName == nnfv1alpha7.CopyOffloadServiceAccountName
+
+			if src.Data.MPISpec.SlotsPerWorker != nil {
+				if dst.Data.NnfMPISpec.SlotsPerWorker == nil {
+					dst.Data.NnfMPISpec.SlotsPerWorker = new(int32)
+				}
+				*dst.Data.NnfMPISpec.SlotsPerWorker = *src.Data.MPISpec.SlotsPerWorker
+			}
+		}
+	}
 
 	return nil
 }
@@ -89,6 +155,43 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha6_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
+	}
+
+	if src.Data.NnfSpec != nil {
+		if dst.Data.Spec == nil {
+			dst.Data.Spec = &corev1.PodSpec{}
+		}
+		dst.Data.Spec = src.Data.NnfSpec.ToCorePodSpec()
+	}
+	if src.Data.NnfMPISpec != nil {
+		if dst.Data.MPISpec == nil {
+			dst.Data.MPISpec = &mpiv2beta1.MPIJobSpec{}
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs = make(map[mpiv2beta1.MPIReplicaType]*mpicommonv1.ReplicaSpec)
+		}
+
+		if dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] = &mpicommonv1.ReplicaSpec{}
+		}
+		dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec = *src.Data.NnfMPISpec.Launcher.ToCorePodSpec()
+
+		if dst.Data.MPISpec != nil && dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] == nil {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker] = &mpicommonv1.ReplicaSpec{}
+		}
+		dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec = *src.Data.NnfMPISpec.Worker.ToCorePodSpec()
+
+		if src.Data.NnfMPISpec.CopyOffload {
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName = nnfv1alpha7.CopyOffloadServiceAccountName
+		}
+
+		if src.Data.NnfMPISpec.SlotsPerWorker != nil {
+			if dst.Data.MPISpec.SlotsPerWorker == nil {
+				dst.Data.MPISpec.SlotsPerWorker = new(int32)
+			}
+			*dst.Data.MPISpec.SlotsPerWorker = *src.Data.NnfMPISpec.SlotsPerWorker
+		}
 	}
 
 	// Preserve Hub data on down-conversion except for metadata.
@@ -598,4 +701,15 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
+func Convert_v1alpha6_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *v1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha6_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+}
+
+func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in *v1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha6_NnfContainerProfileData(in, out, s)
 }
