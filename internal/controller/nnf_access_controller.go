@@ -49,6 +49,7 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/helpers"
 )
 
 // NnfAccessReconciler reconciles a NnfAccess object
@@ -1266,30 +1267,7 @@ func (r *NnfAccessReconciler) getRabbitFromClientMount(ctx context.Context, clie
 		return clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Namespace, nil
 	}
 
-	computeName := clientMount.GetNamespace()
-
-	// To find the Rabbit associated with this compute, we have to search the SystemConfiguration resource
-	systemConfiguration := &dwsv1alpha3.SystemConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "default",
-			Namespace: corev1.NamespaceDefault,
-		},
-	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(systemConfiguration), systemConfiguration); err != nil {
-		return "", dwsv1alpha3.NewResourceError("could not get SystemConfiguration %v", client.ObjectKeyFromObject(systemConfiguration)).WithError(err).WithMajor()
-	}
-
-	// Search through the SystemConfiguration to find the Compute node name
-	for _, storageNode := range systemConfiguration.Spec.StorageNodes {
-		for _, computeAccess := range storageNode.ComputesAccess {
-			if computeAccess.Name == computeName {
-				return storageNode.Name, nil
-			}
-		}
-	}
-
-	return "", dwsv1alpha3.NewResourceError("could not find compute in SystemConfiguration: %s", computeName).WithMajor()
+	return helpers.GetRabbitFromCompute(ctx, r.Client, clientMount.GetNamespace())
 }
 
 // For rabbit mounts, use unique index mount directories that consist of <namespace>-<index>.  These
