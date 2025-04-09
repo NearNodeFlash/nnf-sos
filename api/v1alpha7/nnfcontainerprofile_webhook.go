@@ -26,7 +26,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,9 +48,6 @@ func (r *NnfContainerProfile) SetupWebhookWithManager(mgr ctrl.Manager) error {
 //+kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha7-nnfcontainerprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=create;update,versions=v1alpha7,name=vnnfcontainerprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfContainerProfile{}
-
-// expected name of the service account used for copy offload containers
-var copyOffloadServiceAccountName = "nnf-dm-copy-offload"
 
 // look for the string "copy offload" in the container name, with or without a hyphen/space
 var copyOffloadRegex = regexp.MustCompile(`(?i)\bcopy[- ]?offload\b`)
@@ -109,15 +105,15 @@ func (r *NnfContainerProfile) ValidateUpdate(old runtime.Object) (admission.Warn
 }
 
 func (r *NnfContainerProfile) validateContent() error {
-	mpiJob := r.Data.MPISpec != nil
-	nonmpiJob := r.Data.Spec != nil
+	mpiJob := r.Data.NnfMPISpec != nil
+	nonmpiJob := r.Data.NnfSpec != nil
 
-	// Either Spec or MPISpec must be set, but not both
+	// Either NnfSpec or NnfMPISpec must be set, but not both
 	if mpiJob && nonmpiJob {
-		return fmt.Errorf("both Spec and MPISpec are provided - only 1 can be set")
+		return fmt.Errorf("both NnfSpec and NnfMPISpec are provided - only 1 can be set")
 	}
 	if !mpiJob && !nonmpiJob {
-		return fmt.Errorf("either Spec or MPISpec must be provided")
+		return fmt.Errorf("either NnfSpec or NnfMPISpec must be provided")
 	}
 
 	isCopyOffloadContainer := func(name string) bool {
@@ -125,81 +121,39 @@ func (r *NnfContainerProfile) validateContent() error {
 	}
 
 	if mpiJob {
-		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
-		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
-			return fmt.Errorf("both PreRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
-		}
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
-		if r.Data.MPISpec.RunPolicy.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
-			return fmt.Errorf("both PostRunTimeoutSeconds and MPISpec.RunPolicy.ActiveDeadlineSeconds are provided - only 1 can be set")
-		}
-		// Don't allow users to set the backoff limit directly
-		if r.Data.MPISpec.RunPolicy.BackoffLimit != nil && r.Data.RetryLimit > 0 {
-			return fmt.Errorf("MPISpec.RunPolicy.BackoffLimit is set. Use RetryLimit instead")
-		}
-
-		launcher, launcherOk := r.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeLauncher]
-		if !launcherOk || len(launcher.Template.Spec.Containers) < 1 {
-			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Launcher must be present with at least 1 container defined")
-		}
-		worker, workerOk := r.Data.MPISpec.MPIReplicaSpecs[v2beta1.MPIReplicaTypeWorker]
-		if !workerOk || len(worker.Template.Spec.Containers) < 1 {
-			return fmt.Errorf("MPISpec.MPIReplicaSpecs.Worker must be present with at least 1 container defined")
-		}
-
-		// When it looks like we have a copy offload Launcher container, ensure the service account is correct
-		for _, c := range launcher.Template.Spec.Containers {
+		launcher := r.Data.NnfMPISpec.Launcher
+		for _, c := range launcher.Containers {
 			if isCopyOffloadContainer(c.Name) {
-
-				if launcher.Template.Spec.ServiceAccountName != copyOffloadServiceAccountName {
+				// When it looks like we have a copy offload Launcher container, ensure the CopyOffload flag is set
+				if !r.Data.NnfMPISpec.CopyOffload {
 					return fmt.Errorf(
 						"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-							"Launcher containers used for Copy Offload must use the service account name '%s'",
+							"Set the CopyOffload flag to true in the NnfMPISpec to use this container profile with the Copy Offload API",
 						c.Name,
-						copyOffloadServiceAccountName,
 					)
 				}
-			} else {
-				if launcher.Template.Spec.ServiceAccountName == copyOffloadServiceAccountName {
-					return fmt.Errorf(
-						"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. "+
-							"but the Copy Offload service account name '%s' is being used",
+			} else if r.Data.NnfMPISpec.CopyOffload {
+				// When the container doesn't looke like copy offload, ensure the CopyOffload flag is not set
+				return fmt.Errorf(
+					"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. " +
+						"but the CopyOffload flag is set to true in the NnfMPISpec" +
 						c.Name,
-						copyOffloadServiceAccountName,
-					)
-				}
-
+				)
 			}
 		}
 
 	} else {
 		// PreRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PreRun timeout occurs, so we can't set them both
-		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PreRunTimeoutSeconds != nil && *r.Data.PreRunTimeoutSeconds > 0 {
-			return fmt.Errorf("both PreRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
-		}
-		// PostRunTimeoutSeconds will update the Jobs' ActiveDeadlineSeconds once PostRun starts, so we can't set them both
-		if r.Data.Spec.ActiveDeadlineSeconds != nil && r.Data.PostRunTimeoutSeconds != nil && *r.Data.PostRunTimeoutSeconds > 0 {
-			return fmt.Errorf("both PostRunTimeoutSeconds and Spec.ActiveDeadlineSeconds are provided - only 1 can be set")
+		if len(r.Data.NnfSpec.Containers) < 1 {
+			return fmt.Errorf("at least 1 container must be defined in NnfSpec")
 		}
 
-		if len(r.Data.Spec.Containers) < 1 {
-			return fmt.Errorf("at least 1 container must be defined in Spec")
-		}
-
-		// When it looks like we have a copy offload container based on the service account name, let the user know an MPISpec is required
-		if r.Data.Spec.ServiceAccountName == copyOffloadServiceAccountName {
-			return fmt.Errorf(
-				"the specified service account name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-					"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
-				copyOffloadServiceAccountName,
-			)
-		}
-		// When it looks like we have a copy offload container, let the user know an MPISpec is required
-		for _, c := range r.Data.Spec.Containers {
+		// When it looks like we have a copy offload container, let the user know an NnfMPISpec is required
+		for _, c := range r.Data.NnfSpec.Containers {
 			if isCopyOffloadContainer(c.Name) {
 				return fmt.Errorf(
 					"the specified container name ('%s') suggests that this container profile is intended for use with the Copy Offload API. "+
-						"Container profiles used for Copy Offload must use the MPISpec to define the Launcher and Worker containers",
+						"Container profiles used for Copy Offload must use the NnfMPISpec to define the Launcher and Worker containers",
 					c.Name,
 				)
 			}

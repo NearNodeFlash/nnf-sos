@@ -5,20 +5,20 @@ metadata:
 data:
   retryLimit: 6
   storages:
-  - name: DW_JOB_foo_local_storage
-    optional: false
-  - name: DW_PERSISTENT_foo_persistent_storage
-    optional: true
-  - name: DW_GLOBAL_foo_global_lustre
-    optional: true
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
   spec:
     containers:
-    - name: example-success
-      image: alpine:latest
-      command:
-      - /bin/sh
-      - -c
-      - "sleep 10 && exit 0"
+      - name: example-success
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - 'sleep 10 && exit 0'
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
 kind: NnfContainerProfile
@@ -27,12 +27,12 @@ metadata:
 data:
   spec:
     containers:
-    - name: example-fail
-      image: alpine:latest
-      command:
-      - /bin/sh
-      - -c
-      - "sleep 10 && exit 1"
+      - name: example-fail
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - 'sleep 10 && exit 1'
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
 kind: NnfContainerProfile
@@ -41,23 +41,23 @@ metadata:
 data:
   retryLimit: 6
   storages:
-  - name: DW_JOB_foo_local_storage
-    optional: false
-  - name: DW_PERSISTENT_foo_persistent_storage
-    optional: true
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
   spec:
     containers:
-    - name: example-randomly-fail
-      image: alpine:latest
-      command:
-      - /bin/sh
-      - -c
-      - |
-        echo "starting..."
-        sleep 10
-        x=$(($RANDOM % 2))
-        echo "exiting: $x"
-        exit $x
+      - name: example-randomly-fail
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "starting..."
+            sleep 10
+            x=$(($RANDOM % 2))
+            echo "exiting: $x"
+            exit $x
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
 kind: NnfContainerProfile
@@ -66,18 +66,18 @@ metadata:
 data:
   retryLimit: 6
   storages:
-  - name: DW_JOB_foo_local_storage
-    optional: false
-  - name: DW_PERSISTENT_foo_persistent_storage
-    optional: true
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
   spec:
     containers:
-    - name: example-forever
-      image: alpine:latest
-      command:
-      - /bin/sh
-      - -c
-      - "while true; do date && sleep 5; done"
+      - name: example-forever
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - 'while true; do date && sleep 5; done'
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
 kind: NnfContainerProfile
@@ -87,34 +87,27 @@ data:
   retryLimit: 6
   numPorts: 1
   storages:
-  - name: DW_JOB_foo_local_storage
-    optional: false
-  - name: DW_PERSISTENT_foo_persistent_storage
-    optional: true
-  - name: DW_GLOBAL_foo_global_lustre
-    optional: true
-    pvcMode: ReadWriteMany
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
+      pvcMode: ReadWriteMany
   mpiSpec:
-    runPolicy:
-      cleanPodPolicy: Running
-    mpiReplicaSpecs:
-      Launcher:
-        template:
-          spec:
-            containers:
-            - name: example-mpi
-              image: nnf-mfu:latest
-              command:
-              - mpirun
-              - dcmp
-              - "$(DW_JOB_foo_local_storage)/0"
-              - "$(DW_JOB_foo_local_storage)/1"
-      Worker:
-        template:
-          spec:
-            containers:
-            - name: example-mpi
-              image: nnf-mfu:latest
+    launcher:
+      containers:
+        - name: example-mpi
+          image: nnf-mfu:latest
+          command:
+            - mpirun
+            - dcmp
+            - '$(DW_JOB_foo_local_storage)/0'
+            - '$(DW_JOB_foo_local_storage)/1'
+    worker:
+      containers:
+        - name: example-mpi
+          image: nnf-mfu:latest
 
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
@@ -124,26 +117,19 @@ metadata:
 data:
   numPorts: 1
   mpiSpec:
-    runPolicy:
-      cleanPodPolicy: Running
-    mpiReplicaSpecs:
-      Launcher:
-        template:
-          spec:
-            containers:
-            - name: example-mpi-fail
-              image: nnf-mfu:latest
-              command:
-              - mpirun
-              - /bin/sh
-              - -c
-              - "sleep 10 && exit 1"
-      Worker:
-        template:
-          spec:
-            containers:
-            - name: example-mpi-fail
-              image: nnf-mfu:latest
+    launcher:
+      containers:
+        - name: example-mpi-fail
+          image: nnf-mfu:latest
+          command:
+            - mpirun
+            - /bin/sh
+            - -c
+            - 'sleep 10 && exit 1'
+    worker:
+      containers:
+        - name: example-mpi-fail
+          image: nnf-mfu:latest
 ---
 apiVersion: nnf.cray.hpe.com/v1alpha7
 kind: NnfContainerProfile
@@ -153,32 +139,25 @@ data:
   retryLimit: 6
   numPorts: 1
   storages:
-  - name: DW_JOB_foo_local_storage
-    optional: false
-  - name: DW_PERSISTENT_foo_persistent_storage
-    optional: true
-  - name: DW_GLOBAL_foo_global_lustre
-    optional: true
-    pvcMode: ReadWriteMany
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
+    - name: DW_GLOBAL_foo_global_lustre
+      optional: true
+      pvcMode: ReadWriteMany
   mpiSpec:
-    runPolicy:
-      cleanPodPolicy: Running
-    mpiReplicaSpecs:
-      Launcher:
-        template:
-          spec:
-            containers:
-            - name: example-mpi-webserver
-              image: ghcr.io/nearnodeflash/nnf-container-example:master
-              command:
-              - mpirun
-              - python3
-              - -m
-              - http.server
-              - $(NNF_CONTAINER_PORTS)
-      Worker:
-        template:
-          spec:
-            containers:
-            - name: example-mpi-webserver
-              image: ghcr.io/nearnodeflash/nnf-container-example:master
+    launcher:
+      containers:
+        - name: example-mpi-webserver
+          image: ghcr.io/nearnodeflash/nnf-container-example:master
+          command:
+            - mpirun
+            - python3
+            - -m
+            - http.server
+            - $(NNF_CONTAINER_PORTS)
+    worker:
+      containers:
+        - name: example-mpi-webserver
+          image: ghcr.io/nearnodeflash/nnf-container-example:master
