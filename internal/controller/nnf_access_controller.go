@@ -49,6 +49,7 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/helpers"
 )
 
 // NnfAccessReconciler reconciles a NnfAccess object
@@ -123,6 +124,10 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		if !deleteStatus.Complete() {
+			err := r.removeOfflineClientMounts(ctx, access)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 
@@ -1126,11 +1131,19 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 
 		for _, mount := range clientMount.Status.Mounts {
-			if string(mount.State) != access.Status.State {
-				return false, nil
-			}
+			if string(mount.State) != access.Status.State || !mount.Ready {
+				if string(mount.State) == "unmounted" {
+					offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+					if err != nil {
+						return false, err
+					}
+					// If the compute node is down, then ignore an unmount failure. If the compute node
+					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
+					if offline {
+						continue
+					}
+				}
 
-			if !mount.Ready {
 				return false, nil
 			}
 		}
@@ -1147,6 +1160,114 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 func clientMountName(access *nnfv1alpha7.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
+}
+
+// removeOfflineClientMounts deletes the NnfClientMount finalizer from any ClientMounts that
+// have a Compute node marked as "Offline" in the Storage resource
+func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnfAccess *nnfv1alpha7.NnfAccess) error {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(nnfAccess))
+
+	if !nnfAccess.Spec.MakeClientMounts {
+		return nil
+	}
+
+	// Optional timeout before starting to remove the finalizers
+	deletionTimeoutString := os.Getenv("NNF_CHILD_DELETION_TIMEOUT_SECONDS")
+	if len(deletionTimeoutString) > 0 {
+		childTimeout, err := strconv.Atoi(deletionTimeoutString)
+		if err != nil {
+			log.Info("Error: Invalid NNF_CHILD_DELETION_TIMEOUT_SECONDS. Defaulting to 300 seconds", "value", deletionTimeoutString)
+			childTimeout = 300
+		}
+
+		// Don't check for offline computes until after the timeout has elapsed
+		if nnfAccess.GetDeletionTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).After(time.Now()) {
+			return nil
+		}
+	}
+
+	// Find all ClientMounts owned by the NnfAccess
+	clientMountList := &dwsv1alpha3.ClientMountList{}
+	matchLabels := dwsv1alpha3.MatchingOwner(nnfAccess)
+
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+
+	if err := r.List(ctx, clientMountList, listOptions...); err != nil {
+		return dwsv1alpha3.NewResourceError("could not list ClientMounts").WithError(err)
+	}
+
+	// For each ClientMount, check whether the Compute node is marked as "Offline". If it is,
+	// remove the NnfClientMount finalizer and update the resource
+	for _, clientMount := range clientMountList.Items {
+		offline, err := r.checkOfflineCompute(ctx, nnfAccess, &clientMount)
+		if err != nil {
+			return err
+		}
+
+		if !offline {
+			continue
+		}
+
+		// Remove the finalizer from the ClientMount since the compute node is offline
+		controllerutil.RemoveFinalizer(&clientMount, finalizerNnfClientMount)
+		if err := r.Update(ctx, &clientMount); err != nil {
+			if !apierrors.IsConflict(err) {
+				return dwsv1alpha3.NewResourceError("could not update ClientMount to remove finalizer for offline compute: %v", client.ObjectKeyFromObject(&clientMount)).WithError(err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
+// compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection)
+func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha7.NnfAccess, clientMount *dwsv1alpha3.ClientMount) (bool, error) {
+	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return false, nil
+	}
+
+	// Find the name of the Rabbit attached to the compute node
+	rabbitName, err := r.getRabbitFromClientMount(ctx, clientMount)
+	if err != nil {
+		return false, err
+	}
+
+	// Get the Storage resource for the Rabbit
+	storage := &dwsv1alpha3.Storage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      rabbitName,
+			Namespace: "default",
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+		return false, dwsv1alpha3.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
+	}
+
+	// Check the status of the compute node in the Storage resource to determine if it's offline
+	computeName := clientMount.GetNamespace()
+	for _, compute := range storage.Status.Access.Computes {
+		if compute.Name == computeName {
+			return compute.Status == dwsv1alpha3.OfflineStatus, nil
+		}
+	}
+
+	return false, nil
+}
+
+// getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
+// compute node
+func (r *NnfAccessReconciler) getRabbitFromClientMount(ctx context.Context, clientMount *dwsv1alpha3.ClientMount) (string, error) {
+	// If the ClientMount has a block device reference that points to an NnNodeStorage, use the namespace of the NnfNodeStorage
+	// as the Rabbit name
+	if clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Kind == reflect.TypeOf(nnfv1alpha7.NnfNodeStorage{}).Name() {
+		return clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Namespace, nil
+	}
+
+	return helpers.GetRabbitFromCompute(ctx, r.Client, clientMount.GetNamespace())
 }
 
 // For rabbit mounts, use unique index mount directories that consist of <namespace>-<index>.  These

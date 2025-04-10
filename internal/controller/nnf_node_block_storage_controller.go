@@ -188,6 +188,11 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, nil
 		}
 
+		// If the NnfNodeStorage hasn't removed the finalizer from this NnfNodeBlockStorage, then don't start
+		// the deletion process.
+		if controllerutil.ContainsFinalizer(nodeBlockStorage, finalizerNnfNodeStorage) {
+			return ctrl.Result{}, nil
+		}
 		for i := range nodeBlockStorage.Spec.Allocations {
 			// Release physical storage
 			result, err := r.deleteStorage(nodeBlockStorage, i)

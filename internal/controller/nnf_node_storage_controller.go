@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -151,6 +152,27 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
+		// Remove the finalizer from the NnfNodeBlockStorage
+		nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfNodeStorage.Spec.BlockReference.Name,
+				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
+			if controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+				controllerutil.RemoveFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
+
+				err := r.Update(ctx, nnfNodeBlockStorage)
+				if err != nil {
+					return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+				}
+
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+
 		controllerutil.RemoveFinalizer(nnfNodeStorage, finalizerNnfNodeStorage)
 		if err := r.Update(ctx, nnfNodeStorage); err != nil {
 			if !apierrors.IsConflict(err) {
@@ -189,6 +211,28 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		nnfNodeStorage.Status.Ready = false
 
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Add a finalizer to the NnfNodeBlockStorage. This will block its deletion until the NnfNodeStorage
+	// is completely torn down
+	nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nnfNodeStorage.Spec.BlockReference.Name,
+			Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
+		if !controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+			controllerutil.AddFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
+
+			err := r.Update(ctx, nnfNodeBlockStorage)
+			if err != nil {
+				return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	blockDevices := []blockdevice.BlockDevice{}

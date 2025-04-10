@@ -395,5 +395,6 @@ func (r *DWSServersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha3.Servers{}).
 		Watches(&nnfv1alpha7.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
+		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha3.OwnerLabelMapFunc)).
 		Complete(r)
 }
