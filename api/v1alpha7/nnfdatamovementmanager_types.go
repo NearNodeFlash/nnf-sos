@@ -21,7 +21,6 @@ package v1alpha7
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -47,9 +46,9 @@ type NnfDataMovementManagerSpec struct {
 	// to the template.spec.metadata.labels to satisfy the requirements of the worker's Daemon Set.
 	Selector metav1.LabelSelector `json:"selector"`
 
-	// Template defines the pod template that is used for the basis of the worker Daemon Set that
+	// Spec defines the slim PodSpec that is used for the basis of the worker Daemon Set that
 	// manages the per node data movement operations.
-	Template corev1.PodTemplateSpec `json:"template"`
+	PodSpec NnfPodSpec `json:"podSpec"`
 
 	// UpdateStrategy defines the UpdateStrategy that is used for the basis of the worker Daemon Set
 	// that manages the per node data movement operations.

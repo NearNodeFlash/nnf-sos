@@ -514,7 +514,7 @@ func (in *NnfDataMovementManagerList) DeepCopyObject() runtime.Object {
 func (in *NnfDataMovementManagerSpec) DeepCopyInto(out *NnfDataMovementManagerSpec) {
 	*out = *in
 	in.Selector.DeepCopyInto(&out.Selector)
-	in.Template.DeepCopyInto(&out.Template)
+	in.PodSpec.DeepCopyInto(&out.PodSpec)
 	in.UpdateStrategy.DeepCopyInto(&out.UpdateStrategy)
 }
 

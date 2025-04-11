@@ -733,13 +733,11 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 					Namespace: nnfv1alpha7.DataMovementNamespace,
 				},
 				Spec: nnfv1alpha7.NnfDataMovementManagerSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{{
-								Name:  "name-manager dummy",
-								Image: "nginx",
-							}},
-						},
+					PodSpec: nnfv1alpha7.NnfPodSpec{
+						Containers: []nnfv1alpha7.NnfContainer{{
+							Name:  "name-manager-dummy",
+							Image: "nginx",
+						}},
 					},
 				},
 				Status: nnfv1alpha7.NnfDataMovementManagerStatus{
