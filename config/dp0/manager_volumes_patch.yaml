@@ -20,6 +20,7 @@ spec:
               name: dev-dir
               mountPropagation: HostToContainer
             - mountPath: /run
+              mountPropagation: HostToContainer
               name: run-dir
             - mountPath: /var/run/dbus
               name: dbus-dir
