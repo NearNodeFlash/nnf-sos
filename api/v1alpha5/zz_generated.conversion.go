@@ -193,16 +193,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerSpec)(nil), (*v1alpha7.NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(a.(*NnfDataMovementManagerSpec), b.(*v1alpha7.NnfDataMovementManagerSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha7.NnfDataMovementManagerSpec)(nil), (*NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(a.(*v1alpha7.NnfDataMovementManagerSpec), b.(*NnfDataMovementManagerSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfDataMovementManagerStatus)(nil), (*v1alpha7.NnfDataMovementManagerStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha7_NnfDataMovementManagerStatus(a.(*NnfDataMovementManagerStatus), b.(*v1alpha7.NnfDataMovementManagerStatus), scope)
 	}); err != nil {
@@ -878,6 +868,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*NnfDataMovementManagerSpec)(nil), (*v1alpha7.NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(a.(*NnfDataMovementManagerSpec), b.(*v1alpha7.NnfDataMovementManagerSpec), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*NnfStorageProfileLustreCmdLines)(nil), (*v1alpha7.NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(a.(*NnfStorageProfileLustreCmdLines), b.(*v1alpha7.NnfStorageProfileLustreCmdLines), scope)
 	}); err != nil {
@@ -890,6 +885,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha7.NnfContainerProfileData)(nil), (*NnfContainerProfileData)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(a.(*v1alpha7.NnfContainerProfileData), b.(*NnfContainerProfileData), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha7.NnfDataMovementManagerSpec)(nil), (*NnfDataMovementManagerSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(a.(*v1alpha7.NnfDataMovementManagerSpec), b.(*NnfDataMovementManagerSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -1420,7 +1420,17 @@ func Convert_v1alpha7_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(
 
 func autoConvert_v1alpha5_NnfDataMovementManagerList_To_v1alpha7_NnfDataMovementManagerList(in *NnfDataMovementManagerList, out *v1alpha7.NnfDataMovementManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha7.NnfDataMovementManager)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha7.NnfDataMovementManager, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_NnfDataMovementManager_To_v1alpha7_NnfDataMovementManager(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1431,7 +1441,17 @@ func Convert_v1alpha5_NnfDataMovementManagerList_To_v1alpha7_NnfDataMovementMana
 
 func autoConvert_v1alpha7_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementManagerList(in *v1alpha7.NnfDataMovementManagerList, out *NnfDataMovementManagerList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]NnfDataMovementManager)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NnfDataMovementManager, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha7_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1442,30 +1462,20 @@ func Convert_v1alpha7_NnfDataMovementManagerList_To_v1alpha5_NnfDataMovementMana
 
 func autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha7.NnfDataMovementManagerSpec, s conversion.Scope) error {
 	out.Selector = in.Selector
-	out.Template = in.Template
+	// WARNING: in.Template requires manual conversion: does not exist in peer-type
 	out.UpdateStrategy = in.UpdateStrategy
 	out.HostPath = in.HostPath
 	out.MountPath = in.MountPath
 	return nil
-}
-
-// Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *v1alpha7.NnfDataMovementManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in, out, s)
 }
 
 func autoConvert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *v1alpha7.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
 	out.Selector = in.Selector
-	out.Template = in.Template
+	// WARNING: in.PodSpec requires manual conversion: does not exist in peer-type
 	out.UpdateStrategy = in.UpdateStrategy
 	out.HostPath = in.HostPath
 	out.MountPath = in.MountPath
 	return nil
-}
-
-// Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec is an autogenerated conversion function.
-func Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *v1alpha7.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in, out, s)
 }
 
 func autoConvert_v1alpha5_NnfDataMovementManagerStatus_To_v1alpha7_NnfDataMovementManagerStatus(in *NnfDataMovementManagerStatus, out *v1alpha7.NnfDataMovementManagerStatus, s conversion.Scope) error {

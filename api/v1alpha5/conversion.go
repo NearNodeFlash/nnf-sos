@@ -244,12 +244,21 @@ func (src *NnfDataMovementManager) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha7.NnfDataMovementManager{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		dst.Spec.PodSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.Containers...)
+		dst.Spec.PodSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.InitContainers...)
+		dst.Spec.PodSpec.Volumes = append([]corev1.Volume(nil), restored.Spec.PodSpec.Volumes...)
+	} else {
+		dst.Spec.PodSpec.FromCorePodSpec(&src.Spec.Template.Spec)
+	}
 
 	return nil
 }
@@ -261,6 +270,8 @@ func (dst *NnfDataMovementManager) ConvertFrom(srcRaw conversion.Hub) error {
 	if err := Convert_v1alpha7_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(src, dst, nil); err != nil {
 		return err
 	}
+
+	dst.Spec.Template.Spec = *src.Spec.PodSpec.ToCorePodSpec()
 
 	// Preserve Hub data on down-conversion except for metadata.
 	return utilconversion.MarshalData(src, dst)
@@ -823,4 +834,12 @@ func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileDat
 
 func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *nnfv1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
+}
+
+func Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *nnfv1alpha7.NnfDataMovementManagerSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in, out, s)
+}
+
+func Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *nnfv1alpha7.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in, out, s)
 }

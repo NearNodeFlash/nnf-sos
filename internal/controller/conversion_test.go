@@ -264,13 +264,11 @@ var _ = Describe("Conversion Webhook Test", func() {
 					Namespace: corev1.NamespaceDefault,
 				},
 				Spec: nnfv1alpha7.NnfDataMovementManagerSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{{
-								Name:  "dm-worker-dummy",
-								Image: "nginx",
-							}},
-						},
+					PodSpec: nnfv1alpha7.NnfPodSpec{
+						Containers: []nnfv1alpha7.NnfContainer{{
+							Name:  "dm-worker-dummy",
+							Image: "nginx",
+						}},
 					},
 				},
 			}
