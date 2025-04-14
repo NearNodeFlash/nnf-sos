@@ -22,6 +22,7 @@ package v1alpha7
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -100,6 +101,18 @@ type NnfPodSpec struct {
 
 	// Volumes are the list of volumes that will be available to the pod
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// TerminationGracePeriodSeconds is the duration in seconds the pod needs to terminate gracefully.
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+
+	// ShareProcessNamespace indicates whether the containers in the pod share a process namespace.
+	ShareProcessNamespace *bool `json:"shareProcessNamespace,omitempty"`
+
+	// ImagePullSecrets is a list of references to secrets for pulling images.
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// AutomountServiceAccountToken indicates whether the service account token should be mounted.
+	AutomountServiceAccountToken *bool `json:"automountServiceAccountToken,omitempty"`
 }
 
 // NnfMPISpec represents the specification of an MPI job that can be used in a container profile.
@@ -177,6 +190,54 @@ type NnfContainer struct {
 	// Pod volumes to mount into the container's filesystem. NNF Volumes will be patched in from the
 	// Storages field.
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+
+	// Container's working directory.
+	// +kubebuilder:validation:MaxLength=253
+	WorkingDir string `json:"workingDir,omitempty"`
+
+	// RestartPolicy defines the restart behavior of individual containers in a pod. This field may
+	// only be set for init containers, and the only allowed value is "Always". For non-init
+	// containers or when this field is not specified, the restart behavior is defined by the Pod's
+	// restart policy and the container type.
+	RestartPolicy *corev1.ContainerRestartPolicy `json:"restartPolicy,omitempty"`
+
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+
+	// StartupProbe indicates that the Pod has successfully initialized.
+	// If specified, no other probes are executed until this completes successfully.
+	// If this probe fails, the Pod will be restarted, just as if the livenessProbe failed.
+	// This can be used to provide different probe parameters at the beginning of a Pod's lifecycle,
+	// when it might take a long time to load data or warm a cache, than during steady-state operation.
+	StartupProbe *corev1.Probe `json:"startupProbe,omitempty"`
+
+	// Path at which the file to which the container's termination message
+	// will be written is mounted into the container's filesystem.
+	// Message written is intended to be brief final status, such as an assertion failure message.
+	// Will be truncated by the node if greater than 4096 bytes. The total message length across
+	// all containers will be limited to 12kb.
+	// Defaults to /dev/termination-log.
+	TerminationMessagePath string `json:"terminationMessagePath,omitempty"`
+
+	// Indicate how the termination message should be populated. File will use the contents of
+	// terminationMessagePath to populate the container status message on both success and failure.
+	// FallbackToLogsOnError will use the last chunk of container log output if the termination
+	// message file is empty and the container exited with an error.
+	// The log output is limited to 2048 bytes or 80 lines, whichever is smaller.
+	// Defaults to File.
+	TerminationMessagePolicy corev1.TerminationMessagePolicy `json:"terminationMessagePolicy,omitempty"`
+
+	// Image pull policy for the container.  One of Always, Never, IfNotPresent. Set this to Always
+	// if :latest tag is specified in the image field.
+	// Defaults to IfNotPresent
+	// +kubebuilder:validation:Enum=Always;Never;IfNotPresent
+	// +kubebuilder:default:=IfNotPresent
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 }
 
 // NnfContainerProfileStorage defines the mount point information that will be available to the
@@ -221,7 +282,7 @@ func init() {
 	SchemeBuilder.Register(&NnfContainerProfile{}, &NnfContainerProfileList{})
 }
 
-// Convert an NnfPodSpec into a corev1.PodSpec and return it
+// Convert an NnfPodSpec into a corev1.PodSpec and return it.
 func (s *NnfPodSpec) ToCorePodSpec() *corev1.PodSpec {
 	if s == nil {
 		return nil
@@ -250,6 +311,20 @@ func (s *NnfPodSpec) ToCorePodSpec() *corev1.PodSpec {
 		}
 	}
 
+	if s.TerminationGracePeriodSeconds != nil {
+		out.TerminationGracePeriodSeconds = pointer.Int64(*s.TerminationGracePeriodSeconds)
+	}
+
+	if s.ShareProcessNamespace != nil {
+		out.ShareProcessNamespace = pointer.Bool(*s.ShareProcessNamespace)
+	}
+
+	out.ImagePullSecrets = append([]corev1.LocalObjectReference{}, s.ImagePullSecrets...)
+
+	if s.AutomountServiceAccountToken != nil {
+		out.AutomountServiceAccountToken = pointer.Bool(*s.AutomountServiceAccountToken)
+	}
+
 	return out
 }
 
@@ -260,47 +335,41 @@ func (s *NnfContainer) ToCoreContainer() *corev1.Container {
 	}
 
 	out := &corev1.Container{
-		Name:  s.Name,
-		Image: s.Image,
+		Name:                     s.Name,
+		Image:                    s.Image,
+		Command:                  append([]string{}, s.Command...),
+		Args:                     append([]string{}, s.Args...),
+		Env:                      append([]corev1.EnvVar{}, s.Env...),
+		EnvFrom:                  append([]corev1.EnvFromSource{}, s.EnvFrom...),
+		VolumeMounts:             append([]corev1.VolumeMount{}, s.VolumeMounts...),
+		WorkingDir:               s.WorkingDir,
+		TerminationMessagePath:   s.TerminationMessagePath,
+		TerminationMessagePolicy: s.TerminationMessagePolicy,
+		ImagePullPolicy:          s.ImagePullPolicy,
 	}
 
-	if len(s.Command) > 0 {
-		out.Command = make([]string, len(s.Command))
-		copy(out.Command, s.Command)
+	if s.RestartPolicy != nil {
+		out.RestartPolicy = new(corev1.ContainerRestartPolicy)
+		*out.RestartPolicy = *s.RestartPolicy
 	}
 
-	if len(s.Args) > 0 {
-		out.Args = make([]string, len(s.Args))
-		copy(out.Args, s.Args)
+	if s.LivenessProbe != nil {
+		out.LivenessProbe = s.LivenessProbe.DeepCopy()
 	}
 
-	if len(s.Env) > 0 {
-		out.Env = make([]corev1.EnvVar, len(s.Env))
-		for i := range s.Env {
-			s.Env[i].DeepCopyInto(&out.Env[i])
-		}
+	if s.ReadinessProbe != nil {
+		out.ReadinessProbe = s.ReadinessProbe.DeepCopy()
 	}
 
-	if len(s.EnvFrom) > 0 {
-		out.EnvFrom = make([]corev1.EnvFromSource, len(s.EnvFrom))
-		for i := range s.EnvFrom {
-			s.EnvFrom[i].DeepCopyInto(&out.EnvFrom[i])
-		}
-	}
-
-	if len(s.VolumeMounts) > 0 {
-		out.VolumeMounts = make([]corev1.VolumeMount, len(s.VolumeMounts))
-		for i := range s.VolumeMounts {
-			s.VolumeMounts[i].DeepCopyInto(&out.VolumeMounts[i])
-		}
+	if s.StartupProbe != nil {
+		out.StartupProbe = s.StartupProbe.DeepCopy()
 	}
 
 	return out
 }
 
-// Copy a corev1.PodSpec into an NnfContainer
+// Copy a corev1.PodSpec into an NnfPodSpec.
 func (s *NnfPodSpec) FromCorePodSpec(in *corev1.PodSpec) {
-
 	if in == nil {
 		return
 	}
@@ -319,6 +388,20 @@ func (s *NnfPodSpec) FromCorePodSpec(in *corev1.PodSpec) {
 	for i := range in.Volumes {
 		in.Volumes[i].DeepCopyInto(&s.Volumes[i])
 	}
+
+	if in.TerminationGracePeriodSeconds != nil {
+		s.TerminationGracePeriodSeconds = pointer.Int64(*in.TerminationGracePeriodSeconds)
+	}
+
+	if in.ShareProcessNamespace != nil {
+		s.ShareProcessNamespace = pointer.Bool(*in.ShareProcessNamespace)
+	}
+
+	s.ImagePullSecrets = append([]corev1.LocalObjectReference{}, in.ImagePullSecrets...)
+
+	if in.AutomountServiceAccountToken != nil {
+		s.AutomountServiceAccountToken = pointer.Bool(*in.AutomountServiceAccountToken)
+	}
 }
 
 // Copy a corev1.Container into an NnfContainer
@@ -329,19 +412,30 @@ func (s *NnfContainer) FromCoreContainer(in *corev1.Container) {
 
 	s.Name = in.Name
 	s.Image = in.Image
+	s.Command = append([]string{}, in.Command...)
+	s.Args = append([]string{}, in.Args...)
+	s.Env = append([]corev1.EnvVar{}, in.Env...)
+	s.EnvFrom = append([]corev1.EnvFromSource{}, in.EnvFrom...)
+	s.VolumeMounts = append([]corev1.VolumeMount{}, in.VolumeMounts...)
+	s.WorkingDir = in.WorkingDir
+	s.TerminationMessagePath = in.TerminationMessagePath
+	s.TerminationMessagePolicy = in.TerminationMessagePolicy
+	s.ImagePullPolicy = in.ImagePullPolicy
 
-	s.Command = make([]string, len(in.Command))
-	copy(s.Command, in.Command)
+	if in.RestartPolicy != nil {
+		s.RestartPolicy = new(corev1.ContainerRestartPolicy)
+		*s.RestartPolicy = *in.RestartPolicy
+	}
 
-	s.Args = make([]string, len(in.Args))
-	copy(s.Args, in.Args)
+	if in.LivenessProbe != nil {
+		s.LivenessProbe = in.LivenessProbe.DeepCopy()
+	}
 
-	s.Env = make([]corev1.EnvVar, len(in.Env))
-	copy(s.Env, in.Env)
+	if in.ReadinessProbe != nil {
+		s.ReadinessProbe = in.ReadinessProbe.DeepCopy()
+	}
 
-	s.EnvFrom = make([]corev1.EnvFromSource, len(in.EnvFrom))
-	copy(s.EnvFrom, in.EnvFrom)
-
-	s.VolumeMounts = make([]corev1.VolumeMount, len(in.VolumeMounts))
-	copy(s.VolumeMounts, in.VolumeMounts)
+	if in.StartupProbe != nil {
+		s.StartupProbe = in.StartupProbe.DeepCopy()
+	}
 }

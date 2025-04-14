@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -94,6 +95,21 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 			dst.Data.NnfSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.Containers...)
 			dst.Data.NnfSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.InitContainers...)
 			dst.Data.NnfSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NnfSpec.Volumes...)
+
+			if restored.Data.NnfSpec.TerminationGracePeriodSeconds != nil {
+				dst.Data.NnfSpec.TerminationGracePeriodSeconds = pointer.Int64(*restored.Data.NnfSpec.TerminationGracePeriodSeconds)
+			}
+
+			if restored.Data.NnfSpec.ShareProcessNamespace != nil {
+				dst.Data.NnfSpec.ShareProcessNamespace = pointer.Bool(*restored.Data.NnfSpec.ShareProcessNamespace)
+			}
+
+			dst.Data.NnfSpec.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), restored.Data.NnfSpec.ImagePullSecrets...)
+
+			if restored.Data.NnfSpec.AutomountServiceAccountToken != nil {
+				dst.Data.NnfSpec.AutomountServiceAccountToken = pointer.Bool(*restored.Data.NnfSpec.AutomountServiceAccountToken)
+			}
+
 		}
 		if restored.Data.NnfMPISpec != nil {
 			if dst.Data.NnfMPISpec == nil {
@@ -103,10 +119,18 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 			dst.Data.NnfMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.Containers...)
 			dst.Data.NnfMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.InitContainers...)
 			dst.Data.NnfMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Launcher.Volumes...)
+			dst.Data.NnfMPISpec.Launcher.TerminationGracePeriodSeconds = restored.Data.NnfMPISpec.Launcher.TerminationGracePeriodSeconds
+			dst.Data.NnfMPISpec.Launcher.ShareProcessNamespace = restored.Data.NnfMPISpec.Launcher.ShareProcessNamespace
+			dst.Data.NnfMPISpec.Launcher.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), restored.Data.NnfMPISpec.Launcher.ImagePullSecrets...)
+			dst.Data.NnfMPISpec.Launcher.AutomountServiceAccountToken = restored.Data.NnfMPISpec.Launcher.AutomountServiceAccountToken
 
 			dst.Data.NnfMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.Containers...)
 			dst.Data.NnfMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.InitContainers...)
 			dst.Data.NnfMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Worker.Volumes...)
+			dst.Data.NnfMPISpec.Worker.TerminationGracePeriodSeconds = restored.Data.NnfMPISpec.Worker.TerminationGracePeriodSeconds
+			dst.Data.NnfMPISpec.Worker.ShareProcessNamespace = restored.Data.NnfMPISpec.Worker.ShareProcessNamespace
+			dst.Data.NnfMPISpec.Worker.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), restored.Data.NnfMPISpec.Worker.ImagePullSecrets...)
+			dst.Data.NnfMPISpec.Worker.AutomountServiceAccountToken = restored.Data.NnfMPISpec.Worker.AutomountServiceAccountToken
 
 			dst.Data.NnfMPISpec.CopyOffload = restored.Data.NnfMPISpec.CopyOffload
 
@@ -252,6 +276,21 @@ func (src *NnfDataMovementManager) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Spec.PodSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.Containers...)
 		dst.Spec.PodSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.InitContainers...)
 		dst.Spec.PodSpec.Volumes = append([]corev1.Volume(nil), restored.Spec.PodSpec.Volumes...)
+
+		if restored.Spec.PodSpec.TerminationGracePeriodSeconds != nil {
+			dst.Spec.PodSpec.TerminationGracePeriodSeconds = pointer.Int64(*restored.Spec.PodSpec.TerminationGracePeriodSeconds)
+		}
+
+		if restored.Spec.PodSpec.ShareProcessNamespace != nil {
+			dst.Spec.PodSpec.ShareProcessNamespace = pointer.Bool(*restored.Spec.PodSpec.ShareProcessNamespace)
+		}
+
+		dst.Spec.PodSpec.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), restored.Spec.PodSpec.ImagePullSecrets...)
+
+		if restored.Spec.PodSpec.AutomountServiceAccountToken != nil {
+			dst.Spec.PodSpec.AutomountServiceAccountToken = pointer.Bool(*restored.Spec.PodSpec.AutomountServiceAccountToken)
+		}
+
 	} else {
 		dst.Spec.PodSpec.FromCorePodSpec(&src.Spec.Template.Spec)
 	}

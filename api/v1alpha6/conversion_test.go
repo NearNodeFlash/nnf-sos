@@ -20,8 +20,9 @@
 package v1alpha6
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	fuzz "github.com/google/gofuzz"
 	mpicommon "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -114,28 +115,28 @@ func TestFuzzyConversion(t *testing.T) {
 
 // noFuzzPodSpec sets all the fields in a PodSpec that are not used in v1alpha7 and later to nil or default values.
 func noFuzzPodSpec(spec *corev1.PodSpec) {
-	// We only use:
+	// We use:
 	// - Containers
 	// - InitContainers
 	// - Volumes
+	// - TerminationGracePeriodSeconds
+	// - AutomountServiceAccountToken
+	// - ShareProcessNamespace
+	// - ImagePullSecrets
 
 	// Don't fuzz anything else:
 	spec.EphemeralContainers = nil
 	spec.ActiveDeadlineSeconds = nil
-	spec.TerminationGracePeriodSeconds = nil
 	spec.Affinity = nil
 	spec.RestartPolicy = ""
 	spec.DNSPolicy = ""
 	spec.NodeSelector = nil
 	spec.ServiceAccountName = ""
-	spec.AutomountServiceAccountToken = nil
 	spec.NodeName = ""
 	spec.HostNetwork = false
 	spec.HostPID = false
 	spec.HostIPC = false
-	spec.ShareProcessNamespace = nil
 	spec.SecurityContext = nil
-	spec.ImagePullSecrets = nil
 	spec.Hostname = ""
 	spec.Subdomain = ""
 	spec.Affinity = nil
@@ -160,6 +161,7 @@ func noFuzzPodSpec(spec *corev1.PodSpec) {
 
 	noFuzzContainer(spec.Containers)
 	noFuzzContainer(spec.InitContainers)
+
 }
 
 // noFuzzMPIPodSpec sets all the fields in a MPIJobSpec that are not used in v1alpha7 and later to nil or default values.
@@ -197,7 +199,7 @@ func noFuzzMPIPodSpec(mpiSpec *mpiv2beta1.MPIJobSpec) {
 // noFuzzContainer sets all the fields in a Container that are not used in v1alpha7 and later to nil or default values.
 func noFuzzContainer(containers []corev1.Container) {
 	for i := range containers {
-		// We only use:
+		// We use:
 		// - Name
 		// - Image
 		// - Command
@@ -205,24 +207,24 @@ func noFuzzContainer(containers []corev1.Container) {
 		// - Env
 		// - EnvFrom
 		// - VolumeMounts
+		// - RestartPolicy
+		// - ReadinessProbe
+		// - StartupProbe
+		// - LivenessProbe
+		// - TerminationMessagePath
+		// - TerminationMessagePolicy
+		// - ImagePullPolicy
+		// - WorkingDir
 
 		// Don't fuzz anything else:
 		containers[i].Resources = corev1.ResourceRequirements{}
-		containers[i].RestartPolicy = nil
 		containers[i].ResizePolicy = nil
 		containers[i].VolumeDevices = nil
-		containers[i].ReadinessProbe = nil
-		containers[i].StartupProbe = nil
-		containers[i].LivenessProbe = nil
 		containers[i].Lifecycle = nil
-		containers[i].TerminationMessagePath = ""
-		containers[i].TerminationMessagePolicy = ""
-		containers[i].ImagePullPolicy = ""
 		containers[i].SecurityContext = nil
 		containers[i].Stdin = false
 		containers[i].StdinOnce = false
 		containers[i].TTY = false
-		containers[i].WorkingDir = ""
 		containers[i].Lifecycle = nil
 		containers[i].VolumeDevices = nil
 		containers[i].Ports = nil
