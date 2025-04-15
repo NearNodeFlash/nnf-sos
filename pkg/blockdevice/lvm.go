@@ -255,7 +255,7 @@ func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 		}
 	}
 
-	return false, nil
+	return true, nil
 }
 
 // Deactivate the LVM
