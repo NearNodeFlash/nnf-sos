@@ -9,8 +9,8 @@
 
 package openapi
 
-// StorageControllerV100NvMeSmartCriticalWarnings - The NVMe SMART Critical Warnings for a storage controller.
-type StorageControllerV100NvMeSmartCriticalWarnings struct {
+// StorageControllerV100NVMeSmartCriticalWarnings - The NVMe SMART Critical Warnings for a storage controller.
+type StorageControllerV100NVMeSmartCriticalWarnings struct {
 
 	// Indicates the media has been placed in read only mode.
 	MediaInReadOnly bool `json:"MediaInReadOnly,omitempty"`

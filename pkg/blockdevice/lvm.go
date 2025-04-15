@@ -253,9 +253,11 @@ func (l *Lvm) Activate(ctx context.Context) (bool, error) {
 		if err := l.waitForMapper(); err != nil {
 			return false, err
 		}
+
+		return true, nil
 	}
 
-	return true, nil
+	return false, nil
 }
 
 // Deactivate the LVM

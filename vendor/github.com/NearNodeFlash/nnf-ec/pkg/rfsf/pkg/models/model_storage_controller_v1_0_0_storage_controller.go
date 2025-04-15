@@ -57,7 +57,7 @@ type StorageControllerV100StorageController struct {
 	// The model number for the storage controller.
 	Model string `json:"Model,omitempty"`
 
-	NVMeControllerProperties StorageControllerV100NvMeControllerProperties `json:"NVMeControllerProperties,omitempty"`
+	NVMeControllerProperties StorageControllerV100NVMeControllerProperties `json:"NVMeControllerProperties,omitempty"`
 
 	// The name of the resource or array member.
 	Name string `json:"Name"`

@@ -28,6 +28,7 @@ import (
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
+// StorageGroup represents a mapping between a storage pool and an endpoint
 type StorageGroup struct {
 	id          string
 	name        string
@@ -88,6 +89,22 @@ const (
 	storageGroupDeleteCompleteLogEntryType
 )
 
+// storageGroupLogEntryTypeNames maps the numeric log entry type constants to their string representations
+var storageGroupLogEntryTypeNames = []string{
+	"storageGroupCreateStartLogEntryType",
+	"storageGroupCreateCompleteLogEntryType",
+	"storageGroupDeleteStartLogEntryType",
+	"storageGroupDeleteCompleteLogEntryType",
+}
+
+// LogEntryTypeToString converts a numeric log entry type to its string representation
+func LogEntryTypeToString(entryType uint32) string {
+	if int(entryType) < len(storageGroupLogEntryTypeNames) {
+		return storageGroupLogEntryTypeNames[entryType]
+	}
+	return fmt.Sprintf("Unknown(%d)", entryType)
+}
+
 type storageGroupPersistentMetadata struct {
 	Name          string `json:"Name"`
 	Description   string `json:"Description"`
@@ -117,7 +134,7 @@ func (sg *StorageGroup) GenerateStateData(state uint32) ([]byte, error) {
 func (sg *StorageGroup) Rollback(state uint32) error {
 	switch state {
 	case storageGroupCreateStartLogEntryType:
-		// Rollback to a state where no controllers are detached from the storage pool
+		// Rollback to a state where no controllers are attached to the storage pool
 
 		sp := sg.storageService.findStoragePool(sg.storagePoolId)
 		if sp == nil {
@@ -136,7 +153,7 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 		}
 
 	case storageGroupDeleteStartLogEntryType:
-		// Rollback to a state where all controllers are attached to the storage pool
+		// Rollback to a state where all controllers are detached from the storage pool
 
 		sp := sg.storageService.findStoragePool(sg.storagePoolId)
 		if sp == nil {
@@ -158,12 +175,48 @@ func (sg *StorageGroup) Rollback(state uint32) error {
 	return nil
 }
 
+// recoverPool iterates through each volume in the associated storage pool and
+// lists the controllers that volumes are attached to. It helps ensure that all
+// necessary controller attachments are properly recovered during system recovery.
+func (sg *StorageGroup) recoverPool() error {
+	log := sg.storageService.log.WithValues("storageGroup", sg.id, "storagePool", sg.storagePoolId, "endpoint", sg.endpoint.id)
+
+	sp := sg.storageService.findStoragePool(sg.storagePoolId)
+	if sp == nil {
+		return fmt.Errorf("recover storage group pool: storage pool %s not found", sg.storagePoolId)
+	}
+
+	log.V(1).Info("recovering storage group")
+
+	// Check each providing volume in the storage pool
+	for _, pv := range sp.providingVolumes {
+		volume := pv.Storage.FindVolume(pv.VolumeId)
+		if volume == nil {
+			log.Error(fmt.Errorf("volume not found"),
+				"failed to recover volume",
+				"storageGroup", sg.id,
+				"volumeId", pv.VolumeId)
+			continue
+		}
+
+		// Attach the volume to the endpoint if necessary
+		if err := volume.AttachControllerIfUnattached(sg.endpoint.controllerId); err != nil {
+			return err
+		}
+	}
+
+	log.V(1).Info("recovered storage group")
+
+	return nil
+}
+
 // Persistent Object Recovery API
 
 type storageGroupRecoveryRegistry struct {
 	storageService *StorageService
 }
 
+// NewStorageGroupRecoveryRegistry creates a new registry for recovering storage groups
 func NewStorageGroupRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &storageGroupRecoveryRegistry{storageService: s}
 }
@@ -215,11 +268,14 @@ func (rh *storageGroupRecoveryReplyHandler) Done() (bool, error) {
 
 	switch rh.lastLogEntryType {
 	case storageGroupCreateStartLogEntryType:
-		// In this case the storage group started, but didn't finish. We may have outstanding controllers
+		// In this case, the storage group started but didn't finish. We may have outstanding controllers
 		// attached to the endpoint that we don't want to preserve since the client did not get confirmation
 		// of the action. We want to detach any controllers for this <Pool, Endpoint> pair.
 
 		sp := rh.storageService.findStoragePool(sg.storagePoolId)
+		if sp == nil {
+			return false, fmt.Errorf("Storage Group %s Recover: Storage Pool %s not found", sg.id, sg.storagePoolId)
+		}
 		for _, pv := range sp.providingVolumes {
 			volume := pv.Storage.FindVolume(pv.VolumeId)
 			if volume == nil {
@@ -236,18 +292,28 @@ func (rh *storageGroupRecoveryReplyHandler) Done() (bool, error) {
 		return true, nil
 
 	case storageGroupCreateCompleteLogEntryType:
-		// In this case we've created the storage group, and it exists without error. There is nothing to do
-		// here (the storage group is already part of the storage service from the call to Metadata())
+		// In this case, we've created the storage group, and it exists without error. There is nothing to do
+		// here (the storage group is already part of the storage service from the call to Metadata()).
+		// The attachment to a particular endpoint is persistently maintained in the NVMe controller, so
+		// for namespaces that formerly were attached, there is nothing to do.
+
+		// Verify all volumes are attached to the endpoint
+		if err := sg.recoverPool(); err != nil {
+			return false, err
+		}
+
 	case storageGroupDeleteStartLogEntryType:
 		// Delete Start: We started the delete operation but did not complete it. We may have remaining connections
-		// to the controllers; and we need to find those that remain, but we can expect some to be missing. This is done
+		// to the controllers, and we need to find those that remain, but we can expect some to be missing. This is done
 		// by recovering the list of controllers attached to the volume.
-
 	case storageGroupDeleteCompleteLogEntryType:
-		// We've deleted all the connections but the key remains. We should garbage collect the key
-		// from the store. We don't have a guarentee that the client received the completion for
-		// the delete; they may try to delete it again and we should just ignore it.
+		// We've deleted all the connections, but the key remains. We should garbage collect the key
+		// from the store. We don't have a guarantee that the client received the completion for
+		// the delete; they may try to delete it again, and we should just ignore it.
 	}
 
+	rh.storageService.log.V(2).Info("recover storage group complete",
+		"storageGroup", sg.id,
+		"lastLogEntryType", LogEntryTypeToString(rh.lastLogEntryType))
 	return false, nil
 }

@@ -31,16 +31,23 @@ import (
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
+// StoragePool represents a logical grouping of storage capacity that can be allocated and managed
+// as a unit within the storage service.
 type StoragePool struct {
 	id          string
 	name        string
 	description string
 
-	uid    uuid.UUID
-	policy AllocationPolicy
+	uid            uuid.UUID
+	policy         AllocationPolicy
+	volumeCapacity uint64
 
 	allocatedVolume  AllocatedVolume
 	providingVolumes []nvme.ProvidingVolume
+	missingVolumes   []storagePoolPersistentVolumeInfo
+
+	// Original persistent volume information from KV store
+	persistentVolumes []storagePoolPersistentVolumeInfo
 
 	storageGroupIds []string
 	fileSystemId    string
@@ -48,15 +55,25 @@ type StoragePool struct {
 	storageService *StorageService
 }
 
+// AllocatedVolume represents a volume that has been allocated in a storage pool
 type AllocatedVolume struct {
 	id            string
 	capacityBytes uint64
 }
 
+// GetCapacityBytes - sum up the capacity of the volume recording the maximum volume size in the process
 func (p *StoragePool) GetCapacityBytes() (capacityBytes uint64) {
+	p.volumeCapacity = uint64(0)
 	for _, pv := range p.providingVolumes {
-		capacityBytes += pv.Storage.FindVolume(pv.VolumeId).GetCapacityBytes()
+		capacity := pv.Storage.FindVolume(pv.VolumeId).GetCapacityBytes()
+		capacityBytes += capacity
+
+		// Missing volumes will be allocated with the maximum volume capacity of the providing volumes
+		p.volumeCapacity = max(p.volumeCapacity, capacity)
 	}
+
+	// Add on the capacity of the missing volumes
+	capacityBytes += p.volumeCapacity * uint64(len(p.missingVolumes))
 	return capacityBytes
 }
 
@@ -104,38 +121,38 @@ func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGro
 	return nil
 }
 
-func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, ignoreErrors bool) error {
-	log := p.storageService.log
-
-	log.WithValues(storagePoolIdKey, p.id)
+func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo) error {
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
 	log.Info("recover volumes")
 
+	// Store the persistent volumes information for later use
+	p.persistentVolumes = make([]storagePoolPersistentVolumeInfo, len(volumes))
+	copy(p.persistentVolumes, volumes)
+
 	for _, volumeInfo := range volumes {
-		log := log.WithValues("serialNumber", volumeInfo.SerialNumber, "namespaceId", volumeInfo.NamespaceId)
+		log := log.WithValues("serialNumber", volumeInfo.SerialNumber, "namespaceId", volumeInfo.NamespaceID)
 
 		// Locate the NVMe Storage device by Serial Number
 		storage := p.storageService.findStorage(volumeInfo.SerialNumber)
 		if storage == nil {
 			log.Info("storage device not found")
+			p.missingVolumes = append(p.missingVolumes, volumeInfo)
 			continue
 		}
 
 		// Locate the Volume by Namespace ID
-		volume, err := storage.FindVolumeByNamespaceId(volumeInfo.NamespaceId)
+		volumeID := uint32(volumeInfo.NamespaceID)
+		_, err := storage.FindVolumeByNamespaceId(volumeInfo.NamespaceID)
 		if err != nil {
-			log.Error(err, "namespace not found")
-			if ignoreErrors {
-				continue
-			}
-
-			return err
+			log.Error(err, "namespace not found", "slot", storage.Slot())
+			p.missingVolumes = append(p.missingVolumes, volumeInfo)
+			continue
 		}
 
 		p.providingVolumes = append(p.providingVolumes, nvme.ProvidingVolume{
 			Storage:  storage,
-			VolumeId: volume.Id(),
+			VolumeId: fmt.Sprintf("%d", volumeID),
 		})
-
 	}
 
 	p.allocatedVolume = AllocatedVolume{
@@ -144,6 +161,139 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo, 
 	}
 
 	return nil
+}
+
+// Rescan namespaces associated to set the missing volumes list
+func (p *StoragePool) checkVolumes() error {
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
+	log.Info("check volumes")
+
+	// Rescan the storages to ensure our namespace information is up to date
+	volumes := make([]storagePoolPersistentVolumeInfo, len(p.persistentVolumes))
+	copy(volumes, p.persistentVolumes)
+
+	for _, pv := range volumes {
+		log := log.WithValues("serialNumber", pv.SerialNumber, "namespaceId", pv.NamespaceID)
+		log.V(2).Info("check volume", "volumeId", pv.NamespaceID)
+		storage := p.storageService.findStorage(pv.SerialNumber)
+		if storage == nil {
+			log.Info("storage device not found")
+			continue
+		}
+		storage.Rescan()
+	}
+
+	p.missingVolumes = p.missingVolumes[:0]     // Clear the missing volumes list
+	p.providingVolumes = p.providingVolumes[:0] // Clear the providing volumes list
+
+	if err := p.recoverVolumes(volumes); err != nil {
+		log.Error(err, "Failed to rescan volumes")
+		return err
+	}
+
+	return nil
+}
+
+// Replace each missing volume with new volume on available Storage
+func (p *StoragePool) replaceMissingVolumes() error {
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
+	log.Info("replace missing volumes")
+
+	logMissingVolumesFunc := func() {
+		log.V(2).Info("missing volumes", "missingVolumeCount", len(p.missingVolumes), "volumes", p.missingVolumes)
+	}
+	defer logMissingVolumesFunc()
+
+	// Anything to do?
+	if len(p.missingVolumes) == 0 {
+		return nil
+	}
+
+	// Attempt to locate a storage device that is not providing a volume
+	// and use it to replace the missing volume
+	// This is a best effort attempt to replace the missing volume
+	// and may not be successful if there are no available storage devices
+	// or if the storage device is not able to provide a volume
+	// This is not a failure condition, but rather a best effort attempt
+	// to replace the missing volume
+	// The caller should check the missing volumes list to determine
+	// if there are any missing volumes that were not replaced
+	unusedStorages := p.locateUnusedStorage()
+	if len(unusedStorages) == 0 {
+		return fmt.Errorf("Unable to find unused storage")
+	}
+
+	if len(unusedStorages) < len(p.missingVolumes) {
+		log.V(2).Info("not enough unused storage", "unusedStorageCount", len(unusedStorages), "missingVolumeCount", len(p.missingVolumes))
+		return fmt.Errorf("Not enough unused storage to replace missing volumes")
+	}
+
+	// Remove excess storages
+	if len(unusedStorages) > len(p.missingVolumes) {
+		unusedStorages = unusedStorages[:len(p.missingVolumes)]
+	}
+
+	// Replace each missing volume with a new volume on the unused storage
+	for idx, missingVolume := range p.missingVolumes {
+		log := log.WithValues("missingVolume", missingVolume)
+
+		log.V(2).Info("replace missing volume", "missingVolume", missingVolume)
+		storage := unusedStorages[idx]
+
+		volume, err := nvme.CreateVolume(storage, p.volumeCapacity)
+		if err != nil {
+			log.Error(err, "Failed to create replacement volume")
+			return fmt.Errorf("Failed to create volume: %v", err)
+		}
+		log.V(2).Info("created replacement volume", "volume", volume.Id())
+		pv := nvme.ProvidingVolume{
+			Storage:  storage,
+			VolumeId: volume.Id(),
+		}
+
+		p.providingVolumes = append(p.providingVolumes, pv)
+
+		// TODO: Find the serialnumber/volumeid in any other storage pools and
+		// invalidate that volumeid to prevent reuse. Should probably store
+		// that new value some how too.
+		// OR
+		// Patch all the storage pools and don't allow a particular storeage pool to be patched in isolation
+	}
+
+	// We've replaced all the missing volumes, so clear the list
+	p.missingVolumes = nil
+
+	return nil
+}
+
+// Locate Storages not providing a volume for this pool
+func (p *StoragePool) locateUnusedStorage() []*nvme.Storage {
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
+	log.Info("locate unused storage")
+
+	var unusedStorages []*nvme.Storage
+
+	// Return the first storage that is not providing a volume, if any
+	for _, s := range nvme.GetStorage() {
+		if s.SerialNumber() == "" { // Skip unpopulated Storage slot
+			continue
+		}
+
+		candidate := s
+		for _, pv := range p.providingVolumes {
+			if s.SerialNumber() == pv.Storage.SerialNumber() {
+				candidate = nil
+				break
+			}
+		}
+
+		if candidate != nil {
+			log.V(3).Info("found a storage", "slot", candidate.Slot())
+			unusedStorages = append(unusedStorages, candidate)
+		}
+	}
+
+	return unusedStorages
 }
 
 func (p *StoragePool) deallocateVolumes() error {
@@ -197,6 +347,8 @@ const (
 	storagePoolStorageCreateCompleteLogEntryType
 	storagePoolStorageDeleteStartLogEntryType
 	storagePoolStorageDeleteCompleteLogEntryType
+	storagePoolStorageUpdateStartLogEntryType
+	storagePoolStorageUpdateCompleteLogEntryType
 )
 
 type storagePoolPersistentMetadata struct {
@@ -210,14 +362,23 @@ type storagePoolPersistentCreateCompleteLogEntry struct {
 	CapacityBytes uint64                            `json:"CapacityBytes"`
 }
 
-type storagePoolPersistentVolumeInfo struct {
-	SerialNumber string                    `json:"SerialNumber"`
-	NamespaceId  nvme2.NamespaceIdentifier `json:"NamespaceId"`
+type storagePoolPersistentUpdateCompleteLogEntry struct {
+	Volumes       []storagePoolPersistentVolumeInfo `json:"Volumes,omitempty"`
+	CapacityBytes uint64                            `json:"CapacityBytes"`
 }
 
-func (p *StoragePool) GetKey() string                       { return storagePoolRegistryPrefix + p.id }
+type storagePoolPersistentVolumeInfo struct {
+	SerialNumber string                    `json:"SerialNumber"`
+	NamespaceID  nvme2.NamespaceIdentifier `json:"NamespaceId"`
+}
+
+// GetKey returns the unique key for this storage pool in the persistent store
+func (p *StoragePool) GetKey() string { return storagePoolRegistryPrefix + p.id }
+
+// GetProvider returns the persistent store provider for this storage pool
 func (p *StoragePool) GetProvider() PersistentStoreProvider { return p.storageService }
 
+// GenerateMetadata serializes the storage pool's metadata to JSON for persistence
 func (p *StoragePool) GenerateMetadata() ([]byte, error) {
 	return json.Marshal(storagePoolPersistentMetadata{
 		Name:        p.name,
@@ -226,9 +387,21 @@ func (p *StoragePool) GenerateMetadata() ([]byte, error) {
 	})
 }
 
+// GenerateStateData serializes storage pool state information to JSON based on the state type.
+// For state type storagePoolStorageCreateCompleteLogEntryType, it creates a persistent log entry
+// containing information about provided volumes (serial numbers and namespace IDs) and pool capacity.
+//
+// Parameters:
+//   - state: uint32 identifier for the type of state data to generate
+//
+// Returns:
+//   - []byte: serialized state data in JSON format
+//   - error: any error encountered during serialization, or nil on success
+//
+// If the state type is not recognized, it returns nil, nil.
 func (p *StoragePool) GenerateStateData(state uint32) ([]byte, error) {
 	switch state {
-	case storagePoolStorageCreateCompleteLogEntryType:
+	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageUpdateCompleteLogEntryType:
 		entry := storagePoolPersistentCreateCompleteLogEntry{
 			Volumes:       make([]storagePoolPersistentVolumeInfo, len(p.providingVolumes)),
 			CapacityBytes: p.GetCapacityBytes(),
@@ -237,9 +410,13 @@ func (p *StoragePool) GenerateStateData(state uint32) ([]byte, error) {
 		for idx, pv := range p.providingVolumes {
 			entry.Volumes[idx] = storagePoolPersistentVolumeInfo{
 				SerialNumber: pv.Storage.SerialNumber(),
-				NamespaceId:  pv.Storage.FindVolume(pv.VolumeId).GetNamespaceId(),
+				NamespaceID:  pv.Storage.FindVolume(pv.VolumeId).GetNamespaceId(),
 			}
 		}
+
+		// Store the persistent volumes information for later use
+		p.persistentVolumes = make([]storagePoolPersistentVolumeInfo, len(entry.Volumes))
+		copy(p.persistentVolumes, entry.Volumes)
 
 		return json.Marshal(entry)
 	}
@@ -247,6 +424,20 @@ func (p *StoragePool) GenerateStateData(state uint32) ([]byte, error) {
 	return nil, nil
 }
 
+// Rollback is called when a persistent object operation fails and needs to be rolled back.
+// It handles the rollback of the storage pool based on the provided state type.
+//
+// For the state type storagePoolStorageCreateStartLogEntryType, it deallocates volumes and removes
+// the storage pool from the storage service's list of pools.
+// It returns an error if the rollback operation fails.
+// If the state type is not recognized, it returns nil.
+// Parameters:
+//   - state: uint32 identifier for the type of state data to roll back
+//
+// Returns:
+//   - error: any error encountered during the rollback, or nil on success
+//
+// If the state type is not recognized, it returns nil.
 func (p *StoragePool) Rollback(state uint32) error {
 	switch state {
 	case storagePoolStorageCreateStartLogEntryType:
@@ -272,6 +463,7 @@ type storagePoolRecoveryRegistry struct {
 	storageService *StorageService
 }
 
+// NewStoragePoolRecoveryRegistry creates a new registry for storage pool recovery operations
 func NewStoragePoolRecoveryRegistry(s *StorageService) persistent.Registry {
 	return &storagePoolRecoveryRegistry{storageService: s}
 }
@@ -320,7 +512,7 @@ func (rh *storagePoolRecoveryReplayHandler) Entry(typ uint32, data []byte) error
 	rh.lastLogEntryType = typ
 
 	switch typ {
-	case storagePoolStorageCreateCompleteLogEntryType:
+	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageUpdateCompleteLogEntryType:
 		// We have fully initialized the storage pool and all providing volumes have been allocated. Unpack
 		// the data and fill in the storage pool's list of volumes.
 		entry := storagePoolPersistentCreateCompleteLogEntry{}
@@ -345,17 +537,20 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 
 		// TODO: delete storage pool
 
-	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
-		// Case 1. Create Complete: In this case, we've fully created the storage pool and it should be
-		// fully recoverable and placed back in use.
+	case storagePoolStorageCreateCompleteLogEntryType, storagePoolStorageUpdateCompleteLogEntryType, storagePoolStorageDeleteStartLogEntryType:
+		// Case 1. Create Complete: In this case, we've fully created the storage pool, and it is
+		// fully recoverable and ready for use.
 
-		// Case 2. Delete Start: We started a delete, but it did not finish. This means the storage pool
+		// Case 2. Update Complete: In this case, we've fully updated the storage pool, and it is
+		// fully recoverable and ready for use.
+
+		// Case 3. Delete Start: We started a delete, but it did not finish. This means the storage pool
 		// still exists, and its volumes are unknown. Here we try to recover the volumes, but ignore any
 		// errors as the volume might be deleted. The client should retry the delete, at which point we
 		// will delete any remaining volumes
 
 		// Recover the namespaces that make up this storage pool
-		if err := rh.storagePool.recoverVolumes(rh.volumes, true /* ignore errors */); err != nil {
+		if err := rh.storagePool.recoverVolumes(rh.volumes); err != nil {
 			return false, err
 		}
 

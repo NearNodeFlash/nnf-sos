@@ -43,9 +43,11 @@ type Api interface {
 
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsPost(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdStoragePoolsPatch(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPut(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdDelete(w http.ResponseWriter, r *http.Request)
+	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPatch(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdCapacitySourcesGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdCapacitySourcesCapacitySourceIdGet(w http.ResponseWriter, r *http.Request)
 	RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdCapacitySourcesCapacitySourceIdProvidingVolumesGet(w http.ResponseWriter, r *http.Request)
@@ -89,9 +91,11 @@ type StorageServiceApi interface {
 
 	StorageServiceIdStoragePoolsGet(string, *sf.StoragePoolCollectionStoragePoolCollection) error
 	StorageServiceIdStoragePoolsPost(string, *sf.StoragePoolV150StoragePool) error
+	StorageServiceIdStoragePoolsPatch(string, *sf.StoragePoolCollectionStoragePoolCollection) error
 	StorageServiceIdStoragePoolIdGet(string, string, *sf.StoragePoolV150StoragePool) error
 	StorageServiceIdStoragePoolIdPut(string, string, *sf.StoragePoolV150StoragePool) error
 	StorageServiceIdStoragePoolIdDelete(string, string) error
+	StorageServiceIdStoragePoolIdPatch(string, string, *sf.StoragePoolV150StoragePool) error
 	StorageServiceIdStoragePoolIdCapacitySourcesGet(string, string, *sf.CapacitySourceCollectionCapacitySourceCollection) error
 	StorageServiceIdStoragePoolIdCapacitySourceIdGet(string, string, string, *sf.CapacityCapacitySource) error
 	StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVolumesGet(string, string, string, *sf.VolumeCollectionVolumeCollection) error
