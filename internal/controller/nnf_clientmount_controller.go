@@ -143,9 +143,18 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Rescan the NVMe devices now that the StorageGroup has been deleted on the Rabbit.
 		// This is a workaround for a problem on some compute nodes where the NVMe namespaces don't
-		// disappear by themselves.
-		if err := nvme.NvmeRescanDevices(log); err != nil {
-			return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+		// disappear by themselves. Only do this for file systems that are using local storage.
+		localMount := false
+		for _, mount := range clientMount.Spec.Mounts {
+			if mount.Type != "lustre" {
+				localMount = true
+			}
+		}
+
+		if localMount {
+			if err := nvme.NvmeRescanDevices(log); err != nil {
+				return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+			}
 		}
 
 		controllerutil.RemoveFinalizer(clientMount, finalizerNnfClientMount)
