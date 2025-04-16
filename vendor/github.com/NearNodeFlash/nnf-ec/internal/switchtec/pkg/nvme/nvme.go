@@ -465,7 +465,7 @@ const (
 	DeviceSelfTestCommand                                          = (1 << 4)
 	DirectivesSupport                                              = (1 << 5)
 	NVMeMISendReceiveSupport                                       = (1 << 6)
-	VirtualiztionManagementSupport                                 = (1 << 7)
+	VirtualizationManagementSupport                                = (1 << 7)
 	DoorbellBufferConfigCommand                                    = (1 << 8)
 	GetLBAStatusCapability                                         = (1 << 9)
 )

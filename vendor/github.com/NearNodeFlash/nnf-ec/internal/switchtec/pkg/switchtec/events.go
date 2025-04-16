@@ -466,10 +466,6 @@ func (dev *Device) GetEvents(summary *IoctlEventSummary, id EventId, showAll boo
 			continue
 		}
 
-		if err != nil {
-			return nil, err
-		}
-
 		event.Count = int(cnt)
 		ret = append(ret, event)
 	}

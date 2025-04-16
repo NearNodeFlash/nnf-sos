@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -147,6 +147,29 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 	EncodeResponse(model, nil, w)
 }
 
+// RedfishV1StorageServicesStorageServiceIdStoragePoolsPatch -
+func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePoolsPatch(w http.ResponseWriter, r *http.Request) {
+	params := Params(r)
+	storageServiceId := params["StorageServiceId"]
+
+	var model sf.StoragePoolCollectionStoragePoolCollection
+
+	if err := UnmarshalRequest(r, &model); err != nil {
+		EncodeResponse(model, err, w)
+		return
+	}
+
+	if err := s.ss.StorageServiceIdStoragePoolsPatch(storageServiceId, &model); err != nil {
+		EncodeResponse(model, err, w)
+		return
+	}
+
+	model.OdataId = fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools", storageServiceId)
+	model.OdataType = StoragePoolOdataType
+
+	EncodeResponse(model, nil, w)
+}
+
 // RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdGet -
 func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdGet(w http.ResponseWriter, r *http.Request) {
 	params := Params(r)
@@ -194,6 +217,23 @@ func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePools
 	}
 
 	err := s.ss.StorageServiceIdStoragePoolIdDelete(storageServiceId, storagePoolId)
+
+	EncodeResponse(model, err, w)
+}
+
+// RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPatch -
+func (s *DefaultApiService) RedfishV1StorageServicesStorageServiceIdStoragePoolsStoragePoolIdPatch(w http.ResponseWriter, r *http.Request) {
+	params := Params(r)
+	storageServiceId := params["StorageServiceId"]
+	storagePoolId := params["StoragePoolId"]
+
+	model := sf.StoragePoolV150StoragePool{
+		OdataId:   fmt.Sprintf("/redfish/v1/StorageServices/%s/StoragePools/%s", storageServiceId, storagePoolId),
+		OdataType: StoragePoolOdataType,
+		Name:      "Storage Pool",
+	}
+
+	err := s.ss.StorageServiceIdStoragePoolIdPatch(storageServiceId, storagePoolId, &model)
 
 	EncodeResponse(model, err, w)
 }

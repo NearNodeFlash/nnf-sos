@@ -55,8 +55,9 @@ var storageService = StorageService{
 	health: sf.CRITICAL_RH,
 }
 
-func NewDefaultStorageService(unknownVolumes bool) StorageServiceApi {
+func NewDefaultStorageService(unknownVolumes bool, replaceMissingVolumes bool) StorageServiceApi {
 	storageService.deleteUnknownVolumes = unknownVolumes
+	storageService.replaceMissingVolumes = replaceMissingVolumes
 	return NewAerService(&storageService) // Wrap the default storage service with Advanced Error Reporting capabilities
 }
 
@@ -82,6 +83,8 @@ type StorageService struct {
 
 	// This flag controls whether we delete volumes that don't appear in storage pools we know about.
 	deleteUnknownVolumes bool
+	// This flag controls whether we replace volumes that are missing from storage pools.
+	replaceMissingVolumes bool
 
 	log ec.Logger
 }
@@ -182,7 +185,44 @@ func (s *StorageService) deleteStoragePool(sp *StoragePool) {
 			break
 		}
 	}
+}
 
+func (s *StorageService) patchStoragePool(sp *StoragePool, forceRescan bool) error {
+	log := s.log
+
+	// In a test environment where you may be deleting volumes underneath nnf-ec and
+	// the initial rescan has already completed, it is handly to force a rescan
+	if !forceRescan && len(sp.missingVolumes) == 0 {
+		log.V(2).Info("No missing volumes to replace")
+		return nil
+	}
+
+	// Look for missing volumes
+	err := sp.checkVolumes()
+	if err != nil {
+		log.Error(err, "Unable to rescan volumes")
+		return err
+	}
+
+	err = sp.replaceMissingVolumes()
+	if err != nil {
+		log.Error(err, "Unable to replace missing volumes")
+		return err
+	}
+
+	// Persist the changes
+	updateFunc := func() error {
+		// Nothing to do for simple metadata updates
+		return nil
+	}
+
+	if err := s.persistentController.UpdatePersistentObject(sp, updateFunc, storagePoolStorageUpdateStartLogEntryType, storagePoolStorageUpdateCompleteLogEntryType); err != nil {
+		return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause("Failed to update storage pool")
+	}
+
+	event.EventManager.PublishResourceEvent(msgreg.StoragePoolPatchedNnf(sp.id), sp)
+
+	return err
 }
 
 func (s *StorageService) findStorage(sn string) *nvme.Storage {
@@ -219,6 +259,12 @@ func (s *StorageService) createStorageGroup(id string, sp *StoragePool, endpoint
 	expectedNamespaces := make([]server.StorageNamespace, len(sp.providingVolumes))
 	for idx, pv := range sp.providingVolumes {
 		volume := pv.Storage.FindVolume(pv.VolumeId)
+		if volume == nil {
+			err := fmt.Errorf("Volume not found")
+			s.log.Error(err, "Storage pool createStorageGroup volume not found", "volumeid", pv.VolumeId)
+			continue
+		}
+
 		expectedNamespaces[idx] = server.StorageNamespace{
 			SerialNumber: pv.Storage.SerialNumber(),
 			Id:           volume.GetNamespaceId(),
@@ -537,8 +583,8 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		return nil
 	}
 
-	// Check if the fabric is ready;
-	// that is all devices are enumerated and discovery is complete.
+	// Fabric is ready
+	// All devices are enumerated and discovery is complete.
 	if e.Is(msgreg.FabricReadyNnf("")) {
 		log.V(1).Info("Fabric ready")
 
@@ -553,16 +599,26 @@ func (s *StorageService) EventHandler(e event.Event) error {
 			s.cleanupVolumes()
 		}
 
+		if s.replaceMissingVolumes {
+			log.V(2).Info("Replace missing volumes")
+			for spIdx := range s.pools {
+				pool := &s.pools[spIdx]
+				if err := pool.storageService.patchStoragePool(pool, false /* rescan */); err != nil {
+					log.Error(err, "Failed to replace missing volumes", "poolId", pool.id)
+				}
+			}
+		}
+
 		s.state = sf.ENABLED_RST
 		s.health = sf.OK_RH
 
-		var fabricId string
-		if err := e.Args(&fabricId); err != nil {
+		var fabricID string
+		if err := e.Args(&fabricID); err != nil {
 			return ec.NewErrInternalServerError().WithError(err).WithCause("event parameters illformed")
 		}
 
 		f := &sf.FabricV120Fabric{}
-		if err := fabric.FabricIdGet(fabricId, f); err != nil {
+		if err := fabric.FabricIdGet(fabricID, f); err != nil {
 			return ec.NewErrInternalServerError().WithError(err).WithCause("fabric not found")
 		}
 
@@ -571,6 +627,27 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		}
 
 		log.Info("Storage Service Enabled", "health", s.health)
+	}
+
+	// Check for storage pool events
+	if e.Is(msgreg.StoragePoolPatchedNnf("")) {
+		// After a storage pool is patched, check for new volumes that need to be attached
+		log.V(1).Info("Storage Pool Patched")
+		var storagePoolID string
+		if err := e.Args(&storagePoolID); err != nil {
+			return ec.NewErrInternalServerError().WithError(err).WithCause("event parameters illformed")
+		}
+
+		log = log.WithValues("poolId", storagePoolID)
+
+		// We may have multiple storage groups associated with the same storage pool
+		for _, sg := range s.groups {
+			if sg.storagePoolId == storagePoolID {
+				if err := sg.recoverPool(); err != nil {
+					return ec.NewErrInternalServerError().WithError(err).WithCause("unable to update storage group")
+				}
+			}
+		}
 	}
 
 	return nil
@@ -671,14 +748,13 @@ func (*StorageService) StorageServiceIdStoragePoolsGet(storageServiceId string, 
 	return nil
 }
 
-// StorageServiceIdStoragePoolsPost -
+// StorageServiceIdStoragePoolsPost - create a storage pool
 func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string, model *sf.StoragePoolV150StoragePool) (err error) {
 	s := findStorageService(storageServiceId)
 	if s == nil {
 		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StorageServiceOdataType, storageServiceId))
 	}
 
-	// TODO: Check the model for valid RAID configurations
 	log := s.log.WithValues(modelIdKey, model.Id)
 	log.V(2).Info("Creating storage pool")
 	defer func() {
@@ -714,7 +790,7 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 	p := s.createStoragePool(model.Id, model.Name, model.Description, uuid.UUID{}, policy)
 
 	updateFunc := func() (err error) {
-		p.providingVolumes, err = policy.Allocate(p.uid)
+		p.providingVolumes, err = policy.Allocate()
 		if err != nil {
 			return err
 		}
@@ -737,6 +813,44 @@ func (*StorageService) StorageServiceIdStoragePoolsPost(storageServiceId string,
 	log.Info("Created storage pool", storagePoolIdKey, p.id, "volumes", len(p.providingVolumes), "capacityInBytes", p.allocatedVolume.capacityBytes)
 
 	return s.StorageServiceIdStoragePoolIdGet(storageServiceId, p.id, model)
+}
+
+// StorageServiceIdStoragePoolsPatch updates the storage pools in the storage service.
+func (*StorageService) StorageServiceIdStoragePoolsPatch(storageServiceId string, model *sf.StoragePoolCollectionStoragePoolCollection) (err error) {
+	s := findStorageService(storageServiceId)
+	if s == nil {
+		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StorageServiceOdataType, storageServiceId))
+	}
+
+	log := s.log
+	log.V(2).Info("Patching storage pools")
+	defer func() {
+		if err != nil {
+			log.Error(err, "Patch storage pool failed")
+		}
+	}()
+
+	// Patch each storage pool
+	for _, sp := range s.pools {
+		log := log.WithValues(storagePoolIdKey, sp.id)
+		log.V(2).Info("Patching storage pool")
+
+		poolModel := &sf.StoragePoolV150StoragePool{
+			Id: sp.OdataId(),
+		}
+		err = s.StorageServiceIdStoragePoolIdPatch(storageServiceId, sp.id, poolModel)
+		if err != nil {
+			break
+		}
+	}
+
+	model.MembersodataCount = int64(len(s.pools))
+	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
+	for poolIdx, pool := range s.pools {
+		model.Members[poolIdx] = sf.OdataV4IdRef{OdataId: pool.OdataId()}
+	}
+
+	return nil
 }
 
 // StorageServiceIdStoragePoolIdPut -
@@ -869,6 +983,42 @@ func (*StorageService) StorageServiceIdStoragePoolIdDelete(storageServiceId, sto
 	return nil
 }
 
+// StorageServiceIdStoragePoolIdPatch -
+func (*StorageService) StorageServiceIdStoragePoolIdPatch(storageServiceID, storagePoolID string, model *sf.StoragePoolV150StoragePool) (err error) {
+	s, p := findStoragePool(storageServiceID, storagePoolID)
+	if p == nil {
+		return ec.NewErrNotFound().WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolID))
+	}
+
+	log := s.log.WithValues(storagePoolIdKey, p.id)
+	log.V(2).Info("Patching storage pool")
+	defer func() {
+		if err != nil {
+			log.Error(err, "Patch storage pool failed")
+		}
+	}()
+
+	// Update fields that are allowed to be modified
+	if model.Name != "" {
+		p.name = model.Name
+	}
+
+	if model.Description != "" {
+		p.description = model.Description
+	}
+
+	// Replace any missing volumes
+	if err = s.patchStoragePool(p, true /* forceRescan */); err != nil {
+		log.Error(err, "Failed to check and replace volumes in storage pool")
+		return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause("Failed to update storage pool resources")
+	}
+
+	log.Info("Patched storage pool")
+
+	// Return the updated storage pool model
+	return s.StorageServiceIdStoragePoolIdGet(storageServiceID, storagePoolID, model)
+}
+
 // StorageServiceIdStoragePoolIdCapacitySourcesGet -
 func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourcesGet(storageServiceId, storagePoolId string, model *sf.CapacitySourceCollectionCapacitySourceCollection) error {
 	_, p := findStoragePool(storageServiceId, storagePoolId)
@@ -916,7 +1066,10 @@ func (*StorageService) StorageServiceIdStoragePoolIdCapacitySourceIdProvidingVol
 	model.MembersodataCount = int64(len(p.providingVolumes))
 	model.Members = make([]sf.OdataV4IdRef, model.MembersodataCount)
 	for idx, pv := range p.providingVolumes {
-		model.Members[idx] = sf.OdataV4IdRef{OdataId: pv.Storage.FindVolume(pv.VolumeId).GetOdataId()}
+		volume := pv.Storage.FindVolume(pv.VolumeId)
+		if volume != nil {
+			model.Members[idx] = sf.OdataV4IdRef{OdataId: volume.GetOdataId()}
+		}
 	}
 
 	return nil
@@ -982,7 +1135,7 @@ func (*StorageService) StorageServiceIdStorageGroupsGet(storageServiceId string,
 	return nil
 }
 
-// StorageServiceIdStorageGroupPost -
+// StorageServiceIdStorageGroupPost creates a new storage group in the storage service.
 func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string, model *sf.StorageGroupV150StorageGroup) (err error) {
 	s := findStorageService(storageServiceId)
 	if s == nil {
@@ -1002,11 +1155,11 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.InvalidURIBase(model.Links.StoragePool.OdataId))
 	}
 
-	storagePoolId := fields[s.resourceIndex]
+	storagePoolID := fields[s.resourceIndex]
 
-	_, sp := findStoragePool(storageServiceId, storagePoolId)
+	_, sp := findStoragePool(storageServiceId, storagePoolID)
 	if sp == nil {
-		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolId))
+		return ec.NewErrNotAcceptable().WithResourceType(StoragePoolOdataType).WithEvent(msgreg.ResourceNotFoundBase(StoragePoolOdataType, storagePoolID))
 	}
 
 	// TODO RABSW-1110: Ensure storage pool is operational before creating a storage group
@@ -1016,19 +1169,18 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.InvalidURIBase(model.Links.ServerEndpoint.OdataId))
 	}
 
-	endpointId := fields[s.resourceIndex]
+	endpointID := fields[s.resourceIndex]
 
-	ep := s.findEndpoint(endpointId)
+	ep := s.findEndpoint(endpointID)
 	if ep == nil {
-		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.ResourceNotFoundBase(EndpointOdataType, endpointId))
+		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithEvent(msgreg.ResourceNotFoundBase(EndpointOdataType, endpointID))
 	}
 
 	if !ep.serverCtrl.Connected() {
-		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithCause(fmt.Sprintf("Server endpoint '%s' not connected", endpointId))
+		return ec.NewErrNotAcceptable().WithResourceType(EndpointOdataType).WithCause(fmt.Sprintf("Server endpoint '%s' not connected", endpointID))
 	}
 
 	// Everything validated OK - create the Storage Group
-
 	sg := s.createStorageGroup(model.Id, sp, ep)
 
 	updateFunc := func() error {
@@ -1058,7 +1210,7 @@ func (*StorageService) StorageServiceIdStorageGroupPost(storageServiceId string,
 	return s.StorageServiceIdStorageGroupIdGet(storageServiceId, sg.id, model)
 }
 
-// StorageServiceIdStorageGroupIdPut
+// StorageServiceIdStorageGroupIdPut handles PUT requests for a specific storage group
 func (*StorageService) StorageServiceIdStorageGroupIdPut(storageServiceId, storageGroupId string, model *sf.StorageGroupV150StorageGroup) error {
 	s, sg := findStorageGroup(storageServiceId, storageGroupId)
 	if s == nil {
@@ -1073,7 +1225,7 @@ func (*StorageService) StorageServiceIdStorageGroupIdPut(storageServiceId, stora
 	return s.StorageServiceIdStorageGroupPost(storageServiceId, model)
 }
 
-// StorageServiceIdStorageGroupIdGet -
+// StorageServiceIdStorageGroupIdGet handles GET requests for a specific storage group
 func (*StorageService) StorageServiceIdStorageGroupIdGet(storageServiceId, storageGroupId string, model *sf.StorageGroupV150StorageGroup) error {
 	s, sg := findStorageGroup(storageServiceId, storageGroupId)
 	if sg == nil {

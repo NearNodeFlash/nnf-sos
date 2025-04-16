@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,6 +23,25 @@ package messageregistry
 
 import events "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 
+func ResourceOperationFailedNnf(arg0, arg1 string) events.Event {
+	return events.Event{
+		Message:         "The requested operation on resource type '%1' failed with error '%2'",
+		MessageSeverity: "Critical",
+		MessageId:       "Nnf.1.0.0.ResourceOperationFailed",
+		MessageArgs:     []string{arg0, arg1},
+	}
+}
+
+// arg0: The storage pool identifier. This argument shall contain the storage pool resource identifier.
+func StoragePoolPatchedNnf(arg0 string) events.Event {
+	return events.Event{
+		Message:         "The storage pool '%1' has been patched",
+		MessageSeverity: "OK",
+		MessageId:       "Nnf.1.0.0.StoragePoolPatched",
+		MessageArgs:     []string{arg0},
+	}
+}
+
 // arg0: The fabric identifier. This argument shall contain the fabric resource identifier.
 func FabricReadyNnf(arg0 string) events.Event {
 	return events.Event{
@@ -30,14 +49,5 @@ func FabricReadyNnf(arg0 string) events.Event {
 		MessageSeverity: "OK",
 		MessageId:       "Nnf.1.0.0.FabricReady",
 		MessageArgs:     []string{arg0},
-	}
-}
-
-func ResourceOperationFailedNnf(arg0, arg1 string) events.Event {
-	return events.Event{
-		Message:         "The requested operation on resource type '%1' failed with error '%2'",
-		MessageSeverity: "Critical",
-		MessageId:       "Nnf.1.0.0.ResourceOperationFailed",
-		MessageArgs:     []string{arg0, arg1},
 	}
 }

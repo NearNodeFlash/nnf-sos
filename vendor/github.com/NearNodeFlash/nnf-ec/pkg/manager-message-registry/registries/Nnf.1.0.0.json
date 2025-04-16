@@ -13,7 +13,7 @@
             "Description": "Indicates that the fabric and all child resources are ready",
             "LongDescription": "This message shall be used to indicate the fabric resource has completed its startup sequence and is ready for operation",
             "Message": "The fabric '%1' is ready",
-            "Severity": "OK", 
+            "Severity": "OK",
             "MessageSeverity": "OK",
             "NumberOfArgs": 1,
             "ParamTypes": [
@@ -45,6 +45,24 @@
             "ArgLongDescription": [
                 "This argument shall contain the schema name of the resource.",
                 "This argument shall contain the error message for the failure."
+            ],
+            "Resolution": "None"
+        },
+        "StoragePoolPatched": {
+            "Description": "Indicates that a storage pool has been patched",
+            "LongDescription": "This message shall be used to indicate that an existing storage pool has been patched",
+            "Message": "The storage pool '%1' has been patched",
+            "Severity": "OK",
+            "MessageSeverity": "OK",
+            "NumberOfArgs": 1,
+            "ParamTypes": [
+                "string"
+            ],
+            "ArgDescriptions": [
+                "The storage pool identifier."
+            ],
+            "ArgLongDescriptions": [
+                "This argument shall contain the storage pool resource identifier."
             ],
             "Resolution": "None"
         }

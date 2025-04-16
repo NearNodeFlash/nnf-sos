@@ -249,7 +249,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	// Access the default storage service running in the NNF Element
 	// Controller. Check for any State/Health change.
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 	storageService := &sf.StorageServiceV150StorageService{}
 	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
@@ -369,7 +369,7 @@ func (r *NnfNodeReconciler) createNode() *nnfv1alpha7.NnfNode {
 // Update the Servers status of the NNF Node if necessary
 func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha7.NnfNode, log logr.Logger) error {
 
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 	// Update the server status' with the current values
 	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
