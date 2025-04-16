@@ -11,6 +11,7 @@ spec:
           args:
             - --controller=node
             - --deleteUnknownVolumes
+            - --replaceMissingVolumes
           workingDir: /localdisk
           volumeMounts:
             - mountPath: /mnt

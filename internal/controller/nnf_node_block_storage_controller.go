@@ -169,7 +169,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// Ensure the NNF Storage Service is running prior to taking any action.
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 	storageService := &sf.StorageServiceV150StorageService{}
 	if err := ss.StorageServiceIdGet(ss.Id(), storageService); err != nil {
 		return ctrl.Result{}, err
@@ -296,7 +296,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1alpha7.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 	nvmeSS := nnfnvme.NewDefaultStorageService()
 
 	allocationStatus := &nodeBlockStorage.Status.Allocations[index]
@@ -353,7 +353,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 
 func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, nodeBlockStorage *nnfv1alpha7.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 	allocationStatus := &nodeBlockStorage.Status.Allocations[index]
 
@@ -515,7 +515,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alpha7.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
-	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes())
+	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 	storagePoolID := getStoragePoolID(nodeBlockStorage, index)
 	log.Info("Deleting storage pool", "Id", storagePoolID)

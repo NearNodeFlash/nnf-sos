@@ -24,6 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -116,7 +117,7 @@ type Storage struct {
 
 	// Namespace Properties - Read using the Common Namespace Identifier (0xffffffff)
 	// These are properties common to all namespaces for this controller (we use controller
-	// zero as the basis for all other controllers - technically the spec supports uinque
+	// zero as the basis for all other controllers - technically the spec supports unique
 	// LBA Formats per controller, but this is not done in practice by drive vendors.)
 	lbaFormatIndex uint8
 	blockSizeBytes uint64
@@ -147,7 +148,7 @@ type StorageController struct {
 	controllerId   uint16
 	functionNumber uint16
 
-	// These are attributes for a Secondary Controller that is manged
+	// These are attributes for a Secondary Controller that is managed
 	// by the Primary Controller using NVMe 1.3 Virtualization Mgmt.
 	vqResources uint16
 	viResources uint16
@@ -165,6 +166,7 @@ type Volume struct {
 	log     ec.Logger
 }
 
+// ProvidingVolume - volume as part of a storage pool
 type ProvidingVolume struct {
 	Storage  *Storage
 	VolumeId string
@@ -306,6 +308,8 @@ func CreateVolume(s *Storage, capacityBytes uint64) (*Volume, error) {
 func (s *Storage) UnallocatedBytes() uint64 { return s.unallocatedBytes }
 func (s *Storage) IsEnabled() bool          { return s.state == sf.ENABLED_RST }
 func (s *Storage) SerialNumber() string     { return s.serialNumber }
+func (s *Storage) Slot() int64              { return s.slot }
+func (s *Storage) Rescan() error            { return s.recoverStorageVolumes() }
 
 func (s *Storage) IsKioxiaDualPortConfiguration() bool {
 	return false ||
@@ -346,7 +350,7 @@ func (s *Storage) initialize() error {
 
 	ctrl, err := s.device.IdentifyController(0)
 	if err != nil {
-		return fmt.Errorf("Initialize Storage %s: Failed to indentify common controller: Error: %w", s.id, err)
+		return fmt.Errorf("Initialize Storage %s: Failed to identify common controller: Error: %w", s.id, err)
 	}
 
 	s.physicalFunctionControllerId = ctrl.ControllerId
@@ -385,7 +389,7 @@ func (s *Storage) initialize() error {
 		return fmt.Errorf("Initialize Storage %s: Unsupported unallocated 0x%x_%x, will overflow uint64 definition", s.id, unallocatedCapBytesHi, unallocatedCapBytesLo)
 	}
 
-	s.virtManagementEnabled = ctrl.GetCapability(nvme.VirtualiztionManagementSupport)
+	s.virtManagementEnabled = ctrl.GetCapability(nvme.VirtualizationManagementSupport)
 
 	log.V(1).Info("Identified controller",
 		"serialNumber", s.serialNumber,
@@ -586,9 +590,7 @@ func (s *Storage) formatVolume(volumeID string) error {
 	return ec.NewErrNotFound()
 }
 
-func (s *Storage) recoverVolumes() error {
-	s.log.V(1).Info("Recovering volumes")
-
+func (s *Storage) recoverStorageVolumes() error {
 	namespaces, err := s.device.ListNamespaces(0)
 	if err != nil {
 		s.log.Error(err, "Failed to list device namespaces")
@@ -598,7 +600,6 @@ func (s *Storage) recoverVolumes() error {
 	for _, nsid := range namespaces {
 		log := s.log.WithValues(namespaceIdKey, nsid)
 
-		log.V(2).Info("Identify namespace")
 		ns, err := s.device.IdentifyNamespace(nsid)
 		if err != nil {
 			log.Error(err, "Failed to identify namespace")
@@ -617,8 +618,6 @@ func (s *Storage) recoverVolumes() error {
 		}
 
 		s.volumes = append(s.volumes, volume)
-
-		s.log.V(1).Info("Recovered Volume", "volume", volume)
 	}
 
 	return nil
@@ -668,6 +667,10 @@ func (v *Volume) SetFeature(data []byte) error {
 	// attaching the volume to a working host.
 
 	return v.runInAttachDetachBlock(func() error { return v.storage.device.SetNamespaceFeature(v.namespaceId, data) })
+}
+
+func (v *Volume) listAttachedControllers() ([]uint16, error) {
+	return v.storage.device.ListAttachedControllers(v.namespaceId)
 }
 
 func (v *Volume) runInAttachDetachBlock(fn func() error) error {
@@ -726,15 +729,14 @@ func (v *Volume) WaitFormatComplete() error {
 	return nil
 }
 
+// Controller indicies to be passed into the nvme-manager;
+// For Kioxia Dual Port drives (not production), the secondary controller IDs
+// start at 3, with controller IDs one and two representing the dual port physical functions.
+//
+// For Direct Devices, the Rabbit is controlling the drive through the physical functions; we
+// still use the secondary controller values for all other ports, but we need to remap the
+// first index to the physical function.
 func (v *Volume) controllerIDFromIndex(controllerIndex uint16) uint16 {
-	// Controller indicies to be passed into the nvme-manager;
-	// For Kioxia Dual Port drives (not production), the secondary controller IDs
-	// start at 3, with controller IDs one and two representing the dual port physical functions.
-	//
-	// For Direct Devices, the Rabbit is controlling the drive through the physical functions; we
-	// still use the secondary controller values for all other ports, but we need to remap the
-	// first index to the physical function.
-
 	if controllerIndex == PhysicalFunctionControllerIndex {
 		return v.storage.physicalFunctionControllerId
 	}
@@ -800,6 +802,43 @@ func (v *Volume) detach(controllerIndex uint16) error {
 	}
 
 	log.V(1).Info("Detached namespace")
+
+	return nil
+}
+
+// AttachControllerIfUnattached ensures that a specified controller is attached to the volume.
+// If the controller is not already attached, it attempts to attach it.
+//
+// Parameters:
+//   - controllerIndex: The index of the controller to check and attach if necessary.
+//
+// Returns:
+//   - error: An error if the operation to list or attach controllers fails, otherwise nil.
+//
+// This function logs detailed information about the operation, including the storage ID,
+// volume ID, controller index, and controller ID. It also logs the list of currently
+// attached controllers and whether a reattachment is performed.
+func (v *Volume) AttachControllerIfUnattached(controllerIndex uint16) error {
+	controllerID := v.controllerIDFromIndex(controllerIndex)
+
+	log := v.log.WithValues("storage", v.storage.id, "volume", v.id, "controllerIndex", controllerIndex, "controllerID", controllerID)
+
+	attachedControllers, err := v.listAttachedControllers()
+	if err != nil {
+		log.Error(err, "failed to list attached controllers")
+		return err
+	}
+
+	controllerAttached := slices.Contains(attachedControllers, controllerID)
+
+	if !controllerAttached {
+		log.Info("reattaching controller to volume")
+
+		if err := v.AttachController(controllerIndex); err != nil {
+			log.Error(err, "failed to reattach controller to volume")
+			return err
+		}
+	}
 
 	return nil
 }
@@ -962,10 +1001,7 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 			return err
 		}
 
-		count := ls.Count
-		if count > uint8(s.config.Functions) {
-			count = uint8(s.config.Functions)
-		}
+		count := min(ls.Count, uint8(s.config.Functions))
 
 		s.controllers = make([]StorageController, 1 /*PF*/ +count)
 
@@ -1052,8 +1088,8 @@ func (s *Storage) LinkEstablishedEventHandler(switchId, portId string) error {
 
 	// Recover existing volumes
 	log.V(2).Info("Recovering volumes")
-	if err := s.recoverVolumes(); err != nil {
-		log.Error(err, "Failed to recover existing volumes")
+	if err := s.recoverStorageVolumes(); err != nil {
+		log.Error(err, "Failed to recover existing storage volumes")
 		return err
 	}
 
@@ -1218,7 +1254,7 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 		}
 	*/
 
-	model.NVMeControllerProperties = sf.StorageControllerV100NvMeControllerProperties{
+	model.NVMeControllerProperties = sf.StorageControllerV100NVMeControllerProperties{
 		ControllerType:           sf.IO_SCV100NVMCT, // OR ADMIN IF PF
 		NVMeSMARTPercentageUsage: percentageUsage,
 	}

@@ -91,6 +91,9 @@ func (aer *AerService) StorageServiceIdStoragePoolsGet(id string, model *sf.Stor
 func (aer *AerService) StorageServiceIdStoragePoolsPost(id string, model *sf.StoragePoolV150StoragePool) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolsPost(id, model))
 }
+func (aer *AerService) StorageServiceIdStoragePoolsPatch(id string, model *sf.StoragePoolCollectionStoragePoolCollection) error {
+	return aer.c(aer.s.StorageServiceIdStoragePoolsPatch(id, model))
+}
 func (aer *AerService) StorageServiceIdStoragePoolIdGet(id0 string, id1 string, model *sf.StoragePoolV150StoragePool) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolIdGet(id0, id1, model))
 }
@@ -99,6 +102,9 @@ func (aer *AerService) StorageServiceIdStoragePoolIdPut(id0 string, id1 string, 
 }
 func (aer *AerService) StorageServiceIdStoragePoolIdDelete(id0 string, id1 string) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolIdDelete(id0, id1))
+}
+func (aer *AerService) StorageServiceIdStoragePoolIdPatch(id0 string, id1 string, model *sf.StoragePoolV150StoragePool) error {
+	return aer.c(aer.s.StorageServiceIdStoragePoolIdPatch(id0, id1, model))
 }
 func (aer *AerService) StorageServiceIdStoragePoolIdCapacitySourcesGet(id0 string, id1 string, model *sf.CapacitySourceCollectionCapacitySourceCollection) error {
 	return aer.c(aer.s.StorageServiceIdStoragePoolIdCapacitySourcesGet(id0, id1, model))
