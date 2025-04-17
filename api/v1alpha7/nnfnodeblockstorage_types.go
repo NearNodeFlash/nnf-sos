@@ -20,7 +20,7 @@
 package v1alpha7
 
 import (
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,7 +48,7 @@ type NnfNodeBlockStorageStatus struct {
 	// Allocations is the list of storage allocations that were made
 	Allocations []NnfNodeBlockStorageAllocationStatus `json:"allocations,omitempty"`
 
-	dwsv1alpha3.ResourceError `json:",inline"`
+	dwsv1alpha4.ResourceError `json:",inline"`
 
 	// PodStartTime is the value of pod.status.containerStatuses[].state.running.startedAt from the pod that did
 	// last successful full reconcile of the NnfNodeBlockStorage. This is used to tell whether the /dev paths

@@ -53,7 +53,7 @@ import (
 	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -246,7 +246,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Allocate physical storage
 		result, err := r.allocateStorage(nodeBlockStorage, i)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to allocate NVMe namespaces for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to allocate NVMe namespaces for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
 			return *result, nil
@@ -255,7 +255,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Create a block device in /dev that is accessible on the Rabbit node
 		result, err = r.createBlockDevice(ctx, nodeBlockStorage, i)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to attache NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to attache NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
 			return *result, nil
@@ -271,7 +271,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
-			return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+			return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
 		}
 
 		// Set the start time of the pod that did the reconcile. This allows us to detect when the Rabbit node has
@@ -282,7 +282,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 
 			if container.State.Running == nil {
-				return ctrl.Result{}, dwsv1alpha3.NewResourceError("pod not in state running: %v", client.ObjectKeyFromObject(pod)).WithError(err).WithMajor()
+				return ctrl.Result{}, dwsv1alpha4.NewResourceError("pod not in state running: %v", client.ObjectKeyFromObject(pod)).WithError(err).WithMajor()
 			}
 
 			nodeBlockStorage.Status.PodStartTime = container.State.Running.StartedAt
@@ -305,7 +305,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	storagePoolID := getStoragePoolID(nodeBlockStorage, index)
 	sp, err := r.createStoragePool(ss, storagePoolID, nodeBlockStorage.Spec.Allocations[index].Capacity)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not create storage pool").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not create storage pool").WithError(err).WithMajor()
 	}
 
 	vc := &sf.VolumeCollectionVolumeCollection{}
@@ -318,7 +318,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	}
 
 	if len(allocationStatus.Devices) != len(vc.Members) {
-		return nil, dwsv1alpha3.NewResourceError("unexpected number of namespaces").WithFatal()
+		return nil, dwsv1alpha4.NewResourceError("unexpected number of namespaces").WithFatal()
 	}
 
 	for i, member := range vc.Members {
@@ -366,7 +366,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 	// Retrieve the collection of endpoints for us to map
 	serverEndpointCollection := &sf.EndpointCollectionEndpointCollection{}
 	if err := ss.StorageServiceIdEndpointsGet(ss.Id(), serverEndpointCollection); err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not get service endpoint").WithError(err).WithFatal()
+		return nil, dwsv1alpha4.NewResourceError("could not get service endpoint").WithError(err).WithFatal()
 	}
 
 	// Get the Storage resource to map between compute node name and
@@ -376,10 +376,10 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		Namespace: "default",
 	}
 
-	storage := &dwsv1alpha3.Storage{}
+	storage := &dwsv1alpha4.Storage{}
 	err := r.Get(ctx, namespacedName, storage)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not read storage resource").WithError(err)
+		return nil, dwsv1alpha4.NewResourceError("could not read storage resource").WithError(err)
 	}
 
 	// Build a list of all nodes with access to the storage
@@ -414,7 +414,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		if nodeName == "" {
 			if _, err := r.getStorageGroup(ss, storageGroupId); err == nil {
 				if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
-					return nil, dwsv1alpha3.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+					return nil, dwsv1alpha4.NewResourceError("could not delete storage group").WithError(err).WithMajor()
 				}
 				log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 			}
@@ -434,7 +434,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			endPoint, err := r.getEndpoint(ss, endpointID)
 			if err != nil {
-				return nil, dwsv1alpha3.NewResourceError("could not get endpoint").WithError(err).WithFatal()
+				return nil, dwsv1alpha4.NewResourceError("could not get endpoint").WithError(err).WithFatal()
 			}
 
 			// Skip the endpoints that are not ready
@@ -444,7 +444,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			sg, err := r.createStorageGroup(ss, storageGroupId, allocationStatus.StoragePoolId, endpointID)
 			if err != nil {
-				return nil, dwsv1alpha3.NewResourceError("could not create storage group").WithError(err).WithMajor()
+				return nil, dwsv1alpha4.NewResourceError("could not create storage group").WithError(err).WithMajor()
 			}
 
 			if allocationStatus.Accesses == nil {
@@ -496,10 +496,10 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				if path == "" {
 					err := nvme.NvmeRescanDevices(log)
 					if err != nil {
-						return nil, dwsv1alpha3.NewResourceError("could not rescan devices after failing to find device path for %v", allocatedDevice).WithError(err).WithMajor()
+						return nil, dwsv1alpha4.NewResourceError("could not rescan devices after failing to find device path for %v", allocatedDevice).WithError(err).WithMajor()
 					}
 
-					return nil, dwsv1alpha3.NewResourceError("could not find device path for %v", allocatedDevice).WithMajor()
+					return nil, dwsv1alpha4.NewResourceError("could not find device path for %v", allocatedDevice).WithMajor()
 				}
 
 				allocationStatus.Accesses[nodeName].DevicePaths[i] = path
@@ -526,7 +526,7 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 		// If the error is from a 404 error, then there's nothing to clean up and we
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
-			nodeBlockStorage.Status.Error = dwsv1alpha3.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
+			nodeBlockStorage.Status.Error = dwsv1alpha4.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
 			log.Info(nodeBlockStorage.Status.Error.Error())
 
 			return &ctrl.Result{Requeue: true}, nil
@@ -551,7 +551,7 @@ func (r *NnfNodeBlockStorageReconciler) createStoragePool(ss nnf.StorageServiceA
 	}
 
 	if err := ss.StorageServiceIdStoragePoolIdPut(ss.Id(), id, sp); err != nil {
-		resourceErr := dwsv1alpha3.NewResourceError("could not allocate storage pool").WithError(err)
+		resourceErr := dwsv1alpha4.NewResourceError("could not allocate storage pool").WithError(err)
 		ecErr, ok := err.(*ec.ControllerError)
 		if ok {
 			switch ecErr.Cause() {

@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwparse "github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
@@ -58,8 +58,8 @@ var _ = Describe("Integration Test", func() {
 	blockOwnerDeletion := true
 
 	var (
-		workflow               *dwsv1alpha3.Workflow
-		persistentInstance     *dwsv1alpha3.PersistentStorageInstance
+		workflow               *dwsv1alpha4.Workflow
+		persistentInstance     *dwsv1alpha4.PersistentStorageInstance
 		nodeNames              []string
 		setup                  sync.Once
 		storageProfile         *nnfv1alpha7.NnfStorageProfile
@@ -68,7 +68,7 @@ var _ = Describe("Integration Test", func() {
 		userContainerTLSSecret *corev1.Secret
 	)
 
-	advanceState := func(state dwsv1alpha3.WorkflowState, w *dwsv1alpha3.Workflow, testStackOffset int) {
+	advanceState := func(state dwsv1alpha4.WorkflowState, w *dwsv1alpha4.Workflow, testStackOffset int) {
 		By(fmt.Sprintf("Advancing to %s state, wf %s", state, w.Name))
 		Eventually(func() error {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
@@ -77,7 +77,7 @@ var _ = Describe("Integration Test", func() {
 		}).WithOffset(testStackOffset).Should(Succeed(), fmt.Sprintf("Advancing to %s state", state))
 
 		By(fmt.Sprintf("Waiting on state %s", state))
-		Eventually(func() dwsv1alpha3.WorkflowState {
+		Eventually(func() dwsv1alpha4.WorkflowState {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(w), w)).WithOffset(testStackOffset).To(Succeed())
 			return w.Status.State
 		}).WithOffset(testStackOffset).Should(Equal(state), fmt.Sprintf("Waiting on state %s", state))
@@ -107,7 +107,7 @@ var _ = Describe("Integration Test", func() {
 		}
 	}
 
-	advanceStateAndCheckReady := func(state dwsv1alpha3.WorkflowState, w *dwsv1alpha3.Workflow) {
+	advanceStateAndCheckReady := func(state dwsv1alpha4.WorkflowState, w *dwsv1alpha4.Workflow) {
 		By(fmt.Sprintf("advanceStateAndCheckReady: advance workflow state %s", state))
 
 		// If this method fails, have the test results report where it was called from rather
@@ -125,14 +125,14 @@ var _ = Describe("Integration Test", func() {
 
 			// If we're currently in a staging state, ensure the data movement status is marked as finished so
 			// we can successfully transition out of that state.
-			if w.Status.State == dwsv1alpha3.StateDataIn || w.Status.State == dwsv1alpha3.StateDataOut {
+			if w.Status.State == dwsv1alpha4.StateDataIn || w.Status.State == dwsv1alpha4.StateDataOut {
 
 				findDataMovementDirectiveIndex := func() int {
 					for idx, directive := range w.Spec.DWDirectives {
-						if state == dwsv1alpha3.StateDataIn && strings.HasPrefix(directive, "#DW copy_in") {
+						if state == dwsv1alpha4.StateDataIn && strings.HasPrefix(directive, "#DW copy_in") {
 							return idx
 						}
-						if state == dwsv1alpha3.StateDataOut && strings.HasPrefix(directive, "#DW copy_out") {
+						if state == dwsv1alpha4.StateDataOut && strings.HasPrefix(directive, "#DW copy_out") {
 							return idx
 						}
 					}
@@ -159,7 +159,7 @@ var _ = Describe("Integration Test", func() {
 			return w.Status.Ready
 		}).WithOffset(testStackOffset).Should(BeTrue(), fmt.Sprintf("Waiting on ready status state %s", state))
 
-		if w.Status.State == dwsv1alpha3.StateSetup {
+		if w.Status.State == dwsv1alpha4.StateSetup {
 			for dwIndex, directive := range w.Spec.DWDirectives {
 				dwArgs, err := dwparse.BuildArgsMap(directive)
 				Expect(err).WithOffset(testStackOffset).To(Succeed())
@@ -180,10 +180,10 @@ var _ = Describe("Integration Test", func() {
 				verifyNnfNodeStoragesHaveStorageProfileLabel(nnfStorage)
 			}
 		}
-	} // advanceStateAndCheckReady(state dwsv1alpha3.WorkflowState, w *dwsv1alpha3.Workflow)
+	} // advanceStateAndCheckReady(state dwsv1alpha4.WorkflowState, w *dwsv1alpha4.Workflow)
 
-	checkPSIConsumerReference := func(storageName string, w *dwsv1alpha3.Workflow) {
-		persistentInstance = &dwsv1alpha3.PersistentStorageInstance{
+	checkPSIConsumerReference := func(storageName string, w *dwsv1alpha4.Workflow) {
+		persistentInstance = &dwsv1alpha4.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      storageName,
 				Namespace: w.Namespace,
@@ -199,17 +199,17 @@ var _ = Describe("Integration Test", func() {
 		Expect(persistentInstance.Spec.ConsumerReferences[0].Namespace).To(Equal(w.Namespace))
 	}
 
-	checkPSIToServerMapping := func(psiOwnedByWorkflow bool, storageName string, w *dwsv1alpha3.Workflow) {
+	checkPSIToServerMapping := func(psiOwnedByWorkflow bool, storageName string, w *dwsv1alpha4.Workflow) {
 		workFlowOwnerRef := metav1.OwnerReference{
-			Kind:               reflect.TypeOf(dwsv1alpha3.Workflow{}).Name(),
-			APIVersion:         dwsv1alpha3.GroupVersion.String(),
+			Kind:               reflect.TypeOf(dwsv1alpha4.Workflow{}).Name(),
+			APIVersion:         dwsv1alpha4.GroupVersion.String(),
 			UID:                w.GetUID(),
 			Name:               w.GetName(),
 			Controller:         &controller,
 			BlockOwnerDeletion: &blockOwnerDeletion,
 		}
 
-		persistentInstance = &dwsv1alpha3.PersistentStorageInstance{
+		persistentInstance = &dwsv1alpha4.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      storageName,
 				Namespace: w.Namespace,
@@ -229,8 +229,8 @@ var _ = Describe("Integration Test", func() {
 		// running in the testenv so we can't prove it is deleted on teardown.
 		// See https://book.kubebuilder.io/reference/envtest.html#testing-considerations
 		psiOwnerRef := metav1.OwnerReference{
-			Kind:               reflect.TypeOf(dwsv1alpha3.PersistentStorageInstance{}).Name(),
-			APIVersion:         dwsv1alpha3.GroupVersion.String(),
+			Kind:               reflect.TypeOf(dwsv1alpha4.PersistentStorageInstance{}).Name(),
+			APIVersion:         dwsv1alpha4.GroupVersion.String(),
 			UID:                persistentInstance.GetUID(),
 			Name:               persistentInstance.GetName(),
 			Controller:         &controller,
@@ -238,23 +238,23 @@ var _ = Describe("Integration Test", func() {
 		}
 
 		By("Checking DW Directive has Servers resource, named from the PSI")
-		servers := &dwsv1alpha3.Servers{}
+		servers := &dwsv1alpha4.Servers{}
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), servers)).To(Succeed())
 		Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(psiOwnerRef), "Servers owned by PSI")
 
 		By("Checking PersistentStorageInstance has reference to its Servers resource now that DirectiveBreakdown controller has finished")
-		Expect(persistentInstance.Status.Servers.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Servers{}).Name()))
+		Expect(persistentInstance.Status.Servers.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Servers{}).Name()))
 		Expect(persistentInstance.Status.Servers.Name).To(Equal(persistentInstance.Name))
 		Expect(persistentInstance.Status.Servers.Namespace).To(Equal(persistentInstance.Namespace))
 	}
 
 	checkServersToNnfStorageMapping := func(nnfStoragePresent bool) {
-		servers := &dwsv1alpha3.Servers{}
+		servers := &dwsv1alpha4.Servers{}
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(persistentInstance), servers)).To(Succeed(), "Fetch Servers")
 
 		persistentStorageOwnerRef := metav1.OwnerReference{
-			Kind:               reflect.TypeOf(dwsv1alpha3.PersistentStorageInstance{}).Name(),
-			APIVersion:         dwsv1alpha3.GroupVersion.String(),
+			Kind:               reflect.TypeOf(dwsv1alpha4.PersistentStorageInstance{}).Name(),
+			APIVersion:         dwsv1alpha4.GroupVersion.String(),
 			UID:                persistentInstance.GetUID(),
 			Name:               persistentInstance.GetName(),
 			Controller:         &controller,
@@ -310,17 +310,17 @@ var _ = Describe("Integration Test", func() {
 		}
 
 		generator := computeNameGeneratorFunc()
-		configSpec := dwsv1alpha3.SystemConfigurationSpec{}
+		configSpec := dwsv1alpha4.SystemConfigurationSpec{}
 		for _, nodeName := range nodeNames {
-			storageNode := dwsv1alpha3.SystemConfigurationStorageNode{
+			storageNode := dwsv1alpha4.SystemConfigurationStorageNode{
 				Type: "Rabbit",
 				Name: nodeName,
 			}
 
 			computeNames := generator()
-			storageNode.ComputesAccess = make([]dwsv1alpha3.SystemConfigurationComputeNodeReference, 0)
+			storageNode.ComputesAccess = make([]dwsv1alpha4.SystemConfigurationComputeNodeReference, 0)
 			for idx, name := range computeNames {
-				computesAccess := dwsv1alpha3.SystemConfigurationComputeNodeReference{
+				computesAccess := dwsv1alpha4.SystemConfigurationComputeNodeReference{
 					Name:  name,
 					Index: idx,
 				}
@@ -329,7 +329,7 @@ var _ = Describe("Integration Test", func() {
 			configSpec.StorageNodes = append(configSpec.StorageNodes, storageNode)
 		}
 
-		config := &dwsv1alpha3.SystemConfiguration{
+		config := &dwsv1alpha4.SystemConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
@@ -380,7 +380,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Create(context.TODO(), nnfNode)).To(Succeed())
 
 			// Check that the DWS storage resource was updated with the compute node information
-			storage := &dwsv1alpha3.Storage{
+			storage := &dwsv1alpha4.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
@@ -475,7 +475,7 @@ var _ = Describe("Integration Test", func() {
 
 		}
 
-		config := &dwsv1alpha3.SystemConfiguration{
+		config := &dwsv1alpha4.SystemConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
@@ -483,7 +483,7 @@ var _ = Describe("Integration Test", func() {
 		}
 
 		Expect(k8sClient.Delete(context.TODO(), config)).To(Succeed())
-		tempConfig := &dwsv1alpha3.SystemConfiguration{}
+		tempConfig := &dwsv1alpha4.SystemConfiguration{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(config), tempConfig)
 		}).ShouldNot(Succeed())
@@ -548,13 +548,13 @@ var _ = Describe("Integration Test", func() {
 			wfid := uuid.NewString()[0:8]
 
 			By(fmt.Sprintf("Testing directive '%s' filesystem '%s'", storageDirective, fsType))
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%s-%s", storageDirectiveName, fsType, wfid),
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					JobID:        intstr.FromInt(idx),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
@@ -573,8 +573,8 @@ var _ = Describe("Integration Test", func() {
 
 			// Store ownership reference to workflow - this is checked for many of the created objects
 			ownerRef := metav1.OwnerReference{
-				Kind:               reflect.TypeOf(dwsv1alpha3.Workflow{}).Name(),
-				APIVersion:         dwsv1alpha3.GroupVersion.String(),
+				Kind:               reflect.TypeOf(dwsv1alpha4.Workflow{}).Name(),
+				APIVersion:         dwsv1alpha4.GroupVersion.String(),
 				UID:                workflow.GetUID(),
 				Name:               workflow.GetName(),
 				Controller:         &controller,
@@ -586,25 +586,25 @@ var _ = Describe("Integration Test", func() {
 			By("Checking proposal state and ready")
 			Eventually(func() bool {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-				return workflow.Status.State == dwsv1alpha3.StateProposal && workflow.Status.Ready
+				return workflow.Status.State == dwsv1alpha4.StateProposal && workflow.Status.Ready
 			}).Should(BeTrue())
 
 			By("Checking for Computes resource")
-			computes := &dwsv1alpha3.Computes{
+			computes := &dwsv1alpha4.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workflow.Status.Computes.Name,
 					Namespace: workflow.Status.Computes.Namespace,
 				},
 			}
-			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Computes{}).Name()))
+			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Computes{}).Name()))
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
 			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 			By("Checking various DW Directive Breakdowns")
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(wfTests[idx].expectedDirectiveBreakdowns))
 			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-				dbd := &dwsv1alpha3.DirectiveBreakdown{}
-				Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.DirectiveBreakdown{}).Name()))
+				dbd := &dwsv1alpha4.DirectiveBreakdown{}
+				Expect(dbdRef.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.DirectiveBreakdown{}).Name()))
 
 				By("DW Directive Breakdown should go ready")
 				Eventually(func() bool {
@@ -633,8 +633,8 @@ var _ = Describe("Integration Test", func() {
 					Expect(dbd.Status.Compute.Constraints.Location).ToNot(BeEmpty())
 
 					for _, location := range dbd.Status.Compute.Constraints.Location {
-						servers := &dwsv1alpha3.Servers{}
-						Expect(location.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Servers{}).Name()))
+						servers := &dwsv1alpha4.Servers{}
+						Expect(location.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Servers{}).Name()))
 						Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: location.Reference.Name, Namespace: location.Reference.Namespace}, servers)).To(Succeed())
 					}
 				} else {
@@ -650,16 +650,16 @@ var _ = Describe("Integration Test", func() {
 				Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(expectedAllocationSets))
 
 				By("DW Directive has Servers resource accessible from the DirectiveBreakdown")
-				servers := &dwsv1alpha3.Servers{}
-				Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Servers{}).Name()))
+				servers := &dwsv1alpha4.Servers{}
+				Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Servers{}).Name()))
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
 				By("DW Directive verifying servers resource")
 				switch storageDirective {
 				case "jobdw":
 					Expect(servers.ObjectMeta.OwnerReferences).To(ContainElement(metav1.OwnerReference{
-						Kind:               reflect.TypeOf(dwsv1alpha3.DirectiveBreakdown{}).Name(),
-						APIVersion:         dwsv1alpha3.GroupVersion.String(),
+						Kind:               reflect.TypeOf(dwsv1alpha4.DirectiveBreakdown{}).Name(),
+						APIVersion:         dwsv1alpha4.GroupVersion.String(),
 						UID:                dbd.GetUID(),
 						Name:               dbd.GetName(),
 						Controller:         &controller,
@@ -673,9 +673,9 @@ var _ = Describe("Integration Test", func() {
 				By("Assigning storage")
 				if fsType != "lustre" {
 					// If non-lustre, allocate storage on all the Rabbit nodes in test.
-					storage := make([]dwsv1alpha3.ServersSpecStorage, 0, len(nodeNames))
+					storage := make([]dwsv1alpha4.ServersSpecStorage, 0, len(nodeNames))
 					for _, nodeName := range nodeNames {
-						storage = append(storage, dwsv1alpha3.ServersSpecStorage{
+						storage = append(storage, dwsv1alpha4.ServersSpecStorage{
 							AllocationCount: 1,
 							Name:            nodeName,
 						})
@@ -684,8 +684,8 @@ var _ = Describe("Integration Test", func() {
 					Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(1))
 					allocSet := &dbd.Status.Storage.AllocationSets[0]
 
-					servers.Spec.AllocationSets = make([]dwsv1alpha3.ServersSpecAllocationSet, 1)
-					servers.Spec.AllocationSets[0] = dwsv1alpha3.ServersSpecAllocationSet{
+					servers.Spec.AllocationSets = make([]dwsv1alpha4.ServersSpecAllocationSet, 1)
+					servers.Spec.AllocationSets[0] = dwsv1alpha4.ServersSpecAllocationSet{
 						AllocationSize: allocSet.MinimumCapacity,
 						Label:          allocSet.Label,
 						Storage:        storage,
@@ -694,12 +694,12 @@ var _ = Describe("Integration Test", func() {
 				} else {
 					// If lustre, allocate one node per allocation set
 					Expect(len(nodeNames) >= len(dbd.Status.Storage.AllocationSets)).To(BeTrue())
-					servers.Spec.AllocationSets = make([]dwsv1alpha3.ServersSpecAllocationSet, len(dbd.Status.Storage.AllocationSets))
+					servers.Spec.AllocationSets = make([]dwsv1alpha4.ServersSpecAllocationSet, len(dbd.Status.Storage.AllocationSets))
 					for idx, allocset := range dbd.Status.Storage.AllocationSets {
-						servers.Spec.AllocationSets[idx] = dwsv1alpha3.ServersSpecAllocationSet{
+						servers.Spec.AllocationSets[idx] = dwsv1alpha4.ServersSpecAllocationSet{
 							AllocationSize: allocset.MinimumCapacity,
 							Label:          allocset.Label,
-							Storage: []dwsv1alpha3.ServersSpecStorage{
+							Storage: []dwsv1alpha4.ServersSpecStorage{
 								{
 									AllocationCount: 1,
 									Name:            nodeNames[idx],
@@ -714,15 +714,15 @@ var _ = Describe("Integration Test", func() {
 
 			By("Assigning computes")
 			Expect(computes.Data).To(HaveLen(0))
-			computes.Data = make([]dwsv1alpha3.ComputesData, 0, len(nodeNames))
+			computes.Data = make([]dwsv1alpha4.ComputesData, 0, len(nodeNames))
 			for idx := range nodeNames {
-				computes.Data = append(computes.Data, dwsv1alpha3.ComputesData{Name: fmt.Sprintf("compute%d", idx*16)})
+				computes.Data = append(computes.Data, dwsv1alpha4.ComputesData{Name: fmt.Sprintf("compute%d", idx*16)})
 			}
 			Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
 
 			/***************************** Setup *****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateSetup, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateSetup, workflow)
 
 			By("Checking Setup state")
 			switch storageDirective {
@@ -738,21 +738,21 @@ var _ = Describe("Integration Test", func() {
 
 			/**************************** Data In ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateDataIn, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateDataIn, workflow)
 
 			By("Checking Data In state")
 			// TODO
 
 			/**************************** Pre Run ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StatePreRun, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StatePreRun, workflow)
 
 			By("Checking Pre Run state")
 
 			switch storageDirective {
 			default:
 				for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-					dbd := &dwsv1alpha3.DirectiveBreakdown{}
+					dbd := &dwsv1alpha4.DirectiveBreakdown{}
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 					By("Check for an NNF Access describing the computes")
@@ -765,7 +765,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
 					Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 					Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"TeardownState": Equal(dwsv1alpha3.StatePostRun),
+						"TeardownState": Equal(dwsv1alpha4.StatePostRun),
 						"DesiredState":  Equal("mounted"),
 						"Target":        Equal("single"),
 					}))
@@ -779,9 +779,9 @@ var _ = Describe("Integration Test", func() {
 					Expect(access.Spec.ClientReference).To(MatchFields(IgnoreExtras, Fields{
 						"Name":      Equal(workflow.Name),
 						"Namespace": Equal(workflow.Namespace),
-						"Kind":      Equal(reflect.TypeOf(dwsv1alpha3.Computes{}).Name()),
+						"Kind":      Equal(reflect.TypeOf(dwsv1alpha4.Computes{}).Name()),
 					}))
-					computes := &dwsv1alpha3.Computes{
+					computes := &dwsv1alpha4.Computes{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      access.Spec.ClientReference.Name,
 							Namespace: access.Spec.ClientReference.Namespace,
@@ -810,7 +810,7 @@ var _ = Describe("Integration Test", func() {
 
 					By("Checking for a Client Mount on each compute")
 					for _, compute := range computes.Data {
-						clientMount := &dwsv1alpha3.ClientMount{
+						clientMount := &dwsv1alpha4.ClientMount{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:      clientMountName(access),
 								Namespace: compute.Name,
@@ -818,8 +818,8 @@ var _ = Describe("Integration Test", func() {
 						}
 						Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
 						Expect(clientMount.Status.Mounts).To(HaveLen(1))
-						Expect(clientMount.Labels[dwsv1alpha3.WorkflowNameLabel]).To(Equal(workflow.Name))
-						Expect(clientMount.Labels[dwsv1alpha3.WorkflowNamespaceLabel]).To(Equal(workflow.Namespace))
+						Expect(clientMount.Labels[dwsv1alpha4.WorkflowNameLabel]).To(Equal(workflow.Name))
+						Expect(clientMount.Labels[dwsv1alpha4.WorkflowNamespaceLabel]).To(Equal(workflow.Namespace))
 						Expect(clientMount.Status.Mounts[0].Ready).To(BeTrue())
 					}
 
@@ -845,14 +845,14 @@ var _ = Describe("Integration Test", func() {
 
 			/*************************** Post Run ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StatePostRun, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StatePostRun, workflow)
 
 			By("Checking Post Run state")
 
 			switch storageDirective {
 			default:
 				for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-					dbd := &dwsv1alpha3.DirectiveBreakdown{}
+					dbd := &dwsv1alpha4.DirectiveBreakdown{}
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 					By("Check that NNF Access describing computes is not present")
@@ -892,27 +892,27 @@ var _ = Describe("Integration Test", func() {
 
 			/**************************** Data Out ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateDataOut, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateDataOut, workflow)
 
 			By("Checking Data Out state")
 			// TODO
 
 			/**************************** Teardown ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateTeardown, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateTeardown, workflow)
 
 			By("Checking Teardown state")
 
 			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
-				dbd := &dwsv1alpha3.DirectiveBreakdown{}
+				dbd := &dwsv1alpha4.DirectiveBreakdown{}
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 				switch storageDirective {
 				case "create_persistent":
 
 					By("Check that the servers resource still exists")
-					servers := &dwsv1alpha3.Servers{}
-					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Servers{}).Name()))
+					servers := &dwsv1alpha4.Servers{}
+					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Servers{}).Name()))
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
 					By("NNFStorages for persistentStorageInstance should NOT be deleted")
@@ -926,8 +926,8 @@ var _ = Describe("Integration Test", func() {
 
 				case "jobdw":
 					By("Check that the servers resource still exists")
-					servers := &dwsv1alpha3.Servers{}
-					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Servers{}).Name()))
+					servers := &dwsv1alpha4.Servers{}
+					Expect(dbd.Status.Storage.Reference.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Servers{}).Name()))
 					Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
 					By("NNFStorages associated with jobdw should be deleted")
@@ -945,13 +945,13 @@ var _ = Describe("Integration Test", func() {
 		It("Testing Lifecycle of workflow with no #DW directives", func() {
 			const workflowName = "no-directives"
 
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workflowName,
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					WLMID:        "854973",
 					DWDirectives: []string{}, // Empty
 				},
@@ -966,11 +966,11 @@ var _ = Describe("Integration Test", func() {
 			By("Verifying proposal state and ready")
 			Eventually(func() bool {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-				return workflow.Status.State == dwsv1alpha3.StateProposal && workflow.Status.Ready
+				return workflow.Status.State == dwsv1alpha4.StateProposal && workflow.Status.Ready
 			}).Should(BeTrue())
 
 			By("Verifying it has no directiveBreakdowns")
-			directiveBreakdown := &dwsv1alpha3.DirectiveBreakdown{
+			directiveBreakdown := &dwsv1alpha4.DirectiveBreakdown{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
 					Namespace: corev1.NamespaceDefault,
@@ -979,7 +979,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).ShouldNot(Succeed())
 
 			By("Verifying it has no servers")
-			servers := &dwsv1alpha3.Servers{
+			servers := &dwsv1alpha4.Servers{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("%s-%d", workflowName, 0),
 					Namespace: corev1.NamespaceDefault,
@@ -989,8 +989,8 @@ var _ = Describe("Integration Test", func() {
 
 			// Store ownership reference to workflow - this is checked for many of the created objects
 			ownerRef := metav1.OwnerReference{
-				Kind:               reflect.TypeOf(dwsv1alpha3.Workflow{}).Name(),
-				APIVersion:         dwsv1alpha3.GroupVersion.String(),
+				Kind:               reflect.TypeOf(dwsv1alpha4.Workflow{}).Name(),
+				APIVersion:         dwsv1alpha4.GroupVersion.String(),
 				UID:                workflow.GetUID(),
 				Name:               workflow.GetName(),
 				Controller:         &controller,
@@ -998,18 +998,18 @@ var _ = Describe("Integration Test", func() {
 			}
 
 			By("Verifying it has Computes resource")
-			computes := &dwsv1alpha3.Computes{
+			computes := &dwsv1alpha4.Computes{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workflow.Status.Computes.Name,
 					Namespace: workflow.Status.Computes.Namespace,
 				},
 			}
-			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha3.Computes{}).Name()))
+			Expect(workflow.Status.Computes.Kind).To(Equal(reflect.TypeOf(dwsv1alpha4.Computes{}).Name()))
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
 			Expect(computes.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 
 			/***************************** Teardown *****************************/
-			advanceStateAndCheckReady(dwsv1alpha3.StateTeardown, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateTeardown, workflow)
 		})
 	})
 
@@ -1031,13 +1031,13 @@ var _ = Describe("Integration Test", func() {
 			k8sClient.Create(context.TODO(), ns)
 
 			wfid := uuid.NewString()[0:8]
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("gfs2-%s", wfid),
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					JobID:        intstr.FromString("a job id"),
 					WLMID:        "Test WLMID",
 				},
@@ -1084,30 +1084,30 @@ var _ = Describe("Integration Test", func() {
 			By("Checking for proposal state and ready")
 			Eventually(func() bool {
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-				return workflow.Status.State == dwsv1alpha3.StateProposal && workflow.Status.Ready
+				return workflow.Status.State == dwsv1alpha4.StateProposal && workflow.Status.Ready
 			}).Should(BeTrue())
 
 			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
 				By("Checking DW Directive Breakdown")
-				dbd := &dwsv1alpha3.DirectiveBreakdown{}
+				dbd := &dwsv1alpha4.DirectiveBreakdown{}
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
 
 				Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(1))
 				allocSet := &dbd.Status.Storage.AllocationSets[0]
 
 				By("Assigning storage")
-				servers := &dwsv1alpha3.Servers{}
+				servers := &dwsv1alpha4.Servers{}
 				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
 
-				storage := make([]dwsv1alpha3.ServersSpecStorage, 0, len(nodeNames))
+				storage := make([]dwsv1alpha4.ServersSpecStorage, 0, len(nodeNames))
 				for _, nodeName := range nodeNames {
-					storage = append(storage, dwsv1alpha3.ServersSpecStorage{
+					storage = append(storage, dwsv1alpha4.ServersSpecStorage{
 						AllocationCount: 1,
 						Name:            nodeName,
 					})
 				}
 
-				servers.Spec.AllocationSets = []dwsv1alpha3.ServersSpecAllocationSet{
+				servers.Spec.AllocationSets = []dwsv1alpha4.ServersSpecAllocationSet{
 					{
 						AllocationSize: allocSet.MinimumCapacity,
 						Label:          allocSet.Label,
@@ -1120,18 +1120,18 @@ var _ = Describe("Integration Test", func() {
 
 			/***************************** Setup *****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateSetup, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateSetup, workflow)
 
 			/**************************** Data In ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateDataIn, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateDataIn, workflow)
 		})
 
 		AfterEach(func() {
 
 			/**************************** Teardown ****************************/
 
-			advanceStateAndCheckReady(dwsv1alpha3.StateTeardown, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateTeardown, workflow)
 
 			Expect(k8sClient.Delete(context.TODO(), dmm)).To(Succeed())
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
@@ -1161,7 +1161,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
 		})
 
-		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha3.WorkflowState) {
+		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha4.WorkflowState) {
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
 
 			access := &nnfv1alpha7.NnfAccess{
@@ -1211,14 +1211,14 @@ var _ = Describe("Integration Test", func() {
 			})
 
 			It("Validates Workflow", func() {
-				Expect(workflow.Status.State).To(Equal(dwsv1alpha3.StateDataIn))
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha4.StateDataIn))
 
 				By("Check that NNF Access is created, with deletion in post-run")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha3.StatePostRun)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StatePostRun)
 
 				By("Advancing to post run, ensure NNF Access is deleted")
-				advanceStateAndCheckReady(dwsv1alpha3.StatePreRun, workflow)
-				advanceStateAndCheckReady(dwsv1alpha3.StatePostRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePreRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePostRun, workflow)
 				validateNnfAccessIsNotFound()
 			})
 		})
@@ -1234,20 +1234,20 @@ var _ = Describe("Integration Test", func() {
 			})
 
 			It("Validates Workflow", func() {
-				Expect(workflow.Status.State).To(Equal(dwsv1alpha3.StateDataIn))
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha4.StateDataIn))
 
 				validateNnfAccessIsNotFound()
-				advanceStateAndCheckReady(dwsv1alpha3.StatePreRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePreRun, workflow)
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha3.StateTeardown)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
 
 				By("Advancing to post run, ensure NNF Access is still set for deletion in data-out")
-				advanceStateAndCheckReady(dwsv1alpha3.StatePostRun, workflow)
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha3.StateTeardown)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePostRun, workflow)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
 
 				By("Advancing to data-out, ensure NNF Access is deleted")
-				advanceStateAndCheckReady(dwsv1alpha3.StateDataOut, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StateDataOut, workflow)
 				validateNnfAccessIsNotFound()
 			})
 		})
@@ -1262,16 +1262,16 @@ var _ = Describe("Integration Test", func() {
 			})
 
 			It("Validates Workflow", func() {
-				Expect(workflow.Status.State).To(Equal(dwsv1alpha3.StateDataIn))
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha4.StateDataIn))
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha3.StateTeardown)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
 
-				advanceStateAndCheckReady(dwsv1alpha3.StatePreRun, workflow)
-				advanceStateAndCheckReady(dwsv1alpha3.StatePostRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePreRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePostRun, workflow)
 
 				By("Advancing to data-out, ensure NNF Access is deleted")
-				advanceStateAndCheckReady(dwsv1alpha3.StateDataOut, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StateDataOut, workflow)
 				validateNnfAccessIsNotFound()
 			})
 
@@ -1285,9 +1285,9 @@ var _ = Describe("Integration Test", func() {
 			})
 
 			It("Validates error propgates to workflow", func() {
-				Expect(workflow.Status.State).To(Equal(dwsv1alpha3.StateDataIn))
+				Expect(workflow.Status.State).To(Equal(dwsv1alpha4.StateDataIn))
 
-				advanceStateAndCheckReady(dwsv1alpha3.StatePreRun, workflow)
+				advanceStateAndCheckReady(dwsv1alpha4.StatePreRun, workflow)
 
 				By("Injecting an error in the data movement resource")
 
@@ -1297,9 +1297,9 @@ var _ = Describe("Integration Test", func() {
 						Namespace: nnfv1alpha7.DataMovementNamespace,
 					},
 				}
-				dwsv1alpha3.AddWorkflowLabels(dm, workflow)
-				dwsv1alpha3.AddOwnerLabels(dm, workflow)
-				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha3.StatePostRun)
+				dwsv1alpha4.AddWorkflowLabels(dm, workflow)
+				dwsv1alpha4.AddOwnerLabels(dm, workflow)
+				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha4.StatePostRun)
 
 				Expect(k8sClient.Create(context.TODO(), dm)).To(Succeed())
 
@@ -1313,16 +1313,16 @@ var _ = Describe("Integration Test", func() {
 				Expect(k8sClient.Status().Update(context.TODO(), dm)).To(Succeed())
 
 				By("Advancing to post-run")
-				advanceState(dwsv1alpha3.StatePostRun, workflow, 1)
+				advanceState(dwsv1alpha4.StatePostRun, workflow, 1)
 
 				By("Checking the driver has an error present")
-				Eventually(func() *dwsv1alpha3.WorkflowDriverStatus {
+				Eventually(func() *dwsv1alpha4.WorkflowDriverStatus {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
 
 					driverID := os.Getenv("DWS_DRIVER_ID")
 					for _, driver := range workflow.Status.Drivers {
 						if driver.DriverID == driverID {
-							if driver.Status == dwsv1alpha3.StatusError {
+							if driver.Status == dwsv1alpha4.StatusError {
 								return &driver
 							}
 						}
@@ -1345,13 +1345,13 @@ var _ = Describe("Integration Test", func() {
 			Expect(containerProfile).ToNot(BeNil())
 
 			wfName := "container-test"
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      wfName,
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					JobID:        intstr.FromString("job 1234"),
 					WLMID:        "Test WLMID",
 					DWDirectives: []string{
@@ -1384,7 +1384,7 @@ var _ = Describe("Integration Test", func() {
 			It("it should target the local NNF nodes for the container jobs", func() {
 				By("assigning the container directive to compute nodes")
 
-				computes := &dwsv1alpha3.Computes{
+				computes := &dwsv1alpha4.Computes{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      workflow.Status.Computes.Name,
 						Namespace: workflow.Status.Computes.Namespace,
@@ -1394,7 +1394,7 @@ var _ = Describe("Integration Test", func() {
 				// Add 2 computes across 2 NNF nodes. For containers, this means we should see 2 jobs
 				// These computes are defined in the SystemConfiguration
 				Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
-				data := []dwsv1alpha3.ComputesData{
+				data := []dwsv1alpha4.ComputesData{
 					{Name: "compute0"},
 					{Name: "compute32"},
 				}
@@ -1407,7 +1407,7 @@ var _ = Describe("Integration Test", func() {
 				advanceState("PreRun", workflow, 1)
 
 				By("verifying the number of targeted NNF nodes for the container jobs")
-				matchLabels := dwsv1alpha3.MatchingWorkflow(workflow)
+				matchLabels := dwsv1alpha4.MatchingWorkflow(workflow)
 				matchLabels[nnfv1alpha7.DirectiveIndexLabel] = "0"
 
 				jobList := &batchv1.JobList{}
@@ -1438,8 +1438,8 @@ var _ = Describe("Integration Test", func() {
 
 			profileMgsNid string
 
-			dbd       *dwsv1alpha3.DirectiveBreakdown
-			dbdServer *dwsv1alpha3.Servers
+			dbd       *dwsv1alpha4.DirectiveBreakdown
+			dbdServer *dwsv1alpha4.Servers
 
 			externalMgsProfileName    string
 			combinedMgtMdtProfileName string
@@ -1448,8 +1448,8 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			profileMgsNid = "profile-mgs@tcp"
 
-			dbd = &dwsv1alpha3.DirectiveBreakdown{}
-			dbdServer = &dwsv1alpha3.Servers{}
+			dbd = &dwsv1alpha4.DirectiveBreakdown{}
+			dbdServer = &dwsv1alpha4.Servers{}
 
 			externalMgsProfileName = "has-external-mgs"
 			combinedMgtMdtProfileName = "has-combined-mgtmdt"
@@ -1493,13 +1493,13 @@ var _ = Describe("Integration Test", func() {
 		BeforeEach(func() {
 			By("BeforeEach setup a basic workflow resource")
 			wfid := uuid.NewString()[0:8]
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("profile-%s", wfid),
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					JobID:        intstr.FromString("some job 234"),
 					WLMID:        "Test WLMID",
 				},
@@ -1508,7 +1508,7 @@ var _ = Describe("Integration Test", func() {
 
 		AfterEach(func() {
 			By("AfterEach advance the workflow state to teardown")
-			advanceStateAndCheckReady(dwsv1alpha3.StateTeardown, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateTeardown, workflow)
 		})
 
 		// Create the workflow for the Ginkgo specs.
@@ -1520,7 +1520,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
 			Eventually(func(g Gomega) error {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
-				if (workflow.Status.Ready == true) && (workflow.Status.State == dwsv1alpha3.StateProposal) {
+				if (workflow.Status.Ready == true) && (workflow.Status.State == dwsv1alpha4.StateProposal) {
 					return nil
 				}
 				return fmt.Errorf("ready state not achieved")
@@ -1540,11 +1540,11 @@ var _ = Describe("Integration Test", func() {
 		})
 
 		assignStorageForMDTOST := func() {
-			dbdServer.Spec.AllocationSets = []dwsv1alpha3.ServersSpecAllocationSet{
+			dbdServer.Spec.AllocationSets = []dwsv1alpha4.ServersSpecAllocationSet{
 				{
 					AllocationSize: 1,
 					Label:          "mdt",
-					Storage: []dwsv1alpha3.ServersSpecStorage{
+					Storage: []dwsv1alpha4.ServersSpecStorage{
 						{AllocationCount: 1,
 							Name: "rabbit-test-node-0"},
 					},
@@ -1552,7 +1552,7 @@ var _ = Describe("Integration Test", func() {
 				{
 					AllocationSize: 1,
 					Label:          "ost",
-					Storage: []dwsv1alpha3.ServersSpecStorage{
+					Storage: []dwsv1alpha4.ServersSpecStorage{
 						{AllocationCount: 1,
 							Name: "rabbit-test-node-1"},
 					},
@@ -1576,7 +1576,7 @@ var _ = Describe("Integration Test", func() {
 			assignStorageForMDTOST()
 			Expect(k8sClient.Update(context.TODO(), dbdServer)).To(Succeed())
 			By(fmt.Sprintf("Verify that the MGS NID %s is used by the filesystem", getNidVia))
-			advanceStateAndCheckReady(dwsv1alpha3.StateSetup, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateSetup, workflow)
 			// The NnfStorage's name matches the Server resource's name.
 			nnfstorage := &nnfv1alpha7.NnfStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(dbdServer), nnfstorage)).To(Succeed())
@@ -1627,13 +1627,13 @@ var _ = Describe("Integration Test", func() {
 		// in its BeforeEach() clause.
 		BeforeEach(func() {
 			wfid := uuid.NewString()[0:8]
-			workflow = &dwsv1alpha3.Workflow{
+			workflow = &dwsv1alpha4.Workflow{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("persistent-%s", wfid),
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: dwsv1alpha3.WorkflowSpec{
-					DesiredState: dwsv1alpha3.StateProposal,
+				Spec: dwsv1alpha4.WorkflowSpec{
+					DesiredState: dwsv1alpha4.StateProposal,
 					JobID:        intstr.FromString("job 2222"),
 					WLMID:        "Test WLMID",
 				},
@@ -1642,7 +1642,7 @@ var _ = Describe("Integration Test", func() {
 
 		AfterEach(func() {
 			By("AfterEach advance the workflow state to teardown")
-			advanceStateAndCheckReady(dwsv1alpha3.StateTeardown, workflow)
+			advanceStateAndCheckReady(dwsv1alpha4.StateTeardown, workflow)
 		})
 
 		// Create the workflow for the Ginkgo specs.
@@ -1655,15 +1655,15 @@ var _ = Describe("Integration Test", func() {
 		// verifyErrorIsPresent checks that the workflow has stopped due to a driver error
 		verifyErrorIsPresent := func() {
 			By("Checking the driver has an error present")
-			Eventually(func(g Gomega) *dwsv1alpha3.WorkflowDriverStatus {
+			Eventually(func(g Gomega) *dwsv1alpha4.WorkflowDriverStatus {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
 				g.Expect(workflow.Status.Ready == false)
-				g.Expect(workflow.Status.State == dwsv1alpha3.StateProposal)
+				g.Expect(workflow.Status.State == dwsv1alpha4.StateProposal)
 
 				driverID := os.Getenv("DWS_DRIVER_ID")
 				for _, driver := range workflow.Status.Drivers {
 					if driver.DriverID == driverID {
-						if driver.Status == dwsv1alpha3.StatusError {
+						if driver.Status == dwsv1alpha4.StatusError {
 							return &driver
 						}
 					}

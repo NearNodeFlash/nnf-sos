@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -86,7 +86,7 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	log := r.Log.WithValues("Servers", req.NamespacedName)
 	metrics.NnfServersReconcilesTotal.Inc()
 
-	servers := &dwsv1alpha3.Servers{}
+	servers := &dwsv1alpha4.Servers{}
 	if err := r.Get(ctx, req.NamespacedName, servers); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -94,7 +94,7 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha3.ServersStatus](servers)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha4.ServersStatus](servers)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { servers.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -161,7 +161,7 @@ func (r *DWSServersReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return r.updateCapacityUsed(ctx, servers)
 }
 
-func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *dwsv1alpha3.Servers) (ctrl.Result, error) {
+func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *dwsv1alpha4.Servers) (ctrl.Result, error) {
 	originalServers := servers.DeepCopy()
 
 	if len(servers.Status.AllocationSets) == 0 {
@@ -217,11 +217,11 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		// If the nnfStorage was created using information from the Servers resource, then
 		// we should always find a match.
 		if serversIndex == -1 {
-			return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to find allocation label %s", label).WithFatal()
+			return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to find allocation label %s", label).WithFatal()
 		}
 
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
-		matchLabels := dwsv1alpha3.MatchingOwner(nnfStorage)
+		matchLabels := dwsv1alpha4.MatchingOwner(nnfStorage)
 		matchLabels[nnfv1alpha7.AllocationSetLabel] = label
 
 		listOptions := []client.ListOption{
@@ -258,7 +258,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		for name, capacityAllocated := range capacityAllocatedMap {
-			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha3.ServersStatusStorage{AllocationSize: capacityAllocated}
+			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha4.ServersStatusStorage{AllocationSize: capacityAllocated}
 		}
 
 		for _, storageStatus := range servers.Status.AllocationSets[serversIndex].Storage {
@@ -291,14 +291,14 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 }
 
 // Reset the allocation information from the status section to empty values
-func (r *DWSServersReconciler) clearAllocationStatus(servers *dwsv1alpha3.Servers) {
-	servers.Status.AllocationSets = []dwsv1alpha3.ServersStatusAllocationSet{}
+func (r *DWSServersReconciler) clearAllocationStatus(servers *dwsv1alpha4.Servers) {
+	servers.Status.AllocationSets = []dwsv1alpha4.ServersStatusAllocationSet{}
 	for _, allocationSetSpec := range servers.Spec.AllocationSets {
-		allocationSetStatus := dwsv1alpha3.ServersStatusAllocationSet{}
+		allocationSetStatus := dwsv1alpha4.ServersStatusAllocationSet{}
 		allocationSetStatus.Label = allocationSetSpec.Label
-		allocationSetStatus.Storage = make(map[string]dwsv1alpha3.ServersStatusStorage)
+		allocationSetStatus.Storage = make(map[string]dwsv1alpha4.ServersStatusStorage)
 		for _, storage := range allocationSetSpec.Storage {
-			allocationSetStatus.Storage[storage.Name] = dwsv1alpha3.ServersStatusStorage{AllocationSize: 0}
+			allocationSetStatus.Storage[storage.Name] = dwsv1alpha4.ServersStatusStorage{AllocationSize: 0}
 		}
 
 		servers.Status.AllocationSets = append(servers.Status.AllocationSets, allocationSetStatus)
@@ -306,7 +306,7 @@ func (r *DWSServersReconciler) clearAllocationStatus(servers *dwsv1alpha3.Server
 }
 
 // Either the NnfStorage has not been created yet, or it existed and has been deleted
-func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha3.Servers) (ctrl.Result, error) {
+func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv1alpha4.Servers) (ctrl.Result, error) {
 	// Keep the original to check later for updates
 	originalServers := servers.DeepCopy()
 
@@ -324,7 +324,7 @@ func (r *DWSServersReconciler) statusSetEmpty(ctx context.Context, servers *dwsv
 }
 
 // Update Status if we've eclipsed the batch time
-func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1alpha3.Servers, batch bool) (ctrl.Result, error) {
+func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1alpha4.Servers, batch bool) (ctrl.Result, error) {
 	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
 	if batch == true && servers.Status.LastUpdate != nil {
 		batchTime, err := strconv.Atoi(os.Getenv("SERVERS_BATCH_TIME_MSEC"))
@@ -359,7 +359,7 @@ func (r *DWSServersReconciler) statusUpdate(ctx context.Context, servers *dwsv1a
 
 // Wait for the NnfStorage resource to be deleted. We'll update the servers status to reflect
 // capacity being freed.
-func (r *DWSServersReconciler) checkDeletedStorage(ctx context.Context, servers *dwsv1alpha3.Servers) (deletedStorage, error) {
+func (r *DWSServersReconciler) checkDeletedStorage(ctx context.Context, servers *dwsv1alpha4.Servers) (deletedStorage, error) {
 	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
 
 	// Get the NnfStorage with the same name/namespace as the servers resource
@@ -393,8 +393,8 @@ func (r *DWSServersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha3.Servers{}).
+		For(&dwsv1alpha4.Servers{}).
 		Watches(&nnfv1alpha7.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
-		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha3.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha4.OwnerLabelMapFunc)).
 		Complete(r)
 }

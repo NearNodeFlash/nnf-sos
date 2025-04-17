@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -116,7 +116,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	metrics.NnfClientMountReconcilesTotal.Inc()
 
-	clientMount := &dwsv1alpha3.ClientMount{}
+	clientMount := &dwsv1alpha4.ClientMount{}
 	if err := r.Get(ctx, req.NamespacedName, clientMount); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -125,7 +125,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	// Create a status updater that handles the call to status().Update() if any of the fields
 	// in clientMount.Status change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha3.ClientMountStatus](clientMount)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha4.ClientMountStatus](clientMount)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { clientMount.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -137,7 +137,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		// Unmount everything before removing the finalizer
 		log.Info("Unmounting all file systems due to resource deletion")
-		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha3.ClientMountStateUnmounted); err != nil {
+		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha4.ClientMountStateUnmounted); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -153,7 +153,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		if localMount {
 			if err := nvme.NvmeRescanDevices(log); err != nil {
-				return ctrl.Result{}, dwsv1alpha3.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+				return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
 			}
 		}
 
@@ -171,7 +171,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create the status section if it doesn't exist yet
 	if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
-		clientMount.Status.Mounts = make([]dwsv1alpha3.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
+		clientMount.Status.Mounts = make([]dwsv1alpha4.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
 	}
 
 	// Initialize the status section if the desired state doesn't match the status state
@@ -203,7 +203,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	clientMount.Status.AllReady = false
 
 	if err := r.changeMountAll(ctx, clientMount, clientMount.Spec.DesiredState); err != nil {
-		resourceError := dwsv1alpha3.NewResourceError("mount/unmount failed").WithError(err)
+		resourceError := dwsv1alpha4.NewResourceError("mount/unmount failed").WithError(err)
 		log.Info(resourceError.Error())
 
 		return ctrl.Result{}, resourceError
@@ -215,18 +215,18 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
-func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha3.ClientMount, state dwsv1alpha3.ClientMountState) error {
+func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha4.ClientMount, state dwsv1alpha4.ClientMountState) error {
 	var firstError error
 	for i := range clientMount.Spec.Mounts {
 		var err error
 
 		switch state {
-		case dwsv1alpha3.ClientMountStateMounted:
+		case dwsv1alpha4.ClientMountStateMounted:
 			err = r.changeMount(ctx, clientMount, i, true)
-		case dwsv1alpha3.ClientMountStateUnmounted:
+		case dwsv1alpha4.ClientMountStateUnmounted:
 			err = r.changeMount(ctx, clientMount, i, false)
 		default:
-			return dwsv1alpha3.NewResourceError("invalid desired state %s", state).WithFatal()
+			return dwsv1alpha4.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
 
 		if err != nil {
@@ -243,18 +243,18 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 }
 
 // changeMount mount or unmounts a single mount point described in the ClientMountInfo object
-func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount *dwsv1alpha3.ClientMount, index int, shouldMount bool) error {
+func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount *dwsv1alpha4.ClientMount, index int, shouldMount bool) error {
 	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount), "index", index)
 
 	clientMountInfo := clientMount.Spec.Mounts[index]
 	nnfNodeStorage, err := r.fakeNnfNodeStorage(ctx, clientMount, index)
 	if err != nil {
-		return dwsv1alpha3.NewResourceError("unable to build NnfNodeStorage").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("unable to build NnfNodeStorage").WithError(err).WithMajor()
 	}
 
 	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, clientMountInfo.Device.DeviceReference.Data, log)
 	if err != nil {
-		return dwsv1alpha3.NewResourceError("unable to get file system information").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("unable to get file system information").WithError(err).WithMajor()
 	}
 
 	if shouldMount {
@@ -263,10 +263,10 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			// If we weren't able to activate the block device, then rescan for the NVMe namespaces. If the rescan is
 			// successful the block device will be activated on the next reconcile
 			if err := nvme.NvmeRescanDevices(log); err != nil {
-				return dwsv1alpha3.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+				return dwsv1alpha4.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
 			}
 
-			return dwsv1alpha3.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+			return dwsv1alpha4.NewResourceError("unable to activate block device").WithError(err).WithMajor()
 		}
 		if activated {
 			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
@@ -274,7 +274,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
-			return dwsv1alpha3.NewResourceError("unable to mount file system").WithError(err).WithMajor()
+			return dwsv1alpha4.NewResourceError("unable to mount file system").WithError(err).WithMajor()
 		}
 		if mounted {
 			log.Info("Mounted file system", "Mount path", clientMountInfo.MountPath)
@@ -282,7 +282,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 		if clientMount.Spec.Mounts[index].SetPermissions {
 			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
-				return dwsv1alpha3.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
+				return dwsv1alpha4.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
 			}
 
 			// If we're setting permissions then we know this is only happening once.  Dump the
@@ -292,7 +292,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			if clientMount.Spec.Mounts[index].Type == "lustre" {
 				serversFilepath := filepath.Join(clientMountInfo.MountPath, lustreServersFilepath)
 				if err := r.dumpServersToFile(ctx, clientMount, serversFilepath, clientMount.Spec.Mounts[index].UserID, clientMount.Spec.Mounts[index].GroupID); err != nil {
-					return dwsv1alpha3.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
+					return dwsv1alpha4.NewResourceError("unable to dump servers resource to file on clientmount path").WithError(err).WithMajor()
 				}
 			}
 		}
@@ -300,7 +300,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	} else {
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
-			return dwsv1alpha3.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
+			return dwsv1alpha4.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
 		}
 		if unmounted {
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
@@ -314,7 +314,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
-			return dwsv1alpha3.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
+			return dwsv1alpha4.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
 		}
 		if deactivated {
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
@@ -325,18 +325,18 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 }
 
 // Retrieve the Servers resource for the workflow and write it to a dotfile on the mount path for compute users to retrieve
-func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha3.ClientMount, path string, uid, gid uint32) error {
+func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, clientMount *dwsv1alpha4.ClientMount, path string, uid, gid uint32) error {
 
 	// Get the NnfServers Resource
 	server, err := r.getServerForClientMount(ctx, clientMount)
 	if err != nil {
-		return dwsv1alpha3.NewResourceError("could not retrieve corresponding NnfServer resource for this ClientMount").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("could not retrieve corresponding NnfServer resource for this ClientMount").WithError(err).WithMajor()
 	}
 
 	// Dump server resource to file on mountpoint (e.g. .nnf-lustre)
 	file, err := os.Create(path)
 	if err != nil {
-		return dwsv1alpha3.NewResourceError("could not create servers file").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("could not create servers file").WithError(err).WithMajor()
 	}
 	defer file.Close()
 
@@ -345,12 +345,12 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 	components := getLustreMappingFromServer(server)
 	err = encoder.Encode(components)
 	if err != nil {
-		return dwsv1alpha3.NewResourceError("could not write JSON to file").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("could not write JSON to file").WithError(err).WithMajor()
 	}
 
 	// Change permissions to user
 	if err := os.Chown(path, int(uid), int(gid)); err != nil {
-		return dwsv1alpha3.NewResourceError("unable to set owner and group").WithError(err).WithMajor()
+		return dwsv1alpha4.NewResourceError("unable to set owner and group").WithError(err).WithMajor()
 	}
 
 	return nil
@@ -364,20 +364,20 @@ func (r *NnfClientMountReconciler) dumpServersToFile(ctx context.Context, client
 // 2. PersistentStorageInstance (persistent storage case)
 //
 // Once we understand who owns the NnfStorage resource, we can then obtain the NnfServer resource through slightly different methods.
-func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, clientMount *dwsv1alpha3.ClientMount) (*dwsv1alpha3.Servers, error) {
+func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, clientMount *dwsv1alpha4.ClientMount) (*dwsv1alpha4.Servers, error) {
 	storageKind := "NnfStorage"
 	persistentKind := "PersistentStorageInstance"
 	workflowKind := "Workflow"
 
 	// Get the owner and directive index from ClientMount's labels
-	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha3.OwnerKindLabel]
-	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha3.OwnerNameLabel]
-	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha3.OwnerNamespaceLabel]
+	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha4.OwnerKindLabel]
+	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha4.OwnerNameLabel]
+	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha4.OwnerNamespaceLabel]
 	_, idxExists := clientMount.Labels[nnfv1alpha7.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
-		return nil, dwsv1alpha3.NewResourceError("expected owner to be of kind NnfStorage and have the expected labels").WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("expected owner to be of kind NnfStorage and have the expected labels").WithMajor()
 	}
 
 	// Retrieve the NnfStorage resource
@@ -388,19 +388,19 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-		return nil, dwsv1alpha3.NewResourceError("unable retrieve NnfStorage resource").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("unable retrieve NnfStorage resource").WithError(err).WithMajor()
 	}
 
 	// Get the owner and directive index from NnfStorage's labels
-	ownerKind, ownerExists = storage.Labels[dwsv1alpha3.OwnerKindLabel]
-	ownerName, ownerNameExists = storage.Labels[dwsv1alpha3.OwnerNameLabel]
-	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha3.OwnerNamespaceLabel]
+	ownerKind, ownerExists = storage.Labels[dwsv1alpha4.OwnerKindLabel]
+	ownerName, ownerNameExists = storage.Labels[dwsv1alpha4.OwnerNameLabel]
+	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha4.OwnerNamespaceLabel]
 	idx, idxExists := storage.Labels[nnfv1alpha7.DirectiveIndexLabel]
 
 	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
 	// have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || (ownerKind != workflowKind && ownerKind != persistentKind) {
-		return nil, dwsv1alpha3.NewResourceError("expected owner to be of kind Workflow or PersistentStorageInstance and have the expected labels").WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("expected owner to be of kind Workflow or PersistentStorageInstance and have the expected labels").WithMajor()
 	}
 
 	// If the owner is a workflow, then we can use the workflow labels and directive index to get
@@ -409,8 +409,8 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	if ownerKind == workflowKind {
 		listOptions = []client.ListOption{
 			client.MatchingLabels(map[string]string{
-				dwsv1alpha3.WorkflowNameLabel:      ownerName,
-				dwsv1alpha3.WorkflowNamespaceLabel: ownerNS,
+				dwsv1alpha4.WorkflowNameLabel:      ownerName,
+				dwsv1alpha4.WorkflowNamespaceLabel: ownerNS,
 				nnfv1alpha7.DirectiveIndexLabel:    idx,
 			}),
 		}
@@ -419,21 +419,21 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 		// labels. It also will not have a directive index.
 		listOptions = []client.ListOption{
 			client.MatchingLabels(map[string]string{
-				dwsv1alpha3.OwnerKindLabel:      ownerKind,
-				dwsv1alpha3.OwnerNameLabel:      ownerName,
-				dwsv1alpha3.OwnerNamespaceLabel: ownerNS,
+				dwsv1alpha4.OwnerKindLabel:      ownerKind,
+				dwsv1alpha4.OwnerNameLabel:      ownerName,
+				dwsv1alpha4.OwnerNamespaceLabel: ownerNS,
 			}),
 		}
 	}
 
-	serversList := &dwsv1alpha3.ServersList{}
+	serversList := &dwsv1alpha4.ServersList{}
 	if err := r.List(ctx, serversList, listOptions...); err != nil {
-		return nil, dwsv1alpha3.NewResourceError("unable retrieve NnfServers resource").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("unable retrieve NnfServers resource").WithError(err).WithMajor()
 	}
 
 	// We should only have 1
 	if len(serversList.Items) != 1 {
-		return nil, dwsv1alpha3.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
 	}
 
 	return &serversList.Items[0], nil
@@ -442,7 +442,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 // Go through the Server's allocation sets to determine the number of Lustre components and rabbit
 // nodes. Returns a map with keys for each lustre component type and also the nnf nodes involved. The
 // list of nnf nodes is kept unique, but mdts, osts, etc can include a node multiple times.
-func getLustreMappingFromServer(server *dwsv1alpha3.Servers) map[string][]string {
+func getLustreMappingFromServer(server *dwsv1alpha4.Servers) map[string][]string {
 	nnfNodeKey := "nnfNode"
 	components := map[string][]string{
 		"mdt":      []string{},
@@ -478,7 +478,7 @@ func getLustreMappingFromServer(server *dwsv1alpha3.Servers) map[string][]string
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha3.ClientMount, index int) (*nnfv1alpha7.NnfNodeStorage, error) {
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha4.ClientMount, index int) (*nnfv1alpha7.NnfNodeStorage, error) {
 	nnfNodeStorage := &nnfv1alpha7.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
@@ -489,10 +489,10 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 
 	// These labels aren't exactly right (NnfStorage owns NnfNodeStorage), but the
 	// labels that are important for doing the mount are there and correct
-	dwsv1alpha3.InheritParentLabels(nnfNodeStorage, clientMount)
+	dwsv1alpha4.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
 	labels[nnfv1alpha7.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
-	labels[dwsv1alpha3.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
+	labels[dwsv1alpha4.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 
 	nnfNodeStorage.Spec.BlockReference = corev1.ObjectReference{
@@ -518,7 +518,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfNodeStorage)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("unable to find pinned storage profile").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("unable to find pinned storage profile").WithError(err).WithMajor()
 	}
 
 	switch nnfNodeStorage.Spec.FileSystemType {
@@ -547,7 +547,7 @@ func (r *NnfClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha3.ClientMount{})
+		For(&dwsv1alpha4.ClientMount{})
 
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		builder = builder.WithEventFilter(filterByRabbitNamespacePrefixForTest())

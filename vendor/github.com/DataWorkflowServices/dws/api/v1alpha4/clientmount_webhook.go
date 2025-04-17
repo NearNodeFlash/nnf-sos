@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha4
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,10 +25,10 @@ import (
 )
 
 // log is for logging in this package.
-var storagelog = logf.Log.WithName("storage-resource")
+var clientmountlog = logf.Log.WithName("clientmount-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *Storage) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *ClientMount) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
