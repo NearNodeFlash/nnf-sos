@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
 
@@ -54,7 +54,7 @@ const (
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	clientMount := &dwsv1alpha3.ClientMount{}
+	clientMount := &dwsv1alpha4.ClientMount{}
 	if err := r.Get(ctx, req.NamespacedName, clientMount); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -64,7 +64,7 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Create a status updater that handles the call to r.Status().Update() if any of the fields
 	// in clientMount.Status{} change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha3.ClientMountStatus](clientMount)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha4.ClientMountStatus](clientMount)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { clientMount.Status.SetResourceError(err) }()
 
@@ -84,7 +84,7 @@ func (r *ClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Create the status section if it doesn't exist yet
 	if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
-		clientMount.Status.Mounts = make([]dwsv1alpha3.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
+		clientMount.Status.Mounts = make([]dwsv1alpha4.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
 	}
 
 	// Initialize the status section if the desired state doesn't match the status state
@@ -126,7 +126,7 @@ func filterByComputeNamespacePrefix() predicate.Predicate {
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClientMountReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dwsv1alpha3.ClientMount{}).
+		For(&dwsv1alpha4.ClientMount{}).
 		WithEventFilter(filterByComputeNamespacePrefix()).
 		Complete(r)
 }

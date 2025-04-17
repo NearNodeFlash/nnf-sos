@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha4
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,10 +25,10 @@ import (
 )
 
 // log is for logging in this package.
-var dwdirectiverulelog = logf.Log.WithName("dwdirectiverule-resource")
+var persistentstorageinstancelog = logf.Log.WithName("persistentstorageinstance-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *DWDirectiveRule) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *PersistentStorageInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
