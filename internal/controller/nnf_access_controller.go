@@ -136,6 +136,16 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 
+		// Wait for all the devices to be removed from the correct nodes
+		ready, err := r.getBlockStorageAccessStatus(ctx, access, storageMapping)
+		if err != nil {
+			return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
+		}
+
+		if !ready {
+			return ctrl.Result{RequeueAfter: time.Second * 2}, nil
+		}
+
 		// Unlock the NnfStorage so it can be used by another NnfAccess
 		if err = r.unlockStorage(ctx, access); err != nil {
 			return ctrl.Result{}, err
@@ -233,7 +243,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha7.Nnf
 		return nil, dwsv1alpha4.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
 	}
 
-	if ready == false {
+	if !ready {
 		return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
@@ -282,6 +292,16 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha7.N
 	err = r.removeBlockStorageAccess(ctx, access, storageMapping)
 	if err != nil {
 		return nil, dwsv1alpha4.NewResourceError("unable to remove NnfNodeStorage endpoints").WithError(err)
+	}
+
+	// Wait for all the devices to be removed from the correct nodes
+	ready, err = r.getBlockStorageAccessStatus(ctx, access, storageMapping)
+	if err != nil {
+		return nil, dwsv1alpha4.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
+	}
+
+	if !ready {
+		return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
 	// Unlock the NnfStorage so it can be used by another NnfAccess
@@ -871,21 +891,26 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 	}
 
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
+		storage := &dwsv1alpha4.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfNodeBlockStorage.GetNamespace(),
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+
+		// If we're ignoring offline Computes, then get the Storage resource once here so it can be
+		// used later
+		if access.Spec.IgnoreOfflineComputes {
+			if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+				return false, err
+			}
+		}
+
 		for allocationIndex, allocation := range nnfNodeBlockStorage.Spec.Allocations {
+			// Check that all of the StorageGroups we've requested have been created
 			for _, nodeName := range allocation.Access {
 				blockAccess, exists := nnfNodeBlockStorage.Status.Allocations[allocationIndex].Accesses[nodeName]
 				if access.Spec.IgnoreOfflineComputes {
-					storage := &dwsv1alpha4.Storage{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      nnfNodeBlockStorage.GetNamespace(),
-							Namespace: corev1.NamespaceDefault,
-						},
-					}
-
-					if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-						return false, err
-					}
-
 					computeOffline := false
 					for _, compute := range storage.Status.Access.Computes {
 						if compute.Name != nodeName {
@@ -894,6 +919,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 
 						if compute.Status == dwsv1alpha4.OfflineStatus {
 							computeOffline = true
+							break
 						}
 					}
 
@@ -912,6 +938,42 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 				if blockAccess.StorageGroupId == "" {
 					return false, nil
 				}
+			}
+
+			// Check that there aren't any extra StorageGroups present
+			for statusNodeName := range nnfNodeBlockStorage.Status.Allocations[allocationIndex].Accesses {
+				found := false
+				for _, specNodeName := range allocation.Access {
+					if specNodeName == statusNodeName {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					continue
+				}
+
+				if access.Spec.IgnoreOfflineComputes {
+					computeOffline := false
+					for _, compute := range storage.Status.Access.Computes {
+						if compute.Name != statusNodeName {
+							continue
+						}
+
+						if compute.Status == dwsv1alpha4.OfflineStatus {
+							computeOffline = true
+							break
+						}
+					}
+
+					// If the compute is offline, don't check its status
+					if computeOffline {
+						continue
+					}
+				}
+
+				return false, nil
 			}
 		}
 	}

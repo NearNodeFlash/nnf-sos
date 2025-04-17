@@ -193,6 +193,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		if controllerutil.ContainsFinalizer(nodeBlockStorage, finalizerNnfNodeStorage) {
 			return ctrl.Result{}, nil
 		}
+
 		for i := range nodeBlockStorage.Spec.Allocations {
 			// Release physical storage
 			result, err := r.deleteStorage(nodeBlockStorage, i)
@@ -411,12 +412,11 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 		// If the endpoint doesn't need a storage group, remove one if it exists
 		if nodeName == "" {
-			if _, err := r.getStorageGroup(ss, storageGroupId); err != nil {
-				continue
-			}
-
-			if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
-				return nil, dwsv1alpha4.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+			if _, err := r.getStorageGroup(ss, storageGroupId); err == nil {
+				if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
+					return nil, dwsv1alpha4.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+				}
+				log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 			}
 
 			for oldNodeName, accessStatus := range allocationStatus.Accesses {
@@ -425,7 +425,6 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 				}
 			}
 
-			log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 		} else {
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
