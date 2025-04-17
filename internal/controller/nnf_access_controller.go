@@ -919,6 +919,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 
 						if compute.Status == dwsv1alpha3.OfflineStatus {
 							computeOffline = true
+							break
 						}
 					}
 
@@ -962,6 +963,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 
 						if compute.Status == dwsv1alpha3.OfflineStatus {
 							computeOffline = true
+							break
 						}
 					}
 
