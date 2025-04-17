@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha4
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
