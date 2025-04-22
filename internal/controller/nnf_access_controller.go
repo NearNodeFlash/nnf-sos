@@ -75,6 +75,7 @@ const (
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorages/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts,verbs=get;list;watch;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=clientmounts/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemstatuses,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -1285,7 +1286,8 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 }
 
 // checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
-// compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection)
+// compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection).
+// It also checks the SystemStatus resource to see if the compute node is marked as Disabled.
 func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha7.NnfAccess, clientMount *dwsv1alpha4.ClientMount) (bool, error) {
 	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
 		return false, nil
@@ -1313,7 +1315,29 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	computeName := clientMount.GetNamespace()
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
-			return compute.Status == dwsv1alpha4.OfflineStatus, nil
+			if compute.Status == dwsv1alpha4.OfflineStatus {
+				return true, nil
+			}
+			break
+		}
+	}
+
+	systemStatus := &dwsv1alpha4.SystemStatus{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "default",
+			Namespace: corev1.NamespaceDefault,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(systemStatus), systemStatus); err != nil {
+		// Don't rely on the SystemStatus existing. If it's not there, just return that the compute node
+		// isn't offline
+		return false, nil
+	}
+
+	if status, found := systemStatus.Data.Nodes[computeName]; found {
+		if status == dwsv1alpha4.SystemNodeStatusDisabled {
+			return true, nil
 		}
 	}
 

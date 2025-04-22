@@ -1,0 +1,53 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: systemstatuses.dataworkflowservices.github.io
+spec:
+  group: dataworkflowservices.github.io
+  names:
+    kind: SystemStatus
+    listKind: SystemStatusList
+    plural: systemstatuses
+    singular: systemstatus
+  scope: Namespaced
+  versions:
+  - name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: SystemStatus is the Schema for the systemstatuses API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          data:
+            description: SystemStatusSpec defines the desired state of SystemStatus
+            properties:
+              nodes:
+                additionalProperties:
+                  enum:
+                  - Enabled
+                  - Disabled
+                  type: string
+                description: Nodes is a map of node name to node status
+                type: object
+            type: object
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: true
