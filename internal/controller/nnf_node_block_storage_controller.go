@@ -428,7 +428,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		} else {
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
-				allocationStatus.Accesses[nodeName] = nnfv1alpha7.NnfNodeBlockStorageAccessStatus{StorageGroupId: "fake-storage-group"}
+				allocationStatus.Accesses[nodeName] = nnfv1alpha7.NnfNodeBlockStorageAccessStatus{StorageGroupId: storageGroupId}
 				continue
 			}
 
