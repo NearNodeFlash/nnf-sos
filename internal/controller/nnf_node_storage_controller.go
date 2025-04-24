@@ -140,19 +140,6 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 
-		for i := range nnfNodeStorage.Status.Allocations {
-			// Release physical storage
-			result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
-			if err != nil {
-
-				return ctrl.Result{}, err
-			}
-			if result != nil {
-				return *result, nil
-			}
-		}
-
-		// Remove the finalizer from the NnfNodeBlockStorage
 		nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
@@ -161,6 +148,19 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
+			for i := range nnfNodeStorage.Status.Allocations {
+				// Release physical storage
+				result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
+				if err != nil {
+
+					return ctrl.Result{}, err
+				}
+				if result != nil {
+					return *result, nil
+				}
+			}
+
+			// Remove the finalizer from the NnfNodeBlockStorage
 			if controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
 				controllerutil.RemoveFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
 
@@ -168,6 +168,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				if err != nil {
 					return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 				}
+				log.Info("finalizer removed from blockstorage")
 
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -232,6 +233,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 
 			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if !nnfNodeBlockStorage.Status.Ready {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 	}
 

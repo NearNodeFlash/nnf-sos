@@ -179,19 +179,6 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	// Collect status information from the NnfNodeBlockStorage resources and aggregate it into the
-	// NnfStorage
-	for i := range storage.Spec.AllocationSets {
-		res, err := r.aggregateNodeBlockStorageStatus(ctx, storage, i)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if res != nil {
-			return *res, nil
-		}
-	}
-
 	// Collect the lists of nodes for each lustre component used for the filesystem
 	if storage.Spec.FileSystemType == "lustre" {
 		components := getLustreMappingFromStorage(storage)
@@ -214,6 +201,19 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		res, err := r.createNodeStorage(ctx, storage, i)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if res != nil {
+			return *res, nil
+		}
+	}
+
+	// Collect status information from the NnfNodeBlockStorage resources and aggregate it into the
+	// NnfStorage
+	for i := range storage.Spec.AllocationSets {
+		res, err := r.aggregateNodeBlockStorageStatus(ctx, storage, i)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
