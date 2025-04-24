@@ -233,6 +233,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			return ctrl.Result{Requeue: true}, nil
 		}
+
+		if !nnfNodeBlockStorage.Status.Ready {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 	}
 
 	blockDevices := []blockdevice.BlockDevice{}
