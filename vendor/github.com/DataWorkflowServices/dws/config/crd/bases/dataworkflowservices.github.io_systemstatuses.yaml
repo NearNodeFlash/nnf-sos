@@ -27,7 +27,7 @@ spec:
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           data:
-            description: SystemStatusSpec defines the desired state of SystemStatus
+            description: SystemStatusData defines the data in the SystemStatus
             properties:
               nodes:
                 additionalProperties:

@@ -31,7 +31,7 @@ const (
 	SystemNodeStatusDisabled SystemNodeStatus = "Disabled"
 )
 
-// SystemStatusSpec defines the desired state of SystemStatus
+// SystemStatusData defines the data in the SystemStatus
 type SystemStatusData struct {
 	// Nodes is a map of node name to node status
 	Nodes map[string]SystemNodeStatus `json:"nodes,omitempty"`
