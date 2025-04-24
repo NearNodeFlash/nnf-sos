@@ -156,6 +156,14 @@ rules:
 - apiGroups:
   - dataworkflowservices.github.io
   resources:
+  - systemstatuses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
   - workflows
   verbs:
   - get

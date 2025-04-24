@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.5
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20250417160348-262076fecc45
+	github.com/DataWorkflowServices/dws v0.0.1-0.20250424161110-635a3b991607
 	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250219194350-45aad5cbbe17
 	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250416170223-aeb7554e777b
 	github.com/ghodss/yaml v1.0.0
