@@ -27,7 +27,7 @@ package v1alpha2
 import (
 	unsafe "unsafe"
 
-	v1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	v1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwdparse "github.com/DataWorkflowServices/dws/utils/dwdparse"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,655 +43,655 @@ func init() {
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
 func RegisterConversions(s *runtime.Scheme) error {
-	if err := s.AddGeneratedConversionFunc((*AllocationSetColocationConstraint)(nil), (*v1alpha3.AllocationSetColocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha3_AllocationSetColocationConstraint(a.(*AllocationSetColocationConstraint), b.(*v1alpha3.AllocationSetColocationConstraint), scope)
+	if err := s.AddGeneratedConversionFunc((*AllocationSetColocationConstraint)(nil), (*v1alpha4.AllocationSetColocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha4_AllocationSetColocationConstraint(a.(*AllocationSetColocationConstraint), b.(*v1alpha4.AllocationSetColocationConstraint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.AllocationSetColocationConstraint)(nil), (*AllocationSetColocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(a.(*v1alpha3.AllocationSetColocationConstraint), b.(*AllocationSetColocationConstraint), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.AllocationSetColocationConstraint)(nil), (*AllocationSetColocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(a.(*v1alpha4.AllocationSetColocationConstraint), b.(*AllocationSetColocationConstraint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*AllocationSetConstraints)(nil), (*v1alpha3.AllocationSetConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints(a.(*AllocationSetConstraints), b.(*v1alpha3.AllocationSetConstraints), scope)
+	if err := s.AddGeneratedConversionFunc((*AllocationSetConstraints)(nil), (*v1alpha4.AllocationSetConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints(a.(*AllocationSetConstraints), b.(*v1alpha4.AllocationSetConstraints), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.AllocationSetConstraints)(nil), (*AllocationSetConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(a.(*v1alpha3.AllocationSetConstraints), b.(*AllocationSetConstraints), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.AllocationSetConstraints)(nil), (*AllocationSetConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(a.(*v1alpha4.AllocationSetConstraints), b.(*AllocationSetConstraints), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMount)(nil), (*v1alpha3.ClientMount)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMount_To_v1alpha3_ClientMount(a.(*ClientMount), b.(*v1alpha3.ClientMount), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMount)(nil), (*v1alpha4.ClientMount)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMount_To_v1alpha4_ClientMount(a.(*ClientMount), b.(*v1alpha4.ClientMount), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMount)(nil), (*ClientMount)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMount_To_v1alpha2_ClientMount(a.(*v1alpha3.ClientMount), b.(*ClientMount), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMount)(nil), (*ClientMount)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMount_To_v1alpha2_ClientMount(a.(*v1alpha4.ClientMount), b.(*ClientMount), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountDevice)(nil), (*v1alpha3.ClientMountDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice(a.(*ClientMountDevice), b.(*v1alpha3.ClientMountDevice), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountDevice)(nil), (*v1alpha4.ClientMountDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice(a.(*ClientMountDevice), b.(*v1alpha4.ClientMountDevice), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountDevice)(nil), (*ClientMountDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(a.(*v1alpha3.ClientMountDevice), b.(*ClientMountDevice), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountDevice)(nil), (*ClientMountDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice(a.(*v1alpha4.ClientMountDevice), b.(*ClientMountDevice), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceLVM)(nil), (*v1alpha3.ClientMountDeviceLVM)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha3_ClientMountDeviceLVM(a.(*ClientMountDeviceLVM), b.(*v1alpha3.ClientMountDeviceLVM), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceLVM)(nil), (*v1alpha4.ClientMountDeviceLVM)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha4_ClientMountDeviceLVM(a.(*ClientMountDeviceLVM), b.(*v1alpha4.ClientMountDeviceLVM), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountDeviceLVM)(nil), (*ClientMountDeviceLVM)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(a.(*v1alpha3.ClientMountDeviceLVM), b.(*ClientMountDeviceLVM), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountDeviceLVM)(nil), (*ClientMountDeviceLVM)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(a.(*v1alpha4.ClientMountDeviceLVM), b.(*ClientMountDeviceLVM), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceLustre)(nil), (*v1alpha3.ClientMountDeviceLustre)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha3_ClientMountDeviceLustre(a.(*ClientMountDeviceLustre), b.(*v1alpha3.ClientMountDeviceLustre), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceLustre)(nil), (*v1alpha4.ClientMountDeviceLustre)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha4_ClientMountDeviceLustre(a.(*ClientMountDeviceLustre), b.(*v1alpha4.ClientMountDeviceLustre), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountDeviceLustre)(nil), (*ClientMountDeviceLustre)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(a.(*v1alpha3.ClientMountDeviceLustre), b.(*ClientMountDeviceLustre), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountDeviceLustre)(nil), (*ClientMountDeviceLustre)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(a.(*v1alpha4.ClientMountDeviceLustre), b.(*ClientMountDeviceLustre), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceReference)(nil), (*v1alpha3.ClientMountDeviceReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha3_ClientMountDeviceReference(a.(*ClientMountDeviceReference), b.(*v1alpha3.ClientMountDeviceReference), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountDeviceReference)(nil), (*v1alpha4.ClientMountDeviceReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha4_ClientMountDeviceReference(a.(*ClientMountDeviceReference), b.(*v1alpha4.ClientMountDeviceReference), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountDeviceReference)(nil), (*ClientMountDeviceReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(a.(*v1alpha3.ClientMountDeviceReference), b.(*ClientMountDeviceReference), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountDeviceReference)(nil), (*ClientMountDeviceReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(a.(*v1alpha4.ClientMountDeviceReference), b.(*ClientMountDeviceReference), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountInfo)(nil), (*v1alpha3.ClientMountInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo(a.(*ClientMountInfo), b.(*v1alpha3.ClientMountInfo), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountInfo)(nil), (*v1alpha4.ClientMountInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountInfo_To_v1alpha4_ClientMountInfo(a.(*ClientMountInfo), b.(*v1alpha4.ClientMountInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountInfo)(nil), (*ClientMountInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo(a.(*v1alpha3.ClientMountInfo), b.(*ClientMountInfo), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountInfo)(nil), (*ClientMountInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountInfo_To_v1alpha2_ClientMountInfo(a.(*v1alpha4.ClientMountInfo), b.(*ClientMountInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountInfoStatus)(nil), (*v1alpha3.ClientMountInfoStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha3_ClientMountInfoStatus(a.(*ClientMountInfoStatus), b.(*v1alpha3.ClientMountInfoStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountInfoStatus)(nil), (*v1alpha4.ClientMountInfoStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha4_ClientMountInfoStatus(a.(*ClientMountInfoStatus), b.(*v1alpha4.ClientMountInfoStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountInfoStatus)(nil), (*ClientMountInfoStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(a.(*v1alpha3.ClientMountInfoStatus), b.(*ClientMountInfoStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountInfoStatus)(nil), (*ClientMountInfoStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(a.(*v1alpha4.ClientMountInfoStatus), b.(*ClientMountInfoStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountList)(nil), (*v1alpha3.ClientMountList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountList_To_v1alpha3_ClientMountList(a.(*ClientMountList), b.(*v1alpha3.ClientMountList), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountList)(nil), (*v1alpha4.ClientMountList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountList_To_v1alpha4_ClientMountList(a.(*ClientMountList), b.(*v1alpha4.ClientMountList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountList)(nil), (*ClientMountList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountList_To_v1alpha2_ClientMountList(a.(*v1alpha3.ClientMountList), b.(*ClientMountList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountList)(nil), (*ClientMountList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountList_To_v1alpha2_ClientMountList(a.(*v1alpha4.ClientMountList), b.(*ClientMountList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountNVMeDesc)(nil), (*v1alpha3.ClientMountNVMeDesc)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha3_ClientMountNVMeDesc(a.(*ClientMountNVMeDesc), b.(*v1alpha3.ClientMountNVMeDesc), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountNVMeDesc)(nil), (*v1alpha4.ClientMountNVMeDesc)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha4_ClientMountNVMeDesc(a.(*ClientMountNVMeDesc), b.(*v1alpha4.ClientMountNVMeDesc), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountNVMeDesc)(nil), (*ClientMountNVMeDesc)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(a.(*v1alpha3.ClientMountNVMeDesc), b.(*ClientMountNVMeDesc), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountNVMeDesc)(nil), (*ClientMountNVMeDesc)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(a.(*v1alpha4.ClientMountNVMeDesc), b.(*ClientMountNVMeDesc), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountSpec)(nil), (*v1alpha3.ClientMountSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec(a.(*ClientMountSpec), b.(*v1alpha3.ClientMountSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountSpec)(nil), (*v1alpha4.ClientMountSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec(a.(*ClientMountSpec), b.(*v1alpha4.ClientMountSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountSpec)(nil), (*ClientMountSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec(a.(*v1alpha3.ClientMountSpec), b.(*ClientMountSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountSpec)(nil), (*ClientMountSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec(a.(*v1alpha4.ClientMountSpec), b.(*ClientMountSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ClientMountStatus)(nil), (*v1alpha3.ClientMountStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus(a.(*ClientMountStatus), b.(*v1alpha3.ClientMountStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ClientMountStatus)(nil), (*v1alpha4.ClientMountStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus(a.(*ClientMountStatus), b.(*v1alpha4.ClientMountStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ClientMountStatus)(nil), (*ClientMountStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus(a.(*v1alpha3.ClientMountStatus), b.(*ClientMountStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ClientMountStatus)(nil), (*ClientMountStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus(a.(*v1alpha4.ClientMountStatus), b.(*ClientMountStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputeBreakdown)(nil), (*v1alpha3.ComputeBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputeBreakdown_To_v1alpha3_ComputeBreakdown(a.(*ComputeBreakdown), b.(*v1alpha3.ComputeBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputeBreakdown)(nil), (*v1alpha4.ComputeBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputeBreakdown_To_v1alpha4_ComputeBreakdown(a.(*ComputeBreakdown), b.(*v1alpha4.ComputeBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputeBreakdown)(nil), (*ComputeBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(a.(*v1alpha3.ComputeBreakdown), b.(*ComputeBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputeBreakdown)(nil), (*ComputeBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(a.(*v1alpha4.ComputeBreakdown), b.(*ComputeBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputeConstraints)(nil), (*v1alpha3.ComputeConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints(a.(*ComputeConstraints), b.(*v1alpha3.ComputeConstraints), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputeConstraints)(nil), (*v1alpha4.ComputeConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints(a.(*ComputeConstraints), b.(*v1alpha4.ComputeConstraints), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputeConstraints)(nil), (*ComputeConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints(a.(*v1alpha3.ComputeConstraints), b.(*ComputeConstraints), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputeConstraints)(nil), (*ComputeConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints(a.(*v1alpha4.ComputeConstraints), b.(*ComputeConstraints), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputeLocationAccess)(nil), (*v1alpha3.ComputeLocationAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputeLocationAccess_To_v1alpha3_ComputeLocationAccess(a.(*ComputeLocationAccess), b.(*v1alpha3.ComputeLocationAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputeLocationAccess)(nil), (*v1alpha4.ComputeLocationAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputeLocationAccess_To_v1alpha4_ComputeLocationAccess(a.(*ComputeLocationAccess), b.(*v1alpha4.ComputeLocationAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputeLocationAccess)(nil), (*ComputeLocationAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(a.(*v1alpha3.ComputeLocationAccess), b.(*ComputeLocationAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputeLocationAccess)(nil), (*ComputeLocationAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(a.(*v1alpha4.ComputeLocationAccess), b.(*ComputeLocationAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputeLocationConstraint)(nil), (*v1alpha3.ComputeLocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha3_ComputeLocationConstraint(a.(*ComputeLocationConstraint), b.(*v1alpha3.ComputeLocationConstraint), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputeLocationConstraint)(nil), (*v1alpha4.ComputeLocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha4_ComputeLocationConstraint(a.(*ComputeLocationConstraint), b.(*v1alpha4.ComputeLocationConstraint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputeLocationConstraint)(nil), (*ComputeLocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(a.(*v1alpha3.ComputeLocationConstraint), b.(*ComputeLocationConstraint), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputeLocationConstraint)(nil), (*ComputeLocationConstraint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(a.(*v1alpha4.ComputeLocationConstraint), b.(*ComputeLocationConstraint), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Computes)(nil), (*v1alpha3.Computes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_Computes_To_v1alpha3_Computes(a.(*Computes), b.(*v1alpha3.Computes), scope)
+	if err := s.AddGeneratedConversionFunc((*Computes)(nil), (*v1alpha4.Computes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_Computes_To_v1alpha4_Computes(a.(*Computes), b.(*v1alpha4.Computes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.Computes)(nil), (*Computes)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_Computes_To_v1alpha2_Computes(a.(*v1alpha3.Computes), b.(*Computes), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.Computes)(nil), (*Computes)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_Computes_To_v1alpha2_Computes(a.(*v1alpha4.Computes), b.(*Computes), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputesData)(nil), (*v1alpha3.ComputesData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputesData_To_v1alpha3_ComputesData(a.(*ComputesData), b.(*v1alpha3.ComputesData), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputesData)(nil), (*v1alpha4.ComputesData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputesData_To_v1alpha4_ComputesData(a.(*ComputesData), b.(*v1alpha4.ComputesData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputesData)(nil), (*ComputesData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputesData_To_v1alpha2_ComputesData(a.(*v1alpha3.ComputesData), b.(*ComputesData), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputesData)(nil), (*ComputesData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputesData_To_v1alpha2_ComputesData(a.(*v1alpha4.ComputesData), b.(*ComputesData), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ComputesList)(nil), (*v1alpha3.ComputesList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ComputesList_To_v1alpha3_ComputesList(a.(*ComputesList), b.(*v1alpha3.ComputesList), scope)
+	if err := s.AddGeneratedConversionFunc((*ComputesList)(nil), (*v1alpha4.ComputesList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ComputesList_To_v1alpha4_ComputesList(a.(*ComputesList), b.(*v1alpha4.ComputesList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ComputesList)(nil), (*ComputesList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ComputesList_To_v1alpha2_ComputesList(a.(*v1alpha3.ComputesList), b.(*ComputesList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ComputesList)(nil), (*ComputesList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ComputesList_To_v1alpha2_ComputesList(a.(*v1alpha4.ComputesList), b.(*ComputesList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DWDirectiveRule)(nil), (*v1alpha3.DWDirectiveRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DWDirectiveRule_To_v1alpha3_DWDirectiveRule(a.(*DWDirectiveRule), b.(*v1alpha3.DWDirectiveRule), scope)
+	if err := s.AddGeneratedConversionFunc((*DWDirectiveRule)(nil), (*v1alpha4.DWDirectiveRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DWDirectiveRule_To_v1alpha4_DWDirectiveRule(a.(*DWDirectiveRule), b.(*v1alpha4.DWDirectiveRule), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.DWDirectiveRule)(nil), (*DWDirectiveRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(a.(*v1alpha3.DWDirectiveRule), b.(*DWDirectiveRule), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.DWDirectiveRule)(nil), (*DWDirectiveRule)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(a.(*v1alpha4.DWDirectiveRule), b.(*DWDirectiveRule), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DWDirectiveRuleList)(nil), (*v1alpha3.DWDirectiveRuleList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha3_DWDirectiveRuleList(a.(*DWDirectiveRuleList), b.(*v1alpha3.DWDirectiveRuleList), scope)
+	if err := s.AddGeneratedConversionFunc((*DWDirectiveRuleList)(nil), (*v1alpha4.DWDirectiveRuleList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha4_DWDirectiveRuleList(a.(*DWDirectiveRuleList), b.(*v1alpha4.DWDirectiveRuleList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.DWDirectiveRuleList)(nil), (*DWDirectiveRuleList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(a.(*v1alpha3.DWDirectiveRuleList), b.(*DWDirectiveRuleList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.DWDirectiveRuleList)(nil), (*DWDirectiveRuleList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(a.(*v1alpha4.DWDirectiveRuleList), b.(*DWDirectiveRuleList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdown)(nil), (*v1alpha3.DirectiveBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown(a.(*DirectiveBreakdown), b.(*v1alpha3.DirectiveBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdown)(nil), (*v1alpha4.DirectiveBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown(a.(*DirectiveBreakdown), b.(*v1alpha4.DirectiveBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.DirectiveBreakdown)(nil), (*DirectiveBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(a.(*v1alpha3.DirectiveBreakdown), b.(*DirectiveBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.DirectiveBreakdown)(nil), (*DirectiveBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(a.(*v1alpha4.DirectiveBreakdown), b.(*DirectiveBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdownList)(nil), (*v1alpha3.DirectiveBreakdownList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownList(a.(*DirectiveBreakdownList), b.(*v1alpha3.DirectiveBreakdownList), scope)
+	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdownList)(nil), (*v1alpha4.DirectiveBreakdownList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha4_DirectiveBreakdownList(a.(*DirectiveBreakdownList), b.(*v1alpha4.DirectiveBreakdownList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.DirectiveBreakdownList)(nil), (*DirectiveBreakdownList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(a.(*v1alpha3.DirectiveBreakdownList), b.(*DirectiveBreakdownList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.DirectiveBreakdownList)(nil), (*DirectiveBreakdownList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(a.(*v1alpha4.DirectiveBreakdownList), b.(*DirectiveBreakdownList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdownSpec)(nil), (*v1alpha3.DirectiveBreakdownSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec(a.(*DirectiveBreakdownSpec), b.(*v1alpha3.DirectiveBreakdownSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*DirectiveBreakdownSpec)(nil), (*v1alpha4.DirectiveBreakdownSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec(a.(*DirectiveBreakdownSpec), b.(*v1alpha4.DirectiveBreakdownSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.DirectiveBreakdownSpec)(nil), (*DirectiveBreakdownSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(a.(*v1alpha3.DirectiveBreakdownSpec), b.(*DirectiveBreakdownSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.DirectiveBreakdownSpec)(nil), (*DirectiveBreakdownSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(a.(*v1alpha4.DirectiveBreakdownSpec), b.(*DirectiveBreakdownSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Node)(nil), (*v1alpha3.Node)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_Node_To_v1alpha3_Node(a.(*Node), b.(*v1alpha3.Node), scope)
+	if err := s.AddGeneratedConversionFunc((*Node)(nil), (*v1alpha4.Node)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_Node_To_v1alpha4_Node(a.(*Node), b.(*v1alpha4.Node), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.Node)(nil), (*Node)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_Node_To_v1alpha2_Node(a.(*v1alpha3.Node), b.(*Node), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.Node)(nil), (*Node)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_Node_To_v1alpha2_Node(a.(*v1alpha4.Node), b.(*Node), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstance)(nil), (*v1alpha3.PersistentStorageInstance)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_PersistentStorageInstance_To_v1alpha3_PersistentStorageInstance(a.(*PersistentStorageInstance), b.(*v1alpha3.PersistentStorageInstance), scope)
+	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstance)(nil), (*v1alpha4.PersistentStorageInstance)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_PersistentStorageInstance_To_v1alpha4_PersistentStorageInstance(a.(*PersistentStorageInstance), b.(*v1alpha4.PersistentStorageInstance), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.PersistentStorageInstance)(nil), (*PersistentStorageInstance)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(a.(*v1alpha3.PersistentStorageInstance), b.(*PersistentStorageInstance), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.PersistentStorageInstance)(nil), (*PersistentStorageInstance)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(a.(*v1alpha4.PersistentStorageInstance), b.(*PersistentStorageInstance), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceList)(nil), (*v1alpha3.PersistentStorageInstanceList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha3_PersistentStorageInstanceList(a.(*PersistentStorageInstanceList), b.(*v1alpha3.PersistentStorageInstanceList), scope)
+	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceList)(nil), (*v1alpha4.PersistentStorageInstanceList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha4_PersistentStorageInstanceList(a.(*PersistentStorageInstanceList), b.(*v1alpha4.PersistentStorageInstanceList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.PersistentStorageInstanceList)(nil), (*PersistentStorageInstanceList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(a.(*v1alpha3.PersistentStorageInstanceList), b.(*PersistentStorageInstanceList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.PersistentStorageInstanceList)(nil), (*PersistentStorageInstanceList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(a.(*v1alpha4.PersistentStorageInstanceList), b.(*PersistentStorageInstanceList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceSpec)(nil), (*v1alpha3.PersistentStorageInstanceSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec(a.(*PersistentStorageInstanceSpec), b.(*v1alpha3.PersistentStorageInstanceSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceSpec)(nil), (*v1alpha4.PersistentStorageInstanceSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec(a.(*PersistentStorageInstanceSpec), b.(*v1alpha4.PersistentStorageInstanceSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.PersistentStorageInstanceSpec)(nil), (*PersistentStorageInstanceSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(a.(*v1alpha3.PersistentStorageInstanceSpec), b.(*PersistentStorageInstanceSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.PersistentStorageInstanceSpec)(nil), (*PersistentStorageInstanceSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(a.(*v1alpha4.PersistentStorageInstanceSpec), b.(*PersistentStorageInstanceSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceStatus)(nil), (*v1alpha3.PersistentStorageInstanceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus(a.(*PersistentStorageInstanceStatus), b.(*v1alpha3.PersistentStorageInstanceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*PersistentStorageInstanceStatus)(nil), (*v1alpha4.PersistentStorageInstanceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus(a.(*PersistentStorageInstanceStatus), b.(*v1alpha4.PersistentStorageInstanceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.PersistentStorageInstanceStatus)(nil), (*PersistentStorageInstanceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(a.(*v1alpha3.PersistentStorageInstanceStatus), b.(*PersistentStorageInstanceStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.PersistentStorageInstanceStatus)(nil), (*PersistentStorageInstanceStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(a.(*v1alpha4.PersistentStorageInstanceStatus), b.(*PersistentStorageInstanceStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ResourceError)(nil), (*v1alpha3.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(a.(*ResourceError), b.(*v1alpha3.ResourceError), scope)
+	if err := s.AddGeneratedConversionFunc((*ResourceError)(nil), (*v1alpha4.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(a.(*ResourceError), b.(*v1alpha4.ResourceError), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ResourceError)(nil), (*ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(a.(*v1alpha3.ResourceError), b.(*ResourceError), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ResourceError)(nil), (*ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(a.(*v1alpha4.ResourceError), b.(*ResourceError), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ResourceErrorInfo)(nil), (*v1alpha3.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(a.(*ResourceErrorInfo), b.(*v1alpha3.ResourceErrorInfo), scope)
+	if err := s.AddGeneratedConversionFunc((*ResourceErrorInfo)(nil), (*v1alpha4.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(a.(*ResourceErrorInfo), b.(*v1alpha4.ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ResourceErrorInfo)(nil), (*ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(a.(*v1alpha3.ResourceErrorInfo), b.(*ResourceErrorInfo), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ResourceErrorInfo)(nil), (*ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(a.(*v1alpha4.ResourceErrorInfo), b.(*ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Servers)(nil), (*v1alpha3.Servers)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_Servers_To_v1alpha3_Servers(a.(*Servers), b.(*v1alpha3.Servers), scope)
+	if err := s.AddGeneratedConversionFunc((*Servers)(nil), (*v1alpha4.Servers)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_Servers_To_v1alpha4_Servers(a.(*Servers), b.(*v1alpha4.Servers), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.Servers)(nil), (*Servers)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_Servers_To_v1alpha2_Servers(a.(*v1alpha3.Servers), b.(*Servers), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.Servers)(nil), (*Servers)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_Servers_To_v1alpha2_Servers(a.(*v1alpha4.Servers), b.(*Servers), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersList)(nil), (*v1alpha3.ServersList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersList_To_v1alpha3_ServersList(a.(*ServersList), b.(*v1alpha3.ServersList), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersList)(nil), (*v1alpha4.ServersList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersList_To_v1alpha4_ServersList(a.(*ServersList), b.(*v1alpha4.ServersList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersList)(nil), (*ServersList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersList_To_v1alpha2_ServersList(a.(*v1alpha3.ServersList), b.(*ServersList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersList)(nil), (*ServersList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersList_To_v1alpha2_ServersList(a.(*v1alpha4.ServersList), b.(*ServersList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersSpec)(nil), (*v1alpha3.ServersSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec(a.(*ServersSpec), b.(*v1alpha3.ServersSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersSpec)(nil), (*v1alpha4.ServersSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec(a.(*ServersSpec), b.(*v1alpha4.ServersSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersSpec)(nil), (*ServersSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec(a.(*v1alpha3.ServersSpec), b.(*ServersSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersSpec)(nil), (*ServersSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec(a.(*v1alpha4.ServersSpec), b.(*ServersSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersSpecAllocationSet)(nil), (*v1alpha3.ServersSpecAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha3_ServersSpecAllocationSet(a.(*ServersSpecAllocationSet), b.(*v1alpha3.ServersSpecAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersSpecAllocationSet)(nil), (*v1alpha4.ServersSpecAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha4_ServersSpecAllocationSet(a.(*ServersSpecAllocationSet), b.(*v1alpha4.ServersSpecAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersSpecAllocationSet)(nil), (*ServersSpecAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(a.(*v1alpha3.ServersSpecAllocationSet), b.(*ServersSpecAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersSpecAllocationSet)(nil), (*ServersSpecAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(a.(*v1alpha4.ServersSpecAllocationSet), b.(*ServersSpecAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersSpecStorage)(nil), (*v1alpha3.ServersSpecStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersSpecStorage_To_v1alpha3_ServersSpecStorage(a.(*ServersSpecStorage), b.(*v1alpha3.ServersSpecStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersSpecStorage)(nil), (*v1alpha4.ServersSpecStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersSpecStorage_To_v1alpha4_ServersSpecStorage(a.(*ServersSpecStorage), b.(*v1alpha4.ServersSpecStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersSpecStorage)(nil), (*ServersSpecStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(a.(*v1alpha3.ServersSpecStorage), b.(*ServersSpecStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersSpecStorage)(nil), (*ServersSpecStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(a.(*v1alpha4.ServersSpecStorage), b.(*ServersSpecStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersStatus)(nil), (*v1alpha3.ServersStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus(a.(*ServersStatus), b.(*v1alpha3.ServersStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersStatus)(nil), (*v1alpha4.ServersStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus(a.(*ServersStatus), b.(*v1alpha4.ServersStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersStatus)(nil), (*ServersStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus(a.(*v1alpha3.ServersStatus), b.(*ServersStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersStatus)(nil), (*ServersStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus(a.(*v1alpha4.ServersStatus), b.(*ServersStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersStatusAllocationSet)(nil), (*v1alpha3.ServersStatusAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha3_ServersStatusAllocationSet(a.(*ServersStatusAllocationSet), b.(*v1alpha3.ServersStatusAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersStatusAllocationSet)(nil), (*v1alpha4.ServersStatusAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha4_ServersStatusAllocationSet(a.(*ServersStatusAllocationSet), b.(*v1alpha4.ServersStatusAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersStatusAllocationSet)(nil), (*ServersStatusAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(a.(*v1alpha3.ServersStatusAllocationSet), b.(*ServersStatusAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersStatusAllocationSet)(nil), (*ServersStatusAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(a.(*v1alpha4.ServersStatusAllocationSet), b.(*ServersStatusAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ServersStatusStorage)(nil), (*v1alpha3.ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(a.(*ServersStatusStorage), b.(*v1alpha3.ServersStatusStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*ServersStatusStorage)(nil), (*v1alpha4.ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_ServersStatusStorage_To_v1alpha4_ServersStatusStorage(a.(*ServersStatusStorage), b.(*v1alpha4.ServersStatusStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.ServersStatusStorage)(nil), (*ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(a.(*v1alpha3.ServersStatusStorage), b.(*ServersStatusStorage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.ServersStatusStorage)(nil), (*ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(a.(*v1alpha4.ServersStatusStorage), b.(*ServersStatusStorage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Storage)(nil), (*v1alpha3.Storage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_Storage_To_v1alpha3_Storage(a.(*Storage), b.(*v1alpha3.Storage), scope)
+	if err := s.AddGeneratedConversionFunc((*Storage)(nil), (*v1alpha4.Storage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_Storage_To_v1alpha4_Storage(a.(*Storage), b.(*v1alpha4.Storage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.Storage)(nil), (*Storage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_Storage_To_v1alpha2_Storage(a.(*v1alpha3.Storage), b.(*Storage), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.Storage)(nil), (*Storage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_Storage_To_v1alpha2_Storage(a.(*v1alpha4.Storage), b.(*Storage), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageAccess)(nil), (*v1alpha3.StorageAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess(a.(*StorageAccess), b.(*v1alpha3.StorageAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageAccess)(nil), (*v1alpha4.StorageAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess(a.(*StorageAccess), b.(*v1alpha4.StorageAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageAccess)(nil), (*StorageAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess(a.(*v1alpha3.StorageAccess), b.(*StorageAccess), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageAccess)(nil), (*StorageAccess)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess(a.(*v1alpha4.StorageAccess), b.(*StorageAccess), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageAllocationSet)(nil), (*v1alpha3.StorageAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageAllocationSet_To_v1alpha3_StorageAllocationSet(a.(*StorageAllocationSet), b.(*v1alpha3.StorageAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageAllocationSet)(nil), (*v1alpha4.StorageAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageAllocationSet_To_v1alpha4_StorageAllocationSet(a.(*StorageAllocationSet), b.(*v1alpha4.StorageAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageAllocationSet)(nil), (*StorageAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(a.(*v1alpha3.StorageAllocationSet), b.(*StorageAllocationSet), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageAllocationSet)(nil), (*StorageAllocationSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(a.(*v1alpha4.StorageAllocationSet), b.(*StorageAllocationSet), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageBreakdown)(nil), (*v1alpha3.StorageBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageBreakdown_To_v1alpha3_StorageBreakdown(a.(*StorageBreakdown), b.(*v1alpha3.StorageBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageBreakdown)(nil), (*v1alpha4.StorageBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageBreakdown_To_v1alpha4_StorageBreakdown(a.(*StorageBreakdown), b.(*v1alpha4.StorageBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageBreakdown)(nil), (*StorageBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageBreakdown_To_v1alpha2_StorageBreakdown(a.(*v1alpha3.StorageBreakdown), b.(*StorageBreakdown), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageBreakdown)(nil), (*StorageBreakdown)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageBreakdown_To_v1alpha2_StorageBreakdown(a.(*v1alpha4.StorageBreakdown), b.(*StorageBreakdown), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageDevice)(nil), (*v1alpha3.StorageDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageDevice_To_v1alpha3_StorageDevice(a.(*StorageDevice), b.(*v1alpha3.StorageDevice), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageDevice)(nil), (*v1alpha4.StorageDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageDevice_To_v1alpha4_StorageDevice(a.(*StorageDevice), b.(*v1alpha4.StorageDevice), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageDevice)(nil), (*StorageDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice(a.(*v1alpha3.StorageDevice), b.(*StorageDevice), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageDevice)(nil), (*StorageDevice)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageDevice_To_v1alpha2_StorageDevice(a.(*v1alpha4.StorageDevice), b.(*StorageDevice), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageList)(nil), (*v1alpha3.StorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageList_To_v1alpha3_StorageList(a.(*StorageList), b.(*v1alpha3.StorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageList)(nil), (*v1alpha4.StorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageList_To_v1alpha4_StorageList(a.(*StorageList), b.(*v1alpha4.StorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageList)(nil), (*StorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageList_To_v1alpha2_StorageList(a.(*v1alpha3.StorageList), b.(*StorageList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageList)(nil), (*StorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageList_To_v1alpha2_StorageList(a.(*v1alpha4.StorageList), b.(*StorageList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageSpec)(nil), (*v1alpha3.StorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec(a.(*StorageSpec), b.(*v1alpha3.StorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageSpec)(nil), (*v1alpha4.StorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec(a.(*StorageSpec), b.(*v1alpha4.StorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageSpec)(nil), (*StorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec(a.(*v1alpha3.StorageSpec), b.(*StorageSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageSpec)(nil), (*StorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec(a.(*v1alpha4.StorageSpec), b.(*StorageSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageStatus)(nil), (*v1alpha3.StorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus(a.(*StorageStatus), b.(*v1alpha3.StorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*StorageStatus)(nil), (*v1alpha4.StorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus(a.(*StorageStatus), b.(*v1alpha4.StorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.StorageStatus)(nil), (*StorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(a.(*v1alpha3.StorageStatus), b.(*StorageStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.StorageStatus)(nil), (*StorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus(a.(*v1alpha4.StorageStatus), b.(*StorageStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfiguration)(nil), (*v1alpha3.SystemConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfiguration_To_v1alpha3_SystemConfiguration(a.(*SystemConfiguration), b.(*v1alpha3.SystemConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfiguration)(nil), (*v1alpha4.SystemConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfiguration_To_v1alpha4_SystemConfiguration(a.(*SystemConfiguration), b.(*v1alpha4.SystemConfiguration), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfiguration)(nil), (*SystemConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfiguration_To_v1alpha2_SystemConfiguration(a.(*v1alpha3.SystemConfiguration), b.(*SystemConfiguration), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfiguration)(nil), (*SystemConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfiguration_To_v1alpha2_SystemConfiguration(a.(*v1alpha4.SystemConfiguration), b.(*SystemConfiguration), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationComputeNodeReference)(nil), (*v1alpha3.SystemConfigurationComputeNodeReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha3_SystemConfigurationComputeNodeReference(a.(*SystemConfigurationComputeNodeReference), b.(*v1alpha3.SystemConfigurationComputeNodeReference), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationComputeNodeReference)(nil), (*v1alpha4.SystemConfigurationComputeNodeReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha4_SystemConfigurationComputeNodeReference(a.(*SystemConfigurationComputeNodeReference), b.(*v1alpha4.SystemConfigurationComputeNodeReference), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationComputeNodeReference)(nil), (*SystemConfigurationComputeNodeReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(a.(*v1alpha3.SystemConfigurationComputeNodeReference), b.(*SystemConfigurationComputeNodeReference), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationComputeNodeReference)(nil), (*SystemConfigurationComputeNodeReference)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(a.(*v1alpha4.SystemConfigurationComputeNodeReference), b.(*SystemConfigurationComputeNodeReference), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationExternalComputeNode)(nil), (*v1alpha3.SystemConfigurationExternalComputeNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha3_SystemConfigurationExternalComputeNode(a.(*SystemConfigurationExternalComputeNode), b.(*v1alpha3.SystemConfigurationExternalComputeNode), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationExternalComputeNode)(nil), (*v1alpha4.SystemConfigurationExternalComputeNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha4_SystemConfigurationExternalComputeNode(a.(*SystemConfigurationExternalComputeNode), b.(*v1alpha4.SystemConfigurationExternalComputeNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationExternalComputeNode)(nil), (*SystemConfigurationExternalComputeNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(a.(*v1alpha3.SystemConfigurationExternalComputeNode), b.(*SystemConfigurationExternalComputeNode), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationExternalComputeNode)(nil), (*SystemConfigurationExternalComputeNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(a.(*v1alpha4.SystemConfigurationExternalComputeNode), b.(*SystemConfigurationExternalComputeNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationList)(nil), (*v1alpha3.SystemConfigurationList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationList_To_v1alpha3_SystemConfigurationList(a.(*SystemConfigurationList), b.(*v1alpha3.SystemConfigurationList), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationList)(nil), (*v1alpha4.SystemConfigurationList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationList_To_v1alpha4_SystemConfigurationList(a.(*SystemConfigurationList), b.(*v1alpha4.SystemConfigurationList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationList)(nil), (*SystemConfigurationList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(a.(*v1alpha3.SystemConfigurationList), b.(*SystemConfigurationList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationList)(nil), (*SystemConfigurationList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(a.(*v1alpha4.SystemConfigurationList), b.(*SystemConfigurationList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationSpec)(nil), (*v1alpha3.SystemConfigurationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec(a.(*SystemConfigurationSpec), b.(*v1alpha3.SystemConfigurationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationSpec)(nil), (*v1alpha4.SystemConfigurationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec(a.(*SystemConfigurationSpec), b.(*v1alpha4.SystemConfigurationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationSpec)(nil), (*SystemConfigurationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(a.(*v1alpha3.SystemConfigurationSpec), b.(*SystemConfigurationSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationSpec)(nil), (*SystemConfigurationSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(a.(*v1alpha4.SystemConfigurationSpec), b.(*SystemConfigurationSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationStatus)(nil), (*v1alpha3.SystemConfigurationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus(a.(*SystemConfigurationStatus), b.(*v1alpha3.SystemConfigurationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationStatus)(nil), (*v1alpha4.SystemConfigurationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus(a.(*SystemConfigurationStatus), b.(*v1alpha4.SystemConfigurationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationStatus)(nil), (*SystemConfigurationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(a.(*v1alpha3.SystemConfigurationStatus), b.(*SystemConfigurationStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationStatus)(nil), (*SystemConfigurationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(a.(*v1alpha4.SystemConfigurationStatus), b.(*SystemConfigurationStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*SystemConfigurationStorageNode)(nil), (*v1alpha3.SystemConfigurationStorageNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha3_SystemConfigurationStorageNode(a.(*SystemConfigurationStorageNode), b.(*v1alpha3.SystemConfigurationStorageNode), scope)
+	if err := s.AddGeneratedConversionFunc((*SystemConfigurationStorageNode)(nil), (*v1alpha4.SystemConfigurationStorageNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha4_SystemConfigurationStorageNode(a.(*SystemConfigurationStorageNode), b.(*v1alpha4.SystemConfigurationStorageNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.SystemConfigurationStorageNode)(nil), (*SystemConfigurationStorageNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(a.(*v1alpha3.SystemConfigurationStorageNode), b.(*SystemConfigurationStorageNode), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.SystemConfigurationStorageNode)(nil), (*SystemConfigurationStorageNode)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(a.(*v1alpha4.SystemConfigurationStorageNode), b.(*SystemConfigurationStorageNode), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Workflow)(nil), (*v1alpha3.Workflow)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_Workflow_To_v1alpha3_Workflow(a.(*Workflow), b.(*v1alpha3.Workflow), scope)
+	if err := s.AddGeneratedConversionFunc((*Workflow)(nil), (*v1alpha4.Workflow)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_Workflow_To_v1alpha4_Workflow(a.(*Workflow), b.(*v1alpha4.Workflow), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.Workflow)(nil), (*Workflow)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_Workflow_To_v1alpha2_Workflow(a.(*v1alpha3.Workflow), b.(*Workflow), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.Workflow)(nil), (*Workflow)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_Workflow_To_v1alpha2_Workflow(a.(*v1alpha4.Workflow), b.(*Workflow), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*WorkflowDriverStatus)(nil), (*v1alpha3.WorkflowDriverStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus(a.(*WorkflowDriverStatus), b.(*v1alpha3.WorkflowDriverStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*WorkflowDriverStatus)(nil), (*v1alpha4.WorkflowDriverStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha4_WorkflowDriverStatus(a.(*WorkflowDriverStatus), b.(*v1alpha4.WorkflowDriverStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.WorkflowDriverStatus)(nil), (*WorkflowDriverStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(a.(*v1alpha3.WorkflowDriverStatus), b.(*WorkflowDriverStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.WorkflowDriverStatus)(nil), (*WorkflowDriverStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(a.(*v1alpha4.WorkflowDriverStatus), b.(*WorkflowDriverStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*WorkflowList)(nil), (*v1alpha3.WorkflowList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList(a.(*WorkflowList), b.(*v1alpha3.WorkflowList), scope)
+	if err := s.AddGeneratedConversionFunc((*WorkflowList)(nil), (*v1alpha4.WorkflowList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_WorkflowList_To_v1alpha4_WorkflowList(a.(*WorkflowList), b.(*v1alpha4.WorkflowList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.WorkflowList)(nil), (*WorkflowList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList(a.(*v1alpha3.WorkflowList), b.(*WorkflowList), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.WorkflowList)(nil), (*WorkflowList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_WorkflowList_To_v1alpha2_WorkflowList(a.(*v1alpha4.WorkflowList), b.(*WorkflowList), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*WorkflowSpec)(nil), (*v1alpha3.WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(a.(*WorkflowSpec), b.(*v1alpha3.WorkflowSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*WorkflowSpec)(nil), (*v1alpha4.WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec(a.(*WorkflowSpec), b.(*v1alpha4.WorkflowSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha3.WorkflowSpec)(nil), (*WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(a.(*v1alpha3.WorkflowSpec), b.(*WorkflowSpec), scope)
+	if err := s.AddGeneratedConversionFunc((*v1alpha4.WorkflowSpec)(nil), (*WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec(a.(*v1alpha4.WorkflowSpec), b.(*WorkflowSpec), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*WorkflowStatus)(nil), (*v1alpha3.WorkflowStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(a.(*WorkflowStatus), b.(*v1alpha3.WorkflowStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*WorkflowStatus)(nil), (*v1alpha4.WorkflowStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus(a.(*WorkflowStatus), b.(*v1alpha4.WorkflowStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*DirectiveBreakdownStatus)(nil), (*v1alpha3.DirectiveBreakdownStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha3_DirectiveBreakdownStatus(a.(*DirectiveBreakdownStatus), b.(*v1alpha3.DirectiveBreakdownStatus), scope)
+	if err := s.AddConversionFunc((*DirectiveBreakdownStatus)(nil), (*v1alpha4.DirectiveBreakdownStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha4_DirectiveBreakdownStatus(a.(*DirectiveBreakdownStatus), b.(*v1alpha4.DirectiveBreakdownStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha3.DirectiveBreakdownStatus)(nil), (*DirectiveBreakdownStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(a.(*v1alpha3.DirectiveBreakdownStatus), b.(*DirectiveBreakdownStatus), scope)
+	if err := s.AddConversionFunc((*v1alpha4.DirectiveBreakdownStatus)(nil), (*DirectiveBreakdownStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(a.(*v1alpha4.DirectiveBreakdownStatus), b.(*DirectiveBreakdownStatus), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha3.WorkflowStatus)(nil), (*WorkflowStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha3_WorkflowStatus_To_v1alpha2_WorkflowStatus(a.(*v1alpha3.WorkflowStatus), b.(*WorkflowStatus), scope)
+	if err := s.AddConversionFunc((*v1alpha4.WorkflowStatus)(nil), (*WorkflowStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_WorkflowStatus_To_v1alpha2_WorkflowStatus(a.(*v1alpha4.WorkflowStatus), b.(*WorkflowStatus), scope)
 	}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha3_AllocationSetColocationConstraint(in *AllocationSetColocationConstraint, out *v1alpha3.AllocationSetColocationConstraint, s conversion.Scope) error {
+func autoConvert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha4_AllocationSetColocationConstraint(in *AllocationSetColocationConstraint, out *v1alpha4.AllocationSetColocationConstraint, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Key = in.Key
 	return nil
 }
 
-// Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha3_AllocationSetColocationConstraint is an autogenerated conversion function.
-func Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha3_AllocationSetColocationConstraint(in *AllocationSetColocationConstraint, out *v1alpha3.AllocationSetColocationConstraint, s conversion.Scope) error {
-	return autoConvert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha3_AllocationSetColocationConstraint(in, out, s)
+// Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha4_AllocationSetColocationConstraint is an autogenerated conversion function.
+func Convert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha4_AllocationSetColocationConstraint(in *AllocationSetColocationConstraint, out *v1alpha4.AllocationSetColocationConstraint, s conversion.Scope) error {
+	return autoConvert_v1alpha2_AllocationSetColocationConstraint_To_v1alpha4_AllocationSetColocationConstraint(in, out, s)
 }
 
-func autoConvert_v1alpha3_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in *v1alpha3.AllocationSetColocationConstraint, out *AllocationSetColocationConstraint, s conversion.Scope) error {
+func autoConvert_v1alpha4_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in *v1alpha4.AllocationSetColocationConstraint, out *AllocationSetColocationConstraint, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Key = in.Key
 	return nil
 }
 
-// Convert_v1alpha3_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint is an autogenerated conversion function.
-func Convert_v1alpha3_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in *v1alpha3.AllocationSetColocationConstraint, out *AllocationSetColocationConstraint, s conversion.Scope) error {
-	return autoConvert_v1alpha3_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in, out, s)
+// Convert_v1alpha4_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint is an autogenerated conversion function.
+func Convert_v1alpha4_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in *v1alpha4.AllocationSetColocationConstraint, out *AllocationSetColocationConstraint, s conversion.Scope) error {
+	return autoConvert_v1alpha4_AllocationSetColocationConstraint_To_v1alpha2_AllocationSetColocationConstraint(in, out, s)
 }
 
-func autoConvert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints(in *AllocationSetConstraints, out *v1alpha3.AllocationSetConstraints, s conversion.Scope) error {
+func autoConvert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints(in *AllocationSetConstraints, out *v1alpha4.AllocationSetConstraints, s conversion.Scope) error {
 	out.Labels = *(*[]string)(unsafe.Pointer(&in.Labels))
 	out.Scale = in.Scale
 	out.Count = in.Count
-	out.Colocation = *(*[]v1alpha3.AllocationSetColocationConstraint)(unsafe.Pointer(&in.Colocation))
+	out.Colocation = *(*[]v1alpha4.AllocationSetColocationConstraint)(unsafe.Pointer(&in.Colocation))
 	return nil
 }
 
-// Convert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints is an autogenerated conversion function.
-func Convert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints(in *AllocationSetConstraints, out *v1alpha3.AllocationSetConstraints, s conversion.Scope) error {
-	return autoConvert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints(in, out, s)
+// Convert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints is an autogenerated conversion function.
+func Convert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints(in *AllocationSetConstraints, out *v1alpha4.AllocationSetConstraints, s conversion.Scope) error {
+	return autoConvert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints(in, out, s)
 }
 
-func autoConvert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in *v1alpha3.AllocationSetConstraints, out *AllocationSetConstraints, s conversion.Scope) error {
+func autoConvert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in *v1alpha4.AllocationSetConstraints, out *AllocationSetConstraints, s conversion.Scope) error {
 	out.Labels = *(*[]string)(unsafe.Pointer(&in.Labels))
 	out.Scale = in.Scale
 	out.Count = in.Count
@@ -699,57 +699,57 @@ func autoConvert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetCons
 	return nil
 }
 
-// Convert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints is an autogenerated conversion function.
-func Convert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in *v1alpha3.AllocationSetConstraints, out *AllocationSetConstraints, s conversion.Scope) error {
-	return autoConvert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in, out, s)
+// Convert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints is an autogenerated conversion function.
+func Convert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in *v1alpha4.AllocationSetConstraints, out *AllocationSetConstraints, s conversion.Scope) error {
+	return autoConvert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMount_To_v1alpha3_ClientMount(in *ClientMount, out *v1alpha3.ClientMount, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMount_To_v1alpha4_ClientMount(in *ClientMount, out *v1alpha4.ClientMount, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_ClientMount_To_v1alpha3_ClientMount is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMount_To_v1alpha3_ClientMount(in *ClientMount, out *v1alpha3.ClientMount, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMount_To_v1alpha3_ClientMount(in, out, s)
+// Convert_v1alpha2_ClientMount_To_v1alpha4_ClientMount is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMount_To_v1alpha4_ClientMount(in *ClientMount, out *v1alpha4.ClientMount, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMount_To_v1alpha4_ClientMount(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMount_To_v1alpha2_ClientMount(in *v1alpha3.ClientMount, out *ClientMount, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMount_To_v1alpha2_ClientMount(in *v1alpha4.ClientMount, out *ClientMount, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_ClientMount_To_v1alpha2_ClientMount is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMount_To_v1alpha2_ClientMount(in *v1alpha3.ClientMount, out *ClientMount, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMount_To_v1alpha2_ClientMount(in, out, s)
+// Convert_v1alpha4_ClientMount_To_v1alpha2_ClientMount is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMount_To_v1alpha2_ClientMount(in *v1alpha4.ClientMount, out *ClientMount, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMount_To_v1alpha2_ClientMount(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice(in *ClientMountDevice, out *v1alpha3.ClientMountDevice, s conversion.Scope) error {
-	out.Type = v1alpha3.ClientMountDeviceType(in.Type)
-	out.Lustre = (*v1alpha3.ClientMountDeviceLustre)(unsafe.Pointer(in.Lustre))
-	out.LVM = (*v1alpha3.ClientMountDeviceLVM)(unsafe.Pointer(in.LVM))
-	out.DeviceReference = (*v1alpha3.ClientMountDeviceReference)(unsafe.Pointer(in.DeviceReference))
+func autoConvert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice(in *ClientMountDevice, out *v1alpha4.ClientMountDevice, s conversion.Scope) error {
+	out.Type = v1alpha4.ClientMountDeviceType(in.Type)
+	out.Lustre = (*v1alpha4.ClientMountDeviceLustre)(unsafe.Pointer(in.Lustre))
+	out.LVM = (*v1alpha4.ClientMountDeviceLVM)(unsafe.Pointer(in.LVM))
+	out.DeviceReference = (*v1alpha4.ClientMountDeviceReference)(unsafe.Pointer(in.DeviceReference))
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice(in *ClientMountDevice, out *v1alpha3.ClientMountDevice, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice(in, out, s)
+// Convert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice(in *ClientMountDevice, out *v1alpha4.ClientMountDevice, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(in *v1alpha3.ClientMountDevice, out *ClientMountDevice, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice(in *v1alpha4.ClientMountDevice, out *ClientMountDevice, s conversion.Scope) error {
 	out.Type = ClientMountDeviceType(in.Type)
 	out.Lustre = (*ClientMountDeviceLustre)(unsafe.Pointer(in.Lustre))
 	out.LVM = (*ClientMountDeviceLVM)(unsafe.Pointer(in.LVM))
@@ -757,25 +757,25 @@ func autoConvert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(in *v1
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(in *v1alpha3.ClientMountDevice, out *ClientMountDevice, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(in, out, s)
+// Convert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice(in *v1alpha4.ClientMountDevice, out *ClientMountDevice, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountDeviceLVM_To_v1alpha3_ClientMountDeviceLVM(in *ClientMountDeviceLVM, out *v1alpha3.ClientMountDeviceLVM, s conversion.Scope) error {
-	out.DeviceType = v1alpha3.ClientMountLVMDeviceType(in.DeviceType)
-	out.NVMeInfo = *(*[]v1alpha3.ClientMountNVMeDesc)(unsafe.Pointer(&in.NVMeInfo))
+func autoConvert_v1alpha2_ClientMountDeviceLVM_To_v1alpha4_ClientMountDeviceLVM(in *ClientMountDeviceLVM, out *v1alpha4.ClientMountDeviceLVM, s conversion.Scope) error {
+	out.DeviceType = v1alpha4.ClientMountLVMDeviceType(in.DeviceType)
+	out.NVMeInfo = *(*[]v1alpha4.ClientMountNVMeDesc)(unsafe.Pointer(&in.NVMeInfo))
 	out.VolumeGroup = in.VolumeGroup
 	out.LogicalVolume = in.LogicalVolume
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha3_ClientMountDeviceLVM is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha3_ClientMountDeviceLVM(in *ClientMountDeviceLVM, out *v1alpha3.ClientMountDeviceLVM, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountDeviceLVM_To_v1alpha3_ClientMountDeviceLVM(in, out, s)
+// Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha4_ClientMountDeviceLVM is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountDeviceLVM_To_v1alpha4_ClientMountDeviceLVM(in *ClientMountDeviceLVM, out *v1alpha4.ClientMountDeviceLVM, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountDeviceLVM_To_v1alpha4_ClientMountDeviceLVM(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in *v1alpha3.ClientMountDeviceLVM, out *ClientMountDeviceLVM, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in *v1alpha4.ClientMountDeviceLVM, out *ClientMountDeviceLVM, s conversion.Scope) error {
 	out.DeviceType = ClientMountLVMDeviceType(in.DeviceType)
 	out.NVMeInfo = *(*[]ClientMountNVMeDesc)(unsafe.Pointer(&in.NVMeInfo))
 	out.VolumeGroup = in.VolumeGroup
@@ -783,62 +783,62 @@ func autoConvert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in *v1alpha3.ClientMountDeviceLVM, out *ClientMountDeviceLVM, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in, out, s)
+// Convert_v1alpha4_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in *v1alpha4.ClientMountDeviceLVM, out *ClientMountDeviceLVM, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountDeviceLVM_To_v1alpha2_ClientMountDeviceLVM(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountDeviceLustre_To_v1alpha3_ClientMountDeviceLustre(in *ClientMountDeviceLustre, out *v1alpha3.ClientMountDeviceLustre, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountDeviceLustre_To_v1alpha4_ClientMountDeviceLustre(in *ClientMountDeviceLustre, out *v1alpha4.ClientMountDeviceLustre, s conversion.Scope) error {
 	out.FileSystemName = in.FileSystemName
 	out.MgsAddresses = in.MgsAddresses
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha3_ClientMountDeviceLustre is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha3_ClientMountDeviceLustre(in *ClientMountDeviceLustre, out *v1alpha3.ClientMountDeviceLustre, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountDeviceLustre_To_v1alpha3_ClientMountDeviceLustre(in, out, s)
+// Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha4_ClientMountDeviceLustre is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountDeviceLustre_To_v1alpha4_ClientMountDeviceLustre(in *ClientMountDeviceLustre, out *v1alpha4.ClientMountDeviceLustre, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountDeviceLustre_To_v1alpha4_ClientMountDeviceLustre(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in *v1alpha3.ClientMountDeviceLustre, out *ClientMountDeviceLustre, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in *v1alpha4.ClientMountDeviceLustre, out *ClientMountDeviceLustre, s conversion.Scope) error {
 	out.FileSystemName = in.FileSystemName
 	out.MgsAddresses = in.MgsAddresses
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in *v1alpha3.ClientMountDeviceLustre, out *ClientMountDeviceLustre, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in, out, s)
+// Convert_v1alpha4_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in *v1alpha4.ClientMountDeviceLustre, out *ClientMountDeviceLustre, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountDeviceLustre_To_v1alpha2_ClientMountDeviceLustre(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountDeviceReference_To_v1alpha3_ClientMountDeviceReference(in *ClientMountDeviceReference, out *v1alpha3.ClientMountDeviceReference, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountDeviceReference_To_v1alpha4_ClientMountDeviceReference(in *ClientMountDeviceReference, out *v1alpha4.ClientMountDeviceReference, s conversion.Scope) error {
 	out.ObjectReference = in.ObjectReference
 	out.Data = in.Data
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha3_ClientMountDeviceReference is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha3_ClientMountDeviceReference(in *ClientMountDeviceReference, out *v1alpha3.ClientMountDeviceReference, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountDeviceReference_To_v1alpha3_ClientMountDeviceReference(in, out, s)
+// Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha4_ClientMountDeviceReference is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountDeviceReference_To_v1alpha4_ClientMountDeviceReference(in *ClientMountDeviceReference, out *v1alpha4.ClientMountDeviceReference, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountDeviceReference_To_v1alpha4_ClientMountDeviceReference(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in *v1alpha3.ClientMountDeviceReference, out *ClientMountDeviceReference, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in *v1alpha4.ClientMountDeviceReference, out *ClientMountDeviceReference, s conversion.Scope) error {
 	out.ObjectReference = in.ObjectReference
 	out.Data = in.Data
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in *v1alpha3.ClientMountDeviceReference, out *ClientMountDeviceReference, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in, out, s)
+// Convert_v1alpha4_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in *v1alpha4.ClientMountDeviceReference, out *ClientMountDeviceReference, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountDeviceReference_To_v1alpha2_ClientMountDeviceReference(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo(in *ClientMountInfo, out *v1alpha3.ClientMountInfo, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountInfo_To_v1alpha4_ClientMountInfo(in *ClientMountInfo, out *v1alpha4.ClientMountInfo, s conversion.Scope) error {
 	out.MountPath = in.MountPath
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
 	out.SetPermissions = in.SetPermissions
 	out.Options = in.Options
-	if err := Convert_v1alpha2_ClientMountDevice_To_v1alpha3_ClientMountDevice(&in.Device, &out.Device, s); err != nil {
+	if err := Convert_v1alpha2_ClientMountDevice_To_v1alpha4_ClientMountDevice(&in.Device, &out.Device, s); err != nil {
 		return err
 	}
 	out.Type = in.Type
@@ -847,18 +847,18 @@ func autoConvert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo(in *Client
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo(in *ClientMountInfo, out *v1alpha3.ClientMountInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountInfo_To_v1alpha3_ClientMountInfo(in, out, s)
+// Convert_v1alpha2_ClientMountInfo_To_v1alpha4_ClientMountInfo is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountInfo_To_v1alpha4_ClientMountInfo(in *ClientMountInfo, out *v1alpha4.ClientMountInfo, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountInfo_To_v1alpha4_ClientMountInfo(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo(in *v1alpha3.ClientMountInfo, out *ClientMountInfo, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountInfo_To_v1alpha2_ClientMountInfo(in *v1alpha4.ClientMountInfo, out *ClientMountInfo, s conversion.Scope) error {
 	out.MountPath = in.MountPath
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
 	out.SetPermissions = in.SetPermissions
 	out.Options = in.Options
-	if err := Convert_v1alpha3_ClientMountDevice_To_v1alpha2_ClientMountDevice(&in.Device, &out.Device, s); err != nil {
+	if err := Convert_v1alpha4_ClientMountDevice_To_v1alpha2_ClientMountDevice(&in.Device, &out.Device, s); err != nil {
 		return err
 	}
 	out.Type = in.Type
@@ -867,366 +867,366 @@ func autoConvert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo(in *v1alph
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo(in *v1alpha3.ClientMountInfo, out *ClientMountInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountInfo_To_v1alpha2_ClientMountInfo(in, out, s)
+// Convert_v1alpha4_ClientMountInfo_To_v1alpha2_ClientMountInfo is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountInfo_To_v1alpha2_ClientMountInfo(in *v1alpha4.ClientMountInfo, out *ClientMountInfo, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountInfo_To_v1alpha2_ClientMountInfo(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountInfoStatus_To_v1alpha3_ClientMountInfoStatus(in *ClientMountInfoStatus, out *v1alpha3.ClientMountInfoStatus, s conversion.Scope) error {
-	out.State = v1alpha3.ClientMountState(in.State)
+func autoConvert_v1alpha2_ClientMountInfoStatus_To_v1alpha4_ClientMountInfoStatus(in *ClientMountInfoStatus, out *v1alpha4.ClientMountInfoStatus, s conversion.Scope) error {
+	out.State = v1alpha4.ClientMountState(in.State)
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha3_ClientMountInfoStatus is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha3_ClientMountInfoStatus(in *ClientMountInfoStatus, out *v1alpha3.ClientMountInfoStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountInfoStatus_To_v1alpha3_ClientMountInfoStatus(in, out, s)
+// Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha4_ClientMountInfoStatus is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountInfoStatus_To_v1alpha4_ClientMountInfoStatus(in *ClientMountInfoStatus, out *v1alpha4.ClientMountInfoStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountInfoStatus_To_v1alpha4_ClientMountInfoStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in *v1alpha3.ClientMountInfoStatus, out *ClientMountInfoStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in *v1alpha4.ClientMountInfoStatus, out *ClientMountInfoStatus, s conversion.Scope) error {
 	out.State = ClientMountState(in.State)
 	out.Ready = in.Ready
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in *v1alpha3.ClientMountInfoStatus, out *ClientMountInfoStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in, out, s)
+// Convert_v1alpha4_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in *v1alpha4.ClientMountInfoStatus, out *ClientMountInfoStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountInfoStatus_To_v1alpha2_ClientMountInfoStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountList_To_v1alpha3_ClientMountList(in *ClientMountList, out *v1alpha3.ClientMountList, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountList_To_v1alpha4_ClientMountList(in *ClientMountList, out *v1alpha4.ClientMountList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.ClientMount)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.ClientMount)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountList_To_v1alpha3_ClientMountList is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountList_To_v1alpha3_ClientMountList(in *ClientMountList, out *v1alpha3.ClientMountList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountList_To_v1alpha3_ClientMountList(in, out, s)
+// Convert_v1alpha2_ClientMountList_To_v1alpha4_ClientMountList is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountList_To_v1alpha4_ClientMountList(in *ClientMountList, out *v1alpha4.ClientMountList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountList_To_v1alpha4_ClientMountList(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountList_To_v1alpha2_ClientMountList(in *v1alpha3.ClientMountList, out *ClientMountList, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountList_To_v1alpha2_ClientMountList(in *v1alpha4.ClientMountList, out *ClientMountList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]ClientMount)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountList_To_v1alpha2_ClientMountList is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountList_To_v1alpha2_ClientMountList(in *v1alpha3.ClientMountList, out *ClientMountList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountList_To_v1alpha2_ClientMountList(in, out, s)
+// Convert_v1alpha4_ClientMountList_To_v1alpha2_ClientMountList is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountList_To_v1alpha2_ClientMountList(in *v1alpha4.ClientMountList, out *ClientMountList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountList_To_v1alpha2_ClientMountList(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountNVMeDesc_To_v1alpha3_ClientMountNVMeDesc(in *ClientMountNVMeDesc, out *v1alpha3.ClientMountNVMeDesc, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountNVMeDesc_To_v1alpha4_ClientMountNVMeDesc(in *ClientMountNVMeDesc, out *v1alpha4.ClientMountNVMeDesc, s conversion.Scope) error {
 	out.DeviceSerial = in.DeviceSerial
 	out.NamespaceID = in.NamespaceID
 	out.NamespaceGUID = in.NamespaceGUID
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha3_ClientMountNVMeDesc is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha3_ClientMountNVMeDesc(in *ClientMountNVMeDesc, out *v1alpha3.ClientMountNVMeDesc, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountNVMeDesc_To_v1alpha3_ClientMountNVMeDesc(in, out, s)
+// Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha4_ClientMountNVMeDesc is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountNVMeDesc_To_v1alpha4_ClientMountNVMeDesc(in *ClientMountNVMeDesc, out *v1alpha4.ClientMountNVMeDesc, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountNVMeDesc_To_v1alpha4_ClientMountNVMeDesc(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in *v1alpha3.ClientMountNVMeDesc, out *ClientMountNVMeDesc, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in *v1alpha4.ClientMountNVMeDesc, out *ClientMountNVMeDesc, s conversion.Scope) error {
 	out.DeviceSerial = in.DeviceSerial
 	out.NamespaceID = in.NamespaceID
 	out.NamespaceGUID = in.NamespaceGUID
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in *v1alpha3.ClientMountNVMeDesc, out *ClientMountNVMeDesc, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in, out, s)
+// Convert_v1alpha4_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in *v1alpha4.ClientMountNVMeDesc, out *ClientMountNVMeDesc, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountNVMeDesc_To_v1alpha2_ClientMountNVMeDesc(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec(in *ClientMountSpec, out *v1alpha3.ClientMountSpec, s conversion.Scope) error {
+func autoConvert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec(in *ClientMountSpec, out *v1alpha4.ClientMountSpec, s conversion.Scope) error {
 	out.Node = in.Node
-	out.DesiredState = v1alpha3.ClientMountState(in.DesiredState)
-	out.Mounts = *(*[]v1alpha3.ClientMountInfo)(unsafe.Pointer(&in.Mounts))
+	out.DesiredState = v1alpha4.ClientMountState(in.DesiredState)
+	out.Mounts = *(*[]v1alpha4.ClientMountInfo)(unsafe.Pointer(&in.Mounts))
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec(in *ClientMountSpec, out *v1alpha3.ClientMountSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountSpec_To_v1alpha3_ClientMountSpec(in, out, s)
+// Convert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec(in *ClientMountSpec, out *v1alpha4.ClientMountSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountSpec_To_v1alpha4_ClientMountSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec(in *v1alpha3.ClientMountSpec, out *ClientMountSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec(in *v1alpha4.ClientMountSpec, out *ClientMountSpec, s conversion.Scope) error {
 	out.Node = in.Node
 	out.DesiredState = ClientMountState(in.DesiredState)
 	out.Mounts = *(*[]ClientMountInfo)(unsafe.Pointer(&in.Mounts))
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec(in *v1alpha3.ClientMountSpec, out *ClientMountSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountSpec_To_v1alpha2_ClientMountSpec(in, out, s)
+// Convert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec(in *v1alpha4.ClientMountSpec, out *ClientMountSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountSpec_To_v1alpha2_ClientMountSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus(in *ClientMountStatus, out *v1alpha3.ClientMountStatus, s conversion.Scope) error {
-	out.Mounts = *(*[]v1alpha3.ClientMountInfoStatus)(unsafe.Pointer(&in.Mounts))
+func autoConvert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus(in *ClientMountStatus, out *v1alpha4.ClientMountStatus, s conversion.Scope) error {
+	out.Mounts = *(*[]v1alpha4.ClientMountInfoStatus)(unsafe.Pointer(&in.Mounts))
 	out.AllReady = in.AllReady
-	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus is an autogenerated conversion function.
-func Convert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus(in *ClientMountStatus, out *v1alpha3.ClientMountStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ClientMountStatus_To_v1alpha3_ClientMountStatus(in, out, s)
+// Convert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus is an autogenerated conversion function.
+func Convert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus(in *ClientMountStatus, out *v1alpha4.ClientMountStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ClientMountStatus_To_v1alpha4_ClientMountStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus(in *v1alpha3.ClientMountStatus, out *ClientMountStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus(in *v1alpha4.ClientMountStatus, out *ClientMountStatus, s conversion.Scope) error {
 	out.Mounts = *(*[]ClientMountInfoStatus)(unsafe.Pointer(&in.Mounts))
 	out.AllReady = in.AllReady
-	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus is an autogenerated conversion function.
-func Convert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus(in *v1alpha3.ClientMountStatus, out *ClientMountStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ClientMountStatus_To_v1alpha2_ClientMountStatus(in, out, s)
+// Convert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus is an autogenerated conversion function.
+func Convert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus(in *v1alpha4.ClientMountStatus, out *ClientMountStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ClientMountStatus_To_v1alpha2_ClientMountStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputeBreakdown_To_v1alpha3_ComputeBreakdown(in *ComputeBreakdown, out *v1alpha3.ComputeBreakdown, s conversion.Scope) error {
-	if err := Convert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+func autoConvert_v1alpha2_ComputeBreakdown_To_v1alpha4_ComputeBreakdown(in *ComputeBreakdown, out *v1alpha4.ComputeBreakdown, s conversion.Scope) error {
+	if err := Convert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints(&in.Constraints, &out.Constraints, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_ComputeBreakdown_To_v1alpha3_ComputeBreakdown is an autogenerated conversion function.
-func Convert_v1alpha2_ComputeBreakdown_To_v1alpha3_ComputeBreakdown(in *ComputeBreakdown, out *v1alpha3.ComputeBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputeBreakdown_To_v1alpha3_ComputeBreakdown(in, out, s)
+// Convert_v1alpha2_ComputeBreakdown_To_v1alpha4_ComputeBreakdown is an autogenerated conversion function.
+func Convert_v1alpha2_ComputeBreakdown_To_v1alpha4_ComputeBreakdown(in *ComputeBreakdown, out *v1alpha4.ComputeBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputeBreakdown_To_v1alpha4_ComputeBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in *v1alpha3.ComputeBreakdown, out *ComputeBreakdown, s conversion.Scope) error {
-	if err := Convert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+func autoConvert_v1alpha4_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in *v1alpha4.ComputeBreakdown, out *ComputeBreakdown, s conversion.Scope) error {
+	if err := Convert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints(&in.Constraints, &out.Constraints, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_ComputeBreakdown_To_v1alpha2_ComputeBreakdown is an autogenerated conversion function.
-func Convert_v1alpha3_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in *v1alpha3.ComputeBreakdown, out *ComputeBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in, out, s)
+// Convert_v1alpha4_ComputeBreakdown_To_v1alpha2_ComputeBreakdown is an autogenerated conversion function.
+func Convert_v1alpha4_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in *v1alpha4.ComputeBreakdown, out *ComputeBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputeBreakdown_To_v1alpha2_ComputeBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints(in *ComputeConstraints, out *v1alpha3.ComputeConstraints, s conversion.Scope) error {
-	out.Location = *(*[]v1alpha3.ComputeLocationConstraint)(unsafe.Pointer(&in.Location))
+func autoConvert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints(in *ComputeConstraints, out *v1alpha4.ComputeConstraints, s conversion.Scope) error {
+	out.Location = *(*[]v1alpha4.ComputeLocationConstraint)(unsafe.Pointer(&in.Location))
 	return nil
 }
 
-// Convert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints is an autogenerated conversion function.
-func Convert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints(in *ComputeConstraints, out *v1alpha3.ComputeConstraints, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputeConstraints_To_v1alpha3_ComputeConstraints(in, out, s)
+// Convert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints is an autogenerated conversion function.
+func Convert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints(in *ComputeConstraints, out *v1alpha4.ComputeConstraints, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputeConstraints_To_v1alpha4_ComputeConstraints(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints(in *v1alpha3.ComputeConstraints, out *ComputeConstraints, s conversion.Scope) error {
+func autoConvert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints(in *v1alpha4.ComputeConstraints, out *ComputeConstraints, s conversion.Scope) error {
 	out.Location = *(*[]ComputeLocationConstraint)(unsafe.Pointer(&in.Location))
 	return nil
 }
 
-// Convert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints is an autogenerated conversion function.
-func Convert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints(in *v1alpha3.ComputeConstraints, out *ComputeConstraints, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputeConstraints_To_v1alpha2_ComputeConstraints(in, out, s)
+// Convert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints is an autogenerated conversion function.
+func Convert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints(in *v1alpha4.ComputeConstraints, out *ComputeConstraints, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputeConstraints_To_v1alpha2_ComputeConstraints(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputeLocationAccess_To_v1alpha3_ComputeLocationAccess(in *ComputeLocationAccess, out *v1alpha3.ComputeLocationAccess, s conversion.Scope) error {
-	out.Type = v1alpha3.ComputeLocationType(in.Type)
-	out.Priority = v1alpha3.ComputeLocationPriority(in.Priority)
+func autoConvert_v1alpha2_ComputeLocationAccess_To_v1alpha4_ComputeLocationAccess(in *ComputeLocationAccess, out *v1alpha4.ComputeLocationAccess, s conversion.Scope) error {
+	out.Type = v1alpha4.ComputeLocationType(in.Type)
+	out.Priority = v1alpha4.ComputeLocationPriority(in.Priority)
 	return nil
 }
 
-// Convert_v1alpha2_ComputeLocationAccess_To_v1alpha3_ComputeLocationAccess is an autogenerated conversion function.
-func Convert_v1alpha2_ComputeLocationAccess_To_v1alpha3_ComputeLocationAccess(in *ComputeLocationAccess, out *v1alpha3.ComputeLocationAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputeLocationAccess_To_v1alpha3_ComputeLocationAccess(in, out, s)
+// Convert_v1alpha2_ComputeLocationAccess_To_v1alpha4_ComputeLocationAccess is an autogenerated conversion function.
+func Convert_v1alpha2_ComputeLocationAccess_To_v1alpha4_ComputeLocationAccess(in *ComputeLocationAccess, out *v1alpha4.ComputeLocationAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputeLocationAccess_To_v1alpha4_ComputeLocationAccess(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in *v1alpha3.ComputeLocationAccess, out *ComputeLocationAccess, s conversion.Scope) error {
+func autoConvert_v1alpha4_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in *v1alpha4.ComputeLocationAccess, out *ComputeLocationAccess, s conversion.Scope) error {
 	out.Type = ComputeLocationType(in.Type)
 	out.Priority = ComputeLocationPriority(in.Priority)
 	return nil
 }
 
-// Convert_v1alpha3_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess is an autogenerated conversion function.
-func Convert_v1alpha3_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in *v1alpha3.ComputeLocationAccess, out *ComputeLocationAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in, out, s)
+// Convert_v1alpha4_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess is an autogenerated conversion function.
+func Convert_v1alpha4_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in *v1alpha4.ComputeLocationAccess, out *ComputeLocationAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputeLocationAccess_To_v1alpha2_ComputeLocationAccess(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputeLocationConstraint_To_v1alpha3_ComputeLocationConstraint(in *ComputeLocationConstraint, out *v1alpha3.ComputeLocationConstraint, s conversion.Scope) error {
-	out.Access = *(*[]v1alpha3.ComputeLocationAccess)(unsafe.Pointer(&in.Access))
+func autoConvert_v1alpha2_ComputeLocationConstraint_To_v1alpha4_ComputeLocationConstraint(in *ComputeLocationConstraint, out *v1alpha4.ComputeLocationConstraint, s conversion.Scope) error {
+	out.Access = *(*[]v1alpha4.ComputeLocationAccess)(unsafe.Pointer(&in.Access))
 	out.Reference = in.Reference
 	return nil
 }
 
-// Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha3_ComputeLocationConstraint is an autogenerated conversion function.
-func Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha3_ComputeLocationConstraint(in *ComputeLocationConstraint, out *v1alpha3.ComputeLocationConstraint, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputeLocationConstraint_To_v1alpha3_ComputeLocationConstraint(in, out, s)
+// Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha4_ComputeLocationConstraint is an autogenerated conversion function.
+func Convert_v1alpha2_ComputeLocationConstraint_To_v1alpha4_ComputeLocationConstraint(in *ComputeLocationConstraint, out *v1alpha4.ComputeLocationConstraint, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputeLocationConstraint_To_v1alpha4_ComputeLocationConstraint(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in *v1alpha3.ComputeLocationConstraint, out *ComputeLocationConstraint, s conversion.Scope) error {
+func autoConvert_v1alpha4_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in *v1alpha4.ComputeLocationConstraint, out *ComputeLocationConstraint, s conversion.Scope) error {
 	out.Access = *(*[]ComputeLocationAccess)(unsafe.Pointer(&in.Access))
 	out.Reference = in.Reference
 	return nil
 }
 
-// Convert_v1alpha3_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint is an autogenerated conversion function.
-func Convert_v1alpha3_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in *v1alpha3.ComputeLocationConstraint, out *ComputeLocationConstraint, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in, out, s)
+// Convert_v1alpha4_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint is an autogenerated conversion function.
+func Convert_v1alpha4_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in *v1alpha4.ComputeLocationConstraint, out *ComputeLocationConstraint, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputeLocationConstraint_To_v1alpha2_ComputeLocationConstraint(in, out, s)
 }
 
-func autoConvert_v1alpha2_Computes_To_v1alpha3_Computes(in *Computes, out *v1alpha3.Computes, s conversion.Scope) error {
+func autoConvert_v1alpha2_Computes_To_v1alpha4_Computes(in *Computes, out *v1alpha4.Computes, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	out.Data = *(*[]v1alpha3.ComputesData)(unsafe.Pointer(&in.Data))
+	out.Data = *(*[]v1alpha4.ComputesData)(unsafe.Pointer(&in.Data))
 	return nil
 }
 
-// Convert_v1alpha2_Computes_To_v1alpha3_Computes is an autogenerated conversion function.
-func Convert_v1alpha2_Computes_To_v1alpha3_Computes(in *Computes, out *v1alpha3.Computes, s conversion.Scope) error {
-	return autoConvert_v1alpha2_Computes_To_v1alpha3_Computes(in, out, s)
+// Convert_v1alpha2_Computes_To_v1alpha4_Computes is an autogenerated conversion function.
+func Convert_v1alpha2_Computes_To_v1alpha4_Computes(in *Computes, out *v1alpha4.Computes, s conversion.Scope) error {
+	return autoConvert_v1alpha2_Computes_To_v1alpha4_Computes(in, out, s)
 }
 
-func autoConvert_v1alpha3_Computes_To_v1alpha2_Computes(in *v1alpha3.Computes, out *Computes, s conversion.Scope) error {
+func autoConvert_v1alpha4_Computes_To_v1alpha2_Computes(in *v1alpha4.Computes, out *Computes, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Data = *(*[]ComputesData)(unsafe.Pointer(&in.Data))
 	return nil
 }
 
-// Convert_v1alpha3_Computes_To_v1alpha2_Computes is an autogenerated conversion function.
-func Convert_v1alpha3_Computes_To_v1alpha2_Computes(in *v1alpha3.Computes, out *Computes, s conversion.Scope) error {
-	return autoConvert_v1alpha3_Computes_To_v1alpha2_Computes(in, out, s)
+// Convert_v1alpha4_Computes_To_v1alpha2_Computes is an autogenerated conversion function.
+func Convert_v1alpha4_Computes_To_v1alpha2_Computes(in *v1alpha4.Computes, out *Computes, s conversion.Scope) error {
+	return autoConvert_v1alpha4_Computes_To_v1alpha2_Computes(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputesData_To_v1alpha3_ComputesData(in *ComputesData, out *v1alpha3.ComputesData, s conversion.Scope) error {
+func autoConvert_v1alpha2_ComputesData_To_v1alpha4_ComputesData(in *ComputesData, out *v1alpha4.ComputesData, s conversion.Scope) error {
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_v1alpha2_ComputesData_To_v1alpha3_ComputesData is an autogenerated conversion function.
-func Convert_v1alpha2_ComputesData_To_v1alpha3_ComputesData(in *ComputesData, out *v1alpha3.ComputesData, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputesData_To_v1alpha3_ComputesData(in, out, s)
+// Convert_v1alpha2_ComputesData_To_v1alpha4_ComputesData is an autogenerated conversion function.
+func Convert_v1alpha2_ComputesData_To_v1alpha4_ComputesData(in *ComputesData, out *v1alpha4.ComputesData, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputesData_To_v1alpha4_ComputesData(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputesData_To_v1alpha2_ComputesData(in *v1alpha3.ComputesData, out *ComputesData, s conversion.Scope) error {
+func autoConvert_v1alpha4_ComputesData_To_v1alpha2_ComputesData(in *v1alpha4.ComputesData, out *ComputesData, s conversion.Scope) error {
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_v1alpha3_ComputesData_To_v1alpha2_ComputesData is an autogenerated conversion function.
-func Convert_v1alpha3_ComputesData_To_v1alpha2_ComputesData(in *v1alpha3.ComputesData, out *ComputesData, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputesData_To_v1alpha2_ComputesData(in, out, s)
+// Convert_v1alpha4_ComputesData_To_v1alpha2_ComputesData is an autogenerated conversion function.
+func Convert_v1alpha4_ComputesData_To_v1alpha2_ComputesData(in *v1alpha4.ComputesData, out *ComputesData, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputesData_To_v1alpha2_ComputesData(in, out, s)
 }
 
-func autoConvert_v1alpha2_ComputesList_To_v1alpha3_ComputesList(in *ComputesList, out *v1alpha3.ComputesList, s conversion.Scope) error {
+func autoConvert_v1alpha2_ComputesList_To_v1alpha4_ComputesList(in *ComputesList, out *v1alpha4.ComputesList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.Computes)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.Computes)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_ComputesList_To_v1alpha3_ComputesList is an autogenerated conversion function.
-func Convert_v1alpha2_ComputesList_To_v1alpha3_ComputesList(in *ComputesList, out *v1alpha3.ComputesList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ComputesList_To_v1alpha3_ComputesList(in, out, s)
+// Convert_v1alpha2_ComputesList_To_v1alpha4_ComputesList is an autogenerated conversion function.
+func Convert_v1alpha2_ComputesList_To_v1alpha4_ComputesList(in *ComputesList, out *v1alpha4.ComputesList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ComputesList_To_v1alpha4_ComputesList(in, out, s)
 }
 
-func autoConvert_v1alpha3_ComputesList_To_v1alpha2_ComputesList(in *v1alpha3.ComputesList, out *ComputesList, s conversion.Scope) error {
+func autoConvert_v1alpha4_ComputesList_To_v1alpha2_ComputesList(in *v1alpha4.ComputesList, out *ComputesList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]Computes)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_ComputesList_To_v1alpha2_ComputesList is an autogenerated conversion function.
-func Convert_v1alpha3_ComputesList_To_v1alpha2_ComputesList(in *v1alpha3.ComputesList, out *ComputesList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ComputesList_To_v1alpha2_ComputesList(in, out, s)
+// Convert_v1alpha4_ComputesList_To_v1alpha2_ComputesList is an autogenerated conversion function.
+func Convert_v1alpha4_ComputesList_To_v1alpha2_ComputesList(in *v1alpha4.ComputesList, out *ComputesList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ComputesList_To_v1alpha2_ComputesList(in, out, s)
 }
 
-func autoConvert_v1alpha2_DWDirectiveRule_To_v1alpha3_DWDirectiveRule(in *DWDirectiveRule, out *v1alpha3.DWDirectiveRule, s conversion.Scope) error {
+func autoConvert_v1alpha2_DWDirectiveRule_To_v1alpha4_DWDirectiveRule(in *DWDirectiveRule, out *v1alpha4.DWDirectiveRule, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = *(*[]dwdparse.DWDirectiveRuleSpec)(unsafe.Pointer(&in.Spec))
 	return nil
 }
 
-// Convert_v1alpha2_DWDirectiveRule_To_v1alpha3_DWDirectiveRule is an autogenerated conversion function.
-func Convert_v1alpha2_DWDirectiveRule_To_v1alpha3_DWDirectiveRule(in *DWDirectiveRule, out *v1alpha3.DWDirectiveRule, s conversion.Scope) error {
-	return autoConvert_v1alpha2_DWDirectiveRule_To_v1alpha3_DWDirectiveRule(in, out, s)
+// Convert_v1alpha2_DWDirectiveRule_To_v1alpha4_DWDirectiveRule is an autogenerated conversion function.
+func Convert_v1alpha2_DWDirectiveRule_To_v1alpha4_DWDirectiveRule(in *DWDirectiveRule, out *v1alpha4.DWDirectiveRule, s conversion.Scope) error {
+	return autoConvert_v1alpha2_DWDirectiveRule_To_v1alpha4_DWDirectiveRule(in, out, s)
 }
 
-func autoConvert_v1alpha3_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in *v1alpha3.DWDirectiveRule, out *DWDirectiveRule, s conversion.Scope) error {
+func autoConvert_v1alpha4_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in *v1alpha4.DWDirectiveRule, out *DWDirectiveRule, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	out.Spec = *(*[]dwdparse.DWDirectiveRuleSpec)(unsafe.Pointer(&in.Spec))
 	return nil
 }
 
-// Convert_v1alpha3_DWDirectiveRule_To_v1alpha2_DWDirectiveRule is an autogenerated conversion function.
-func Convert_v1alpha3_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in *v1alpha3.DWDirectiveRule, out *DWDirectiveRule, s conversion.Scope) error {
-	return autoConvert_v1alpha3_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in, out, s)
+// Convert_v1alpha4_DWDirectiveRule_To_v1alpha2_DWDirectiveRule is an autogenerated conversion function.
+func Convert_v1alpha4_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in *v1alpha4.DWDirectiveRule, out *DWDirectiveRule, s conversion.Scope) error {
+	return autoConvert_v1alpha4_DWDirectiveRule_To_v1alpha2_DWDirectiveRule(in, out, s)
 }
 
-func autoConvert_v1alpha2_DWDirectiveRuleList_To_v1alpha3_DWDirectiveRuleList(in *DWDirectiveRuleList, out *v1alpha3.DWDirectiveRuleList, s conversion.Scope) error {
+func autoConvert_v1alpha2_DWDirectiveRuleList_To_v1alpha4_DWDirectiveRuleList(in *DWDirectiveRuleList, out *v1alpha4.DWDirectiveRuleList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.DWDirectiveRule)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.DWDirectiveRule)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha3_DWDirectiveRuleList is an autogenerated conversion function.
-func Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha3_DWDirectiveRuleList(in *DWDirectiveRuleList, out *v1alpha3.DWDirectiveRuleList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_DWDirectiveRuleList_To_v1alpha3_DWDirectiveRuleList(in, out, s)
+// Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha4_DWDirectiveRuleList is an autogenerated conversion function.
+func Convert_v1alpha2_DWDirectiveRuleList_To_v1alpha4_DWDirectiveRuleList(in *DWDirectiveRuleList, out *v1alpha4.DWDirectiveRuleList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_DWDirectiveRuleList_To_v1alpha4_DWDirectiveRuleList(in, out, s)
 }
 
-func autoConvert_v1alpha3_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in *v1alpha3.DWDirectiveRuleList, out *DWDirectiveRuleList, s conversion.Scope) error {
+func autoConvert_v1alpha4_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in *v1alpha4.DWDirectiveRuleList, out *DWDirectiveRuleList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]DWDirectiveRule)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList is an autogenerated conversion function.
-func Convert_v1alpha3_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in *v1alpha3.DWDirectiveRuleList, out *DWDirectiveRuleList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in, out, s)
+// Convert_v1alpha4_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList is an autogenerated conversion function.
+func Convert_v1alpha4_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in *v1alpha4.DWDirectiveRuleList, out *DWDirectiveRuleList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_DWDirectiveRuleList_To_v1alpha2_DWDirectiveRuleList(in, out, s)
 }
 
-func autoConvert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown(in *DirectiveBreakdown, out *v1alpha3.DirectiveBreakdown, s conversion.Scope) error {
+func autoConvert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown(in *DirectiveBreakdown, out *v1alpha4.DirectiveBreakdown, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha3_DirectiveBreakdownStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha4_DirectiveBreakdownStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown is an autogenerated conversion function.
-func Convert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown(in *DirectiveBreakdown, out *v1alpha3.DirectiveBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown(in, out, s)
+// Convert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown is an autogenerated conversion function.
+func Convert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown(in *DirectiveBreakdown, out *v1alpha4.DirectiveBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in *v1alpha3.DirectiveBreakdown, out *DirectiveBreakdown, s conversion.Scope) error {
+func autoConvert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in *v1alpha4.DirectiveBreakdown, out *DirectiveBreakdown, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown is an autogenerated conversion function.
-func Convert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in *v1alpha3.DirectiveBreakdown, out *DirectiveBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in, out, s)
+// Convert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown is an autogenerated conversion function.
+func Convert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in *v1alpha4.DirectiveBreakdown, out *DirectiveBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownList(in *DirectiveBreakdownList, out *v1alpha3.DirectiveBreakdownList, s conversion.Scope) error {
+func autoConvert_v1alpha2_DirectiveBreakdownList_To_v1alpha4_DirectiveBreakdownList(in *DirectiveBreakdownList, out *v1alpha4.DirectiveBreakdownList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]v1alpha3.DirectiveBreakdown, len(*in))
+		*out = make([]v1alpha4.DirectiveBreakdown, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha2_DirectiveBreakdown_To_v1alpha3_DirectiveBreakdown(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha2_DirectiveBreakdown_To_v1alpha4_DirectiveBreakdown(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -1236,18 +1236,18 @@ func autoConvert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownL
 	return nil
 }
 
-// Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownList is an autogenerated conversion function.
-func Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownList(in *DirectiveBreakdownList, out *v1alpha3.DirectiveBreakdownList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_DirectiveBreakdownList_To_v1alpha3_DirectiveBreakdownList(in, out, s)
+// Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha4_DirectiveBreakdownList is an autogenerated conversion function.
+func Convert_v1alpha2_DirectiveBreakdownList_To_v1alpha4_DirectiveBreakdownList(in *DirectiveBreakdownList, out *v1alpha4.DirectiveBreakdownList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_DirectiveBreakdownList_To_v1alpha4_DirectiveBreakdownList(in, out, s)
 }
 
-func autoConvert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in *v1alpha3.DirectiveBreakdownList, out *DirectiveBreakdownList, s conversion.Scope) error {
+func autoConvert_v1alpha4_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in *v1alpha4.DirectiveBreakdownList, out *DirectiveBreakdownList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]DirectiveBreakdown, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha3_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha4_DirectiveBreakdown_To_v1alpha2_DirectiveBreakdown(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -1257,147 +1257,147 @@ func autoConvert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownL
 	return nil
 }
 
-// Convert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList is an autogenerated conversion function.
-func Convert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in *v1alpha3.DirectiveBreakdownList, out *DirectiveBreakdownList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in, out, s)
+// Convert_v1alpha4_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList is an autogenerated conversion function.
+func Convert_v1alpha4_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in *v1alpha4.DirectiveBreakdownList, out *DirectiveBreakdownList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_DirectiveBreakdownList_To_v1alpha2_DirectiveBreakdownList(in, out, s)
 }
 
-func autoConvert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec(in *DirectiveBreakdownSpec, out *v1alpha3.DirectiveBreakdownSpec, s conversion.Scope) error {
+func autoConvert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec(in *DirectiveBreakdownSpec, out *v1alpha4.DirectiveBreakdownSpec, s conversion.Scope) error {
 	out.Directive = in.Directive
 	out.UserID = in.UserID
 	return nil
 }
 
-// Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec is an autogenerated conversion function.
-func Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec(in *DirectiveBreakdownSpec, out *v1alpha3.DirectiveBreakdownSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha3_DirectiveBreakdownSpec(in, out, s)
+// Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec is an autogenerated conversion function.
+func Convert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec(in *DirectiveBreakdownSpec, out *v1alpha4.DirectiveBreakdownSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_DirectiveBreakdownSpec_To_v1alpha4_DirectiveBreakdownSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in *v1alpha3.DirectiveBreakdownSpec, out *DirectiveBreakdownSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in *v1alpha4.DirectiveBreakdownSpec, out *DirectiveBreakdownSpec, s conversion.Scope) error {
 	out.Directive = in.Directive
 	out.UserID = in.UserID
 	return nil
 }
 
-// Convert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec is an autogenerated conversion function.
-func Convert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in *v1alpha3.DirectiveBreakdownSpec, out *DirectiveBreakdownSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in, out, s)
+// Convert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec is an autogenerated conversion function.
+func Convert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in *v1alpha4.DirectiveBreakdownSpec, out *DirectiveBreakdownSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_DirectiveBreakdownSpec_To_v1alpha2_DirectiveBreakdownSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha3_DirectiveBreakdownStatus(in *DirectiveBreakdownStatus, out *v1alpha3.DirectiveBreakdownStatus, s conversion.Scope) error {
-	out.Storage = (*v1alpha3.StorageBreakdown)(unsafe.Pointer(in.Storage))
-	out.Compute = (*v1alpha3.ComputeBreakdown)(unsafe.Pointer(in.Compute))
+func autoConvert_v1alpha2_DirectiveBreakdownStatus_To_v1alpha4_DirectiveBreakdownStatus(in *DirectiveBreakdownStatus, out *v1alpha4.DirectiveBreakdownStatus, s conversion.Scope) error {
+	out.Storage = (*v1alpha4.StorageBreakdown)(unsafe.Pointer(in.Storage))
+	out.Compute = (*v1alpha4.ComputeBreakdown)(unsafe.Pointer(in.Compute))
 	out.Ready = in.Ready
 	// WARNING: in.RequiredDaemons requires manual conversion: does not exist in peer-type
-	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1alpha3_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(in *v1alpha3.DirectiveBreakdownStatus, out *DirectiveBreakdownStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(in *v1alpha4.DirectiveBreakdownStatus, out *DirectiveBreakdownStatus, s conversion.Scope) error {
 	out.Storage = (*StorageBreakdown)(unsafe.Pointer(in.Storage))
 	out.Compute = (*ComputeBreakdown)(unsafe.Pointer(in.Compute))
 	out.Ready = in.Ready
 	// WARNING: in.Requires requires manual conversion: does not exist in peer-type
-	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-func autoConvert_v1alpha2_Node_To_v1alpha3_Node(in *Node, out *v1alpha3.Node, s conversion.Scope) error {
+func autoConvert_v1alpha2_Node_To_v1alpha4_Node(in *Node, out *v1alpha4.Node, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Status = v1alpha3.ResourceStatus(in.Status)
+	out.Status = v1alpha4.ResourceStatus(in.Status)
 	return nil
 }
 
-// Convert_v1alpha2_Node_To_v1alpha3_Node is an autogenerated conversion function.
-func Convert_v1alpha2_Node_To_v1alpha3_Node(in *Node, out *v1alpha3.Node, s conversion.Scope) error {
-	return autoConvert_v1alpha2_Node_To_v1alpha3_Node(in, out, s)
+// Convert_v1alpha2_Node_To_v1alpha4_Node is an autogenerated conversion function.
+func Convert_v1alpha2_Node_To_v1alpha4_Node(in *Node, out *v1alpha4.Node, s conversion.Scope) error {
+	return autoConvert_v1alpha2_Node_To_v1alpha4_Node(in, out, s)
 }
 
-func autoConvert_v1alpha3_Node_To_v1alpha2_Node(in *v1alpha3.Node, out *Node, s conversion.Scope) error {
+func autoConvert_v1alpha4_Node_To_v1alpha2_Node(in *v1alpha4.Node, out *Node, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Status = ResourceStatus(in.Status)
 	return nil
 }
 
-// Convert_v1alpha3_Node_To_v1alpha2_Node is an autogenerated conversion function.
-func Convert_v1alpha3_Node_To_v1alpha2_Node(in *v1alpha3.Node, out *Node, s conversion.Scope) error {
-	return autoConvert_v1alpha3_Node_To_v1alpha2_Node(in, out, s)
+// Convert_v1alpha4_Node_To_v1alpha2_Node is an autogenerated conversion function.
+func Convert_v1alpha4_Node_To_v1alpha2_Node(in *v1alpha4.Node, out *Node, s conversion.Scope) error {
+	return autoConvert_v1alpha4_Node_To_v1alpha2_Node(in, out, s)
 }
 
-func autoConvert_v1alpha2_PersistentStorageInstance_To_v1alpha3_PersistentStorageInstance(in *PersistentStorageInstance, out *v1alpha3.PersistentStorageInstance, s conversion.Scope) error {
+func autoConvert_v1alpha2_PersistentStorageInstance_To_v1alpha4_PersistentStorageInstance(in *PersistentStorageInstance, out *v1alpha4.PersistentStorageInstance, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_PersistentStorageInstance_To_v1alpha3_PersistentStorageInstance is an autogenerated conversion function.
-func Convert_v1alpha2_PersistentStorageInstance_To_v1alpha3_PersistentStorageInstance(in *PersistentStorageInstance, out *v1alpha3.PersistentStorageInstance, s conversion.Scope) error {
-	return autoConvert_v1alpha2_PersistentStorageInstance_To_v1alpha3_PersistentStorageInstance(in, out, s)
+// Convert_v1alpha2_PersistentStorageInstance_To_v1alpha4_PersistentStorageInstance is an autogenerated conversion function.
+func Convert_v1alpha2_PersistentStorageInstance_To_v1alpha4_PersistentStorageInstance(in *PersistentStorageInstance, out *v1alpha4.PersistentStorageInstance, s conversion.Scope) error {
+	return autoConvert_v1alpha2_PersistentStorageInstance_To_v1alpha4_PersistentStorageInstance(in, out, s)
 }
 
-func autoConvert_v1alpha3_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in *v1alpha3.PersistentStorageInstance, out *PersistentStorageInstance, s conversion.Scope) error {
+func autoConvert_v1alpha4_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in *v1alpha4.PersistentStorageInstance, out *PersistentStorageInstance, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance is an autogenerated conversion function.
-func Convert_v1alpha3_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in *v1alpha3.PersistentStorageInstance, out *PersistentStorageInstance, s conversion.Scope) error {
-	return autoConvert_v1alpha3_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in, out, s)
+// Convert_v1alpha4_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance is an autogenerated conversion function.
+func Convert_v1alpha4_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in *v1alpha4.PersistentStorageInstance, out *PersistentStorageInstance, s conversion.Scope) error {
+	return autoConvert_v1alpha4_PersistentStorageInstance_To_v1alpha2_PersistentStorageInstance(in, out, s)
 }
 
-func autoConvert_v1alpha2_PersistentStorageInstanceList_To_v1alpha3_PersistentStorageInstanceList(in *PersistentStorageInstanceList, out *v1alpha3.PersistentStorageInstanceList, s conversion.Scope) error {
+func autoConvert_v1alpha2_PersistentStorageInstanceList_To_v1alpha4_PersistentStorageInstanceList(in *PersistentStorageInstanceList, out *v1alpha4.PersistentStorageInstanceList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.PersistentStorageInstance)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.PersistentStorageInstance)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha3_PersistentStorageInstanceList is an autogenerated conversion function.
-func Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha3_PersistentStorageInstanceList(in *PersistentStorageInstanceList, out *v1alpha3.PersistentStorageInstanceList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_PersistentStorageInstanceList_To_v1alpha3_PersistentStorageInstanceList(in, out, s)
+// Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha4_PersistentStorageInstanceList is an autogenerated conversion function.
+func Convert_v1alpha2_PersistentStorageInstanceList_To_v1alpha4_PersistentStorageInstanceList(in *PersistentStorageInstanceList, out *v1alpha4.PersistentStorageInstanceList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_PersistentStorageInstanceList_To_v1alpha4_PersistentStorageInstanceList(in, out, s)
 }
 
-func autoConvert_v1alpha3_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in *v1alpha3.PersistentStorageInstanceList, out *PersistentStorageInstanceList, s conversion.Scope) error {
+func autoConvert_v1alpha4_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in *v1alpha4.PersistentStorageInstanceList, out *PersistentStorageInstanceList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]PersistentStorageInstance)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList is an autogenerated conversion function.
-func Convert_v1alpha3_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in *v1alpha3.PersistentStorageInstanceList, out *PersistentStorageInstanceList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in, out, s)
+// Convert_v1alpha4_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList is an autogenerated conversion function.
+func Convert_v1alpha4_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in *v1alpha4.PersistentStorageInstanceList, out *PersistentStorageInstanceList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_PersistentStorageInstanceList_To_v1alpha2_PersistentStorageInstanceList(in, out, s)
 }
 
-func autoConvert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec(in *PersistentStorageInstanceSpec, out *v1alpha3.PersistentStorageInstanceSpec, s conversion.Scope) error {
+func autoConvert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec(in *PersistentStorageInstanceSpec, out *v1alpha4.PersistentStorageInstanceSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.FsType = in.FsType
 	out.DWDirective = in.DWDirective
 	out.UserID = in.UserID
-	out.State = v1alpha3.PersistentStorageInstanceState(in.State)
+	out.State = v1alpha4.PersistentStorageInstanceState(in.State)
 	out.ConsumerReferences = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.ConsumerReferences))
 	return nil
 }
 
-// Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec is an autogenerated conversion function.
-func Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec(in *PersistentStorageInstanceSpec, out *v1alpha3.PersistentStorageInstanceSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha3_PersistentStorageInstanceSpec(in, out, s)
+// Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec is an autogenerated conversion function.
+func Convert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec(in *PersistentStorageInstanceSpec, out *v1alpha4.PersistentStorageInstanceSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_PersistentStorageInstanceSpec_To_v1alpha4_PersistentStorageInstanceSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in *v1alpha3.PersistentStorageInstanceSpec, out *PersistentStorageInstanceSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in *v1alpha4.PersistentStorageInstanceSpec, out *PersistentStorageInstanceSpec, s conversion.Scope) error {
 	out.Name = in.Name
 	out.FsType = in.FsType
 	out.DWDirective = in.DWDirective
@@ -1407,73 +1407,73 @@ func autoConvert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentSt
 	return nil
 }
 
-// Convert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec is an autogenerated conversion function.
-func Convert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in *v1alpha3.PersistentStorageInstanceSpec, out *PersistentStorageInstanceSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in, out, s)
+// Convert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec is an autogenerated conversion function.
+func Convert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in *v1alpha4.PersistentStorageInstanceSpec, out *PersistentStorageInstanceSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_PersistentStorageInstanceSpec_To_v1alpha2_PersistentStorageInstanceSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus(in *PersistentStorageInstanceStatus, out *v1alpha3.PersistentStorageInstanceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus(in *PersistentStorageInstanceStatus, out *v1alpha4.PersistentStorageInstanceStatus, s conversion.Scope) error {
 	out.Servers = in.Servers
-	out.State = v1alpha3.PersistentStorageInstanceState(in.State)
-	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	out.State = v1alpha4.PersistentStorageInstanceState(in.State)
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus is an autogenerated conversion function.
-func Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus(in *PersistentStorageInstanceStatus, out *v1alpha3.PersistentStorageInstanceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha3_PersistentStorageInstanceStatus(in, out, s)
+// Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus is an autogenerated conversion function.
+func Convert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus(in *PersistentStorageInstanceStatus, out *v1alpha4.PersistentStorageInstanceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_PersistentStorageInstanceStatus_To_v1alpha4_PersistentStorageInstanceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in *v1alpha3.PersistentStorageInstanceStatus, out *PersistentStorageInstanceStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in *v1alpha4.PersistentStorageInstanceStatus, out *PersistentStorageInstanceStatus, s conversion.Scope) error {
 	out.Servers = in.Servers
 	out.State = PersistentStorageInstanceState(in.State)
-	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus is an autogenerated conversion function.
-func Convert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in *v1alpha3.PersistentStorageInstanceStatus, out *PersistentStorageInstanceStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in, out, s)
+// Convert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus is an autogenerated conversion function.
+func Convert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in *v1alpha4.PersistentStorageInstanceStatus, out *PersistentStorageInstanceStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_PersistentStorageInstanceStatus_To_v1alpha2_PersistentStorageInstanceStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(in *ResourceError, out *v1alpha3.ResourceError, s conversion.Scope) error {
-	out.Error = (*v1alpha3.ResourceErrorInfo)(unsafe.Pointer(in.Error))
+func autoConvert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(in *ResourceError, out *v1alpha4.ResourceError, s conversion.Scope) error {
+	out.Error = (*v1alpha4.ResourceErrorInfo)(unsafe.Pointer(in.Error))
 	return nil
 }
 
-// Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError is an autogenerated conversion function.
-func Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(in *ResourceError, out *v1alpha3.ResourceError, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(in, out, s)
+// Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError is an autogenerated conversion function.
+func Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(in *ResourceError, out *v1alpha4.ResourceError, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(in, out, s)
 }
 
-func autoConvert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(in *v1alpha3.ResourceError, out *ResourceError, s conversion.Scope) error {
+func autoConvert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(in *v1alpha4.ResourceError, out *ResourceError, s conversion.Scope) error {
 	out.Error = (*ResourceErrorInfo)(unsafe.Pointer(in.Error))
 	return nil
 }
 
-// Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError is an autogenerated conversion function.
-func Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(in *v1alpha3.ResourceError, out *ResourceError, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(in, out, s)
+// Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError is an autogenerated conversion function.
+func Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(in *v1alpha4.ResourceError, out *ResourceError, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(in, out, s)
 }
 
-func autoConvert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(in *ResourceErrorInfo, out *v1alpha3.ResourceErrorInfo, s conversion.Scope) error {
+func autoConvert_v1alpha2_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(in *ResourceErrorInfo, out *v1alpha4.ResourceErrorInfo, s conversion.Scope) error {
 	out.UserMessage = in.UserMessage
 	out.DebugMessage = in.DebugMessage
-	out.Type = v1alpha3.ResourceErrorType(in.Type)
-	out.Severity = v1alpha3.ResourceErrorSeverity(in.Severity)
+	out.Type = v1alpha4.ResourceErrorType(in.Type)
+	out.Severity = v1alpha4.ResourceErrorSeverity(in.Severity)
 	return nil
 }
 
-// Convert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo is an autogenerated conversion function.
-func Convert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(in *ResourceErrorInfo, out *v1alpha3.ResourceErrorInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ResourceErrorInfo_To_v1alpha3_ResourceErrorInfo(in, out, s)
+// Convert_v1alpha2_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo is an autogenerated conversion function.
+func Convert_v1alpha2_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(in *ResourceErrorInfo, out *v1alpha4.ResourceErrorInfo, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(in, out, s)
 }
 
-func autoConvert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *v1alpha3.ResourceErrorInfo, out *ResourceErrorInfo, s conversion.Scope) error {
+func autoConvert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *v1alpha4.ResourceErrorInfo, out *ResourceErrorInfo, s conversion.Scope) error {
 	out.UserMessage = in.UserMessage
 	out.DebugMessage = in.DebugMessage
 	out.Type = ResourceErrorType(in.Type)
@@ -1481,330 +1481,330 @@ func autoConvert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *v1
 	return nil
 }
 
-// Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo is an autogenerated conversion function.
-func Convert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *v1alpha3.ResourceErrorInfo, out *ResourceErrorInfo, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in, out, s)
+// Convert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo is an autogenerated conversion function.
+func Convert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *v1alpha4.ResourceErrorInfo, out *ResourceErrorInfo, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in, out, s)
 }
 
-func autoConvert_v1alpha2_Servers_To_v1alpha3_Servers(in *Servers, out *v1alpha3.Servers, s conversion.Scope) error {
+func autoConvert_v1alpha2_Servers_To_v1alpha4_Servers(in *Servers, out *v1alpha4.Servers, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_Servers_To_v1alpha3_Servers is an autogenerated conversion function.
-func Convert_v1alpha2_Servers_To_v1alpha3_Servers(in *Servers, out *v1alpha3.Servers, s conversion.Scope) error {
-	return autoConvert_v1alpha2_Servers_To_v1alpha3_Servers(in, out, s)
+// Convert_v1alpha2_Servers_To_v1alpha4_Servers is an autogenerated conversion function.
+func Convert_v1alpha2_Servers_To_v1alpha4_Servers(in *Servers, out *v1alpha4.Servers, s conversion.Scope) error {
+	return autoConvert_v1alpha2_Servers_To_v1alpha4_Servers(in, out, s)
 }
 
-func autoConvert_v1alpha3_Servers_To_v1alpha2_Servers(in *v1alpha3.Servers, out *Servers, s conversion.Scope) error {
+func autoConvert_v1alpha4_Servers_To_v1alpha2_Servers(in *v1alpha4.Servers, out *Servers, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_Servers_To_v1alpha2_Servers is an autogenerated conversion function.
-func Convert_v1alpha3_Servers_To_v1alpha2_Servers(in *v1alpha3.Servers, out *Servers, s conversion.Scope) error {
-	return autoConvert_v1alpha3_Servers_To_v1alpha2_Servers(in, out, s)
+// Convert_v1alpha4_Servers_To_v1alpha2_Servers is an autogenerated conversion function.
+func Convert_v1alpha4_Servers_To_v1alpha2_Servers(in *v1alpha4.Servers, out *Servers, s conversion.Scope) error {
+	return autoConvert_v1alpha4_Servers_To_v1alpha2_Servers(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersList_To_v1alpha3_ServersList(in *ServersList, out *v1alpha3.ServersList, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersList_To_v1alpha4_ServersList(in *ServersList, out *v1alpha4.ServersList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.Servers)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.Servers)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_ServersList_To_v1alpha3_ServersList is an autogenerated conversion function.
-func Convert_v1alpha2_ServersList_To_v1alpha3_ServersList(in *ServersList, out *v1alpha3.ServersList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersList_To_v1alpha3_ServersList(in, out, s)
+// Convert_v1alpha2_ServersList_To_v1alpha4_ServersList is an autogenerated conversion function.
+func Convert_v1alpha2_ServersList_To_v1alpha4_ServersList(in *ServersList, out *v1alpha4.ServersList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersList_To_v1alpha4_ServersList(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersList_To_v1alpha2_ServersList(in *v1alpha3.ServersList, out *ServersList, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersList_To_v1alpha2_ServersList(in *v1alpha4.ServersList, out *ServersList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]Servers)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_ServersList_To_v1alpha2_ServersList is an autogenerated conversion function.
-func Convert_v1alpha3_ServersList_To_v1alpha2_ServersList(in *v1alpha3.ServersList, out *ServersList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersList_To_v1alpha2_ServersList(in, out, s)
+// Convert_v1alpha4_ServersList_To_v1alpha2_ServersList is an autogenerated conversion function.
+func Convert_v1alpha4_ServersList_To_v1alpha2_ServersList(in *v1alpha4.ServersList, out *ServersList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersList_To_v1alpha2_ServersList(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec(in *ServersSpec, out *v1alpha3.ServersSpec, s conversion.Scope) error {
-	out.AllocationSets = *(*[]v1alpha3.ServersSpecAllocationSet)(unsafe.Pointer(&in.AllocationSets))
+func autoConvert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec(in *ServersSpec, out *v1alpha4.ServersSpec, s conversion.Scope) error {
+	out.AllocationSets = *(*[]v1alpha4.ServersSpecAllocationSet)(unsafe.Pointer(&in.AllocationSets))
 	return nil
 }
 
-// Convert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec is an autogenerated conversion function.
-func Convert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec(in *ServersSpec, out *v1alpha3.ServersSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersSpec_To_v1alpha3_ServersSpec(in, out, s)
+// Convert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec is an autogenerated conversion function.
+func Convert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec(in *ServersSpec, out *v1alpha4.ServersSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersSpec_To_v1alpha4_ServersSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec(in *v1alpha3.ServersSpec, out *ServersSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec(in *v1alpha4.ServersSpec, out *ServersSpec, s conversion.Scope) error {
 	out.AllocationSets = *(*[]ServersSpecAllocationSet)(unsafe.Pointer(&in.AllocationSets))
 	return nil
 }
 
-// Convert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec is an autogenerated conversion function.
-func Convert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec(in *v1alpha3.ServersSpec, out *ServersSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersSpec_To_v1alpha2_ServersSpec(in, out, s)
+// Convert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec is an autogenerated conversion function.
+func Convert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec(in *v1alpha4.ServersSpec, out *ServersSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersSpec_To_v1alpha2_ServersSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersSpecAllocationSet_To_v1alpha3_ServersSpecAllocationSet(in *ServersSpecAllocationSet, out *v1alpha3.ServersSpecAllocationSet, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersSpecAllocationSet_To_v1alpha4_ServersSpecAllocationSet(in *ServersSpecAllocationSet, out *v1alpha4.ServersSpecAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
 	out.AllocationSize = in.AllocationSize
-	out.Storage = *(*[]v1alpha3.ServersSpecStorage)(unsafe.Pointer(&in.Storage))
+	out.Storage = *(*[]v1alpha4.ServersSpecStorage)(unsafe.Pointer(&in.Storage))
 	return nil
 }
 
-// Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha3_ServersSpecAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha3_ServersSpecAllocationSet(in *ServersSpecAllocationSet, out *v1alpha3.ServersSpecAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersSpecAllocationSet_To_v1alpha3_ServersSpecAllocationSet(in, out, s)
+// Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha4_ServersSpecAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha2_ServersSpecAllocationSet_To_v1alpha4_ServersSpecAllocationSet(in *ServersSpecAllocationSet, out *v1alpha4.ServersSpecAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersSpecAllocationSet_To_v1alpha4_ServersSpecAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in *v1alpha3.ServersSpecAllocationSet, out *ServersSpecAllocationSet, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in *v1alpha4.ServersSpecAllocationSet, out *ServersSpecAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
 	out.AllocationSize = in.AllocationSize
 	out.Storage = *(*[]ServersSpecStorage)(unsafe.Pointer(&in.Storage))
 	return nil
 }
 
-// Convert_v1alpha3_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha3_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in *v1alpha3.ServersSpecAllocationSet, out *ServersSpecAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in, out, s)
+// Convert_v1alpha4_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha4_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in *v1alpha4.ServersSpecAllocationSet, out *ServersSpecAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersSpecAllocationSet_To_v1alpha2_ServersSpecAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersSpecStorage_To_v1alpha3_ServersSpecStorage(in *ServersSpecStorage, out *v1alpha3.ServersSpecStorage, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersSpecStorage_To_v1alpha4_ServersSpecStorage(in *ServersSpecStorage, out *v1alpha4.ServersSpecStorage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.AllocationCount = in.AllocationCount
 	return nil
 }
 
-// Convert_v1alpha2_ServersSpecStorage_To_v1alpha3_ServersSpecStorage is an autogenerated conversion function.
-func Convert_v1alpha2_ServersSpecStorage_To_v1alpha3_ServersSpecStorage(in *ServersSpecStorage, out *v1alpha3.ServersSpecStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersSpecStorage_To_v1alpha3_ServersSpecStorage(in, out, s)
+// Convert_v1alpha2_ServersSpecStorage_To_v1alpha4_ServersSpecStorage is an autogenerated conversion function.
+func Convert_v1alpha2_ServersSpecStorage_To_v1alpha4_ServersSpecStorage(in *ServersSpecStorage, out *v1alpha4.ServersSpecStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersSpecStorage_To_v1alpha4_ServersSpecStorage(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in *v1alpha3.ServersSpecStorage, out *ServersSpecStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in *v1alpha4.ServersSpecStorage, out *ServersSpecStorage, s conversion.Scope) error {
 	out.Name = in.Name
 	out.AllocationCount = in.AllocationCount
 	return nil
 }
 
-// Convert_v1alpha3_ServersSpecStorage_To_v1alpha2_ServersSpecStorage is an autogenerated conversion function.
-func Convert_v1alpha3_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in *v1alpha3.ServersSpecStorage, out *ServersSpecStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in, out, s)
+// Convert_v1alpha4_ServersSpecStorage_To_v1alpha2_ServersSpecStorage is an autogenerated conversion function.
+func Convert_v1alpha4_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in *v1alpha4.ServersSpecStorage, out *ServersSpecStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus(in *ServersStatus, out *v1alpha3.ServersStatus, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus(in *ServersStatus, out *v1alpha4.ServersStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.LastUpdate = (*metav1.MicroTime)(unsafe.Pointer(in.LastUpdate))
-	out.AllocationSets = *(*[]v1alpha3.ServersStatusAllocationSet)(unsafe.Pointer(&in.AllocationSets))
-	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	out.AllocationSets = *(*[]v1alpha4.ServersStatusAllocationSet)(unsafe.Pointer(&in.AllocationSets))
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus is an autogenerated conversion function.
-func Convert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus(in *ServersStatus, out *v1alpha3.ServersStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersStatus_To_v1alpha3_ServersStatus(in, out, s)
+// Convert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus is an autogenerated conversion function.
+func Convert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus(in *ServersStatus, out *v1alpha4.ServersStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersStatus_To_v1alpha4_ServersStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha3.ServersStatus, out *ServersStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha4.ServersStatus, out *ServersStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.LastUpdate = (*metav1.MicroTime)(unsafe.Pointer(in.LastUpdate))
 	out.AllocationSets = *(*[]ServersStatusAllocationSet)(unsafe.Pointer(&in.AllocationSets))
-	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus is an autogenerated conversion function.
-func Convert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha3.ServersStatus, out *ServersStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersStatus_To_v1alpha2_ServersStatus(in, out, s)
+// Convert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus is an autogenerated conversion function.
+func Convert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha4.ServersStatus, out *ServersStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersStatus_To_v1alpha2_ServersStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersStatusAllocationSet_To_v1alpha3_ServersStatusAllocationSet(in *ServersStatusAllocationSet, out *v1alpha3.ServersStatusAllocationSet, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersStatusAllocationSet_To_v1alpha4_ServersStatusAllocationSet(in *ServersStatusAllocationSet, out *v1alpha4.ServersStatusAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
-	out.Storage = *(*map[string]v1alpha3.ServersStatusStorage)(unsafe.Pointer(&in.Storage))
+	out.Storage = *(*map[string]v1alpha4.ServersStatusStorage)(unsafe.Pointer(&in.Storage))
 	return nil
 }
 
-// Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha3_ServersStatusAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha3_ServersStatusAllocationSet(in *ServersStatusAllocationSet, out *v1alpha3.ServersStatusAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersStatusAllocationSet_To_v1alpha3_ServersStatusAllocationSet(in, out, s)
+// Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha4_ServersStatusAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha4_ServersStatusAllocationSet(in *ServersStatusAllocationSet, out *v1alpha4.ServersStatusAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersStatusAllocationSet_To_v1alpha4_ServersStatusAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in *v1alpha3.ServersStatusAllocationSet, out *ServersStatusAllocationSet, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in *v1alpha4.ServersStatusAllocationSet, out *ServersStatusAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
 	out.Storage = *(*map[string]ServersStatusStorage)(unsafe.Pointer(&in.Storage))
 	return nil
 }
 
-// Convert_v1alpha3_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha3_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in *v1alpha3.ServersStatusAllocationSet, out *ServersStatusAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in, out, s)
+// Convert_v1alpha4_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha4_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in *v1alpha4.ServersStatusAllocationSet, out *ServersStatusAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha2_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(in *ServersStatusStorage, out *v1alpha3.ServersStatusStorage, s conversion.Scope) error {
+func autoConvert_v1alpha2_ServersStatusStorage_To_v1alpha4_ServersStatusStorage(in *ServersStatusStorage, out *v1alpha4.ServersStatusStorage, s conversion.Scope) error {
 	out.AllocationSize = in.AllocationSize
 	return nil
 }
 
-// Convert_v1alpha2_ServersStatusStorage_To_v1alpha3_ServersStatusStorage is an autogenerated conversion function.
-func Convert_v1alpha2_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(in *ServersStatusStorage, out *v1alpha3.ServersStatusStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha2_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(in, out, s)
+// Convert_v1alpha2_ServersStatusStorage_To_v1alpha4_ServersStatusStorage is an autogenerated conversion function.
+func Convert_v1alpha2_ServersStatusStorage_To_v1alpha4_ServersStatusStorage(in *ServersStatusStorage, out *v1alpha4.ServersStatusStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha2_ServersStatusStorage_To_v1alpha4_ServersStatusStorage(in, out, s)
 }
 
-func autoConvert_v1alpha3_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha3.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
+func autoConvert_v1alpha4_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha4.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
 	out.AllocationSize = in.AllocationSize
 	return nil
 }
 
-// Convert_v1alpha3_ServersStatusStorage_To_v1alpha2_ServersStatusStorage is an autogenerated conversion function.
-func Convert_v1alpha3_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha3.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha3_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in, out, s)
+// Convert_v1alpha4_ServersStatusStorage_To_v1alpha2_ServersStatusStorage is an autogenerated conversion function.
+func Convert_v1alpha4_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha4.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in, out, s)
 }
 
-func autoConvert_v1alpha2_Storage_To_v1alpha3_Storage(in *Storage, out *v1alpha3.Storage, s conversion.Scope) error {
+func autoConvert_v1alpha2_Storage_To_v1alpha4_Storage(in *Storage, out *v1alpha4.Storage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_Storage_To_v1alpha3_Storage is an autogenerated conversion function.
-func Convert_v1alpha2_Storage_To_v1alpha3_Storage(in *Storage, out *v1alpha3.Storage, s conversion.Scope) error {
-	return autoConvert_v1alpha2_Storage_To_v1alpha3_Storage(in, out, s)
+// Convert_v1alpha2_Storage_To_v1alpha4_Storage is an autogenerated conversion function.
+func Convert_v1alpha2_Storage_To_v1alpha4_Storage(in *Storage, out *v1alpha4.Storage, s conversion.Scope) error {
+	return autoConvert_v1alpha2_Storage_To_v1alpha4_Storage(in, out, s)
 }
 
-func autoConvert_v1alpha3_Storage_To_v1alpha2_Storage(in *v1alpha3.Storage, out *Storage, s conversion.Scope) error {
+func autoConvert_v1alpha4_Storage_To_v1alpha2_Storage(in *v1alpha4.Storage, out *Storage, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_Storage_To_v1alpha2_Storage is an autogenerated conversion function.
-func Convert_v1alpha3_Storage_To_v1alpha2_Storage(in *v1alpha3.Storage, out *Storage, s conversion.Scope) error {
-	return autoConvert_v1alpha3_Storage_To_v1alpha2_Storage(in, out, s)
+// Convert_v1alpha4_Storage_To_v1alpha2_Storage is an autogenerated conversion function.
+func Convert_v1alpha4_Storage_To_v1alpha2_Storage(in *v1alpha4.Storage, out *Storage, s conversion.Scope) error {
+	return autoConvert_v1alpha4_Storage_To_v1alpha2_Storage(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess(in *StorageAccess, out *v1alpha3.StorageAccess, s conversion.Scope) error {
-	out.Protocol = v1alpha3.StorageAccessProtocol(in.Protocol)
-	out.Servers = *(*[]v1alpha3.Node)(unsafe.Pointer(&in.Servers))
-	out.Computes = *(*[]v1alpha3.Node)(unsafe.Pointer(&in.Computes))
+func autoConvert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess(in *StorageAccess, out *v1alpha4.StorageAccess, s conversion.Scope) error {
+	out.Protocol = v1alpha4.StorageAccessProtocol(in.Protocol)
+	out.Servers = *(*[]v1alpha4.Node)(unsafe.Pointer(&in.Servers))
+	out.Computes = *(*[]v1alpha4.Node)(unsafe.Pointer(&in.Computes))
 	return nil
 }
 
-// Convert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess is an autogenerated conversion function.
-func Convert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess(in *StorageAccess, out *v1alpha3.StorageAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess(in, out, s)
+// Convert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess is an autogenerated conversion function.
+func Convert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess(in *StorageAccess, out *v1alpha4.StorageAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess(in *v1alpha3.StorageAccess, out *StorageAccess, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess(in *v1alpha4.StorageAccess, out *StorageAccess, s conversion.Scope) error {
 	out.Protocol = StorageAccessProtocol(in.Protocol)
 	out.Servers = *(*[]Node)(unsafe.Pointer(&in.Servers))
 	out.Computes = *(*[]Node)(unsafe.Pointer(&in.Computes))
 	return nil
 }
 
-// Convert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess is an autogenerated conversion function.
-func Convert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess(in *v1alpha3.StorageAccess, out *StorageAccess, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess(in, out, s)
+// Convert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess is an autogenerated conversion function.
+func Convert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess(in *v1alpha4.StorageAccess, out *StorageAccess, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageAllocationSet_To_v1alpha3_StorageAllocationSet(in *StorageAllocationSet, out *v1alpha3.StorageAllocationSet, s conversion.Scope) error {
-	out.AllocationStrategy = v1alpha3.AllocationStrategy(in.AllocationStrategy)
+func autoConvert_v1alpha2_StorageAllocationSet_To_v1alpha4_StorageAllocationSet(in *StorageAllocationSet, out *v1alpha4.StorageAllocationSet, s conversion.Scope) error {
+	out.AllocationStrategy = v1alpha4.AllocationStrategy(in.AllocationStrategy)
 	out.MinimumCapacity = in.MinimumCapacity
 	out.Label = in.Label
-	if err := Convert_v1alpha2_AllocationSetConstraints_To_v1alpha3_AllocationSetConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+	if err := Convert_v1alpha2_AllocationSetConstraints_To_v1alpha4_AllocationSetConstraints(&in.Constraints, &out.Constraints, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_StorageAllocationSet_To_v1alpha3_StorageAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha2_StorageAllocationSet_To_v1alpha3_StorageAllocationSet(in *StorageAllocationSet, out *v1alpha3.StorageAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageAllocationSet_To_v1alpha3_StorageAllocationSet(in, out, s)
+// Convert_v1alpha2_StorageAllocationSet_To_v1alpha4_StorageAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha2_StorageAllocationSet_To_v1alpha4_StorageAllocationSet(in *StorageAllocationSet, out *v1alpha4.StorageAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageAllocationSet_To_v1alpha4_StorageAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in *v1alpha3.StorageAllocationSet, out *StorageAllocationSet, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in *v1alpha4.StorageAllocationSet, out *StorageAllocationSet, s conversion.Scope) error {
 	out.AllocationStrategy = AllocationStrategy(in.AllocationStrategy)
 	out.MinimumCapacity = in.MinimumCapacity
 	out.Label = in.Label
-	if err := Convert_v1alpha3_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+	if err := Convert_v1alpha4_AllocationSetConstraints_To_v1alpha2_AllocationSetConstraints(&in.Constraints, &out.Constraints, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_StorageAllocationSet_To_v1alpha2_StorageAllocationSet is an autogenerated conversion function.
-func Convert_v1alpha3_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in *v1alpha3.StorageAllocationSet, out *StorageAllocationSet, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in, out, s)
+// Convert_v1alpha4_StorageAllocationSet_To_v1alpha2_StorageAllocationSet is an autogenerated conversion function.
+func Convert_v1alpha4_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in *v1alpha4.StorageAllocationSet, out *StorageAllocationSet, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageAllocationSet_To_v1alpha2_StorageAllocationSet(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageBreakdown_To_v1alpha3_StorageBreakdown(in *StorageBreakdown, out *v1alpha3.StorageBreakdown, s conversion.Scope) error {
+func autoConvert_v1alpha2_StorageBreakdown_To_v1alpha4_StorageBreakdown(in *StorageBreakdown, out *v1alpha4.StorageBreakdown, s conversion.Scope) error {
 	out.Lifetime = in.Lifetime
 	out.Reference = in.Reference
-	out.AllocationSets = *(*[]v1alpha3.StorageAllocationSet)(unsafe.Pointer(&in.AllocationSets))
+	out.AllocationSets = *(*[]v1alpha4.StorageAllocationSet)(unsafe.Pointer(&in.AllocationSets))
 	return nil
 }
 
-// Convert_v1alpha2_StorageBreakdown_To_v1alpha3_StorageBreakdown is an autogenerated conversion function.
-func Convert_v1alpha2_StorageBreakdown_To_v1alpha3_StorageBreakdown(in *StorageBreakdown, out *v1alpha3.StorageBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageBreakdown_To_v1alpha3_StorageBreakdown(in, out, s)
+// Convert_v1alpha2_StorageBreakdown_To_v1alpha4_StorageBreakdown is an autogenerated conversion function.
+func Convert_v1alpha2_StorageBreakdown_To_v1alpha4_StorageBreakdown(in *StorageBreakdown, out *v1alpha4.StorageBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageBreakdown_To_v1alpha4_StorageBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageBreakdown_To_v1alpha2_StorageBreakdown(in *v1alpha3.StorageBreakdown, out *StorageBreakdown, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageBreakdown_To_v1alpha2_StorageBreakdown(in *v1alpha4.StorageBreakdown, out *StorageBreakdown, s conversion.Scope) error {
 	out.Lifetime = in.Lifetime
 	out.Reference = in.Reference
 	out.AllocationSets = *(*[]StorageAllocationSet)(unsafe.Pointer(&in.AllocationSets))
 	return nil
 }
 
-// Convert_v1alpha3_StorageBreakdown_To_v1alpha2_StorageBreakdown is an autogenerated conversion function.
-func Convert_v1alpha3_StorageBreakdown_To_v1alpha2_StorageBreakdown(in *v1alpha3.StorageBreakdown, out *StorageBreakdown, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageBreakdown_To_v1alpha2_StorageBreakdown(in, out, s)
+// Convert_v1alpha4_StorageBreakdown_To_v1alpha2_StorageBreakdown is an autogenerated conversion function.
+func Convert_v1alpha4_StorageBreakdown_To_v1alpha2_StorageBreakdown(in *v1alpha4.StorageBreakdown, out *StorageBreakdown, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageBreakdown_To_v1alpha2_StorageBreakdown(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageDevice_To_v1alpha3_StorageDevice(in *StorageDevice, out *v1alpha3.StorageDevice, s conversion.Scope) error {
+func autoConvert_v1alpha2_StorageDevice_To_v1alpha4_StorageDevice(in *StorageDevice, out *v1alpha4.StorageDevice, s conversion.Scope) error {
 	out.Model = in.Model
 	out.SerialNumber = in.SerialNumber
 	out.FirmwareVersion = in.FirmwareVersion
 	out.Slot = in.Slot
 	out.Capacity = in.Capacity
 	out.WearLevel = (*int64)(unsafe.Pointer(in.WearLevel))
-	out.Status = v1alpha3.ResourceStatus(in.Status)
+	out.Status = v1alpha4.ResourceStatus(in.Status)
 	return nil
 }
 
-// Convert_v1alpha2_StorageDevice_To_v1alpha3_StorageDevice is an autogenerated conversion function.
-func Convert_v1alpha2_StorageDevice_To_v1alpha3_StorageDevice(in *StorageDevice, out *v1alpha3.StorageDevice, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageDevice_To_v1alpha3_StorageDevice(in, out, s)
+// Convert_v1alpha2_StorageDevice_To_v1alpha4_StorageDevice is an autogenerated conversion function.
+func Convert_v1alpha2_StorageDevice_To_v1alpha4_StorageDevice(in *StorageDevice, out *v1alpha4.StorageDevice, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageDevice_To_v1alpha4_StorageDevice(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice(in *v1alpha3.StorageDevice, out *StorageDevice, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageDevice_To_v1alpha2_StorageDevice(in *v1alpha4.StorageDevice, out *StorageDevice, s conversion.Scope) error {
 	out.Model = in.Model
 	out.SerialNumber = in.SerialNumber
 	out.FirmwareVersion = in.FirmwareVersion
@@ -1815,77 +1815,77 @@ func autoConvert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice(in *v1alpha3.S
 	return nil
 }
 
-// Convert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice is an autogenerated conversion function.
-func Convert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice(in *v1alpha3.StorageDevice, out *StorageDevice, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageDevice_To_v1alpha2_StorageDevice(in, out, s)
+// Convert_v1alpha4_StorageDevice_To_v1alpha2_StorageDevice is an autogenerated conversion function.
+func Convert_v1alpha4_StorageDevice_To_v1alpha2_StorageDevice(in *v1alpha4.StorageDevice, out *StorageDevice, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageDevice_To_v1alpha2_StorageDevice(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageList_To_v1alpha3_StorageList(in *StorageList, out *v1alpha3.StorageList, s conversion.Scope) error {
+func autoConvert_v1alpha2_StorageList_To_v1alpha4_StorageList(in *StorageList, out *v1alpha4.StorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.Storage)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.Storage)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_StorageList_To_v1alpha3_StorageList is an autogenerated conversion function.
-func Convert_v1alpha2_StorageList_To_v1alpha3_StorageList(in *StorageList, out *v1alpha3.StorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageList_To_v1alpha3_StorageList(in, out, s)
+// Convert_v1alpha2_StorageList_To_v1alpha4_StorageList is an autogenerated conversion function.
+func Convert_v1alpha2_StorageList_To_v1alpha4_StorageList(in *StorageList, out *v1alpha4.StorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageList_To_v1alpha4_StorageList(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageList_To_v1alpha2_StorageList(in *v1alpha3.StorageList, out *StorageList, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageList_To_v1alpha2_StorageList(in *v1alpha4.StorageList, out *StorageList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]Storage)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_StorageList_To_v1alpha2_StorageList is an autogenerated conversion function.
-func Convert_v1alpha3_StorageList_To_v1alpha2_StorageList(in *v1alpha3.StorageList, out *StorageList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageList_To_v1alpha2_StorageList(in, out, s)
+// Convert_v1alpha4_StorageList_To_v1alpha2_StorageList is an autogenerated conversion function.
+func Convert_v1alpha4_StorageList_To_v1alpha2_StorageList(in *v1alpha4.StorageList, out *StorageList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageList_To_v1alpha2_StorageList(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec(in *StorageSpec, out *v1alpha3.StorageSpec, s conversion.Scope) error {
-	out.State = v1alpha3.ResourceState(in.State)
+func autoConvert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec(in *StorageSpec, out *v1alpha4.StorageSpec, s conversion.Scope) error {
+	out.State = v1alpha4.ResourceState(in.State)
 	out.Mode = in.Mode
 	return nil
 }
 
-// Convert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec is an autogenerated conversion function.
-func Convert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec(in *StorageSpec, out *v1alpha3.StorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageSpec_To_v1alpha3_StorageSpec(in, out, s)
+// Convert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec is an autogenerated conversion function.
+func Convert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec(in *StorageSpec, out *v1alpha4.StorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageSpec_To_v1alpha4_StorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec(in *v1alpha3.StorageSpec, out *StorageSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec(in *v1alpha4.StorageSpec, out *StorageSpec, s conversion.Scope) error {
 	out.State = ResourceState(in.State)
 	out.Mode = in.Mode
 	return nil
 }
 
-// Convert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec is an autogenerated conversion function.
-func Convert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec(in *v1alpha3.StorageSpec, out *StorageSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageSpec_To_v1alpha2_StorageSpec(in, out, s)
+// Convert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec is an autogenerated conversion function.
+func Convert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec(in *v1alpha4.StorageSpec, out *StorageSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageSpec_To_v1alpha2_StorageSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus(in *StorageStatus, out *v1alpha3.StorageStatus, s conversion.Scope) error {
-	out.Type = v1alpha3.StorageType(in.Type)
-	out.Devices = *(*[]v1alpha3.StorageDevice)(unsafe.Pointer(&in.Devices))
-	if err := Convert_v1alpha2_StorageAccess_To_v1alpha3_StorageAccess(&in.Access, &out.Access, s); err != nil {
+func autoConvert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus(in *StorageStatus, out *v1alpha4.StorageStatus, s conversion.Scope) error {
+	out.Type = v1alpha4.StorageType(in.Type)
+	out.Devices = *(*[]v1alpha4.StorageDevice)(unsafe.Pointer(&in.Devices))
+	if err := Convert_v1alpha2_StorageAccess_To_v1alpha4_StorageAccess(&in.Access, &out.Access, s); err != nil {
 		return err
 	}
 	out.Capacity = in.Capacity
-	out.Status = v1alpha3.ResourceStatus(in.Status)
+	out.Status = v1alpha4.ResourceStatus(in.Status)
 	out.RebootRequired = in.RebootRequired
 	out.Message = in.Message
 	return nil
 }
 
-// Convert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus is an autogenerated conversion function.
-func Convert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus(in *StorageStatus, out *v1alpha3.StorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageStatus_To_v1alpha3_StorageStatus(in, out, s)
+// Convert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus is an autogenerated conversion function.
+func Convert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus(in *StorageStatus, out *v1alpha4.StorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_StorageStatus_To_v1alpha4_StorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(in *v1alpha3.StorageStatus, out *StorageStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus(in *v1alpha4.StorageStatus, out *StorageStatus, s conversion.Scope) error {
 	out.Type = StorageType(in.Type)
 	out.Devices = *(*[]StorageDevice)(unsafe.Pointer(&in.Devices))
-	if err := Convert_v1alpha3_StorageAccess_To_v1alpha2_StorageAccess(&in.Access, &out.Access, s); err != nil {
+	if err := Convert_v1alpha4_StorageAccess_To_v1alpha2_StorageAccess(&in.Access, &out.Access, s); err != nil {
 		return err
 	}
 	out.Capacity = in.Capacity
@@ -1895,121 +1895,121 @@ func autoConvert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(in *v1alpha3.S
 	return nil
 }
 
-// Convert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus is an autogenerated conversion function.
-func Convert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(in *v1alpha3.StorageStatus, out *StorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_StorageStatus_To_v1alpha2_StorageStatus(in, out, s)
+// Convert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus is an autogenerated conversion function.
+func Convert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus(in *v1alpha4.StorageStatus, out *StorageStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_StorageStatus_To_v1alpha2_StorageStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfiguration_To_v1alpha3_SystemConfiguration(in *SystemConfiguration, out *v1alpha3.SystemConfiguration, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfiguration_To_v1alpha4_SystemConfiguration(in *SystemConfiguration, out *v1alpha4.SystemConfiguration, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfiguration_To_v1alpha3_SystemConfiguration is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfiguration_To_v1alpha3_SystemConfiguration(in *SystemConfiguration, out *v1alpha3.SystemConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfiguration_To_v1alpha3_SystemConfiguration(in, out, s)
+// Convert_v1alpha2_SystemConfiguration_To_v1alpha4_SystemConfiguration is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfiguration_To_v1alpha4_SystemConfiguration(in *SystemConfiguration, out *v1alpha4.SystemConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfiguration_To_v1alpha4_SystemConfiguration(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfiguration_To_v1alpha2_SystemConfiguration(in *v1alpha3.SystemConfiguration, out *SystemConfiguration, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfiguration_To_v1alpha2_SystemConfiguration(in *v1alpha4.SystemConfiguration, out *SystemConfiguration, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfiguration_To_v1alpha2_SystemConfiguration is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfiguration_To_v1alpha2_SystemConfiguration(in *v1alpha3.SystemConfiguration, out *SystemConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfiguration_To_v1alpha2_SystemConfiguration(in, out, s)
+// Convert_v1alpha4_SystemConfiguration_To_v1alpha2_SystemConfiguration is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfiguration_To_v1alpha2_SystemConfiguration(in *v1alpha4.SystemConfiguration, out *SystemConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfiguration_To_v1alpha2_SystemConfiguration(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha3_SystemConfigurationComputeNodeReference(in *SystemConfigurationComputeNodeReference, out *v1alpha3.SystemConfigurationComputeNodeReference, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha4_SystemConfigurationComputeNodeReference(in *SystemConfigurationComputeNodeReference, out *v1alpha4.SystemConfigurationComputeNodeReference, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Index = in.Index
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha3_SystemConfigurationComputeNodeReference is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha3_SystemConfigurationComputeNodeReference(in *SystemConfigurationComputeNodeReference, out *v1alpha3.SystemConfigurationComputeNodeReference, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha3_SystemConfigurationComputeNodeReference(in, out, s)
+// Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha4_SystemConfigurationComputeNodeReference is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha4_SystemConfigurationComputeNodeReference(in *SystemConfigurationComputeNodeReference, out *v1alpha4.SystemConfigurationComputeNodeReference, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationComputeNodeReference_To_v1alpha4_SystemConfigurationComputeNodeReference(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in *v1alpha3.SystemConfigurationComputeNodeReference, out *SystemConfigurationComputeNodeReference, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in *v1alpha4.SystemConfigurationComputeNodeReference, out *SystemConfigurationComputeNodeReference, s conversion.Scope) error {
 	out.Name = in.Name
 	out.Index = in.Index
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in *v1alpha3.SystemConfigurationComputeNodeReference, out *SystemConfigurationComputeNodeReference, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in, out, s)
+// Convert_v1alpha4_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in *v1alpha4.SystemConfigurationComputeNodeReference, out *SystemConfigurationComputeNodeReference, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationComputeNodeReference_To_v1alpha2_SystemConfigurationComputeNodeReference(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha3_SystemConfigurationExternalComputeNode(in *SystemConfigurationExternalComputeNode, out *v1alpha3.SystemConfigurationExternalComputeNode, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha4_SystemConfigurationExternalComputeNode(in *SystemConfigurationExternalComputeNode, out *v1alpha4.SystemConfigurationExternalComputeNode, s conversion.Scope) error {
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha3_SystemConfigurationExternalComputeNode is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha3_SystemConfigurationExternalComputeNode(in *SystemConfigurationExternalComputeNode, out *v1alpha3.SystemConfigurationExternalComputeNode, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha3_SystemConfigurationExternalComputeNode(in, out, s)
+// Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha4_SystemConfigurationExternalComputeNode is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha4_SystemConfigurationExternalComputeNode(in *SystemConfigurationExternalComputeNode, out *v1alpha4.SystemConfigurationExternalComputeNode, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationExternalComputeNode_To_v1alpha4_SystemConfigurationExternalComputeNode(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in *v1alpha3.SystemConfigurationExternalComputeNode, out *SystemConfigurationExternalComputeNode, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in *v1alpha4.SystemConfigurationExternalComputeNode, out *SystemConfigurationExternalComputeNode, s conversion.Scope) error {
 	out.Name = in.Name
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in *v1alpha3.SystemConfigurationExternalComputeNode, out *SystemConfigurationExternalComputeNode, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in, out, s)
+// Convert_v1alpha4_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in *v1alpha4.SystemConfigurationExternalComputeNode, out *SystemConfigurationExternalComputeNode, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationExternalComputeNode_To_v1alpha2_SystemConfigurationExternalComputeNode(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationList_To_v1alpha3_SystemConfigurationList(in *SystemConfigurationList, out *v1alpha3.SystemConfigurationList, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfigurationList_To_v1alpha4_SystemConfigurationList(in *SystemConfigurationList, out *v1alpha4.SystemConfigurationList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha3.SystemConfiguration)(unsafe.Pointer(&in.Items))
+	out.Items = *(*[]v1alpha4.SystemConfiguration)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationList_To_v1alpha3_SystemConfigurationList is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationList_To_v1alpha3_SystemConfigurationList(in *SystemConfigurationList, out *v1alpha3.SystemConfigurationList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationList_To_v1alpha3_SystemConfigurationList(in, out, s)
+// Convert_v1alpha2_SystemConfigurationList_To_v1alpha4_SystemConfigurationList is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationList_To_v1alpha4_SystemConfigurationList(in *SystemConfigurationList, out *v1alpha4.SystemConfigurationList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationList_To_v1alpha4_SystemConfigurationList(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in *v1alpha3.SystemConfigurationList, out *SystemConfigurationList, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in *v1alpha4.SystemConfigurationList, out *SystemConfigurationList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]SystemConfiguration)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationList_To_v1alpha2_SystemConfigurationList is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in *v1alpha3.SystemConfigurationList, out *SystemConfigurationList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in, out, s)
+// Convert_v1alpha4_SystemConfigurationList_To_v1alpha2_SystemConfigurationList is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in *v1alpha4.SystemConfigurationList, out *SystemConfigurationList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationList_To_v1alpha2_SystemConfigurationList(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec(in *SystemConfigurationSpec, out *v1alpha3.SystemConfigurationSpec, s conversion.Scope) error {
-	out.ExternalComputeNodes = *(*[]v1alpha3.SystemConfigurationExternalComputeNode)(unsafe.Pointer(&in.ExternalComputeNodes))
-	out.StorageNodes = *(*[]v1alpha3.SystemConfigurationStorageNode)(unsafe.Pointer(&in.StorageNodes))
+func autoConvert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec(in *SystemConfigurationSpec, out *v1alpha4.SystemConfigurationSpec, s conversion.Scope) error {
+	out.ExternalComputeNodes = *(*[]v1alpha4.SystemConfigurationExternalComputeNode)(unsafe.Pointer(&in.ExternalComputeNodes))
+	out.StorageNodes = *(*[]v1alpha4.SystemConfigurationStorageNode)(unsafe.Pointer(&in.StorageNodes))
 	out.Ports = *(*[]intstr.IntOrString)(unsafe.Pointer(&in.Ports))
 	out.PortsCooldownInSeconds = in.PortsCooldownInSeconds
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec(in *SystemConfigurationSpec, out *v1alpha3.SystemConfigurationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationSpec_To_v1alpha3_SystemConfigurationSpec(in, out, s)
+// Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec(in *SystemConfigurationSpec, out *v1alpha4.SystemConfigurationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationSpec_To_v1alpha4_SystemConfigurationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in *v1alpha3.SystemConfigurationSpec, out *SystemConfigurationSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in *v1alpha4.SystemConfigurationSpec, out *SystemConfigurationSpec, s conversion.Scope) error {
 	out.ExternalComputeNodes = *(*[]SystemConfigurationExternalComputeNode)(unsafe.Pointer(&in.ExternalComputeNodes))
 	out.StorageNodes = *(*[]SystemConfigurationStorageNode)(unsafe.Pointer(&in.StorageNodes))
 	out.Ports = *(*[]intstr.IntOrString)(unsafe.Pointer(&in.Ports))
@@ -2017,98 +2017,98 @@ func autoConvert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfiguratio
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in *v1alpha3.SystemConfigurationSpec, out *SystemConfigurationSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in, out, s)
+// Convert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in *v1alpha4.SystemConfigurationSpec, out *SystemConfigurationSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationSpec_To_v1alpha2_SystemConfigurationSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus(in *SystemConfigurationStatus, out *v1alpha3.SystemConfigurationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus(in *SystemConfigurationStatus, out *v1alpha4.SystemConfigurationStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	if err := Convert_v1alpha2_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha2_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus(in *SystemConfigurationStatus, out *v1alpha3.SystemConfigurationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationStatus_To_v1alpha3_SystemConfigurationStatus(in, out, s)
+// Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus(in *SystemConfigurationStatus, out *v1alpha4.SystemConfigurationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationStatus_To_v1alpha4_SystemConfigurationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in *v1alpha3.SystemConfigurationStatus, out *SystemConfigurationStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in *v1alpha4.SystemConfigurationStatus, out *SystemConfigurationStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	if err := Convert_v1alpha3_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in *v1alpha3.SystemConfigurationStatus, out *SystemConfigurationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in, out, s)
+// Convert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in *v1alpha4.SystemConfigurationStatus, out *SystemConfigurationStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationStatus_To_v1alpha2_SystemConfigurationStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha3_SystemConfigurationStorageNode(in *SystemConfigurationStorageNode, out *v1alpha3.SystemConfigurationStorageNode, s conversion.Scope) error {
+func autoConvert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha4_SystemConfigurationStorageNode(in *SystemConfigurationStorageNode, out *v1alpha4.SystemConfigurationStorageNode, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Name = in.Name
-	out.ComputesAccess = *(*[]v1alpha3.SystemConfigurationComputeNodeReference)(unsafe.Pointer(&in.ComputesAccess))
+	out.ComputesAccess = *(*[]v1alpha4.SystemConfigurationComputeNodeReference)(unsafe.Pointer(&in.ComputesAccess))
 	return nil
 }
 
-// Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha3_SystemConfigurationStorageNode is an autogenerated conversion function.
-func Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha3_SystemConfigurationStorageNode(in *SystemConfigurationStorageNode, out *v1alpha3.SystemConfigurationStorageNode, s conversion.Scope) error {
-	return autoConvert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha3_SystemConfigurationStorageNode(in, out, s)
+// Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha4_SystemConfigurationStorageNode is an autogenerated conversion function.
+func Convert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha4_SystemConfigurationStorageNode(in *SystemConfigurationStorageNode, out *v1alpha4.SystemConfigurationStorageNode, s conversion.Scope) error {
+	return autoConvert_v1alpha2_SystemConfigurationStorageNode_To_v1alpha4_SystemConfigurationStorageNode(in, out, s)
 }
 
-func autoConvert_v1alpha3_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in *v1alpha3.SystemConfigurationStorageNode, out *SystemConfigurationStorageNode, s conversion.Scope) error {
+func autoConvert_v1alpha4_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in *v1alpha4.SystemConfigurationStorageNode, out *SystemConfigurationStorageNode, s conversion.Scope) error {
 	out.Type = in.Type
 	out.Name = in.Name
 	out.ComputesAccess = *(*[]SystemConfigurationComputeNodeReference)(unsafe.Pointer(&in.ComputesAccess))
 	return nil
 }
 
-// Convert_v1alpha3_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode is an autogenerated conversion function.
-func Convert_v1alpha3_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in *v1alpha3.SystemConfigurationStorageNode, out *SystemConfigurationStorageNode, s conversion.Scope) error {
-	return autoConvert_v1alpha3_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in, out, s)
+// Convert_v1alpha4_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode is an autogenerated conversion function.
+func Convert_v1alpha4_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in *v1alpha4.SystemConfigurationStorageNode, out *SystemConfigurationStorageNode, s conversion.Scope) error {
+	return autoConvert_v1alpha4_SystemConfigurationStorageNode_To_v1alpha2_SystemConfigurationStorageNode(in, out, s)
 }
 
-func autoConvert_v1alpha2_Workflow_To_v1alpha3_Workflow(in *Workflow, out *v1alpha3.Workflow, s conversion.Scope) error {
+func autoConvert_v1alpha2_Workflow_To_v1alpha4_Workflow(in *Workflow, out *v1alpha4.Workflow, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha2_Workflow_To_v1alpha3_Workflow is an autogenerated conversion function.
-func Convert_v1alpha2_Workflow_To_v1alpha3_Workflow(in *Workflow, out *v1alpha3.Workflow, s conversion.Scope) error {
-	return autoConvert_v1alpha2_Workflow_To_v1alpha3_Workflow(in, out, s)
+// Convert_v1alpha2_Workflow_To_v1alpha4_Workflow is an autogenerated conversion function.
+func Convert_v1alpha2_Workflow_To_v1alpha4_Workflow(in *Workflow, out *v1alpha4.Workflow, s conversion.Scope) error {
+	return autoConvert_v1alpha2_Workflow_To_v1alpha4_Workflow(in, out, s)
 }
 
-func autoConvert_v1alpha3_Workflow_To_v1alpha2_Workflow(in *v1alpha3.Workflow, out *Workflow, s conversion.Scope) error {
+func autoConvert_v1alpha4_Workflow_To_v1alpha2_Workflow(in *v1alpha4.Workflow, out *Workflow, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(&in.Spec, &out.Spec, s); err != nil {
+	if err := Convert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec(&in.Spec, &out.Spec, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha3_WorkflowStatus_To_v1alpha2_WorkflowStatus(&in.Status, &out.Status, s); err != nil {
+	if err := Convert_v1alpha4_WorkflowStatus_To_v1alpha2_WorkflowStatus(&in.Status, &out.Status, s); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Convert_v1alpha3_Workflow_To_v1alpha2_Workflow is an autogenerated conversion function.
-func Convert_v1alpha3_Workflow_To_v1alpha2_Workflow(in *v1alpha3.Workflow, out *Workflow, s conversion.Scope) error {
-	return autoConvert_v1alpha3_Workflow_To_v1alpha2_Workflow(in, out, s)
+// Convert_v1alpha4_Workflow_To_v1alpha2_Workflow is an autogenerated conversion function.
+func Convert_v1alpha4_Workflow_To_v1alpha2_Workflow(in *v1alpha4.Workflow, out *Workflow, s conversion.Scope) error {
+	return autoConvert_v1alpha4_Workflow_To_v1alpha2_Workflow(in, out, s)
 }
 
-func autoConvert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus(in *WorkflowDriverStatus, out *v1alpha3.WorkflowDriverStatus, s conversion.Scope) error {
+func autoConvert_v1alpha2_WorkflowDriverStatus_To_v1alpha4_WorkflowDriverStatus(in *WorkflowDriverStatus, out *v1alpha4.WorkflowDriverStatus, s conversion.Scope) error {
 	out.DriverID = in.DriverID
 	out.TaskID = in.TaskID
 	out.DWDIndex = in.DWDIndex
-	out.WatchState = v1alpha3.WorkflowState(in.WatchState)
+	out.WatchState = v1alpha4.WorkflowState(in.WatchState)
 	out.LastHB = in.LastHB
 	out.Completed = in.Completed
 	out.Status = in.Status
@@ -2118,12 +2118,12 @@ func autoConvert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus(
 	return nil
 }
 
-// Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus is an autogenerated conversion function.
-func Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus(in *WorkflowDriverStatus, out *v1alpha3.WorkflowDriverStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_WorkflowDriverStatus_To_v1alpha3_WorkflowDriverStatus(in, out, s)
+// Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha4_WorkflowDriverStatus is an autogenerated conversion function.
+func Convert_v1alpha2_WorkflowDriverStatus_To_v1alpha4_WorkflowDriverStatus(in *WorkflowDriverStatus, out *v1alpha4.WorkflowDriverStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_WorkflowDriverStatus_To_v1alpha4_WorkflowDriverStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in *v1alpha3.WorkflowDriverStatus, out *WorkflowDriverStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in *v1alpha4.WorkflowDriverStatus, out *WorkflowDriverStatus, s conversion.Scope) error {
 	out.DriverID = in.DriverID
 	out.TaskID = in.TaskID
 	out.DWDIndex = in.DWDIndex
@@ -2137,18 +2137,18 @@ func autoConvert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(
 	return nil
 }
 
-// Convert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus is an autogenerated conversion function.
-func Convert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in *v1alpha3.WorkflowDriverStatus, out *WorkflowDriverStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha3_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in, out, s)
+// Convert_v1alpha4_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus is an autogenerated conversion function.
+func Convert_v1alpha4_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in *v1alpha4.WorkflowDriverStatus, out *WorkflowDriverStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha4_WorkflowDriverStatus_To_v1alpha2_WorkflowDriverStatus(in, out, s)
 }
 
-func autoConvert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList(in *WorkflowList, out *v1alpha3.WorkflowList, s conversion.Scope) error {
+func autoConvert_v1alpha2_WorkflowList_To_v1alpha4_WorkflowList(in *WorkflowList, out *v1alpha4.WorkflowList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]v1alpha3.Workflow, len(*in))
+		*out = make([]v1alpha4.Workflow, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha2_Workflow_To_v1alpha3_Workflow(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha2_Workflow_To_v1alpha4_Workflow(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2158,18 +2158,18 @@ func autoConvert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList(in *WorkflowList
 	return nil
 }
 
-// Convert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList is an autogenerated conversion function.
-func Convert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList(in *WorkflowList, out *v1alpha3.WorkflowList, s conversion.Scope) error {
-	return autoConvert_v1alpha2_WorkflowList_To_v1alpha3_WorkflowList(in, out, s)
+// Convert_v1alpha2_WorkflowList_To_v1alpha4_WorkflowList is an autogenerated conversion function.
+func Convert_v1alpha2_WorkflowList_To_v1alpha4_WorkflowList(in *WorkflowList, out *v1alpha4.WorkflowList, s conversion.Scope) error {
+	return autoConvert_v1alpha2_WorkflowList_To_v1alpha4_WorkflowList(in, out, s)
 }
 
-func autoConvert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList(in *v1alpha3.WorkflowList, out *WorkflowList, s conversion.Scope) error {
+func autoConvert_v1alpha4_WorkflowList_To_v1alpha2_WorkflowList(in *v1alpha4.WorkflowList, out *WorkflowList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Workflow, len(*in))
 		for i := range *in {
-			if err := Convert_v1alpha3_Workflow_To_v1alpha2_Workflow(&(*in)[i], &(*out)[i], s); err != nil {
+			if err := Convert_v1alpha4_Workflow_To_v1alpha2_Workflow(&(*in)[i], &(*out)[i], s); err != nil {
 				return err
 			}
 		}
@@ -2179,13 +2179,13 @@ func autoConvert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList(in *v1alpha3.Wor
 	return nil
 }
 
-// Convert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList is an autogenerated conversion function.
-func Convert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList(in *v1alpha3.WorkflowList, out *WorkflowList, s conversion.Scope) error {
-	return autoConvert_v1alpha3_WorkflowList_To_v1alpha2_WorkflowList(in, out, s)
+// Convert_v1alpha4_WorkflowList_To_v1alpha2_WorkflowList is an autogenerated conversion function.
+func Convert_v1alpha4_WorkflowList_To_v1alpha2_WorkflowList(in *v1alpha4.WorkflowList, out *WorkflowList, s conversion.Scope) error {
+	return autoConvert_v1alpha4_WorkflowList_To_v1alpha2_WorkflowList(in, out, s)
 }
 
-func autoConvert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(in *WorkflowSpec, out *v1alpha3.WorkflowSpec, s conversion.Scope) error {
-	out.DesiredState = v1alpha3.WorkflowState(in.DesiredState)
+func autoConvert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec(in *WorkflowSpec, out *v1alpha4.WorkflowSpec, s conversion.Scope) error {
+	out.DesiredState = v1alpha4.WorkflowState(in.DesiredState)
 	out.WLMID = in.WLMID
 	out.JobID = in.JobID
 	out.UserID = in.UserID
@@ -2195,12 +2195,12 @@ func autoConvert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(in *WorkflowSpec
 	return nil
 }
 
-// Convert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec is an autogenerated conversion function.
-func Convert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(in *WorkflowSpec, out *v1alpha3.WorkflowSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha2_WorkflowSpec_To_v1alpha3_WorkflowSpec(in, out, s)
+// Convert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec is an autogenerated conversion function.
+func Convert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec(in *WorkflowSpec, out *v1alpha4.WorkflowSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha2_WorkflowSpec_To_v1alpha4_WorkflowSpec(in, out, s)
 }
 
-func autoConvert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha3.WorkflowSpec, out *WorkflowSpec, s conversion.Scope) error {
+func autoConvert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha4.WorkflowSpec, out *WorkflowSpec, s conversion.Scope) error {
 	out.DesiredState = WorkflowState(in.DesiredState)
 	out.WLMID = in.WLMID
 	out.JobID = in.JobID
@@ -2211,18 +2211,18 @@ func autoConvert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha3.Wor
 	return nil
 }
 
-// Convert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec is an autogenerated conversion function.
-func Convert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha3.WorkflowSpec, out *WorkflowSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha3_WorkflowSpec_To_v1alpha2_WorkflowSpec(in, out, s)
+// Convert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec is an autogenerated conversion function.
+func Convert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha4.WorkflowSpec, out *WorkflowSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha4_WorkflowSpec_To_v1alpha2_WorkflowSpec(in, out, s)
 }
 
-func autoConvert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(in *WorkflowStatus, out *v1alpha3.WorkflowStatus, s conversion.Scope) error {
-	out.State = v1alpha3.WorkflowState(in.State)
+func autoConvert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus(in *WorkflowStatus, out *v1alpha4.WorkflowStatus, s conversion.Scope) error {
+	out.State = v1alpha4.WorkflowState(in.State)
 	out.Ready = in.Ready
 	out.Status = in.Status
 	out.Message = in.Message
 	out.Env = *(*map[string]string)(unsafe.Pointer(&in.Env))
-	out.Drivers = *(*[]v1alpha3.WorkflowDriverStatus)(unsafe.Pointer(&in.Drivers))
+	out.Drivers = *(*[]v1alpha4.WorkflowDriverStatus)(unsafe.Pointer(&in.Drivers))
 	out.DirectiveBreakdowns = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.DirectiveBreakdowns))
 	out.Computes = in.Computes
 	out.DesiredStateChange = (*metav1.MicroTime)(unsafe.Pointer(in.DesiredStateChange))
@@ -2231,12 +2231,12 @@ func autoConvert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(in *Workflow
 	return nil
 }
 
-// Convert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus is an autogenerated conversion function.
-func Convert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(in *WorkflowStatus, out *v1alpha3.WorkflowStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha2_WorkflowStatus_To_v1alpha3_WorkflowStatus(in, out, s)
+// Convert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus is an autogenerated conversion function.
+func Convert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus(in *WorkflowStatus, out *v1alpha4.WorkflowStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha2_WorkflowStatus_To_v1alpha4_WorkflowStatus(in, out, s)
 }
 
-func autoConvert_v1alpha3_WorkflowStatus_To_v1alpha2_WorkflowStatus(in *v1alpha3.WorkflowStatus, out *WorkflowStatus, s conversion.Scope) error {
+func autoConvert_v1alpha4_WorkflowStatus_To_v1alpha2_WorkflowStatus(in *v1alpha4.WorkflowStatus, out *WorkflowStatus, s conversion.Scope) error {
 	out.State = WorkflowState(in.State)
 	out.Ready = in.Ready
 	out.Status = in.Status

@@ -5,9 +5,9 @@ go 1.22.0
 toolchain go1.22.5
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20250312162549-a682dcdf49b1
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250219194350-45aad5cbbe17
-	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250312170301-6f4fd32b0173
+	github.com/DataWorkflowServices/dws v0.0.1-0.20250424161110-635a3b991607
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250425152023-c5cd382612d7
+	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250416170223-aeb7554e777b
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -29,6 +29,7 @@ require (
 	k8s.io/client-go v0.28.1
 	k8s.io/kubernetes v1.28.4
 	k8s.io/mount-utils v0.27.1
+	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	sigs.k8s.io/controller-runtime v0.16.2
 )
 
@@ -99,7 +100,6 @@ require (
 	k8s.io/component-base v0.28.1 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect

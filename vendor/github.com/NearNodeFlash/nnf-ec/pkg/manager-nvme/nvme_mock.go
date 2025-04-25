@@ -201,7 +201,7 @@ func (d *mockDevice) IdentifyController(controllerId uint16) (*nvme.IdCtrl, erro
 	binary.LittleEndian.PutUint64(ctrl.TotalNVMCapacity[:], d.capacityInBytes)
 	binary.LittleEndian.PutUint64(ctrl.UnallocatedNVMCapacity[:], d.capacityInBytes-d.allocatedCapacityInBytes)
 
-	ctrl.OptionalAdminCommandSupport = nvme.VirtualiztionManagementSupport
+	ctrl.OptionalAdminCommandSupport = nvme.VirtualizationManagementSupport
 
 	return ctrl, nil
 }

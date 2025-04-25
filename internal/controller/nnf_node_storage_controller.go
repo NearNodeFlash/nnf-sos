@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,9 +38,9 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
 
-	dwsv1alpha3 "github.com/DataWorkflowServices/dws/api/v1alpha3"
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
+	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -60,7 +61,7 @@ type NnfNodeStorageReconciler struct {
 	SemaphoreForDone  chan struct{}
 
 	types.NamespacedName
-	ChildObjects []dwsv1alpha3.ObjectList
+	ChildObjects []dwsv1alpha4.ObjectList
 
 	sync.Mutex
 	started         bool
@@ -107,7 +108,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	metrics.NnfNodeStorageReconcilesTotal.Inc()
 
-	nnfNodeStorage := &nnfv1alpha6.NnfNodeStorage{}
+	nnfNodeStorage := &nnfv1alpha7.NnfNodeStorage{}
 	if err := r.Get(ctx, req.NamespacedName, nnfNodeStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -123,7 +124,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// so when we would normally call "return ctrl.Result{}, nil", at that time
 	// "err" is nil - and if permitted we will update err with the result of
 	// the r.Update()
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha6.NnfNodeStorageStatus](nnfNodeStorage)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha7.NnfNodeStorageStatus](nnfNodeStorage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nnfNodeStorage.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -139,15 +140,37 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 
-		for i := range nnfNodeStorage.Status.Allocations {
-			// Release physical storage
-			result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
-			if err != nil {
+		nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nnfNodeStorage.Spec.BlockReference.Name,
+				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+			},
+		}
 
-				return ctrl.Result{}, err
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
+			for i := range nnfNodeStorage.Status.Allocations {
+				// Release physical storage
+				result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
+				if err != nil {
+
+					return ctrl.Result{}, err
+				}
+				if result != nil {
+					return *result, nil
+				}
 			}
-			if result != nil {
-				return *result, nil
+
+			// Remove the finalizer from the NnfNodeBlockStorage
+			if controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+				controllerutil.RemoveFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
+
+				err := r.Update(ctx, nnfNodeBlockStorage)
+				if err != nil {
+					return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+				}
+				log.Info("finalizer removed from blockstorage")
+
+				return ctrl.Result{Requeue: true}, nil
 			}
 		}
 
@@ -182,13 +205,39 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Initialize the status section with empty allocation statuses.
 	if len(nnfNodeStorage.Status.Allocations) == 0 {
-		nnfNodeStorage.Status.Allocations = make([]nnfv1alpha6.NnfNodeStorageAllocationStatus, nnfNodeStorage.Spec.Count)
+		nnfNodeStorage.Status.Allocations = make([]nnfv1alpha7.NnfNodeStorageAllocationStatus, nnfNodeStorage.Spec.Count)
 		for i := range nnfNodeStorage.Status.Allocations {
 			nnfNodeStorage.Status.Allocations[i].Ready = false
 		}
 		nnfNodeStorage.Status.Ready = false
 
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Add a finalizer to the NnfNodeBlockStorage. This will block its deletion until the NnfNodeStorage
+	// is completely torn down
+	nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nnfNodeStorage.Spec.BlockReference.Name,
+			Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
+		if !controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+			controllerutil.AddFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
+
+			err := r.Update(ctx, nnfNodeBlockStorage)
+			if err != nil {
+				return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+			}
+
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		if !nnfNodeBlockStorage.Status.Ready {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 	}
 
 	blockDevices := []blockdevice.BlockDevice{}
@@ -207,7 +256,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	result, err := r.createAllocations(ctx, nnfNodeStorage, blockDevices, fileSystems)
 	if err != nil {
-		return ctrl.Result{}, dwsv1alpha3.NewResourceError("unable to create storage allocation").WithError(err).WithMajor()
+		return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to create storage allocation").WithError(err).WithMajor()
 	}
 	if result != nil {
 		return *result, nil
@@ -226,7 +275,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNodeStorage *nnfv1alpha6.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNodeStorage *nnfv1alpha7.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage), "index", index)
 
 	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, index, log)
@@ -237,13 +286,13 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 	// If we never successfully completed creating the allocation or if it's already gone, then don't try to run PreDeactivate
 	blockDeviceExists, err := blockDevice.CheckExists(ctx)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not check if block device exists").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not check if block device exists").WithError(err).WithMajor()
 	}
 
 	if blockDeviceExists && nnfNodeStorage.Status.Allocations[index].Ready {
 		ran, err := blockDevice.Activate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated block device", "allocation", index)
@@ -251,7 +300,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 		ran, err = fileSystem.Activate(ctx, false)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not activate file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated file system", "allocation", index)
@@ -261,7 +310,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
 			ran, err = fileSystem.PreUnmount(ctx)
 			if err != nil {
-				return nil, dwsv1alpha3.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
+				return nil, dwsv1alpha4.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
 			}
 			if ran {
 				log.Info("Pre unmount file system", "allocation", index)
@@ -270,7 +319,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 		ran, err = fileSystem.PreDeactivate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Pre deactivate file system", "allocation", index)
@@ -279,7 +328,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err := fileSystem.Deactivate(ctx)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Deactivated file system", "allocation", index)
@@ -287,7 +336,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = fileSystem.Destroy(ctx)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not destroy file system").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not destroy file system").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Destroyed file system", "allocation", index)
@@ -295,7 +344,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = blockDevice.Deactivate(ctx, false)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Deactivated block device", "allocation", index)
@@ -303,7 +352,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 	ran, err = blockDevice.Destroy(ctx)
 	if err != nil {
-		return nil, dwsv1alpha3.NewResourceError("could not destroy block devices").WithError(err).WithMajor()
+		return nil, dwsv1alpha4.NewResourceError("could not destroy block devices").WithError(err).WithMajor()
 	}
 	if ran {
 		log.Info("Destroyed block device", "allocation", index)
@@ -312,7 +361,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 	return nil, nil
 }
 
-func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha6.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha7.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
 	for index, blockDevice := range blockDevices {
@@ -325,7 +374,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not create block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not create block devices").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Created block device", "allocation", index)
@@ -333,7 +382,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		_, err = blockDevice.Activate(ctx)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not activate block devices").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 
 		deferIndex := index
@@ -350,7 +399,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err := fileSystem.Create(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not create file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not create file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Created file system", "allocation", index)
@@ -358,7 +407,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not activate file system").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Activated file system", "allocation", index)
@@ -366,7 +415,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 
 		ran, err = fileSystem.PostActivate(ctx, allocationStatus.Ready)
 		if err != nil {
-			return nil, dwsv1alpha3.NewResourceError("could not run post activate").WithError(err).WithMajor()
+			return nil, dwsv1alpha4.NewResourceError("could not run post activate").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Post activate file system", "allocation", index)
@@ -378,7 +427,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
 			ran, err = fileSystem.PostMount(ctx, allocationStatus.Ready)
 			if err != nil {
-				return nil, dwsv1alpha3.NewResourceError("could not run post mount").WithError(err).WithMajor()
+				return nil, dwsv1alpha4.NewResourceError("could not run post mount").WithError(err).WithMajor()
 			}
 			if ran {
 				log.Info("Post mount file system", "allocation", index)
@@ -399,6 +448,6 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&nnfv1alpha6.NnfNodeStorage{}).
+		For(&nnfv1alpha7.NnfNodeStorage{}).
 		Complete(r)
 }

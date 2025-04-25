@@ -1,0 +1,9 @@
+apiVersion: nnf.cray.hpe.com/v1alpha7
+kind: NnfDataMovementManager
+metadata:
+  labels:
+    app.kubernetes.io/name: nnf-sos
+    app.kubernetes.io/managed-by: kustomize
+  name: nnfdatamovementmanager-sample
+spec:
+  # TODO(user): Add fields here

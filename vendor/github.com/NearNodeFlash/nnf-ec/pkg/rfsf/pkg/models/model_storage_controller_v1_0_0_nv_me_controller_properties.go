@@ -9,8 +9,8 @@
 
 package openapi
 
-// StorageControllerV100NvMeControllerProperties - NVMe related properties for a storage controller.
-type StorageControllerV100NvMeControllerProperties struct {
+// StorageControllerV100NVMeControllerProperties - NVMe related properties for a storage controller.
+type StorageControllerV100NVMeControllerProperties struct {
 
 	// The ANA characteristics and volume information.
 	ANACharacteristics []StorageControllerV100AnaCharacteristics `json:"ANACharacteristics,omitempty"`
@@ -20,9 +20,9 @@ type StorageControllerV100NvMeControllerProperties struct {
 	// The maximum individual queue size that an NVMe IO controller supports.
 	MaxQueueSize int64 `json:"MaxQueueSize,omitempty"`
 
-	NVMeControllerAttributes StorageControllerV100NvMeControllerAttributes `json:"NVMeControllerAttributes,omitempty"`
+	NVMeControllerAttributes StorageControllerV100NVMeControllerAttributes `json:"NVMeControllerAttributes,omitempty"`
 
-	NVMeSMARTCriticalWarnings StorageControllerV100NvMeSmartCriticalWarnings `json:"NVMeSMARTCriticalWarnings,omitempty"`
+	NVMeSMARTCriticalWarnings StorageControllerV100NVMeSmartCriticalWarnings `json:"NVMeSMARTCriticalWarnings,omitempty"`
 
 	// Contains a vendor specific estimate of the percentage of NVM subsystem life used based on the actual usage and
 	// the manufacturer’s prediction of NVM life. A value of 100 indicates that the estimated endurance of the NVM in
@@ -30,7 +30,7 @@ type StorageControllerV100NvMeControllerProperties struct {
 	// exceed 100. Percentages greater than 254 shall be represented as 255. This value shall be updated once per
 	// power-on hour (when the controller is not in a sleep state).
 	// Refer to the JEDEC JESD218A standard for SSD device life and endurance measurement techniques.
-	NVMeSMARTPercentageUsage uint8 `json:"NVMeSMARTPercentageUsage,omitempty"`
+	NVMeSMARTPercentageUsage uint8 `json:"NVMeSMARTPercentageUsage"`
 
 	// The version of the NVMe Base Specification supported.
 	NVMeVersion string `json:"NVMeVersion,omitempty"`

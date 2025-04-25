@@ -9,8 +9,8 @@
 
 package openapi
 
-// StorageControllerV100NvMeControllerAttributes - The NVMe controller attributes for a storage controller.
-type StorageControllerV100NvMeControllerAttributes struct {
+// StorageControllerV100NVMeControllerAttributes - The NVMe controller attributes for a storage controller.
+type StorageControllerV100NVMeControllerAttributes struct {
 
 	// Indicates whether or not the controller supports reporting of Namespace Granularity.
 	ReportsNamespaceGranularity bool `json:"ReportsNamespaceGranularity,omitempty"`
