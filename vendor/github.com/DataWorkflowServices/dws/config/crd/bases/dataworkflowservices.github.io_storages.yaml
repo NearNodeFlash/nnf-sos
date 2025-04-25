@@ -635,6 +635,220 @@ spec:
         - spec
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: State of the storage resource
+      jsonPath: .spec.state
+      name: State
+      type: string
+    - description: Status of the storage resource
+      jsonPath: .status.status
+      name: Status
+      type: string
+    - description: State of live updates
+      jsonPath: .spec.mode
+      name: Mode
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha4
+    schema:
+      openAPIV3Schema:
+        description: Storage is the Schema for the storages API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: StorageSpec defines the desired specifications of Storage
+              resource
+            properties:
+              mode:
+                default: Live
+                description: |-
+                  Mode indicates whether the resource is live and is being updated
+                  by the reconcilers or whether it is in testing mode and is being
+                  updated manually.
+                enum:
+                - Live
+                - Testing
+                type: string
+              state:
+                default: Enabled
+                description: State describes the desired state of the Storage resource.
+                enum:
+                - Enabled
+                - Disabled
+                type: string
+            type: object
+          status:
+            description: StorageData contains the data about the storage
+            properties:
+              access:
+                description: Access contains the information about where the storage
+                  is accessible
+                properties:
+                  computes:
+                    description: Computes is the list of compute nodes that have access
+                      to the storage
+                    items:
+                      description: Node provides the status of either a compute or
+                        a server
+                      properties:
+                        name:
+                          description: Name is the Kubernetes name of the node
+                          type: string
+                        status:
+                          description: Status of the node
+                          enum:
+                          - Starting
+                          - Ready
+                          - Disabled
+                          - NotPresent
+                          - Offline
+                          - Failed
+                          - Degraded
+                          - Drained
+                          - Unknown
+                          type: string
+                      type: object
+                    type: array
+                  protocol:
+                    description: Protocol is the method that this storage can be accessed
+                    enum:
+                    - PCIe
+                    type: string
+                  servers:
+                    description: Servers is the list of non-compute nodes that have
+                      access to the storage
+                    items:
+                      description: Node provides the status of either a compute or
+                        a server
+                      properties:
+                        name:
+                          description: Name is the Kubernetes name of the node
+                          type: string
+                        status:
+                          description: Status of the node
+                          enum:
+                          - Starting
+                          - Ready
+                          - Disabled
+                          - NotPresent
+                          - Offline
+                          - Failed
+                          - Degraded
+                          - Drained
+                          - Unknown
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              capacity:
+                default: 0
+                description: |-
+                  Capacity is the number of bytes this storage provides. This is the
+                  total accessible bytes as determined by the driver and may be different
+                  than the sum of the devices' capacities.
+                format: int64
+                type: integer
+              devices:
+                description: Devices is the list of physical devices that make up
+                  this storage
+                items:
+                  description: StorageDevice contains the details of the storage hardware
+                  properties:
+                    capacity:
+                      description: |-
+                        Capacity in bytes of the device. The full capacity may not
+                        be usable depending on what the storage driver can provide.
+                      format: int64
+                      type: integer
+                    firmwareVersion:
+                      description: The firmware version of this storage controller.
+                      type: string
+                    model:
+                      description: Model is the manufacturer information about the
+                        device
+                      type: string
+                    serialNumber:
+                      description: The serial number for this storage controller.
+                      type: string
+                    slot:
+                      description: Physical slot location of the storage controller.
+                      type: string
+                    status:
+                      description: Status of the individual device
+                      enum:
+                      - Starting
+                      - Ready
+                      - Disabled
+                      - NotPresent
+                      - Offline
+                      - Failed
+                      - Degraded
+                      - Drained
+                      - Unknown
+                      type: string
+                    wearLevel:
+                      description: |-
+                        WearLevel in percent for SSDs. A value of 100 indicates the estimated endurance of the non-volatile memory
+                        has been consumed, but may not indicate a storage failure.
+                      format: int64
+                      type: integer
+                  type: object
+                type: array
+              message:
+                description: Message provides additional details on the current status
+                  of the resource
+                type: string
+              rebootRequired:
+                description: |-
+                  Reboot Required is true if the node requires a reboot and false otherwise. A reboot my be
+                  necessary to recover from certain hardware failures or high-availability clustering events.
+                type: boolean
+              status:
+                description: Status is the overall status of the storage
+                enum:
+                - Starting
+                - Ready
+                - Disabled
+                - NotPresent
+                - Offline
+                - Failed
+                - Degraded
+                - Drained
+                - Unknown
+                type: string
+              type:
+                description: Type describes what type of storage this is
+                enum:
+                - NVMe
+                type: string
+            required:
+            - capacity
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}
