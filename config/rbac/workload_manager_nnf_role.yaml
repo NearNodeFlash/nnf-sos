@@ -114,6 +114,16 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - dataworkflowservices.github.io
+  resources:
+  - systemstatuses
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
 
 # Add some NNF pieces:
 
