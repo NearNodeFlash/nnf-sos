@@ -1,7 +1,7 @@
 # A comma-separated list of directories where more Go code can be found, beyond
 # the usual cmd/, api/, internal/ that kubebuilder would put in place. The Go
 # files in these dirs will be bumped to the new hub version.
-extra_go_dirs: mount-daemon
+extra_go_dirs: mount-daemon,pkg
 
 # A comma-separated list of directories of Kustomize config files that have
 # references to the API and that must be updated to the new hub version so
