@@ -220,8 +220,6 @@ func (s *StorageService) patchStoragePool(sp *StoragePool, forceRescan bool) err
 		return ec.NewErrInternalServerError().WithResourceType(StoragePoolOdataType).WithError(err).WithCause("Failed to update storage pool")
 	}
 
-	event.EventManager.PublishResourceEvent(msgreg.StoragePoolPatchedNnf(sp.id), sp)
-
 	return err
 }
 
@@ -630,15 +628,19 @@ func (s *StorageService) EventHandler(e event.Event) error {
 	}
 
 	// Check for storage pool events
-	if e.Is(msgreg.StoragePoolPatchedNnf("")) {
+	if e.Is(msgreg.StoragePoolPatchedNnf("", "", "", "", "")) {
 		// After a storage pool is patched, check for new volumes that need to be attached
 		log.V(1).Info("Storage Pool Patched")
 		var storagePoolID string
-		if err := e.Args(&storagePoolID); err != nil {
+		var oldStorageSN string
+		var oldNamespaceID string
+		var newStorageSN string
+		var newNamespaceID string
+		if err := e.Args(&storagePoolID, &oldStorageSN, &oldNamespaceID, &newStorageSN, &newNamespaceID); err != nil {
 			return ec.NewErrInternalServerError().WithError(err).WithCause("event parameters illformed")
 		}
 
-		log = log.WithValues("poolId", storagePoolID)
+		log = log.WithValues("poolId", storagePoolID, "oldStorageSN", oldStorageSN, "oldNamespaceId", oldNamespaceID, "newStorageSN", newStorageSN, "newNamespaceId", newNamespaceID)
 
 		// We may have multiple storage groups associated with the same storage pool
 		for _, sg := range s.groups {

@@ -832,7 +832,7 @@ func (v *Volume) AttachControllerIfUnattached(controllerIndex uint16) error {
 	controllerAttached := slices.Contains(attachedControllers, controllerID)
 
 	if !controllerAttached {
-		log.Info("reattaching controller to volume")
+		log.Info("attaching controller to volume")
 
 		if err := v.AttachController(controllerIndex); err != nil {
 			log.Error(err, "failed to reattach controller to volume")
