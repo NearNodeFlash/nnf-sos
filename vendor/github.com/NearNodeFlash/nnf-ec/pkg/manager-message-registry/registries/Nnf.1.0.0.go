@@ -23,6 +23,9 @@ package messageregistry
 
 import events "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
 
+// ResourceOperationFailedNnf - event indicating that a requested operation on a resource type has failed
+// arg0: The schema name. This argument shall contain the schema name of the resource type.
+// arg1: The error message. This argument shall contain the error message that was returned by the resource type.
 func ResourceOperationFailedNnf(arg0, arg1 string) events.Event {
 	return events.Event{
 		Message:         "The requested operation on resource type '%1' failed with error '%2'",
@@ -32,16 +35,22 @@ func ResourceOperationFailedNnf(arg0, arg1 string) events.Event {
 	}
 }
 
+// StoragePoolPatchedNnf - event indicating that a storage pool has been patched.
 // arg0: The storage pool identifier. This argument shall contain the storage pool resource identifier.
-func StoragePoolPatchedNnf(arg0 string) events.Event {
+// arg1: The durable name of the storage device that was replaced.
+// arg2: The namespace id on the storage device that was replaced.
+// arg3: The durable name of the new storage device.
+// arg4: The namespace id on the new storage device.
+func StoragePoolPatchedNnf(arg0, arg1, arg2, arg3, arg4 string) events.Event {
 	return events.Event{
 		Message:         "The storage pool '%1' has been patched",
 		MessageSeverity: "OK",
 		MessageId:       "Nnf.1.0.0.StoragePoolPatched",
-		MessageArgs:     []string{arg0},
+		MessageArgs:     []string{arg0, arg1, arg2, arg3, arg4},
 	}
 }
 
+// FabricReadyNnf - event indicating that a fabric is ready
 // arg0: The fabric identifier. This argument shall contain the fabric resource identifier.
 func FabricReadyNnf(arg0 string) events.Event {
 	return events.Event{

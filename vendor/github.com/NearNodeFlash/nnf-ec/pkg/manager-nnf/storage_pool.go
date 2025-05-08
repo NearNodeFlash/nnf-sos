@@ -26,6 +26,8 @@ import (
 	"github.com/google/uuid"
 
 	nvme2 "github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme"
+	event "github.com/NearNodeFlash/nnf-ec/pkg/manager-event"
+	msgreg "github.com/NearNodeFlash/nnf-ec/pkg/manager-message-registry/registries"
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	"github.com/NearNodeFlash/nnf-ec/pkg/persistent"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
@@ -208,13 +210,13 @@ func (p *StoragePool) replaceMissingVolumes() error {
 		return nil
 	}
 
-	// Attempt to locate a storage device that is not providing a volume
-	// and use it to replace the missing volume
+	// Attempt to locate a storage device that is not providing a volume in this pool,
+	// and create a new volume on it to replace the missing volume.
 	// This is a best effort attempt to replace the missing volume
-	// and may not be successful if there are no available storage devices
-	// or if the storage device is not able to provide a volume
+	// and may not be successful if there are no available storage devices,
+	// or if the storage device is not able to provide a volume.
 	// This is not a failure condition, but rather a best effort attempt
-	// to replace the missing volume
+	// to replace the missing volume.
 	// The caller should check the missing volumes list to determine
 	// if there are any missing volumes that were not replaced
 	unusedStorages := p.locateUnusedStorage()
@@ -222,6 +224,7 @@ func (p *StoragePool) replaceMissingVolumes() error {
 		return fmt.Errorf("Unable to find unused storage")
 	}
 
+	// It's all or nothing, we need to replace all the missing volumes or none.
 	if len(unusedStorages) < len(p.missingVolumes) {
 		log.V(2).Info("not enough unused storage", "unusedStorageCount", len(unusedStorages), "missingVolumeCount", len(p.missingVolumes))
 		return fmt.Errorf("Not enough unused storage to replace missing volumes")
@@ -236,7 +239,7 @@ func (p *StoragePool) replaceMissingVolumes() error {
 	for idx, missingVolume := range p.missingVolumes {
 		log := log.WithValues("missingVolume", missingVolume)
 
-		log.V(2).Info("replace missing volume", "missingVolume", missingVolume)
+		log.Info("replace missing volume")
 		storage := unusedStorages[idx]
 
 		volume, err := nvme.CreateVolume(storage, p.volumeCapacity)
@@ -244,13 +247,20 @@ func (p *StoragePool) replaceMissingVolumes() error {
 			log.Error(err, "Failed to create replacement volume")
 			return fmt.Errorf("Failed to create volume: %v", err)
 		}
-		log.V(2).Info("created replacement volume", "volume", volume.Id())
 		pv := nvme.ProvidingVolume{
 			Storage:  storage,
 			VolumeId: volume.Id(),
 		}
+		log.Info("created replacement volume", "storage", storage.SerialNumber(), "volume", pv.VolumeId)
 
 		p.providingVolumes = append(p.providingVolumes, pv)
+
+		event.EventManager.PublishResourceEvent(msgreg.StoragePoolPatchedNnf(
+			p.id,
+			missingVolume.SerialNumber,
+			volume.Id(),
+			pv.Storage.SerialNumber(),
+			pv.VolumeId), p)
 
 		// TODO: Find the serialnumber/volumeid in any other storage pools and
 		// invalidate that volumeid to prevent reuse. Should probably store

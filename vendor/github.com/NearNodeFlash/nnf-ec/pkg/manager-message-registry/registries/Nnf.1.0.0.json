@@ -51,18 +51,30 @@
         "StoragePoolPatched": {
             "Description": "Indicates that a storage pool has been patched",
             "LongDescription": "This message shall be used to indicate that an existing storage pool has been patched",
-            "Message": "The storage pool '%1' has been patched",
+            "Message": "The storage pool '%1' patched, SerialNumber '%2', Namespace '%3' replaced with SerialNumber '%4', Namespace '%5'",
             "Severity": "OK",
             "MessageSeverity": "OK",
             "NumberOfArgs": 1,
             "ParamTypes": [
-                "string"
+                "string",
+                "string",
+                "number",
+                "string",
+                "number"
             ],
             "ArgDescriptions": [
-                "The storage pool identifier."
+                "The storage pool identifier.",
+                "The durable name of the storage device that was replaced.",
+                "The namespace id on the storage device that was replaced.",
+                "The durable name of the new storage device.",
+                "The namespace id on the new storage device."
             ],
             "ArgLongDescriptions": [
-                "This argument shall contain the storage pool resource identifier."
+                "This argument shall contain the storage pool resource identifier.",
+                "This argument shall contain the durable name of the storage device that was replaced.",
+                "This argument shall contain the namespace id on the storage device that was replaced.",
+                "This argument shall contain the durable name of the new storage device.",
+                "This argument shall contain the namespace id on the new storage device."
             ],
             "Resolution": "None"
         }
