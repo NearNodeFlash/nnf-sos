@@ -183,14 +183,11 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nodeBlockStorage.Status.SetResourceErrorAndLog(err, log) }()
 
-	if !nodeBlockStorage.GetDeletionTimestamp().IsZero() {
+	// If the NnfNodeStorage hasn't removed the finalizer from this NnfNodeBlockStorage, then don't start
+	// the deletion process. We still might need the /dev paths updated for the NnfNodeStorage to properly
+	// teardown
+	if !nodeBlockStorage.GetDeletionTimestamp().IsZero() && !controllerutil.ContainsFinalizer(nodeBlockStorage, finalizerNnfNodeStorage) {
 		if !controllerutil.ContainsFinalizer(nodeBlockStorage, finalizerNnfNodeBlockStorage) {
-			return ctrl.Result{}, nil
-		}
-
-		// If the NnfNodeStorage hasn't removed the finalizer from this NnfNodeBlockStorage, then don't start
-		// the deletion process.
-		if controllerutil.ContainsFinalizer(nodeBlockStorage, finalizerNnfNodeStorage) {
 			return ctrl.Result{}, nil
 		}
 

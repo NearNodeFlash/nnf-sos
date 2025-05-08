@@ -1861,7 +1861,12 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 
 		for _, job := range jobList.Items {
 			for _, condition := range job.Status.Conditions {
-				if condition.Type != batchv1.JobComplete {
+				switch condition.Type {
+				// Once the SuccessCriteriaMet condition is set, the job will eventually transition to JobComplete. Watch for both cases.
+				// TODO: At some point, we should upgrade the API to use batchv1.SuccessCriteriaMet
+				case batchv1.JobComplete, "SuccessCriteriaMet":
+					continue
+				default:
 					if condition.Reason == "DeadlineExceeded" {
 						return nil, dwsv1alpha4.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal().WithUserMessage(timeoutMessage)
 					}
