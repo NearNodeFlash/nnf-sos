@@ -742,10 +742,12 @@ func (dst *NnfStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 }
 
 func (src *NnfStorageProfileList) ConvertTo(dstRaw conversion.Hub) error {
+	convertlog.Info("Not supported Convert NnfStorageProfileList To Spoke")
 	return apierrors.NewMethodNotSupported(resource("NnfStorageProfileList"), "ConvertTo")
 }
 
 func (dst *NnfStorageProfileList) ConvertFrom(srcRaw conversion.Hub) error {
+	convertlog.Info("Not supported Convert NnfStorageProfileList To Hub")
 	return apierrors.NewMethodNotSupported(resource("NnfStorageProfileList"), "ConvertFrom")
 }
 
