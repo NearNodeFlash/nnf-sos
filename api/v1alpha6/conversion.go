@@ -718,10 +718,12 @@ func (dst *NnfNodeECDataList) ConvertFrom(srcRaw conversion.Hub) error {
 }
 
 func (src *NnfNodeStorageList) ConvertTo(dstRaw conversion.Hub) error {
+	convertlog.Info("Not supported Convert NnfNodeStorageList To Spoke")
 	return apierrors.NewMethodNotSupported(resource("NnfNodeStorageList"), "ConvertTo")
 }
 
 func (dst *NnfNodeStorageList) ConvertFrom(srcRaw conversion.Hub) error {
+	convertlog.Info("Not supported Convert NnfNodeStorageList To Hub")
 	return apierrors.NewMethodNotSupported(resource("NnfNodeStorageList"), "ConvertFrom")
 }
 
