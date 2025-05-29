@@ -982,8 +982,8 @@ func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workf
 			return dwsv1alpha4.NewResourceError("could not get workflow token string").WithError(err)
 		}
 
-		// Send the requiest, but do not return an error if it fails. It's possible that the
-		// container doesn't have this implemented, but we need to try to send the requests anyway.
+		// Send the request but do not return an error if it fails. It's possible that the
+		// container doesn't have this implemented, but we need to try to send the request anyway.
 		// The PostRunTimeout will eventually kill the container if it doesn't shut down gracefully.
 		if err := r.sendShutdownToHosts(ctx, hosts, string(token)); err != nil {
 			// Log the error but do not return it, as we want to continue with the workflow.
