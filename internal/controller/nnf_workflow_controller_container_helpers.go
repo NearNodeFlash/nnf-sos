@@ -953,6 +953,7 @@ func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workfl
 // request.
 func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha4.Workflow, profile *nnfv1alpha7.NnfContainerProfile) error {
 	isMPIJob := profile.Data.NnfMPISpec != nil
+	isCopyOffload := isMPIJob && profile.Data.NnfMPISpec.CopyOffload
 
 	hosts := []string{}
 	ports := strings.Split(workflow.Status.Env["NNF_CONTAINER_PORTS"], ",")
@@ -978,14 +979,14 @@ func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workf
 
 	if len(hosts) > 0 {
 		token, err := r.getWorkflowToken(ctx, workflow)
-		if workflow.Status.WorkflowToken != nil && err != nil {
+		if err != nil {
 			return dwsv1alpha4.NewResourceError("could not get workflow token string").WithError(err)
 		}
 
 		// Send the request but do not return an error if it fails. It's possible that the
 		// container doesn't have this implemented, but we need to try to send the request anyway.
 		// The PostRunTimeout will eventually kill the container if it doesn't shut down gracefully.
-		if err := r.sendShutdownToHosts(ctx, hosts, string(token)); err != nil {
+		if err := r.sendShutdownToHosts(ctx, hosts, string(token), isCopyOffload); err != nil {
 			// Log the error but do not return it, as we want to continue with the workflow.
 			r.Log.Error(err, "could not send shutdown to user container hosts", "hosts", hosts)
 		}
@@ -998,7 +999,7 @@ func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workf
 // user container to have implemented a `/shutdown` endpoint that accepts a POST request. If we get
 // a connection refused error, we treat it as a success because the user container will no longer be
 // running after the shutdown.
-func (r *NnfWorkflowReconciler) sendShutdownToHosts(ctx context.Context, hosts []string, token string) error {
+func (r *NnfWorkflowReconciler) sendShutdownToHosts(ctx context.Context, hosts []string, token string, copyOffload bool) error {
 
 	failedRequests := map[string]int{}
 
@@ -1035,8 +1036,9 @@ func (r *NnfWorkflowReconciler) sendShutdownToHosts(ctx context.Context, hosts [
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		// This is required for copy offload containers
-		req.Header.Set("Accepts-version", copyOffloadAPIVersion)
+		if copyOffload {
+			req.Header.Set("Accepts-version", copyOffloadAPIVersion)
+		}
 
 		if token != "" {
 			req.Header.Set("Authorization", "Bearer "+token)

@@ -1760,7 +1760,7 @@ func (r *NnfWorkflowReconciler) setMPIJobTimeout(ctx context.Context, workflow *
 func (r *NnfWorkflowReconciler) getWorkflowToken(ctx context.Context, workflow *dwsv1alpha4.Workflow) (string, error) {
 
 	if workflow.Status.WorkflowToken == nil {
-		return "", dwsv1alpha4.NewResourceError("workflow token is not set for workflow '%s'", workflow.Name).WithFatal()
+		return "", nil
 	}
 
 	secret := &corev1.Secret{
