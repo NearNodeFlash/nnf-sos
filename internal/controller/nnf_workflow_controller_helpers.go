@@ -1714,8 +1714,7 @@ func (r *NnfWorkflowReconciler) setJobTimeout(ctx context.Context, job batchv1.J
 	// the desired timeout to that value. k8s Job's ActiveDeadLineSeconds will then
 	// terminate the pods once the deadline is hit.
 	if timeout > 0 && job.Spec.ActiveDeadlineSeconds == nil {
-		var deadline int64
-		deadline = int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
+		deadline := int64((metav1.Now().Sub(job.CreationTimestamp.Time) + timeout).Seconds())
 
 		// Update the job with the deadline
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -1758,6 +1757,34 @@ func (r *NnfWorkflowReconciler) setMPIJobTimeout(ctx context.Context, workflow *
 	return nil
 }
 
+func (r *NnfWorkflowReconciler) getWorkflowToken(ctx context.Context, workflow *dwsv1alpha4.Workflow) (string, error) {
+
+	if workflow.Status.WorkflowToken == nil {
+		return "", nil
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      workflow.Status.WorkflowToken.SecretName,
+			Namespace: workflow.Status.WorkflowToken.SecretNamespace,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return "", dwsv1alpha4.NewResourceError("could not get workflow token secret '%s'", secret.Name).WithError(err)
+	}
+
+	key := "token"
+	token, ok := secret.Data[key]
+	if !ok {
+		return "", dwsv1alpha4.NewResourceError("workflow token secret '%s 'does not contain '%s' key", secret.Name, key).WithFatal()
+	}
+	if len(token) == 0 {
+		return "", dwsv1alpha4.NewResourceError("workflow token secret '%s' is empty", secret.Name).WithFatal()
+	}
+
+	return string(token), nil
+}
+
 func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, workflow *dwsv1alpha4.Workflow, index int) (*result, error) {
 	// Get profile to determine container job type (MPI or not)
 	profile, err := getContainerProfile(ctx, r.Client, workflow, index)
@@ -1765,6 +1792,14 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		return nil, err
 	}
 	isMPIJob := profile.Data.NnfMPISpec != nil
+
+	// If PostRunTimeoutSeconds is set to 0, then don't wait at all and don't check the results.
+	// Just move along to teardown. If any containers are still running, they will get stopped in
+	// teardown.
+	if *profile.Data.PostRunTimeoutSeconds == 0 {
+		r.Log.Info("PostRunTimeoutSeconds is set to 0, not waiting for containers to finish")
+		return nil, nil
+	}
 
 	timeout := time.Duration(0)
 	if profile.Data.PostRunTimeoutSeconds != nil {
@@ -1788,6 +1823,11 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 		}
 
 		if !finished {
+			// Send a shutdown to the user containers if they are running to stop any long running processes.
+			if err := r.sendContainerShutdown(ctx, workflow, profile); err != nil {
+				return nil, dwsv1alpha4.NewResourceError("could not send shutdown to user containers").WithError(err).WithMajor()
+			}
+
 			if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, timeout); err != nil {
 				return nil, err
 			}
@@ -1806,6 +1846,11 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 
 		// Ensure all the jobs are done running before we check the conditions.
 		for _, job := range jobList.Items {
+			// Send a shutdown to the user containers if they are running to stop any long running processes.
+			if err := r.sendContainerShutdown(ctx, workflow, profile); err != nil {
+				return nil, dwsv1alpha4.NewResourceError("could not send shutdown to user containers").WithError(err).WithMajor()
+			}
+
 			// Jobs will have conditions when finished
 			if len(job.Status.Conditions) <= 0 {
 				if err := r.setJobTimeout(ctx, job, timeout); err != nil {
