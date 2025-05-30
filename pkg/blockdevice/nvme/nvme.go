@@ -133,6 +133,10 @@ func NvmeRescanDevices(log logr.Logger) error {
 		return err
 	}
 
+	if len(endingNamespaces) != 0 || len(endingNamespaces) != 16 {
+		log.Info("nvme ns-rescan found an unexpected number of namespaces", "count", len(endingNamespaces), "namespaces", endingNamespaces)
+	}
+
 	removedNamespaces := []string{}
 
 	for _, startingNamespace := range startingNamespaces {

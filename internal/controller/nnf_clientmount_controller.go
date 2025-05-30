@@ -47,6 +47,7 @@ import (
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
+	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 )
 
 type ClientType string
@@ -314,6 +315,21 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
+			//
+			devices, err := nvme.NvmeGetNamespaceDevices()
+			if err != nil {
+				log.Info("failed to get namespace devices", "error", err)
+			} else {
+				log.Info("deactivate failed", "current namespace devices", devices)
+			}
+
+			output, err := command.Run("dlm_tool ls -n", log)
+			if err != nil {
+				log.Info("failed to run dlm_tool", "error", err)
+			} else {
+				log.Info("deactivate failed", "dlm_tool output", output)
+			}
+
 			return dwsv1alpha4.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
 		}
 		if deactivated {
