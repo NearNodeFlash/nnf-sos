@@ -137,16 +137,6 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, err
 		}
 
-		// Wait for all the devices to be removed from the correct nodes
-		ready, err := r.getBlockStorageAccessStatus(ctx, access, storageMapping)
-		if err != nil {
-			return ctrl.Result{}, dwsv1alpha4.NewResourceError("unable to check endpoints for NnfNodeStorage").WithError(err)
-		}
-
-		if !ready {
-			return ctrl.Result{RequeueAfter: time.Second * 2}, nil
-		}
-
 		// Unlock the NnfStorage so it can be used by another NnfAccess
 		if err = r.unlockStorage(ctx, access); err != nil {
 			return ctrl.Result{}, err
