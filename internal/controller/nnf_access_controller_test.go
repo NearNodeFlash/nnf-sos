@@ -33,7 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 )
 
@@ -46,7 +46,7 @@ var _ = Describe("Access Controller Test", func() {
 	nnfNodes := [2]*nnfv1alpha7.NnfNode{}
 	nodes := [2]*corev1.Node{}
 
-	var systemConfiguration *dwsv1alpha4.SystemConfiguration
+	var systemConfiguration *dwsv1alpha5.SystemConfiguration
 	var storageProfile *nnfv1alpha7.NnfStorageProfile
 	var setup sync.Once
 
@@ -58,14 +58,14 @@ var _ = Describe("Access Controller Test", func() {
 			}
 		})
 
-		systemConfiguration = &dwsv1alpha4.SystemConfiguration{
+		systemConfiguration = &dwsv1alpha5.SystemConfiguration{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha4.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha4.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha5.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha5.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: "rabbit-nnf-access-test-node-1",
@@ -117,7 +117,7 @@ var _ = Describe("Access Controller Test", func() {
 				return k8sClient.Update(context.TODO(), nnfNodes[i])
 			}).Should(Succeed(), "set LNet Nid in NnfNode")
 
-			storage := &dwsv1alpha4.Storage{
+			storage := &dwsv1alpha5.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nodeName,
 					Namespace: corev1.NamespaceDefault,
@@ -157,7 +157,7 @@ var _ = Describe("Access Controller Test", func() {
 		}
 
 		Expect(k8sClient.Delete(context.TODO(), systemConfiguration)).To(Succeed())
-		tempConfig := &dwsv1alpha4.SystemConfiguration{}
+		tempConfig := &dwsv1alpha5.SystemConfiguration{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(systemConfiguration), tempConfig)
 		}).ShouldNot(Succeed())
@@ -291,7 +291,7 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 		Spec: nnfv1alpha7.NnfAccessSpec{
 
 			DesiredState:     "mounted",
-			TeardownState:    dwsv1alpha4.StatePreRun,
+			TeardownState:    dwsv1alpha5.StatePreRun,
 			Target:           "all",
 			ClientReference:  corev1.ObjectReference{},
 			MakeClientMounts: true,
@@ -318,7 +318,7 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 
 	By("Verify Client Mounts")
 	for _, nodeName := range nodeNames {
-		mount := &dwsv1alpha4.ClientMount{
+		mount := &dwsv1alpha5.ClientMount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      clientMountName(access),
 				Namespace: nodeName,
@@ -338,14 +338,14 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 
 		Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
 			"Node":         Equal(nodeName),
-			"DesiredState": Equal(dwsv1alpha4.ClientMountStateMounted),
+			"DesiredState": Equal(dwsv1alpha5.ClientMountStateMounted),
 			"Mounts":       HaveLen(1),
 		}))
 
 		Expect(mount.Status.Error).To(BeNil())
 		Expect(mount.Status.Mounts).To(HaveLen(1))
 		Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-			"State": Equal(dwsv1alpha4.ClientMountStateMounted),
+			"State": Equal(dwsv1alpha5.ClientMountStateMounted),
 			"Ready": BeTrue(),
 		}))
 
@@ -372,7 +372,7 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 
 	By("Verify Client Mounts go unmounted")
 	for _, nodeName := range nodeNames {
-		mount := &dwsv1alpha4.ClientMount{
+		mount := &dwsv1alpha5.ClientMount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      clientMountName(access),
 				Namespace: nodeName,
@@ -392,13 +392,13 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 
 		Expect(mount.Spec).To(MatchFields(IgnoreExtras, Fields{
 			"Node":         Equal(nodeName),
-			"DesiredState": Equal(dwsv1alpha4.ClientMountStateUnmounted),
+			"DesiredState": Equal(dwsv1alpha5.ClientMountStateUnmounted),
 			"Mounts":       HaveLen(1),
 		}))
 		Expect(mount.Status.Error).To(BeNil())
 		Expect(mount.Status.Mounts).To(HaveLen(1))
 		Expect(mount.Status.Mounts[0]).To(MatchAllFields(Fields{
-			"State": Equal(dwsv1alpha4.ClientMountStateUnmounted),
+			"State": Equal(dwsv1alpha5.ClientMountStateUnmounted),
 			"Ready": BeTrue(),
 		}))
 	}
