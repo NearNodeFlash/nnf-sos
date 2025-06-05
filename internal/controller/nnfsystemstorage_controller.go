@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
@@ -626,7 +627,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			addPinnedStorageProfileLabel(nnfAccess, storageProfile)
 			addDirectiveIndexLabel(nnfAccess, 0)
 
-			nnfAccess.Spec.TeardownState = dwsv1alpha5.StatePostRun
+			nnfAccess.Spec.TeardownState = dwsv1alpha4.StatePostRun
 			nnfAccess.Spec.DesiredState = "mounted"
 			nnfAccess.Spec.UserID = 0
 			nnfAccess.Spec.GroupID = 0

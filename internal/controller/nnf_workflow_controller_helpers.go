@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
@@ -820,7 +821,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha7.NnfStorage, workflow *dwsv1alpha5.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha5.WorkflowState, log logr.Logger) (*nnfv1alpha7.NnfAccess, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha7.NnfStorage, workflow *dwsv1alpha5.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha4.WorkflowState, log logr.Logger) (*nnfv1alpha7.NnfAccess, error) {
 	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, parentDwIndex)
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {

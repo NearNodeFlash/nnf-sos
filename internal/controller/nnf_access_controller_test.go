@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 )
@@ -291,7 +292,7 @@ func verifyClientMount(storage *nnfv1alpha7.NnfStorage, storageProfile *nnfv1alp
 		Spec: nnfv1alpha7.NnfAccessSpec{
 
 			DesiredState:     "mounted",
-			TeardownState:    dwsv1alpha5.StatePreRun,
+			TeardownState:    dwsv1alpha4.StatePreRun,
 			Target:           "all",
 			ClientReference:  corev1.ObjectReference{},
 			MakeClientMounts: true,

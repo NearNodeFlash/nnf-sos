@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -606,19 +607,19 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
-			var teardownState dwsv1alpha5.WorkflowState
+			var teardownState dwsv1alpha4.WorkflowState
 			if dwArgs["command"] == "copy_in" {
-				teardownState = dwsv1alpha5.StatePreRun
+				teardownState = dwsv1alpha4.StatePreRun
 
 				if fsType == "gfs2" || fsType == "lustre" {
-					teardownState = dwsv1alpha5.StatePostRun
+					teardownState = dwsv1alpha4.StatePostRun
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
-						teardownState = dwsv1alpha5.StateTeardown
+						teardownState = dwsv1alpha4.StateTeardown
 					}
 				}
 			} else if dwArgs["command"] == "copy_out" {
-				teardownState = dwsv1alpha5.StateTeardown
+				teardownState = dwsv1alpha4.StateTeardown
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
@@ -772,7 +773,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 				dwsv1alpha5.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha5.AddOwnerLabels(dm, workflow)
-				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha4.WorkflowState(workflow.Status.State))
 				nnfv1alpha7.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 				addDirectiveIndexLabel(dm, index)
 
@@ -810,7 +811,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 		dwsv1alpha5.AddWorkflowLabels(dm, workflow)
 		dwsv1alpha5.AddOwnerLabels(dm, workflow)
-		nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+		nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha4.WorkflowState(workflow.Status.State))
 		nnfv1alpha7.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 		addDirectiveIndexLabel(dm, index)
 
@@ -915,7 +916,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
 
-			access.Spec.TeardownState = dwsv1alpha5.StatePostRun
+			access.Spec.TeardownState = dwsv1alpha4.StatePostRun
 			access.Spec.DesiredState = "mounted"
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
@@ -976,9 +977,9 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		// Set the teardown state to post run. If there is a copy_out or container directive that
 		// uses this storage instance, set the teardown state so NNF Access is preserved up until
 		// Teardown
-		teardownState := dwsv1alpha5.StatePostRun
+		teardownState := dwsv1alpha4.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 || findContainerDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
-			teardownState = dwsv1alpha5.StateTeardown
+			teardownState = dwsv1alpha4.StateTeardown
 		}
 
 		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)

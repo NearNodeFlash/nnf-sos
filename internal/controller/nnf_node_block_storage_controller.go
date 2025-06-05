@@ -53,6 +53,7 @@ import (
 	openapi "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/common"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 
+	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
@@ -523,7 +524,7 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 		// If the error is from a 404 error, then there's nothing to clean up and we
 		// assume everything has been deleted
 		if !ok || ecErr.StatusCode() != http.StatusNotFound {
-			nodeBlockStorage.Status.Error = dwsv1alpha5.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
+			nodeBlockStorage.Status.Error = dwsv1alpha4.NewResourceError("could not delete storage pool").WithError(err).WithFatal()
 			log.Info(nodeBlockStorage.Status.Error.Error())
 
 			return &ctrl.Result{Requeue: true}, nil
