@@ -168,6 +168,11 @@ type WorkflowSpec struct {
 	// +kubebuilder:default:=false
 	Hurry bool `json:"hurry,omitempty"`
 
+	// ForceReady will cause the workflow to move to 'Ready' even if the underlying drivers haven't finished. This should only be used when the
+	// driver supports it.
+	// +kubebuilder:default:=false
+	ForceReady bool `json:"forceReady"`
+
 	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`
 }

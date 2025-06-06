@@ -134,6 +134,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	// Need to set Status.State first because the webhook validates this.
 	if workflow.Status.State != workflow.Spec.DesiredState {
 		log.Info("Workflow state transitioning", "state", workflow.Spec.DesiredState)
+		workflow.Spec.ForceReady = ConditionFalse
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
 		workflow.Status.Status = dwsv1alpha5.StatusDriverWait
@@ -225,6 +226,12 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 				workflow.Status.Status = dwsv1alpha5.StatusDriverWait
 			}
 		}
+	}
+
+	if workflow.Spec.ForceReady {
+		workflow.Status.Ready = true
+		workflow.Status.Status = dwsv1alpha5.StatusCompleted
+		workflow.Status.Message = "Forced Ready"
 	}
 
 	if workflow.Status.Ready == true {

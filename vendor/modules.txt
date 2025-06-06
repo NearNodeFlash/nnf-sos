@@ -1,4 +1,4 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20250604140623-76b332d96362
+# github.com/DataWorkflowServices/dws v0.0.1-0.20250606184224-adef8404870c
 ## explicit; go 1.22.0
 github.com/DataWorkflowServices/dws/api/v1alpha2
 github.com/DataWorkflowServices/dws/api/v1alpha3
