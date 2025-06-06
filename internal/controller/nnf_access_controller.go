@@ -601,6 +601,9 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 		}
 
 		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+			if !nnfNodeStorage.Status.Ready {
+				continue
+			}
 
 			// Loop through each allocation to pull out the device information and build the
 			// mount information

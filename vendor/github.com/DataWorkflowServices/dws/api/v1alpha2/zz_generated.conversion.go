@@ -438,11 +438,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.ServersStatusStorage)(nil), (*ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(a.(*v1alpha5.ServersStatusStorage), b.(*ServersStatusStorage), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*Storage)(nil), (*v1alpha5.Storage)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_Storage_To_v1alpha5_Storage(a.(*Storage), b.(*v1alpha5.Storage), scope)
 	}); err != nil {
@@ -628,11 +623,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha5.WorkflowSpec)(nil), (*WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(a.(*v1alpha5.WorkflowSpec), b.(*WorkflowSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*WorkflowStatus)(nil), (*v1alpha5.WorkflowStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_WorkflowStatus_To_v1alpha5_WorkflowStatus(a.(*WorkflowStatus), b.(*v1alpha5.WorkflowStatus), scope)
 	}); err != nil {
@@ -645,6 +635,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha5.DirectiveBreakdownStatus)(nil), (*DirectiveBreakdownStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha5_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownStatus(a.(*v1alpha5.DirectiveBreakdownStatus), b.(*DirectiveBreakdownStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha5.ServersStatusStorage)(nil), (*ServersStatusStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(a.(*v1alpha5.ServersStatusStorage), b.(*ServersStatusStorage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha5.WorkflowSpec)(nil), (*WorkflowSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(a.(*v1alpha5.WorkflowSpec), b.(*WorkflowSpec), scope)
 	}); err != nil {
 		return err
 	}
@@ -1520,7 +1520,17 @@ func Convert_v1alpha5_Servers_To_v1alpha2_Servers(in *v1alpha5.Servers, out *Ser
 
 func autoConvert_v1alpha2_ServersList_To_v1alpha5_ServersList(in *ServersList, out *v1alpha5.ServersList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]v1alpha5.Servers)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]v1alpha5.Servers, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha2_Servers_To_v1alpha5_Servers(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1531,7 +1541,17 @@ func Convert_v1alpha2_ServersList_To_v1alpha5_ServersList(in *ServersList, out *
 
 func autoConvert_v1alpha5_ServersList_To_v1alpha2_ServersList(in *v1alpha5.ServersList, out *ServersList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]Servers)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Servers, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_Servers_To_v1alpha2_Servers(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1609,7 +1629,17 @@ func Convert_v1alpha5_ServersSpecStorage_To_v1alpha2_ServersSpecStorage(in *v1al
 func autoConvert_v1alpha2_ServersStatus_To_v1alpha5_ServersStatus(in *ServersStatus, out *v1alpha5.ServersStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.LastUpdate = (*metav1.MicroTime)(unsafe.Pointer(in.LastUpdate))
-	out.AllocationSets = *(*[]v1alpha5.ServersStatusAllocationSet)(unsafe.Pointer(&in.AllocationSets))
+	if in.AllocationSets != nil {
+		in, out := &in.AllocationSets, &out.AllocationSets
+		*out = make([]v1alpha5.ServersStatusAllocationSet, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha5_ServersStatusAllocationSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AllocationSets = nil
+	}
 	if err := Convert_v1alpha2_ResourceError_To_v1alpha5_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
@@ -1624,7 +1654,17 @@ func Convert_v1alpha2_ServersStatus_To_v1alpha5_ServersStatus(in *ServersStatus,
 func autoConvert_v1alpha5_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha5.ServersStatus, out *ServersStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.LastUpdate = (*metav1.MicroTime)(unsafe.Pointer(in.LastUpdate))
-	out.AllocationSets = *(*[]ServersStatusAllocationSet)(unsafe.Pointer(&in.AllocationSets))
+	if in.AllocationSets != nil {
+		in, out := &in.AllocationSets, &out.AllocationSets
+		*out = make([]ServersStatusAllocationSet, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha5_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AllocationSets = nil
+	}
 	if err := Convert_v1alpha5_ResourceError_To_v1alpha2_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
@@ -1638,7 +1678,19 @@ func Convert_v1alpha5_ServersStatus_To_v1alpha2_ServersStatus(in *v1alpha5.Serve
 
 func autoConvert_v1alpha2_ServersStatusAllocationSet_To_v1alpha5_ServersStatusAllocationSet(in *ServersStatusAllocationSet, out *v1alpha5.ServersStatusAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
-	out.Storage = *(*map[string]v1alpha5.ServersStatusStorage)(unsafe.Pointer(&in.Storage))
+	if in.Storage != nil {
+		in, out := &in.Storage, &out.Storage
+		*out = make(map[string]v1alpha5.ServersStatusStorage, len(*in))
+		for key, val := range *in {
+			newVal := new(v1alpha5.ServersStatusStorage)
+			if err := Convert_v1alpha2_ServersStatusStorage_To_v1alpha5_ServersStatusStorage(&val, newVal, s); err != nil {
+				return err
+			}
+			(*out)[key] = *newVal
+		}
+	} else {
+		out.Storage = nil
+	}
 	return nil
 }
 
@@ -1649,7 +1701,19 @@ func Convert_v1alpha2_ServersStatusAllocationSet_To_v1alpha5_ServersStatusAlloca
 
 func autoConvert_v1alpha5_ServersStatusAllocationSet_To_v1alpha2_ServersStatusAllocationSet(in *v1alpha5.ServersStatusAllocationSet, out *ServersStatusAllocationSet, s conversion.Scope) error {
 	out.Label = in.Label
-	out.Storage = *(*map[string]ServersStatusStorage)(unsafe.Pointer(&in.Storage))
+	if in.Storage != nil {
+		in, out := &in.Storage, &out.Storage
+		*out = make(map[string]ServersStatusStorage, len(*in))
+		for key, val := range *in {
+			newVal := new(ServersStatusStorage)
+			if err := Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(&val, newVal, s); err != nil {
+				return err
+			}
+			(*out)[key] = *newVal
+		}
+	} else {
+		out.Storage = nil
+	}
 	return nil
 }
 
@@ -1670,12 +1734,8 @@ func Convert_v1alpha2_ServersStatusStorage_To_v1alpha5_ServersStatusStorage(in *
 
 func autoConvert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha5.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
 	out.AllocationSize = in.AllocationSize
+	// WARNING: in.Ready requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage is an autogenerated conversion function.
-func Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *v1alpha5.ServersStatusStorage, out *ServersStatusStorage, s conversion.Scope) error {
-	return autoConvert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in, out, s)
 }
 
 func autoConvert_v1alpha2_Storage_To_v1alpha5_Storage(in *Storage, out *v1alpha5.Storage, s conversion.Scope) error {
@@ -2207,13 +2267,9 @@ func autoConvert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha5.Wor
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
 	out.Hurry = in.Hurry
+	// WARNING: in.ForceReady requires manual conversion: does not exist in peer-type
 	out.DWDirectives = *(*[]string)(unsafe.Pointer(&in.DWDirectives))
 	return nil
-}
-
-// Convert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec is an autogenerated conversion function.
-func Convert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *v1alpha5.WorkflowSpec, out *WorkflowSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(in, out, s)
 }
 
 func autoConvert_v1alpha2_WorkflowStatus_To_v1alpha5_WorkflowStatus(in *WorkflowStatus, out *v1alpha5.WorkflowStatus, s conversion.Scope) error {

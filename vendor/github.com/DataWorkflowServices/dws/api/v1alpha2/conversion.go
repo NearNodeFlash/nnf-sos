@@ -215,12 +215,28 @@ func (src *Servers) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &dwsv1alpha5.Servers{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		for index := range dst.Status.AllocationSets {
+			if len(restored.Status.AllocationSets) < index {
+				break
+			}
+
+			for name := range dst.Status.AllocationSets[index].Storage {
+				if serverStatus, exists := restored.Status.AllocationSets[index].Storage[name]; exists {
+					serverStatus.AllocationSize = dst.Status.AllocationSets[index].Storage[name].AllocationSize
+					dst.Status.AllocationSets[index].Storage[name] = serverStatus
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -330,6 +346,7 @@ func (src *Workflow) ConvertTo(dstRaw conversion.Hub) error {
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 
 	if hasAnno {
+		dst.Spec.ForceReady = restored.Spec.ForceReady
 		dst.Status.Requires = restored.Status.Requires
 		dst.Status.WorkflowToken = restored.Status.WorkflowToken
 	}
@@ -443,4 +460,12 @@ func Convert_v1alpha5_DirectiveBreakdownStatus_To_v1alpha2_DirectiveBreakdownSta
 
 func Convert_v1alpha5_WorkflowStatus_To_v1alpha2_WorkflowStatus(in *dwsv1alpha5.WorkflowStatus, out *WorkflowStatus, s apiconversion.Scope) error {
 	return autoConvert_v1alpha5_WorkflowStatus_To_v1alpha2_WorkflowStatus(in, out, s)
+}
+
+func Convert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(in *dwsv1alpha5.WorkflowSpec, out *WorkflowSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_WorkflowSpec_To_v1alpha2_WorkflowSpec(in, out, s)
+}
+
+func Convert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in *dwsv1alpha5.ServersStatusStorage, out *ServersStatusStorage, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_ServersStatusStorage_To_v1alpha2_ServersStatusStorage(in, out, s)
 }

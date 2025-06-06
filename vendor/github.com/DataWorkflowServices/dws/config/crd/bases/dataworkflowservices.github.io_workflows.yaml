@@ -1531,6 +1531,12 @@ spec:
                 items:
                   type: string
                 type: array
+              forceReady:
+                default: false
+                description: |-
+                  ForceReady will cause the workflow to move to 'Ready' even if the underlying drivers haven't finished. This should only be used when the
+                  driver supports it.
+                type: boolean
               groupID:
                 description: |-
                   GroupID specifies the group ID for the workflow. The Group ID is used by the various states
@@ -1568,6 +1574,7 @@ spec:
             required:
             - desiredState
             - dwDirectives
+            - forceReady
             - groupID
             - jobID
             - userID

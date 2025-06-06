@@ -21,6 +21,7 @@ package v1alpha3
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -201,12 +202,28 @@ func (src *Servers) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &dwsv1alpha5.Servers{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		for index := range dst.Status.AllocationSets {
+			if len(restored.Status.AllocationSets) < index {
+				break
+			}
+
+			for name := range dst.Status.AllocationSets[index].Storage {
+				if serverStatus, exists := restored.Status.AllocationSets[index].Storage[name]; exists {
+					serverStatus.AllocationSize = dst.Status.AllocationSets[index].Storage[name].AllocationSize
+					dst.Status.AllocationSets[index].Storage[name] = serverStatus
+				}
+			}
+		}
+	}
 
 	return nil
 }
@@ -297,13 +314,17 @@ func (src *Workflow) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &dwsv1alpha5.Workflow{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
 	// EDIT THIS FUNCTION! If the annotation is holding anything that is
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 
+	if hasAnno {
+		dst.Spec.ForceReady = restored.Spec.ForceReady
+	}
 	return nil
 }
 
@@ -398,4 +419,15 @@ func (src *WorkflowList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *WorkflowList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("WorkflowList"), "ConvertFrom")
+}
+
+// The conversion-gen tool dropped these from zz_generated.conversion.go to
+// force us to acknowledge that we are addressing the conversion requirements.
+
+func Convert_v1alpha5_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(in *dwsv1alpha5.ServersStatusStorage, out *ServersStatusStorage, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_ServersStatusStorage_To_v1alpha3_ServersStatusStorage(in, out, s)
+}
+
+func Convert_v1alpha5_WorkflowSpec_To_v1alpha3_WorkflowSpec(in *dwsv1alpha5.WorkflowSpec, out *WorkflowSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_WorkflowSpec_To_v1alpha3_WorkflowSpec(in, out, s)
 }
