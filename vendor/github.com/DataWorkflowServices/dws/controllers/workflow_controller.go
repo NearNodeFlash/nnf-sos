@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/internal/controller/metrics"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 )
@@ -58,7 +58,7 @@ type WorkflowReconciler struct {
 	client.Client
 	Scheme       *kruntime.Scheme
 	Log          logr.Logger
-	ChildObjects []dwsv1alpha4.ObjectList
+	ChildObjects []dwsv1alpha5.ObjectList
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=workflows,verbs=get;list;watch;update;patch
@@ -81,7 +81,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	metrics.DwsReconcilesTotal.Inc()
 
 	// Fetch the Workflow workflow
-	workflow := &dwsv1alpha4.Workflow{}
+	workflow := &dwsv1alpha5.Workflow{}
 	if err := r.Get(ctx, req.NamespacedName, workflow); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -89,7 +89,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	// Create a status updater that handles the call to r.Update() if any of the fields
 	// in workflow.Status{} change. This is necessary since Status is not a subresource
 	// of the workflow.
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha4.WorkflowStatus](workflow)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha5.WorkflowStatus](workflow)
 	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r.Client, err) }()
 
 	// Check if the object is being deleted
@@ -104,7 +104,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		}
 
 		// Delete all the Computes resources owned by the workflow
-		DeleteStatus, err := dwsv1alpha4.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
+		DeleteStatus, err := dwsv1alpha5.DeleteChildren(ctx, r.Client, r.ChildObjects, workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -136,7 +136,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		log.Info("Workflow state transitioning", "state", workflow.Spec.DesiredState)
 		workflow.Status.State = workflow.Spec.DesiredState
 		workflow.Status.Ready = ConditionFalse
-		workflow.Status.Status = dwsv1alpha4.StatusDriverWait
+		workflow.Status.Status = dwsv1alpha5.StatusDriverWait
 		workflow.Status.Message = ""
 		ts := metav1.NowMicro()
 		workflow.Status.DesiredStateChange = &ts
@@ -145,7 +145,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	}
 
 	// We must create Computes during proposal state
-	if workflow.Spec.DesiredState == dwsv1alpha4.StateProposal {
+	if workflow.Spec.DesiredState == dwsv1alpha5.StateProposal {
 		computes, err := r.createComputes(ctx, workflow, workflow.Name, log)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -153,7 +153,7 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 
 		// Ensure the computes reference is set
 		cref := v1.ObjectReference{
-			Kind:      reflect.TypeOf(dwsv1alpha4.Computes{}).Name(),
+			Kind:      reflect.TypeOf(dwsv1alpha5.Computes{}).Name(),
 			Name:      computes.Name,
 			Namespace: computes.Namespace,
 		}
@@ -180,11 +180,11 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	}
 
 	workflow.Status.Ready = true
-	workflow.Status.Status = dwsv1alpha4.StatusCompleted
+	workflow.Status.Status = dwsv1alpha5.StatusCompleted
 	workflow.Status.Message = ""
 
 	// Loop through the driver status array find the entries that are for the current state
-	drivers := []dwsv1alpha4.WorkflowDriverStatus{}
+	drivers := []dwsv1alpha5.WorkflowDriverStatus{}
 
 	for _, driver := range workflow.Status.Drivers {
 		if driver.WatchState != workflow.Status.State {
@@ -219,10 +219,10 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 				workflow.Status.Message = fmt.Sprintf("DW Directive %d: %s", driver.DWDIndex, driver.Message)
 			}
 
-			if driver.Status == dwsv1alpha4.StatusTransientCondition || driver.Status == dwsv1alpha4.StatusError || driver.Status == dwsv1alpha4.StatusCompleted {
+			if driver.Status == dwsv1alpha5.StatusTransientCondition || driver.Status == dwsv1alpha5.StatusError || driver.Status == dwsv1alpha5.StatusCompleted {
 				workflow.Status.Status = driver.Status
 			} else {
-				workflow.Status.Status = dwsv1alpha4.StatusDriverWait
+				workflow.Status.Status = dwsv1alpha5.StatusDriverWait
 			}
 		}
 	}
@@ -237,9 +237,9 @@ func (r *WorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 	return ctrl.Result{}, nil
 }
 
-func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha4.Workflow, name string, log logr.Logger) (*dwsv1alpha4.Computes, error) {
+func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha5.Workflow, name string, log logr.Logger) (*dwsv1alpha5.Computes, error) {
 
-	computes := &dwsv1alpha4.Computes{
+	computes := &dwsv1alpha5.Computes{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: wf.Namespace,
@@ -248,8 +248,8 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha4
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, computes,
 		func() error {
-			dwsv1alpha4.AddWorkflowLabels(computes, wf)
-			dwsv1alpha4.AddOwnerLabels(computes, wf)
+			dwsv1alpha5.AddWorkflowLabels(computes, wf)
+			dwsv1alpha5.AddOwnerLabels(computes, wf)
 
 			// Link the Computes to the workflow
 			return ctrl.SetControllerReference(wf, computes, r.Scheme)
@@ -274,19 +274,19 @@ func (r *WorkflowReconciler) createComputes(ctx context.Context, wf *dwsv1alpha4
 // the lowest priority and completed entries have the lowest priority.
 func statusPriority(status string) int {
 	switch status {
-	case dwsv1alpha4.StatusCompleted:
+	case dwsv1alpha5.StatusCompleted:
 		return 1
-	case dwsv1alpha4.StatusDriverWait:
+	case dwsv1alpha5.StatusDriverWait:
 		fallthrough
-	case dwsv1alpha4.StatusPending:
+	case dwsv1alpha5.StatusPending:
 		fallthrough
-	case dwsv1alpha4.StatusQueued:
+	case dwsv1alpha5.StatusQueued:
 		fallthrough
-	case dwsv1alpha4.StatusRunning:
+	case dwsv1alpha5.StatusRunning:
 		return 2
-	case dwsv1alpha4.StatusTransientCondition:
+	case dwsv1alpha5.StatusTransientCondition:
 		return 3
-	case dwsv1alpha4.StatusError:
+	case dwsv1alpha5.StatusError:
 		return 4
 	}
 
@@ -294,11 +294,11 @@ func statusPriority(status string) int {
 }
 
 type workflowStatusUpdater struct {
-	workflow       *dwsv1alpha4.Workflow
-	existingStatus dwsv1alpha4.WorkflowStatus
+	workflow       *dwsv1alpha5.Workflow
+	existingStatus dwsv1alpha5.WorkflowStatus
 }
 
-func newWorkflowStatusUpdater(w *dwsv1alpha4.Workflow) *workflowStatusUpdater {
+func newWorkflowStatusUpdater(w *dwsv1alpha5.Workflow) *workflowStatusUpdater {
 	return &workflowStatusUpdater{
 		workflow:       w,
 		existingStatus: (*w.DeepCopy()).Status,
@@ -318,14 +318,14 @@ func (w *workflowStatusUpdater) close(ctx context.Context, r *WorkflowReconciler
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha4.ObjectList{
-		&dwsv1alpha4.ComputesList{},
+	r.ChildObjects = []dwsv1alpha5.ObjectList{
+		&dwsv1alpha5.ComputesList{},
 	}
 
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha4.Workflow{}).
-		Owns(&dwsv1alpha4.Computes{}).
+		For(&dwsv1alpha5.Workflow{}).
+		Owns(&dwsv1alpha5.Computes{}).
 		Complete(r)
 }

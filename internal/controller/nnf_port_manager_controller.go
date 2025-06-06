@@ -35,7 +35,7 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	"github.com/go-logr/logr"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 )
 
@@ -75,7 +75,7 @@ func (r *NnfPortManagerReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 
 	// Read in the system configuration which contains the available ports.
-	config := &dwsv1alpha4.SystemConfiguration{
+	config := &dwsv1alpha5.SystemConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mgr.Spec.SystemConfiguration.Name,
 			Namespace: mgr.Spec.SystemConfiguration.Namespace,
@@ -236,7 +236,7 @@ func (r *NnfPortManagerReconciler) isAllocated(mgr *nnfv1alpha7.NnfPortManager, 
 }
 
 // Find free ports to satisfy the provided specification.
-func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alpha7.NnfPortManager, config *dwsv1alpha4.SystemConfiguration, spec AllocationSpec) ([]uint16, nnfv1alpha7.NnfPortManagerAllocationStatusStatus) {
+func (r *NnfPortManagerReconciler) findFreePorts(log logr.Logger, mgr *nnfv1alpha7.NnfPortManager, config *dwsv1alpha5.SystemConfiguration, spec AllocationSpec) ([]uint16, nnfv1alpha7.NnfPortManagerAllocationStatusStatus) {
 
 	portsInUse := make([]uint16, 0)
 	for _, status := range mgr.Status.Allocations {

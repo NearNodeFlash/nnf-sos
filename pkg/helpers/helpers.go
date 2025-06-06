@@ -22,7 +22,7 @@ package helpers
 import (
 	"context"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +31,7 @@ import (
 // getRabbitFromCompute finds the name of the Rabbit that is physically connected to the compute node
 func GetRabbitFromCompute(ctx context.Context, c client.Client, compute string) (string, error) {
 	// To find the Rabbit associated with this compute, we have to search the SystemConfiguration resource
-	systemConfiguration := &dwsv1alpha4.SystemConfiguration{
+	systemConfiguration := &dwsv1alpha5.SystemConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default",
 			Namespace: corev1.NamespaceDefault,
@@ -39,7 +39,7 @@ func GetRabbitFromCompute(ctx context.Context, c client.Client, compute string) 
 	}
 
 	if err := c.Get(ctx, client.ObjectKeyFromObject(systemConfiguration), systemConfiguration); err != nil {
-		return "", dwsv1alpha4.NewResourceError("could not get SystemConfiguration %v", client.ObjectKeyFromObject(systemConfiguration)).WithError(err).WithMajor()
+		return "", dwsv1alpha5.NewResourceError("could not get SystemConfiguration %v", client.ObjectKeyFromObject(systemConfiguration)).WithError(err).WithMajor()
 	}
 
 	// Search through the SystemConfiguration to find the Compute node name
@@ -51,5 +51,5 @@ func GetRabbitFromCompute(ctx context.Context, c client.Client, compute string) 
 		}
 	}
 
-	return "", dwsv1alpha4.NewResourceError("could not find compute in SystemConfiguration: %s", compute).WithMajor()
+	return "", dwsv1alpha5.NewResourceError("could not find compute in SystemConfiguration: %s", compute).WithMajor()
 }

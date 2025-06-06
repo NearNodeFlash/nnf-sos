@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 )
 
@@ -60,18 +60,18 @@ func findProfileToUse(ctx context.Context, clnt client.Client, args map[string]s
 		}
 		// Require that there be one and only one default.
 		if len(profilesFound) == 0 {
-			return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("Unable to find a default NnfStorageProfile to use").WithFatal()
+			return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("Unable to find a default NnfStorageProfile to use").WithFatal()
 		} else if len(profilesFound) > 1 {
-			return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("More than one default NnfStorageProfile found; unable to pick one: %v", profilesFound).WithFatal()
+			return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("More than one default NnfStorageProfile found; unable to pick one: %v", profilesFound).WithFatal()
 		}
 		profileName = profilesFound[0]
 	}
 	if len(profileName) == 0 {
-		return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("Unable to find an NnfStorageProfile name").WithUser().WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("Unable to find an NnfStorageProfile name").WithUser().WithFatal()
 	}
 	err := clnt.Get(ctx, types.NamespacedName{Namespace: profileNamespace, Name: profileName}, nnfStorageProfile)
 	if err != nil {
-		return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("Unable to find NnfStorageProfile: %s", profileName).WithUser().WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("Unable to find NnfStorageProfile: %s", profileName).WithUser().WithFatal()
 	}
 
 	return nnfStorageProfile, nil
@@ -86,7 +86,7 @@ func findPinnedProfile(ctx context.Context, clnt client.Client, namespace string
 		return nil, err
 	}
 	if !nnfStorageProfile.Data.Pinned {
-		return nil, dwsv1alpha4.NewResourceError("Expected pinned NnfStorageProfile, but it was not pinned: %s", pinnedName).WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("Expected pinned NnfStorageProfile, but it was not pinned: %s", pinnedName).WithFatal()
 	}
 	return nnfStorageProfile, nil
 }
@@ -121,7 +121,7 @@ func createPinnedProfile(ctx context.Context, clnt client.Client, clntScheme *ru
 	newProfile.Data.Default = false
 	controllerutil.SetControllerReference(owner, newProfile, clntScheme)
 
-	dwsv1alpha4.AddOwnerLabels(newProfile, owner)
+	dwsv1alpha5.AddOwnerLabels(newProfile, owner)
 	err = clnt.Create(ctx, newProfile)
 	if err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -150,16 +150,16 @@ func addPinnedStorageProfileLabel(object metav1.Object, nnfStorageProfile *nnfv1
 func getPinnedStorageProfileFromLabel(ctx context.Context, clnt client.Client, object metav1.Object) (*nnfv1alpha7.NnfStorageProfile, error) {
 	labels := object.GetLabels()
 	if labels == nil {
-		return nil, dwsv1alpha4.NewResourceError("unable to find labels").WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("unable to find labels").WithFatal()
 	}
 
 	pinnedName, okName := labels[nnfv1alpha7.PinnedStorageProfileLabelName]
 	if !okName {
-		return nil, dwsv1alpha4.NewResourceError("unable to find %s label", nnfv1alpha7.PinnedStorageProfileLabelName).WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("unable to find %s label", nnfv1alpha7.PinnedStorageProfileLabelName).WithFatal()
 	}
 	pinnedNamespace, okNamespace := labels[nnfv1alpha7.PinnedStorageProfileLabelNameSpace]
 	if !okNamespace {
-		return nil, dwsv1alpha4.NewResourceError("unable to find %s label", nnfv1alpha7.PinnedStorageProfileLabelNameSpace).WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("unable to find %s label", nnfv1alpha7.PinnedStorageProfileLabelNameSpace).WithFatal()
 	}
 
 	return findPinnedProfile(ctx, clnt, pinnedNamespace, pinnedName)
