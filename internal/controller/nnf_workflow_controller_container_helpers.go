@@ -20,13 +20,21 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	nnftoken "github.com/NearNodeFlash/nnf-sos/pkg/token"
 	"github.com/go-logr/logr"
@@ -43,7 +51,7 @@ import (
 )
 
 type nnfUserContainer struct {
-	workflow    *dwsv1alpha4.Workflow
+	workflow    *dwsv1alpha5.Workflow
 	profile     *nnfv1alpha7.NnfContainerProfile
 	nnfNodes    []string
 	volumes     []nnfContainerVolume
@@ -86,6 +94,10 @@ const (
 	// containers that use "requiresContainerAuth" or "requiresCopyOffload".
 	userContainerTLSSecretName      = "nnf-dm-usercontainer-server-tls"
 	userContainerTLSSecretNamespace = corev1.NamespaceDefault
+
+	// The version of the copy offload service that this controller supports. This is used to send
+	// shutdown messages to user containers.
+	copyOffloadAPIVersion = "1.0"
 )
 
 // MPI container workflow. In this model, we use mpi-operator to create an MPIJob, which creates
@@ -323,10 +335,10 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 
 func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error {
 	// Apply Job Labels/Owners
-	dwsv1alpha4.InheritParentLabels(obj, c.workflow)
-	dwsv1alpha4.AddWorkflowLabels(obj, c.workflow)
+	dwsv1alpha5.InheritParentLabels(obj, c.workflow)
+	dwsv1alpha5.AddWorkflowLabels(obj, c.workflow)
 	if applyOwner {
-		dwsv1alpha4.AddOwnerLabels(obj, c.workflow)
+		dwsv1alpha5.AddOwnerLabels(obj, c.workflow)
 	}
 
 	labels := obj.GetLabels()
@@ -534,7 +546,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Make sure we found the number of ports in the port manager that we expect
 	if len(ports) != expectedPorts {
-		return nil, dwsv1alpha4.NewResourceError(
+		return nil, dwsv1alpha5.NewResourceError(
 			"number of ports found in NnfPortManager's allocation (%d) does not equal the profile's requested ports (%d)",
 			len(ports), expectedPorts).
 			WithUserMessage("requested ports do not meet the number of allocated ports").WithFatal()
@@ -619,7 +631,7 @@ func getContainerPortsList(ports []uint16) string {
 // NNF_CONTAINER_PORTS - all the ports assigned to all containers
 // NNF_CONTAINER_PORTS_my_container1 - ports assigned to container named my_container1
 // NNF_CONTAINER_PORTS_my_container2 - ports assigned to container named my_container2
-func addPortsEnvVars(workflow dwsv1alpha4.Workflow, spec *corev1.PodSpec, ports []uint16, portMap map[string][]uint16) {
+func addPortsEnvVars(workflow dwsv1alpha5.Workflow, spec *corev1.PodSpec, ports []uint16, portMap map[string][]uint16) {
 	if len(ports) < 1 {
 		return
 	}
@@ -732,7 +744,7 @@ func (c *nnfUserContainer) addSecrets(spec *corev1.PodSpec) {
 	}
 }
 
-func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha4.Workflow, spec *corev1.PodSpec, mpi bool) {
+func (c *nnfUserContainer) addEnvVars(workflow dwsv1alpha5.Workflow, spec *corev1.PodSpec, mpi bool) {
 	// Add in non-volume environment variables for all containers
 	for idx := range spec.Containers {
 		container := &spec.Containers[idx]
@@ -789,12 +801,30 @@ func verifyUserContainerTLSSecretName(clnt client.Client, ctx context.Context) e
 		},
 	}
 	if err := clnt.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
-		return dwsv1alpha4.NewResourceError("the administrator must configure the user container TLS secret for the system. See the copy-offload docs").WithError(err).WithFatal()
+		return dwsv1alpha5.NewResourceError("the administrator must configure the user container TLS secret for the system. See the copy-offload docs").WithError(err).WithFatal()
 	}
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupContainerAuth(ctx context.Context, workflow *dwsv1alpha4.Workflow, log logr.Logger) (*dwsv1alpha4.WorkflowTokenSecret, error) {
+func getUserContainerCACert(clnt client.Client, ctx context.Context) ([]byte, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      userContainerTLSSecretName,
+			Namespace: userContainerTLSSecretNamespace,
+		},
+	}
+	if err := clnt.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return nil, fmt.Errorf("failed to get secret %s: %w", secret.Name, err)
+	}
+	key := "tls.crt"
+	caCert, ok := secret.Data[key]
+	if !ok {
+		return nil, fmt.Errorf("'%s 'not found in secret %s", key, secret.Name)
+	}
+	return caCert, nil
+}
+
+func (r *NnfWorkflowReconciler) setupContainerAuth(ctx context.Context, workflow *dwsv1alpha5.Workflow, log logr.Logger) (*dwsv1alpha5.WorkflowTokenSecret, error) {
 	privKey, err := r.createContainerTokenKey(ctx, workflow, log)
 	if err != nil {
 		return nil, err
@@ -806,10 +836,10 @@ func (r *NnfWorkflowReconciler) setupContainerAuth(ctx context.Context, workflow
 	return workflowToken, nil
 }
 
-func makeWorkflowTokenName(workflow *dwsv1alpha4.Workflow) (*dwsv1alpha4.WorkflowTokenSecret, string) {
+func makeWorkflowTokenName(workflow *dwsv1alpha5.Workflow) (*dwsv1alpha5.WorkflowTokenSecret, string) {
 	workflowToken := workflow.Status.WorkflowToken
 	if workflowToken == nil {
-		workflowToken = &dwsv1alpha4.WorkflowTokenSecret{
+		workflowToken = &dwsv1alpha5.WorkflowTokenSecret{
 			SecretName:      workflow.GetName() + "-token",
 			SecretNamespace: workflow.GetNamespace(),
 		}
@@ -818,7 +848,7 @@ func makeWorkflowTokenName(workflow *dwsv1alpha4.Workflow) (*dwsv1alpha4.Workflo
 	return workflowToken, serversSecretName
 }
 
-func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, workflow *dwsv1alpha4.Workflow, log logr.Logger) ([]byte, error) {
+func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, workflow *dwsv1alpha5.Workflow, log logr.Logger) ([]byte, error) {
 	immutable := true
 	workflowToken, serversSecretName := makeWorkflowTokenName(workflow)
 	tokenKeySecret := &corev1.Secret{
@@ -835,13 +865,13 @@ func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, wor
 
 	keyBytes, pemKey, err := nnftoken.CreateKeyForTokens()
 	if err != nil {
-		return []byte(""), dwsv1alpha4.NewResourceError("%s: %s", errGroup, "CreateKeyForTokens").WithError(err).WithUserMessage("%s", userMessageError)
+		return []byte(""), dwsv1alpha5.NewResourceError("%s: %s", errGroup, "CreateKeyForTokens").WithError(err).WithUserMessage("%s", userMessageError)
 	}
 	tokenKeySecret.Data["token.key"] = pemKey
-	dwsv1alpha4.AddWorkflowLabels(tokenKeySecret, workflow)
-	dwsv1alpha4.AddOwnerLabels(tokenKeySecret, workflow)
+	dwsv1alpha5.AddWorkflowLabels(tokenKeySecret, workflow)
+	dwsv1alpha5.AddOwnerLabels(tokenKeySecret, workflow)
 	if err := ctrl.SetControllerReference(workflow, tokenKeySecret, r.Scheme); err != nil {
-		return []byte(""), dwsv1alpha4.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
+		return []byte(""), dwsv1alpha5.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
 	}
 
 	if err := r.Create(ctx, tokenKeySecret); err != nil {
@@ -849,15 +879,15 @@ func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, wor
 			// Get the key from it so we can use it to create a token.
 			prevTokenKeySecret := &corev1.Secret{}
 			if err = r.Get(ctx, client.ObjectKeyFromObject(tokenKeySecret), prevTokenKeySecret); err != nil {
-				return []byte(""), dwsv1alpha4.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
+				return []byte(""), dwsv1alpha5.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
 			}
 			pemKey = prevTokenKeySecret.Data["token.key"]
 			if keyBytes, err = nnftoken.GetKeyFromPEM(pemKey); err != nil {
-				return []byte(""), dwsv1alpha4.NewResourceError("%s: %s", errGroup, "GetKeyFromPEM").WithError(err).WithUserMessage("%s", userMessageError)
+				return []byte(""), dwsv1alpha5.NewResourceError("%s: %s", errGroup, "GetKeyFromPEM").WithError(err).WithUserMessage("%s", userMessageError)
 			}
 			log.Info("using existing key", "secret", client.ObjectKeyFromObject(prevTokenKeySecret))
 		} else {
-			return []byte(""), dwsv1alpha4.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
+			return []byte(""), dwsv1alpha5.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
 		}
 	} else {
 		log.Info("created key", "secret", client.ObjectKeyFromObject(tokenKeySecret))
@@ -865,7 +895,7 @@ func (r *NnfWorkflowReconciler) createContainerTokenKey(ctx context.Context, wor
 	return keyBytes, nil
 }
 
-func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workflow *dwsv1alpha4.Workflow, keyBytes []byte, log logr.Logger) (*dwsv1alpha4.WorkflowTokenSecret, error) {
+func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workflow *dwsv1alpha5.Workflow, keyBytes []byte, log logr.Logger) (*dwsv1alpha5.WorkflowTokenSecret, error) {
 	immutable := true
 	workflowToken, _ := makeWorkflowTokenName(workflow)
 	tokenSecret := &corev1.Secret{
@@ -882,13 +912,13 @@ func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workfl
 
 	tokenString, err := nnftoken.CreateTokenFromKey(keyBytes, "user-container")
 	if err != nil {
-		return nil, dwsv1alpha4.NewResourceError("%s: %s", errGroup, "CreateTokenFromKey").WithError(err).WithUserMessage("%s", userMessageError)
+		return nil, dwsv1alpha5.NewResourceError("%s: %s", errGroup, "CreateTokenFromKey").WithError(err).WithUserMessage("%s", userMessageError)
 	}
 	tokenSecret.StringData["token"] = tokenString
-	dwsv1alpha4.AddWorkflowLabels(tokenSecret, workflow)
-	dwsv1alpha4.AddOwnerLabels(tokenSecret, workflow)
+	dwsv1alpha5.AddWorkflowLabels(tokenSecret, workflow)
+	dwsv1alpha5.AddOwnerLabels(tokenSecret, workflow)
 	if err := ctrl.SetControllerReference(workflow, tokenSecret, r.Scheme); err != nil {
-		return nil, dwsv1alpha4.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
+		return nil, dwsv1alpha5.NewResourceError("%s: %s", errGroup, "SetControllerReference").WithError(err).WithUserMessage("%s", userMessageError)
 	}
 
 	if err := r.Create(ctx, tokenSecret); err != nil {
@@ -900,19 +930,149 @@ func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workfl
 			// a new token&secret; we have to bail.
 			prevTokenSecret := &corev1.Secret{}
 			if err = r.Get(ctx, client.ObjectKeyFromObject(tokenSecret), prevTokenSecret); err != nil {
-				return nil, dwsv1alpha4.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
+				return nil, dwsv1alpha5.NewResourceError("%s: %s", errGroup, "Get").WithError(err).WithUserMessage("%s", userMessageError)
 			}
 			// Note: we read from Secret.Data, rather than Secret.StringData,
 			// per the instructions in corev1.Secret.
 			tokenStringBytes := prevTokenSecret.Data["token"]
 			if err = nnftoken.VerifyToken(string(tokenStringBytes), keyBytes); err != nil {
-				return nil, dwsv1alpha4.NewResourceError("%s: %s", errGroup, "VerifyToken").WithError(err).WithUserMessage("%s", userMessageError)
+				return nil, dwsv1alpha5.NewResourceError("%s: %s", errGroup, "VerifyToken").WithError(err).WithUserMessage("%s", userMessageError)
 			}
 		} else {
-			return nil, dwsv1alpha4.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
+			return nil, dwsv1alpha5.NewResourceError("%s: %s", errGroup, "Create").WithError(err).WithUserMessage("%s", userMessageError)
 		}
 	} else {
 		log.Info("created token", "secret", client.ObjectKeyFromObject(tokenSecret))
 	}
 	return workflowToken, nil
+}
+
+// sendContainerShutdown sends a shutdown request to the user container. This is done by sending a
+// POST request to the `/shutdown` endpoint of the user container. This might fail if the user
+// container does not implement the `/shutdown` endpoint, but we still want to try to send the
+// request.
+func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha5.Workflow, profile *nnfv1alpha7.NnfContainerProfile) error {
+	isMPIJob := profile.Data.NnfMPISpec != nil
+	isCopyOffload := isMPIJob && profile.Data.NnfMPISpec.CopyOffload
+
+	hosts := []string{}
+	ports := strings.Split(workflow.Status.Env["NNF_CONTAINER_PORTS"], ",")
+
+	// Build the list of hosts to send the shutdown to based on the job type
+	if isMPIJob {
+		launcher := workflow.Status.Env["NNF_CONTAINER_LAUNCHER"]
+		for _, port := range ports {
+			hosts = append(hosts, fmt.Sprintf("%s:%s", launcher, port))
+		}
+	} else {
+		// Get the targeted NNF nodes for the container jobs
+		nnfNodes, err := r.getNnfNodesFromComputes(ctx, workflow)
+		if err != nil || len(nnfNodes) <= 0 {
+			return dwsv1alpha5.NewResourceError("error obtaining the target NNF nodes for containers").WithError(err)
+		}
+		for _, node := range nnfNodes {
+			for _, port := range ports {
+				hosts = append(hosts, fmt.Sprintf("%s:%s", node, port))
+			}
+		}
+	}
+
+	if len(hosts) > 0 {
+		token, err := r.getWorkflowToken(ctx, workflow)
+		if err != nil {
+			return dwsv1alpha5.NewResourceError("could not get workflow token string").WithError(err)
+		}
+
+		// Send the request but do not return an error if it fails. It's possible that the
+		// container doesn't have this implemented, but we need to try to send the request anyway.
+		// The PostRunTimeout will eventually kill the container if it doesn't shut down gracefully.
+		if err := r.sendShutdownToHosts(ctx, hosts, string(token), isCopyOffload); err != nil {
+			// Log the error but do not return it, as we want to continue with the workflow.
+			r.Log.Error(err, "could not send shutdown to user container hosts", "hosts", hosts)
+		}
+	}
+
+	return nil
+}
+
+// sendShutdownToHosts sends a shutdown request to each host in the provided list. This expects the
+// user container to have implemented a `/shutdown` endpoint that accepts a POST request. If we get
+// a connection refused error, we treat it as a success because the user container will no longer be
+// running after the shutdown.
+func (r *NnfWorkflowReconciler) sendShutdownToHosts(ctx context.Context, hosts []string, token string, copyOffload bool) error {
+
+	failedRequests := map[string]int{}
+
+	// Retrieve the CA cert for the user container and create a cert pool for the HTTP client.
+	// This should be present whether the container is using tokens or not.
+	caCert, err := getUserContainerCACert(r.Client, ctx)
+	if err != nil {
+		return err
+	}
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCert) {
+		return fmt.Errorf("failed to append CA cert")
+	}
+
+	// Create an HTTP client with the CA cert pool and a short timeout
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+			},
+		},
+		Timeout: 1 * time.Second,
+	}
+
+	// Send a shutdown request to each host. The request is a POST to the /shutdown endpoint. If it fails,
+	// just log the error and continue to the next host.
+	for _, host := range hosts {
+		url := "https://" + host + "/shutdown"
+		body := []byte(`{"message": "shutdown"}`)
+
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		if copyOffload {
+			req.Header.Set("Accepts-version", copyOffloadAPIVersion)
+		}
+
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set("X-Auth-Type", "XOAUTH2")
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			// Once the shutdown completes, the user container will no longer be running, so we can ignore
+			// ECONNREFUSED errors
+			var opErr *net.OpError
+			if errors.As(err, &opErr) {
+				if sysErr, ok := opErr.Err.(*os.SyscallError); ok && sysErr.Err == syscall.ECONNREFUSED {
+					// Treat as success, do not add to failedRequests
+					continue
+				}
+			}
+			return err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			failedRequests[host] = resp.StatusCode
+		}
+	}
+
+	// If there are any failed requests, return an error with the details of the failed hosts
+	if len(failedRequests) > 0 {
+		failedRequestsStr := ""
+		for host, status := range failedRequests {
+			failedRequestsStr += fmt.Sprintf("%s: %d, ", host, status)
+		}
+		return fmt.Errorf("failed to send shutdown to some hosts: %s", failedRequestsStr)
+	}
+
+	return nil
 }

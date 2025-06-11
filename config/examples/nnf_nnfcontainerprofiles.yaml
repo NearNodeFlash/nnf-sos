@@ -64,6 +64,28 @@ kind: NnfContainerProfile
 metadata:
   name: example-forever
 data:
+  postRunTimeoutSeconds: 5
+  retryLimit: 6
+  storages:
+    - name: DW_JOB_foo_local_storage
+      optional: false
+    - name: DW_PERSISTENT_foo_persistent_storage
+      optional: true
+  spec:
+    containers:
+      - name: example-forever
+        image: alpine:latest
+        command:
+          - /bin/sh
+          - -c
+          - 'while true; do date && sleep 5; done'
+---
+apiVersion: nnf.cray.hpe.com/v1alpha7
+kind: NnfContainerProfile
+metadata:
+  name: example-forever-nowait
+data:
+  postRunTimeoutSeconds: 0
   retryLimit: 6
   storages:
     - name: DW_JOB_foo_local_storage
