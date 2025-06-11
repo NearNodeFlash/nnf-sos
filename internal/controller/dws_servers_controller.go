@@ -228,6 +228,31 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 			matchLabels,
 		}
 
+		nnfNodeStorageList := &nnfv1alpha7.NnfNodeStorageList{}
+		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if len(nnfNodeStorageList.Items) != len(nnfStorage.Spec.AllocationSets[storageIndex].Nodes) {
+			ready = false
+		}
+
+		serversReadyMap := make(map[string]bool)
+
+		for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+			if nnfNodeStorage.Status.Ready {
+				if _, exists := serversReadyMap[nnfNodeStorage.GetNamespace()]; !exists {
+					serversReadyMap[nnfNodeStorage.GetNamespace()] = true
+				}
+			} else {
+				serversReadyMap[nnfNodeStorage.GetNamespace()] = false
+			}
+		}
+
+		for name, serversReady := range serversReadyMap {
+			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha5.ServersStatusStorage{AllocationSize: 0, Ready: serversReady}
+		}
+
 		nnfNodeBlockStorageList := &nnfv1alpha7.NnfNodeBlockStorageList{}
 		if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
 			return ctrl.Result{}, err
@@ -258,7 +283,12 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 		}
 
 		for name, capacityAllocated := range capacityAllocatedMap {
-			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha5.ServersStatusStorage{AllocationSize: capacityAllocated}
+			serverReady := false
+			if _, exists := servers.Status.AllocationSets[serversIndex].Storage[name]; exists {
+				serverReady = servers.Status.AllocationSets[serversIndex].Storage[name].Ready
+			}
+
+			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha5.ServersStatusStorage{AllocationSize: capacityAllocated, Ready: serverReady}
 		}
 
 		for _, storageStatus := range servers.Status.AllocationSets[serversIndex].Storage {
@@ -395,6 +425,7 @@ func (r *DWSServersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha5.Servers{}).
 		Watches(&nnfv1alpha7.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
+		Watches(&nnfv1alpha7.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha5.OwnerLabelMapFunc)).
 		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha5.OwnerLabelMapFunc)).
 		Complete(r)
 }
