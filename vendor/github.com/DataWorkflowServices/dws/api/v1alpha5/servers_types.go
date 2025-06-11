@@ -64,7 +64,7 @@ type ServersStatusStorage struct {
 	// Allocation size in bytes
 	AllocationSize int64 `json:"allocationSize"`
 
-	// Ready indicates whether all the allocatoons on the server have been successfully created
+	// Ready indicates whether all the allocations on the server have been successfully created
 	Ready bool `json:"ready"`
 }
 

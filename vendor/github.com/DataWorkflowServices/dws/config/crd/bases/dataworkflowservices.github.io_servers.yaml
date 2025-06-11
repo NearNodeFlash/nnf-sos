@@ -707,7 +707,7 @@ spec:
                             format: int64
                             type: integer
                           ready:
-                            description: Ready indicates whether all the allocatoons
+                            description: Ready indicates whether all the allocations
                               on the server have been successfully created
                             type: boolean
                         required:
