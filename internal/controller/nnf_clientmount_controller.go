@@ -315,7 +315,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
-			//
+			// Log some debug information to figure out why the deactivate failed
 			devices, err := nvme.NvmeGetNamespaceDevices()
 			if err != nil {
 				log.Info("failed to get namespace devices", "error", err)
