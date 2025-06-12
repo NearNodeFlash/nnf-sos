@@ -1196,6 +1196,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 					// If the compute node is down, then ignore an unmount failure. If the compute node
 					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
 					if offline {
+						log.Info("ignoring status from offline compute node", "node name", clientMount.GetNamespace())
 						continue
 					}
 				}
@@ -1265,6 +1266,8 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 		if !offline {
 			continue
 		}
+
+		log.Info("removing finalizer from offline compute node", "node name", clientMount.GetNamespace())
 
 		// Remove the finalizer from the ClientMount since the compute node is offline
 		controllerutil.RemoveFinalizer(&clientMount, finalizerNnfClientMount)
