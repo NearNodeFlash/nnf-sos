@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ import (
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
+	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 )
 
 type ClientType string
@@ -157,6 +159,25 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 		}
 
+		for _, mount := range clientMount.Spec.Mounts {
+			if mount.Type == "lustre" || mount.Device.Type != dwsv1alpha5.ClientMountDeviceTypeLVM {
+				continue
+			}
+
+			existingDevices, err := nvme.NvmeListDevices(log)
+			if err != nil {
+				return ctrl.Result{}, dwsv1alpha5.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
+			}
+
+			for _, mountDevice := range mount.Device.LVM.NVMeInfo {
+				for _, existingDevice := range existingDevices {
+					if existingDevice.NQN == mountDevice.DeviceSerial && strconv.Itoa(int(existingDevice.NSID)) == mountDevice.NamespaceID {
+						log.Info("NVMe device is still present but should have been removed", "NQN", mountDevice.DeviceSerial, "NSID", mountDevice.NamespaceID)
+					}
+				}
+			}
+		}
+
 		controllerutil.RemoveFinalizer(clientMount, finalizerNnfClientMount)
 		if err := r.Update(ctx, clientMount); err != nil {
 			if !apierrors.IsConflict(err) {
@@ -259,11 +280,29 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 	if shouldMount {
 		activated, err := blockDevice.Activate(ctx)
-		if err != nil {
+		if err != nil && clientMountInfo.Device.Type == dwsv1alpha5.ClientMountDeviceTypeLVM {
 			// If we weren't able to activate the block device, then rescan for the NVMe namespaces. If the rescan is
 			// successful the block device will be activated on the next reconcile
 			if err := nvme.NvmeRescanDevices(log); err != nil {
 				return dwsv1alpha5.NewResourceError("could not rescan NVMe devices").WithError(err).WithMajor()
+			}
+
+			existingDevices, err := nvme.NvmeListDevices(log)
+			if err != nil {
+				return dwsv1alpha5.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
+			}
+
+			for _, expectedDevice := range clientMountInfo.Device.LVM.NVMeInfo {
+				found := false
+				for _, existingDevice := range existingDevices {
+					if existingDevice.NQN == expectedDevice.DeviceSerial && strconv.Itoa(int(existingDevice.NSID)) == expectedDevice.NamespaceID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					log.Info("Could not find expected NVMe device", "NQN", expectedDevice.DeviceSerial, "NSID", expectedDevice.NamespaceID)
+				}
 			}
 
 			return dwsv1alpha5.NewResourceError("unable to activate block device").WithError(err).WithMajor()
@@ -314,6 +353,21 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
+			// Log some debug information to figure out why the deactivate failed
+			devices, err := nvme.NvmeGetNamespaceDevices()
+			if err != nil {
+				log.Info("failed to get namespace devices", "error", err)
+			} else {
+				log.Info("deactivate failed", "current namespace devices", devices)
+			}
+
+			output, err := command.Run("dlm_tool ls -n", log)
+			if err != nil {
+				log.Info("failed to run dlm_tool", "error", err)
+			} else {
+				log.Info("deactivate failed", "dlm_tool output", output)
+			}
+
 			return dwsv1alpha5.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
 		}
 		if deactivated {

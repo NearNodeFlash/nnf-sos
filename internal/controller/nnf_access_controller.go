@@ -604,6 +604,16 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			if !nnfNodeStorage.Status.Ready {
 				continue
 			}
+			nnfNodeBlockStorage := &nnfv1alpha7.NnfNodeBlockStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfNodeStorage.Name,
+					Namespace: nnfNodeStorage.Namespace,
+				},
+			}
+
+			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err != nil {
+				return nil, dwsv1alpha5.NewResourceError("unable to get nnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithMajor()
+			}
 
 			// Loop through each allocation to pull out the device information and build the
 			// mount information
@@ -650,6 +660,14 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 					mountInfo.Device.LVM.VolumeGroup = nnfNodeStorage.Status.Allocations[i].VolumeGroup
 					mountInfo.Device.LVM.LogicalVolume = nnfNodeStorage.Status.Allocations[i].LogicalVolume
 					mountInfo.Device.LVM.DeviceType = dwsv1alpha5.ClientMountLVMDeviceTypeNVMe
+					blockAllocationSetIndex := i
+					if nnfNodeBlockStorage.Spec.SharedAllocation {
+						blockAllocationSetIndex = 0
+					}
+
+					for _, nvmeDesc := range nnfNodeBlockStorage.Status.Allocations[blockAllocationSetIndex].Devices {
+						mountInfo.Device.LVM.NVMeInfo = append(mountInfo.Device.LVM.NVMeInfo, dwsv1alpha5.ClientMountNVMeDesc{DeviceSerial: nvmeDesc.NQN, NamespaceID: nvmeDesc.NamespaceId})
+					}
 				}
 
 				existingStorage[nnfNodeStorage.Namespace] = append(existingStorage[nnfNodeStorage.Namespace], mountInfo)
@@ -1196,6 +1214,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 					// If the compute node is down, then ignore an unmount failure. If the compute node
 					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
 					if offline {
+						log.Info("ignoring status from offline compute node", "node name", clientMount.GetNamespace())
 						continue
 					}
 				}
@@ -1265,6 +1284,8 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 		if !offline {
 			continue
 		}
+
+		log.Info("removing finalizer from offline compute node", "node name", clientMount.GetNamespace())
 
 		// Remove the finalizer from the ClientMount since the compute node is offline
 		controllerutil.RemoveFinalizer(&clientMount, finalizerNnfClientMount)
