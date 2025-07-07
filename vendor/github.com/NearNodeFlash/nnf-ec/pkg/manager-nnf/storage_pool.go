@@ -242,6 +242,12 @@ func (p *StoragePool) replaceMissingVolumes() error {
 		log.Info("replace missing volume")
 		storage := unusedStorages[idx]
 
+		// Add safety check before creating volume
+		if storage == nil || !storage.IsEnabled() || storageDeviceIsNil(storage) {
+			log.Error(fmt.Errorf("storage unavailable"), "Cannot create volume: storage is nil, not enabled, or device is nil")
+			return fmt.Errorf("Cannot create volume: storage unavailable for missing volume %v", missingVolume)
+		}
+
 		volume, err := nvme.CreateVolume(storage, p.volumeCapacity)
 		if err != nil {
 			log.Error(err, "Failed to create replacement volume")
@@ -570,4 +576,17 @@ func (rh *storagePoolRecoveryReplayHandler) Done() (bool, error) {
 	}
 
 	return false, nil
+}
+
+// Helper to check if storage device is nil
+func storageDeviceIsNil(s interface{}) bool {
+	if s == nil {
+		return true
+	}
+	// Use reflection to check for the unexported field
+	type deviceGetter interface{ DeviceApi() interface{} }
+	if dg, ok := s.(deviceGetter); ok {
+		return dg.DeviceApi() == nil
+	}
+	return false
 }

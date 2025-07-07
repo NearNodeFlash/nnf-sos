@@ -43,7 +43,7 @@ func ResourceOperationFailedNnf(arg0, arg1 string) events.Event {
 // arg4: The namespace id on the new storage device.
 func StoragePoolPatchedNnf(arg0, arg1, arg2, arg3, arg4 string) events.Event {
 	return events.Event{
-		Message:         "The storage pool '%1' has been patched",
+		Message:         "The storage pool '%1' has been patched, old storage '%2', old namespace id '%3', new storage '%4', new namespace id '%5'",
 		MessageSeverity: "OK",
 		MessageId:       "Nnf.1.0.0.StoragePoolPatched",
 		MessageArgs:     []string{arg0, arg1, arg2, arg3, arg4},
@@ -58,5 +58,18 @@ func FabricReadyNnf(arg0 string) events.Event {
 		MessageSeverity: "OK",
 		MessageId:       "Nnf.1.0.0.FabricReady",
 		MessageArgs:     []string{arg0},
+	}
+}
+
+// NvmeStateChangeNnf - event indicating that a drive's state has changed
+// arg0: The slot identifier. This argument shall contain the NVMe slot number.
+// arg1: The model number. This argument shall contain the NVMe model number.
+// arg2: The serial number. This argument shall contain the NVMe serial number.
+func NvmeStateChangeNnf(arg0, arg1, arg2 string) events.Event {
+	return events.Event{
+		Message:         "The Nvme State changed slot '%1', model '%2', serial '%3'",
+		MessageSeverity: "Warning",
+		MessageId:       "Nnf.1.0.0.NvmeStateChanged",
+		MessageArgs:     []string{arg0, arg1, arg2},
 	}
 }
