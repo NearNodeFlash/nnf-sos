@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -222,7 +222,7 @@ func (d *cliDevice) ListAttachedControllers(namespaceId nvme.NamespaceIdentifier
 
 func (d *cliDevice) CreateNamespace(sizeInSectors uint64, sectorSizeIndex uint8) (nvme.NamespaceIdentifier, nvme.NamespaceGloballyUniqueIdentifier, error) {
 	// Example Command
-	//    # nvme create-ns /dev/nvme2 --nsze=468843606 --ncap=468843606 --flbas=3 --nmic=1 
+	//    # nvme create-ns /dev/nvme2 --nsze=468843606 --ncap=468843606 --flbas=3 --nmic=1
 	//    create-ns: Success, created nsid:1
 
 	rsp, err := d.run(fmt.Sprintf("create-ns %s --nsze=%d --ncap=%d --flbas=%d --nmic=1", d.dev(), sizeInSectors, sizeInSectors, sectorSizeIndex))
@@ -375,17 +375,20 @@ func (*cliDevice) GetNamespaceFeature(namespaceId nvme.NamespaceIdentifier) ([]b
 	return nil, nil
 }
 
-func (d *cliDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
+// GetSmartLog returns the raw SMART log page data
+func (d *cliDevice) GetSmartLog() (*nvme.SmartLog, error) {
 	rsp, err := d.run(fmt.Sprintf("smart-log %s --output-format=binary", d.dev()))
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	log := new(nvme.SmartLog)
-
 	err = structex.DecodeByteBuffer(bytes.NewBuffer([]byte(rsp)), log)
+	if err != nil {
+		return nil, err
+	}
 
-	return log.PercentageUsed, err
+	return log, nil
 }
 
 func (d *cliDevice) run(cmd string) (string, error) {

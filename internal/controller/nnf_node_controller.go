@@ -426,7 +426,7 @@ func updateDrives(node *nnfv1alpha7.NnfNode, log logr.Logger) error {
 		storageId := storageEndpoint.OdataId[strings.LastIndex(storageEndpoint.OdataId, "/")+1:]
 		storage := &sf.StorageV190Storage{}
 		if err := storageService.StorageIdGet(storageId, storage); err != nil {
-			log.Error(err, fmt.Sprintf("Failed to retrive Storage %s", storageId))
+			log.Error(err, fmt.Sprintf("Failed to retrieve Storage %s", storageId))
 			return err
 		}
 

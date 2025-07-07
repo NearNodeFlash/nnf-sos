@@ -54,7 +54,7 @@
             "Message": "The storage pool '%1' patched, SerialNumber '%2', Namespace '%3' replaced with SerialNumber '%4', Namespace '%5'",
             "Severity": "OK",
             "MessageSeverity": "OK",
-            "NumberOfArgs": 1,
+            "NumberOfArgs": 5,
             "ParamTypes": [
                 "string",
                 "string",
@@ -75,6 +75,30 @@
                 "This argument shall contain the namespace id on the storage device that was replaced.",
                 "This argument shall contain the durable name of the new storage device.",
                 "This argument shall contain the namespace id on the new storage device."
+            ],
+            "Resolution": "None"
+        },
+        "NvmeStateChange": {
+            "Description": "Indicates that an NVMe device has changed state",
+            "LongDescription": "This message shall be used to indicate that an NVMe device has changed state",
+            "Message": "The Nvme State changed slot '%1', model '%2', serial '%3'",
+            "Severity": "Warning",
+            "MessageSeverity": "Warning",
+            "NumberOfArgs": 3,
+            "ParamTypes": [
+                "number",
+                "string",
+                "string"
+            ],
+            "ArgDescriptions": [
+                "The slot identifier.",
+                "The model number.",
+                "The serial number."
+            ],
+            "ArgLongDescriptions": [
+                "This argument shall contain the NVMe slot number.",
+                "This argument shall contain the NVMe model number.",
+                "This argument shall contain the NVMe serial number."
             ],
             "Resolution": "None"
         }
