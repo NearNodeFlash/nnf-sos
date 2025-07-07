@@ -148,20 +148,20 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
-			for i := range nnfNodeStorage.Status.Allocations {
-				// Release physical storage
-				result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
-				if err != nil {
-
-					return ctrl.Result{}, err
-				}
-				if result != nil {
-					return *result, nil
-				}
-			}
-
-			// Remove the finalizer from the NnfNodeBlockStorage
 			if controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+				for i := range nnfNodeStorage.Status.Allocations {
+					// Release physical storage
+					result, err := r.deleteAllocation(ctx, nnfNodeStorage, i)
+					if err != nil {
+
+						return ctrl.Result{}, err
+					}
+					if result != nil {
+						return *result, nil
+					}
+				}
+
+				// Remove the finalizer from the NnfNodeBlockStorage
 				controllerutil.RemoveFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
 
 				err := r.Update(ctx, nnfNodeBlockStorage)
@@ -225,6 +225,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err == nil {
 		if !controllerutil.ContainsFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage) {
+			if !nnfNodeBlockStorage.Status.Ready {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
+			}
+
 			controllerutil.AddFinalizer(nnfNodeBlockStorage, finalizerNnfNodeStorage)
 
 			err := r.Update(ctx, nnfNodeBlockStorage)
@@ -233,10 +237,6 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			}
 
 			return ctrl.Result{Requeue: true}, nil
-		}
-
-		if !nnfNodeBlockStorage.Status.Ready {
-			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
 	}
 
