@@ -185,8 +185,8 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	return nil
 }
 
-// EventHandler implements event.Subscription. Every Upstream or Downstream event runs the reconciler
-// so all the NNF Node server/drive status stays current.
+// EventHandler implements event.Subscription. Every Upstream, Downstream, or NvmeStateChange event runs the reconciler
+// to keep NNF Node server/drive status current.
 func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
 	log := r.Log.WithValues("nnf-ec event", "node-up/node-down")
 
@@ -198,8 +198,15 @@ func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
 	downstreamLinkEstablished := e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
 	downstreamLinkDropped := e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
 
-	// Check if the event is one that we care about
-	if !upstreamLinkEstablished && !upstreamLinkDropped && !downstreamLinkEstablished && !downstreamLinkDropped {
+	// Drive state change events
+	nvmeStateChange := e.Is(msgreg.NvmeStateChangeNnf("", "", ""))
+
+	// If we don't care about the event, exit
+	if !upstreamLinkEstablished &&
+		!upstreamLinkDropped &&
+		!downstreamLinkEstablished &&
+		!downstreamLinkDropped &&
+		!nvmeStateChange {
 		return nil
 	}
 
