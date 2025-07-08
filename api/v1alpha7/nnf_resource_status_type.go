@@ -83,9 +83,9 @@ const (
 // UpdateIfWorseThan updates the stored status of the resource if the new status is worse than what was stored
 func (rst NnfResourceStatusType) UpdateIfWorseThan(status *NnfResourceStatusType) {
 	switch rst {
-	case ResourceStarting:
+	case ResourceStarting, ResourceOffline, ResourceNotPresent, ResourceDisabled:
 		if *status == ResourceReady {
-			*status = ResourceStarting
+			*status = rst
 		}
 	case ResourceFailed:
 		if *status != ResourceFailed {

@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -88,7 +89,7 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha4.DeleteChildren(ctx, r.Client, r.getChildObjects(), nnfSystemStorage)
+		deleteStatus, err := dwsv1alpha5.DeleteChildren(ctx, r.Client, r.getChildObjects(), nnfSystemStorage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -164,12 +165,12 @@ func (r *NnfSystemStorageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 // Get the SystemConfiguration. If a SystemConfiguration is specified in the NnfSystemStorage, use that.
 // Otherwise, use the default/default SystemConfiguration.
-func (r *NnfSystemStorageReconciler) getSystemConfiguration(ctx context.Context, nnfSystemStorage *nnfv1alpha7.NnfSystemStorage) (*dwsv1alpha4.SystemConfiguration, error) {
-	systemConfiguration := &dwsv1alpha4.SystemConfiguration{}
+func (r *NnfSystemStorageReconciler) getSystemConfiguration(ctx context.Context, nnfSystemStorage *nnfv1alpha7.NnfSystemStorage) (*dwsv1alpha5.SystemConfiguration, error) {
+	systemConfiguration := &dwsv1alpha5.SystemConfiguration{}
 
 	if nnfSystemStorage.Spec.SystemConfiguration != (corev1.ObjectReference{}) {
-		if nnfSystemStorage.Spec.SystemConfiguration.Kind != reflect.TypeOf(dwsv1alpha4.SystemConfiguration{}).Name() {
-			return nil, dwsv1alpha4.NewResourceError("system configuration is not of kind '%s'", reflect.TypeOf(dwsv1alpha4.SystemConfiguration{}).Name()).WithFatal()
+		if nnfSystemStorage.Spec.SystemConfiguration.Kind != reflect.TypeOf(dwsv1alpha5.SystemConfiguration{}).Name() {
+			return nil, dwsv1alpha5.NewResourceError("system configuration is not of kind '%s'", reflect.TypeOf(dwsv1alpha5.SystemConfiguration{}).Name()).WithFatal()
 		}
 
 		systemConfiguration.ObjectMeta = metav1.ObjectMeta{
@@ -184,7 +185,7 @@ func (r *NnfSystemStorageReconciler) getSystemConfiguration(ctx context.Context,
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(systemConfiguration), systemConfiguration); err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not get systemconfiguration '%v'", client.ObjectKeyFromObject(systemConfiguration)).WithError(err)
+		return nil, dwsv1alpha5.NewResourceError("could not get systemconfiguration '%v'", client.ObjectKeyFromObject(systemConfiguration)).WithError(err)
 	}
 
 	return systemConfiguration, nil
@@ -194,11 +195,11 @@ func (r *NnfSystemStorageReconciler) getSystemConfiguration(ctx context.Context,
 // specified in the NnfSystemStorage spec, and it must be marked as pinned.
 func (r *NnfSystemStorageReconciler) getStorageProfile(ctx context.Context, nnfSystemStorage *nnfv1alpha7.NnfSystemStorage) (*nnfv1alpha7.NnfStorageProfile, error) {
 	if nnfSystemStorage.Spec.StorageProfile == (corev1.ObjectReference{}) {
-		return nil, dwsv1alpha4.NewResourceError("StorageProfile must be specified").WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("StorageProfile must be specified").WithFatal()
 	}
 
 	if nnfSystemStorage.Spec.StorageProfile.Kind != reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name() {
-		return nil, dwsv1alpha4.NewResourceError("StorageProfile is not of kind '%s'", reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name()).WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("StorageProfile is not of kind '%s'", reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name()).WithFatal()
 	}
 
 	storageProfile := &nnfv1alpha7.NnfStorageProfile{
@@ -209,7 +210,7 @@ func (r *NnfSystemStorageReconciler) getStorageProfile(ctx context.Context, nnfS
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(storageProfile), storageProfile); err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not get StorageProfile '%v'", client.ObjectKeyFromObject(storageProfile)).WithError(err)
+		return nil, dwsv1alpha5.NewResourceError("could not get StorageProfile '%v'", client.ObjectKeyFromObject(storageProfile)).WithError(err)
 	}
 
 	return storageProfile, nil
@@ -226,7 +227,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 
 	if len(nnfSystemStorage.Spec.IncludeRabbits) != 0 {
 		if len(nnfSystemStorage.Spec.ExcludeRabbits) != 0 {
-			return dwsv1alpha4.NewResourceError("IncludeRabbits and ExcludeRabbits can not be used together").WithFatal()
+			return dwsv1alpha5.NewResourceError("IncludeRabbits and ExcludeRabbits can not be used together").WithFatal()
 		}
 
 		rabbitList = append([]string(nil), nnfSystemStorage.Spec.IncludeRabbits...)
@@ -262,7 +263,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 	if nnfSystemStorage.Spec.ExcludeDisabledRabbits {
 		tempRabbitList := rabbitList[:0]
 		for _, rabbit := range rabbitList {
-			storage := &dwsv1alpha4.Storage{
+			storage := &dwsv1alpha5.Storage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      rabbit,
 					Namespace: corev1.NamespaceDefault,
@@ -270,7 +271,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 			}
 
 			if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-				return dwsv1alpha4.NewResourceError("could not get Storage '%v'", client.ObjectKeyFromObject(storage)).WithError(err)
+				return dwsv1alpha5.NewResourceError("could not get Storage '%v'", client.ObjectKeyFromObject(storage)).WithError(err)
 			}
 
 			labels := storage.GetLabels()
@@ -278,11 +279,11 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 				continue
 			}
 
-			if storageType := labels[dwsv1alpha4.StorageTypeLabel]; storageType != "Rabbit" {
+			if storageType := labels[dwsv1alpha5.StorageTypeLabel]; storageType != "Rabbit" {
 				continue
 			}
 
-			if storage.Spec.State == dwsv1alpha4.DisabledState || storage.Status.Status != dwsv1alpha4.ReadyStatus {
+			if storage.Spec.State == dwsv1alpha5.DisabledState || storage.Status.Status != dwsv1alpha5.ReadyStatus {
 				continue
 			}
 
@@ -301,11 +302,11 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 		case nnfv1alpha7.ComputesTargetPattern:
 			allocationCount = len(nnfSystemStorage.Spec.ComputesPattern)
 		default:
-			return dwsv1alpha4.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
+			return dwsv1alpha5.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
 		}
 	}
 	// Use the Rabbit list to fill in the servers resource with one allocation per Rabbit
-	servers := &dwsv1alpha4.Servers{
+	servers := &dwsv1alpha5.Servers{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfSystemStorage.GetName(),
 			Namespace: nnfSystemStorage.GetNamespace(),
@@ -314,25 +315,25 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, servers,
 		func() error {
-			dwsv1alpha4.AddOwnerLabels(servers, nnfSystemStorage)
+			dwsv1alpha5.AddOwnerLabels(servers, nnfSystemStorage)
 			addDirectiveIndexLabel(servers, 0)
 
-			servers.Spec.AllocationSets = []dwsv1alpha4.ServersSpecAllocationSet{{
+			servers.Spec.AllocationSets = []dwsv1alpha5.ServersSpecAllocationSet{{
 				Label:          "system-storage",
 				AllocationSize: nnfSystemStorage.Spec.Capacity,
 			}}
 
-			servers.Spec.AllocationSets[0].Storage = []dwsv1alpha4.ServersSpecStorage{}
+			servers.Spec.AllocationSets[0].Storage = []dwsv1alpha5.ServersSpecStorage{}
 
 			for _, rabbitName := range rabbitList {
-				servers.Spec.AllocationSets[0].Storage = append(servers.Spec.AllocationSets[0].Storage, dwsv1alpha4.ServersSpecStorage{Name: rabbitName, AllocationCount: allocationCount})
+				servers.Spec.AllocationSets[0].Storage = append(servers.Spec.AllocationSets[0].Storage, dwsv1alpha5.ServersSpecStorage{Name: rabbitName, AllocationCount: allocationCount})
 			}
 
 			return ctrl.SetControllerReference(nnfSystemStorage, servers, r.Scheme)
 		})
 
 	if err != nil {
-		return dwsv1alpha4.NewResourceError("CreateOrUpdate failed for servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
+		return dwsv1alpha5.NewResourceError("CreateOrUpdate failed for servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -359,7 +360,7 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 
 	if len(nnfSystemStorage.Spec.IncludeComputes) != 0 {
 		if len(nnfSystemStorage.Spec.ExcludeComputes) != 0 {
-			return dwsv1alpha4.NewResourceError("IncludeComputes and ExcludeComputes can not be used together").WithFatal()
+			return dwsv1alpha5.NewResourceError("IncludeComputes and ExcludeComputes can not be used together").WithFatal()
 		}
 
 		computeList = append([]string(nil), nnfSystemStorage.Spec.IncludeComputes...)
@@ -369,14 +370,14 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 			return err
 		}
 
-		servers := &dwsv1alpha4.Servers{
+		servers := &dwsv1alpha5.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfSystemStorage.GetName(),
 				Namespace: nnfSystemStorage.GetNamespace(),
 			},
 		}
 		if err := r.Get(ctx, client.ObjectKeyFromObject(servers), servers); err != nil {
-			return dwsv1alpha4.NewResourceError("could not get Servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
+			return dwsv1alpha5.NewResourceError("could not get Servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
 		}
 
 		// Create a map of the Rabbit node names so it's easy to search
@@ -397,7 +398,7 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 		case nnfv1alpha7.ComputesTargetPattern:
 			indexList = append([]int(nil), nnfSystemStorage.Spec.ComputesPattern...)
 		default:
-			return dwsv1alpha4.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
+			return dwsv1alpha5.NewResourceError("unexpected ComputesTarget type '%s'", nnfSystemStorage.Spec.ComputesTarget).WithFatal()
 		}
 
 		indexMap := map[int]bool{}
@@ -436,7 +437,7 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 	}
 
 	// Create a computes resource using the list of compute nodes.
-	computes := &dwsv1alpha4.Computes{
+	computes := &dwsv1alpha5.Computes{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfSystemStorage.GetName(),
 			Namespace: nnfSystemStorage.GetNamespace(),
@@ -445,20 +446,20 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, computes,
 		func() error {
-			dwsv1alpha4.AddOwnerLabels(computes, nnfSystemStorage)
+			dwsv1alpha5.AddOwnerLabels(computes, nnfSystemStorage)
 			addDirectiveIndexLabel(computes, 0)
 
-			computes.Data = []dwsv1alpha4.ComputesData{}
+			computes.Data = []dwsv1alpha5.ComputesData{}
 
 			for _, computeName := range computeList {
-				computes.Data = append(computes.Data, dwsv1alpha4.ComputesData{Name: computeName})
+				computes.Data = append(computes.Data, dwsv1alpha5.ComputesData{Name: computeName})
 			}
 
 			return ctrl.SetControllerReference(nnfSystemStorage, computes, r.Scheme)
 		})
 
 	if err != nil {
-		return dwsv1alpha4.NewResourceError("CreateOrUpdate failed for computes: %v", client.ObjectKeyFromObject(computes)).WithError(err)
+		return dwsv1alpha5.NewResourceError("CreateOrUpdate failed for computes: %v", client.ObjectKeyFromObject(computes)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -481,7 +482,7 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 		return err
 	}
 
-	servers := &dwsv1alpha4.Servers{
+	servers := &dwsv1alpha5.Servers{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfSystemStorage.GetName(),
 			Namespace: nnfSystemStorage.GetNamespace(),
@@ -489,7 +490,7 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(servers), servers); err != nil {
-		return dwsv1alpha4.NewResourceError("could not get Servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
+		return dwsv1alpha5.NewResourceError("could not get Servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
 	}
 
 	nnfStorage := &nnfv1alpha7.NnfStorage{
@@ -501,7 +502,7 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfStorage,
 		func() error {
-			dwsv1alpha4.AddOwnerLabels(nnfStorage, nnfSystemStorage)
+			dwsv1alpha5.AddOwnerLabels(nnfStorage, nnfSystemStorage)
 			addDirectiveIndexLabel(nnfStorage, 0)
 			addPinnedStorageProfileLabel(nnfStorage, storageProfile)
 
@@ -558,7 +559,7 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 		})
 
 	if err != nil {
-		return dwsv1alpha4.NewResourceError("CreateOrUpdate failed for NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+		return dwsv1alpha5.NewResourceError("CreateOrUpdate failed for NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -582,7 +583,7 @@ func (r *NnfSystemStorageReconciler) waitForNnfStorage(ctx context.Context, nnfS
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-		return true, dwsv1alpha4.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
+		return true, dwsv1alpha5.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err)
 	}
 
 	// If the Status section has not been filled in yet, exit and wait.
@@ -591,7 +592,7 @@ func (r *NnfSystemStorageReconciler) waitForNnfStorage(ctx context.Context, nnfS
 	}
 
 	if nnfStorage.Status.Error != nil {
-		return true, dwsv1alpha4.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error)
+		return true, dwsv1alpha5.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error)
 	}
 
 	if !nnfStorage.Status.Ready {
@@ -622,7 +623,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 	// Create an NNFAccess for the compute clients
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfAccess,
 		func() error {
-			dwsv1alpha4.AddOwnerLabels(nnfAccess, nnfSystemStorage)
+			dwsv1alpha5.AddOwnerLabels(nnfAccess, nnfSystemStorage)
 			addPinnedStorageProfileLabel(nnfAccess, storageProfile)
 			addDirectiveIndexLabel(nnfAccess, 0)
 
@@ -641,7 +642,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			nnfAccess.Spec.ClientReference = corev1.ObjectReference{
 				Name:      nnfSystemStorage.GetName(),
 				Namespace: nnfSystemStorage.GetNamespace(),
-				Kind:      reflect.TypeOf(dwsv1alpha4.Computes{}).Name(),
+				Kind:      reflect.TypeOf(dwsv1alpha5.Computes{}).Name(),
 			}
 
 			nnfAccess.Spec.StorageReference = corev1.ObjectReference{
@@ -653,7 +654,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			return ctrl.SetControllerReference(nnfSystemStorage, nnfAccess, r.Scheme)
 		})
 	if err != nil {
-		return dwsv1alpha4.NewResourceError("Could not CreateOrUpdate compute node NnfAccess: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(err)
+		return dwsv1alpha5.NewResourceError("Could not CreateOrUpdate compute node NnfAccess: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(err)
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -677,11 +678,11 @@ func (r *NnfSystemStorageReconciler) waitForNnfAccess(ctx context.Context, nnfSy
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(nnfAccess), nnfAccess); err != nil {
-		return true, dwsv1alpha4.NewResourceError("could not get NnfAccess: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(err)
+		return true, dwsv1alpha5.NewResourceError("could not get NnfAccess: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(err)
 	}
 
 	if nnfAccess.Status.Error != nil {
-		return true, dwsv1alpha4.NewResourceError("NnfAccess resource error: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(nnfAccess.Status.Error)
+		return true, dwsv1alpha5.NewResourceError("NnfAccess resource error: %v", client.ObjectKeyFromObject(nnfAccess)).WithError(nnfAccess.Status.Error)
 	}
 
 	if nnfAccess.Status.State != nnfAccess.Spec.DesiredState {
@@ -714,12 +715,12 @@ func (r *NnfSystemStorageReconciler) NnfSystemStorageEnqueueAll(ctx context.Cont
 
 	return requests
 }
-func (r *NnfSystemStorageReconciler) getChildObjects() []dwsv1alpha4.ObjectList {
-	return []dwsv1alpha4.ObjectList{
+func (r *NnfSystemStorageReconciler) getChildObjects() []dwsv1alpha5.ObjectList {
+	return []dwsv1alpha5.ObjectList{
 		&nnfv1alpha7.NnfAccessList{},
 		&nnfv1alpha7.NnfStorageList{},
-		&dwsv1alpha4.ComputesList{},
-		&dwsv1alpha4.ServersList{},
+		&dwsv1alpha5.ComputesList{},
+		&dwsv1alpha5.ServersList{},
 	}
 }
 
@@ -727,10 +728,10 @@ func (r *NnfSystemStorageReconciler) getChildObjects() []dwsv1alpha4.ObjectList 
 func (r *NnfSystemStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha7.NnfSystemStorage{}).
-		Owns(&dwsv1alpha4.Computes{}).
-		Owns(&dwsv1alpha4.Servers{}).
+		Owns(&dwsv1alpha5.Computes{}).
+		Owns(&dwsv1alpha5.Servers{}).
 		Owns(&nnfv1alpha7.NnfStorage{}).
 		Owns(&nnfv1alpha7.NnfAccess{}).
-		Watches(&dwsv1alpha4.Storage{}, handler.EnqueueRequestsFromMapFunc(r.NnfSystemStorageEnqueueAll)).
+		Watches(&dwsv1alpha5.Storage{}, handler.EnqueueRequestsFromMapFunc(r.NnfSystemStorageEnqueueAll)).
 		Complete(r)
 }

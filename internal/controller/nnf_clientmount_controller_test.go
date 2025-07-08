@@ -23,32 +23,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 )
 
 var _ = Describe("Clientmount Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for Servers ", func() {
-		s := dwsv1alpha4.Servers{
-			Spec: dwsv1alpha4.ServersSpec{
-				AllocationSets: []dwsv1alpha4.ServersSpecAllocationSet{
-					{Label: "ost", Storage: []dwsv1alpha4.ServersSpecStorage{
+		s := dwsv1alpha5.Servers{
+			Spec: dwsv1alpha5.ServersSpec{
+				AllocationSets: []dwsv1alpha5.ServersSpecAllocationSet{
+					{Label: "ost", Storage: []dwsv1alpha5.ServersSpecStorage{
 						{Name: "rabbit-node-1", AllocationCount: 2},
 						{Name: "rabbit-node-2", AllocationCount: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Label: "ost", Storage: []dwsv1alpha4.ServersSpecStorage{
+					{Label: "ost", Storage: []dwsv1alpha5.ServersSpecStorage{
 						{Name: "rabbit-node-2", AllocationCount: 1}},
 					},
-					{Label: "mdt", Storage: []dwsv1alpha4.ServersSpecStorage{
+					{Label: "mdt", Storage: []dwsv1alpha5.ServersSpecStorage{
 						{Name: "rabbit-node-3", AllocationCount: 1},
 						{Name: "rabbit-node-4", AllocationCount: 1},
 						{Name: "rabbit-node-8", AllocationCount: 1}},
 					},
-					{Label: "mgt", Storage: []dwsv1alpha4.ServersSpecStorage{
+					{Label: "mgt", Storage: []dwsv1alpha5.ServersSpecStorage{
 						{Name: "rabbit-node-3", AllocationCount: 1}},
 					},
-					{Label: "mgtmdt", Storage: []dwsv1alpha4.ServersSpecStorage{
+					{Label: "mgtmdt", Storage: []dwsv1alpha5.ServersSpecStorage{
 						{Name: "rabbit-node-4", AllocationCount: 1}},
 					},
 				},

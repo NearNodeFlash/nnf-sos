@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -142,6 +142,7 @@ func (*nvmeDirectDevice) SetNamespaceFeature(namespaceId nvme.NamespaceIdentifie
 	panic("unimplemented")
 }
 
-func (d *nvmeDirectDevice) GetWearLevelAsPercentageUsed() (uint8, error) {
-	return d.cliDevice.GetWearLevelAsPercentageUsed()
+// GetSmartLog returns the raw SMART log page data
+func (d *nvmeDirectDevice) GetSmartLog() (*nvme.SmartLog, error) {
+	return d.cliDevice.GetSmartLog()
 }

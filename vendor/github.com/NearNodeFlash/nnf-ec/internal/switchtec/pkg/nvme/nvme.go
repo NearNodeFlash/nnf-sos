@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,6 +22,7 @@ package nvme
 import (
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"path"
 	"regexp"
 	"strconv"
@@ -33,6 +34,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec"
+	"github.com/NearNodeFlash/nnf-ec/pkg/ec"
+	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
 
 // Device describes the NVMe Device and its attributes
@@ -532,7 +535,7 @@ type id_ctrl struct {
 	NVMSetIdentifierMaximum                   uint16               // NSETIDMAX
 	EnduraceGroupIdentifierMaximum            uint16               // ENDGIDMAX
 	ANATranstitionTime                        uint8                // ANATT
-	AsymentricNamespaceAccessCapabilities     uint8                // ANACAP
+	AsymmetricNamespaceAccessCapabilities     uint8                // ANACAP
 	ANAGroupIdenfierMaximum                   uint32               // ANAGRPMAX
 	NumberOfANAGroupIdentifiers               uint32               // NANAGRPID
 	PersistentEventLogSize                    uint32               // PELS
@@ -1101,7 +1104,7 @@ type SmartLog struct {
 	DataUnitsWrittenLo                           uint64
 	DataUnitsWrittenHi                           uint64
 	HostReadsLo                                  uint64
-	HistReadsHi                                  uint64
+	HostReadsHi                                  uint64
 	HostWritesLo                                 uint64
 	HostWritesHi                                 uint64
 	ControllerBusyTimeLo                         uint64
@@ -1126,6 +1129,7 @@ type SmartLog struct {
 	Reserved232                                  [280]uint8
 }
 
+// GetSmartLog - retrieve the smartlog information
 func (dev *Device) GetSmartLog() (*SmartLog, error) {
 
 	log := new(SmartLog)
@@ -1146,6 +1150,53 @@ func (dev *Device) GetSmartLog() (*SmartLog, error) {
 	return log, nil
 }
 
+// InterpretSmartLog - calculate the drive's swordfish status
+func InterpretSmartLog(log *SmartLog) sf.ResourceState {
+	// Check critical warnings first - check individual bitfield members
+	if log.CriticalWarning.SpareCapacity != 0 { // Spare capacity
+		return sf.DISABLED_RST
+	}
+	if log.CriticalWarning.ReadOnly != 0 { // Read-only mode
+		return sf.DISABLED_RST
+	}
+
+	// Check other critical warnings for degraded state
+	if log.CriticalWarning.Temperature != 0 ||
+		log.CriticalWarning.Degraded != 0 ||
+		log.CriticalWarning.BackupFailed != 0 ||
+		log.CriticalWarning.PersistentMemoryRegionReadOnly != 0 {
+		return sf.STANDBY_OFFLINE_RST
+	}
+
+	return sf.ENABLED_RST // Healthy
+}
+
+func MangleSmartLog(log *SmartLog) {
+
+	// Occaionally managle the smart log data
+	if rand.Intn(100) < 10 { // 10% chance of simulating critical condition
+		warningType := rand.Intn(6)
+		switch warningType {
+		case 0:
+			log.CriticalWarning.SpareCapacity = 1
+			log.AvailableSpare = 5 // Below threshold
+		case 1:
+			log.CriticalWarning.Temperature = 1
+			log.CompositeTemperature = 358 // ~85°C
+		case 2:
+			log.CriticalWarning.Degraded = 1
+		case 3:
+			log.CriticalWarning.ReadOnly = 1
+		case 4:
+			log.CriticalWarning.BackupFailed = 1
+		case 5:
+			log.CriticalWarning.PersistentMemoryRegionReadOnly = 1
+		}
+	}
+
+}
+
+// Log contstants
 const (
 	LogCdw10LogPageIdentiferMask         = 0xFF
 	LogCdw10LogPageIdentiferShift        = 0
@@ -1166,7 +1217,7 @@ const (
 )
 
 func (dev *Device) getNsidLog(logPageIdentifier uint8, retainAsynchronousEvent uint8, nsid uint32, buf []byte) error {
-	return dev.getLog(logPageIdentifier, 0, 0, nsid, 0, buf)
+	return dev.getLog(logPageIdentifier, 0, retainAsynchronousEvent, nsid, 0, buf)
 }
 
 func (dev *Device) getLog(logPageIdentifier uint8, logSpecificField uint8, retainAsynchronousEvent uint8, nsid uint32, logPageOffset uint64, buf []byte) error {
@@ -1199,4 +1250,27 @@ func (dev *Device) getLog(logPageIdentifier uint8, logSpecificField uint8, retai
 
 	return dev.ops.submitAdminPassthru(dev, &cmd, buf)
 
+}
+
+// LogSmartLog outputs the SMART log data in a structured way for logging.
+func LogSmartLog(log ec.Logger, smartLog *SmartLog, context ...interface{}) {
+	if smartLog == nil {
+		log.Error(nil, "SMART log is nil", context...)
+		return
+	}
+	log.Info("SMART log data",
+		append(context,
+			"criticalWarning.spareCapacity", smartLog.CriticalWarning.SpareCapacity,
+			"criticalWarning.temperature", smartLog.CriticalWarning.Temperature,
+			"criticalWarning.degraded", smartLog.CriticalWarning.Degraded,
+			"criticalWarning.readOnly", smartLog.CriticalWarning.ReadOnly,
+			"criticalWarning.backupFailed", smartLog.CriticalWarning.BackupFailed,
+			"criticalWarning.persistentMemoryRegionReadOnly", smartLog.CriticalWarning.PersistentMemoryRegionReadOnly,
+			"availableSpare", smartLog.AvailableSpare,
+			"availableSpareThreshold", smartLog.AvailableSpareThreshold,
+			"percentageUsed", smartLog.PercentageUsed,
+			"compositeTemperature", smartLog.CompositeTemperature,
+			"mediaErrorsLo", smartLog.MediaErrorsLo,
+			"numberErrorLogEntriesLo", smartLog.NumberErrorLogEntriesLo,
+		)...)
 }
