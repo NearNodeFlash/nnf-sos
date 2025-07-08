@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -274,7 +274,7 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *NnfStorageReconciler) addPersistentStorageReference(ctx context.Context, nnfStorage *nnfv1alpha7.NnfStorage, persistentMgsReference corev1.ObjectReference) error {
-	persistentStorage := &dwsv1alpha4.PersistentStorageInstance{
+	persistentStorage := &dwsv1alpha5.PersistentStorageInstance{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      persistentMgsReference.Name,
 			Namespace: persistentMgsReference.Namespace,
@@ -282,11 +282,11 @@ func (r *NnfStorageReconciler) addPersistentStorageReference(ctx context.Context
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(persistentStorage), persistentStorage); err != nil {
-		return dwsv1alpha4.NewResourceError("").WithUserMessage("PersistentStorage '%v' not found", client.ObjectKeyFromObject(persistentStorage)).WithMajor()
+		return dwsv1alpha5.NewResourceError("").WithUserMessage("PersistentStorage '%v' not found", client.ObjectKeyFromObject(persistentStorage)).WithMajor()
 	}
 
-	if persistentStorage.Status.State != dwsv1alpha4.PSIStateActive {
-		return dwsv1alpha4.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal()
+	if persistentStorage.Status.State != dwsv1alpha5.PSIStateActive {
+		return dwsv1alpha5.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal()
 	}
 
 	// Add a consumer reference to the persistent storage for this directive
@@ -308,7 +308,7 @@ func (r *NnfStorageReconciler) addPersistentStorageReference(ctx context.Context
 }
 
 func (r *NnfStorageReconciler) removePersistentStorageReference(ctx context.Context, nnfStorage *nnfv1alpha7.NnfStorage, persistentMgsReference corev1.ObjectReference) error {
-	persistentStorage := &dwsv1alpha4.PersistentStorageInstance{
+	persistentStorage := &dwsv1alpha5.PersistentStorageInstance{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      persistentMgsReference.Name,
 			Namespace: persistentMgsReference.Namespace,
@@ -353,8 +353,8 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeBlockStorage,
 			func() error {
-				dwsv1alpha4.InheritParentLabels(nnfNodeBlockStorage, nnfStorage)
-				dwsv1alpha4.AddOwnerLabels(nnfNodeBlockStorage, nnfStorage)
+				dwsv1alpha5.InheritParentLabels(nnfNodeBlockStorage, nnfStorage)
+				dwsv1alpha5.AddOwnerLabels(nnfNodeBlockStorage, nnfStorage)
 
 				labels := nnfNodeBlockStorage.GetLabels()
 				labels[nnfv1alpha7.AllocationSetLabel] = allocationSet.Name
@@ -371,7 +371,7 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 				}
 
 				if len(nnfNodeBlockStorage.Spec.Allocations) != expectedAllocations {
-					return dwsv1alpha4.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), expectedAllocations).WithFatal()
+					return dwsv1alpha5.NewResourceError("block storage allocation count incorrect. found %v, expected %v", len(nnfNodeBlockStorage.Spec.Allocations), expectedAllocations).WithFatal()
 				}
 
 				for i := range nnfNodeBlockStorage.Spec.Allocations {
@@ -424,7 +424,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	allocationSet.AllocationCount = 0
 
 	nnfNodeBlockStorageList := &nnfv1alpha7.NnfNodeBlockStorageList{}
-	matchLabels := dwsv1alpha4.MatchingOwner(nnfStorage)
+	matchLabels := dwsv1alpha5.MatchingOwner(nnfStorage)
 	matchLabels[nnfv1alpha7.AllocationSetLabel] = nnfStorage.Spec.AllocationSets[allocationSetIndex].Name
 
 	listOptions := []client.ListOption{
@@ -432,7 +432,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 	}
 
 	if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not list NnfNodeBlockStorages").WithError(err)
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not list NnfNodeBlockStorages").WithError(err)
 	}
 
 	// make a map with empty data of the Rabbit names to allow easy searching
@@ -460,7 +460,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 		if nnfNodeBlockStorage.Status.Error != nil {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("Node: %s", nnfNodeBlockStorage.GetNamespace()).WithError(nnfNodeBlockStorage.Status.Error)
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("Node: %s", nnfNodeBlockStorage.GetNamespace()).WithError(nnfNodeBlockStorage.Status.Error)
 		}
 	}
 
@@ -479,7 +479,7 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 			}
 
 			if nnfNodeBlockStorage.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
-				return &ctrl.Result{}, dwsv1alpha4.NewResourceError("Node: %s: NnfNodeBlockStorage has not been reconciled after %d seconds", nnfNodeBlockStorage.GetNamespace(), childTimeout).WithMajor()
+				return &ctrl.Result{}, dwsv1alpha5.NewResourceError("Node: %s: NnfNodeBlockStorage has not been reconciled after %d seconds", nnfNodeBlockStorage.GetNamespace(), childTimeout).WithMajor()
 			}
 
 			return &ctrl.Result{RequeueAfter: time.Minute}, nil
@@ -553,7 +553,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 				}
 
 				if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
-					return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not get NnfNode: %v", client.ObjectKeyFromObject(nnfNode)).WithError(err)
+					return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not get NnfNode: %v", client.ObjectKeyFromObject(nnfNode)).WithError(err)
 				}
 
 				mgsAddress = nnfNode.Status.LNetNid
@@ -577,11 +577,11 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 				},
 			}
 
-			dwsv1alpha4.InheritParentLabels(nnfLustreMgt, nnfStorage)
-			dwsv1alpha4.AddOwnerLabels(nnfLustreMgt, nnfStorage)
+			dwsv1alpha5.InheritParentLabels(nnfLustreMgt, nnfStorage)
+			dwsv1alpha5.AddOwnerLabels(nnfLustreMgt, nnfStorage)
 			if err := r.Create(ctx, nnfLustreMgt); err != nil {
 				if !apierrors.IsAlreadyExists(err) {
-					return nil, dwsv1alpha4.NewResourceError("could not create NnfLustreMGT").WithError(err).WithMajor()
+					return nil, dwsv1alpha5.NewResourceError("could not create NnfLustreMGT").WithError(err).WithMajor()
 				}
 			} else {
 				log.Info("Created NnfLustreMGT", "Name", nnfLustreMgt.Name, "Namespace", nnfLustreMgt.Namespace)
@@ -593,7 +593,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 		if fsname == "" && !(len(nnfStorage.Spec.AllocationSets) == 1 && nnfStorage.Spec.AllocationSets[0].Name == "mgt") {
 			fsname, err := r.getFsName(ctx, nnfStorage)
 			if err != nil {
-				return nil, dwsv1alpha4.NewResourceError("could not get available fsname").WithError(err).WithMajor()
+				return nil, dwsv1alpha5.NewResourceError("could not get available fsname").WithError(err).WithMajor()
 			}
 			if fsname == "" {
 				return &ctrl.Result{Requeue: true}, nil
@@ -645,7 +645,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 			continue
 		}
 
-		storage := &dwsv1alpha4.Storage{
+		storage := &dwsv1alpha5.Storage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      node.Name,
 				Namespace: corev1.NamespaceDefault,
@@ -653,13 +653,13 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not get Storage resource: %v", client.ObjectKeyFromObject(storage)).WithError(err)
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not get Storage resource: %v", client.ObjectKeyFromObject(storage)).WithError(err)
 		}
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, nnfNodeStorage,
 			func() error {
-				dwsv1alpha4.InheritParentLabels(nnfNodeStorage, nnfStorage)
-				dwsv1alpha4.AddOwnerLabels(nnfNodeStorage, nnfStorage)
+				dwsv1alpha5.InheritParentLabels(nnfNodeStorage, nnfStorage)
+				dwsv1alpha5.AddOwnerLabels(nnfNodeStorage, nnfStorage)
 
 				labels := nnfNodeStorage.GetLabels()
 				labels[nnfv1alpha7.AllocationSetLabel] = allocationSet.Name
@@ -747,7 +747,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	lustreOST := storage.Spec.FileSystemType == "lustre" && storage.Spec.AllocationSets[allocationSetIndex].TargetType == "ost"
 
 	nnfNodeStorageList := &nnfv1alpha7.NnfNodeStorageList{}
-	matchLabels := dwsv1alpha4.MatchingOwner(storage)
+	matchLabels := dwsv1alpha5.MatchingOwner(storage)
 	matchLabels[nnfv1alpha7.AllocationSetLabel] = storage.Spec.AllocationSets[allocationSetIndex].Name
 
 	listOptions := []client.ListOption{
@@ -755,7 +755,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	}
 
 	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not list NnfNodeStorages").WithError(err)
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not list NnfNodeStorages").WithError(err)
 	}
 
 	// make a map with empty data of the Rabbit names to allow easy searching
@@ -780,7 +780,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			continue
 		}
 		if nnfNodeStorage.Status.Error != nil {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("Node: %s", nnfNodeStorage.GetNamespace()).WithError(nnfNodeStorage.Status.Error)
 		}
 	}
 
@@ -799,7 +799,7 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 			}
 
 			if nnfNodeStorage.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
-				return &ctrl.Result{}, dwsv1alpha4.NewResourceError("Node: %s: NnfNodeStorage has not been reconciled after %d seconds", nnfNodeStorage.GetNamespace(), childTimeout).WithMajor()
+				return &ctrl.Result{}, dwsv1alpha5.NewResourceError("Node: %s: NnfNodeStorage has not been reconciled after %d seconds", nnfNodeStorage.GetNamespace(), childTimeout).WithMajor()
 			}
 
 			return &ctrl.Result{RequeueAfter: time.Minute}, nil
@@ -848,7 +848,7 @@ func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnf
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfLustreMgt), nnfLustreMgt); err != nil {
-			return nil, dwsv1alpha4.NewResourceError("could not get nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
+			return nil, dwsv1alpha5.NewResourceError("could not get nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
 		}
 
 		return nnfLustreMgt, nil
@@ -856,7 +856,7 @@ func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnf
 
 	nnfLustreMgtList := &nnfv1alpha7.NnfLustreMGTList{}
 	if err := r.List(ctx, nnfLustreMgtList, []client.ListOption{}...); err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not list NnfLustreMGTs").WithError(err).WithMajor()
+		return nil, dwsv1alpha5.NewResourceError("could not list NnfLustreMGTs").WithError(err).WithMajor()
 	}
 
 	var nnfLustreMgt *nnfv1alpha7.NnfLustreMGT = nil
@@ -873,14 +873,14 @@ func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnf
 		}
 
 		if nnfLustreMgt != nil {
-			return nil, dwsv1alpha4.NewResourceError("multiple MGTs found for address %s", nnfStorage.Status.MgsAddress).WithFatal().WithWLM()
+			return nil, dwsv1alpha5.NewResourceError("multiple MGTs found for address %s", nnfStorage.Status.MgsAddress).WithFatal().WithWLM()
 		}
 
 		nnfLustreMgt = &nnfLustreMgtList.Items[i]
 	}
 
 	if nnfLustreMgt == nil {
-		return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("no NnfLustreMGT resource found for MGS address: %s", nnfStorage.Status.MgsAddress).WithMajor()
+		return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("no NnfLustreMGT resource found for MGS address: %s", nnfStorage.Status.MgsAddress).WithMajor()
 	}
 
 	return nnfLustreMgt, nil
@@ -889,7 +889,7 @@ func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnf
 func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1alpha7.NnfStorage) (string, error) {
 	nnfLustreMgt, err := r.getLustreMgt(ctx, nnfStorage)
 	if err != nil {
-		return "", dwsv1alpha4.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
+		return "", dwsv1alpha5.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
 	}
 
 	// Save the reference to the NnfLustreMGT resource in the NnfStorage before adding an fsname claim
@@ -931,7 +931,7 @@ func (r *NnfStorageReconciler) getFsName(ctx context.Context, nnfStorage *nnfv1a
 			return "", nil
 		}
 
-		return "", dwsv1alpha4.NewResourceError("could not update NnfLustreMGT").WithError(err).WithMajor()
+		return "", dwsv1alpha5.NewResourceError("could not update NnfLustreMGT").WithError(err).WithMajor()
 	}
 
 	return "", nil
@@ -943,7 +943,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfStorage)
 	if err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
+		return nil, dwsv1alpha5.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
 	}
 
 	// Some tests don't fake out the nnfStorage completely
@@ -958,7 +958,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 
 	nnfLustreMgt, err := r.getLustreMgt(ctx, nnfStorage)
 	if err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
+		return nil, dwsv1alpha5.NewResourceError("could not get NnfLustreMGT for address: %s", nnfStorage.Status.MgsAddress).WithError(err)
 	}
 
 	// An NnfLustreMgt in the "nnf-system" namespace indicates an external MGT. Commands can't be run on external MGTs.
@@ -982,7 +982,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 			}
 
 			if command.Error != nil {
-				return nil, dwsv1alpha4.NewResourceError("").WithUserMessage("shared MGT could not run command").WithError(command.Error)
+				return nil, dwsv1alpha5.NewResourceError("").WithUserMessage("shared MGT could not run command").WithError(command.Error)
 			}
 			// Commands haven't run yet. Keep waiting
 			return &ctrl.Result{RequeueAfter: 2 * time.Second}, nil
@@ -1025,7 +1025,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 			return &ctrl.Result{}, nil
 		}
 
-		return nil, dwsv1alpha4.NewResourceError("could not update NnfLustreMGT with commands").WithError(err).WithMajor()
+		return nil, dwsv1alpha5.NewResourceError("could not update NnfLustreMGT with commands").WithError(err).WithMajor()
 	}
 
 	return nil, nil
@@ -1046,7 +1046,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	if nnfStorage.Spec.FileSystemType != "lustre" {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("invalid file system type '%s' for setLustreOwnerGroup", nnfStorage.Spec.FileSystemType).WithFatal()
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("invalid file system type '%s' for setLustreOwnerGroup", nnfStorage.Spec.FileSystemType).WithFatal()
 	}
 
 	// If this NnfStorage is for a standalone MGT, then we don't need to set the owner and group
@@ -1064,12 +1064,12 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}()
 
 	if index == -1 {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("no ost allocation set").WithFatal()
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("no ost allocation set").WithFatal()
 	}
 
 	allocationSet := nnfStorage.Spec.AllocationSets[index]
 	if len(allocationSet.Nodes) == 0 {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("zero length node array for OST").WithFatal()
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("zero length node array for OST").WithFatal()
 	}
 
 	tempMountDir := os.Getenv("NNF_TEMP_MOUNT_PATH")
@@ -1077,7 +1077,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		tempMountDir = "/mnt/tmp/"
 	}
 
-	clientMount := &dwsv1alpha4.ClientMount{
+	clientMount := &dwsv1alpha5.ClientMount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-ownergroup", nnfStorage.Name),
 			Namespace: allocationSet.Nodes[0].Name,
@@ -1086,7 +1086,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(clientMount), clientMount); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not get clientmount for setting lustre owner/group").WithError(err).WithMajor()
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not get clientmount for setting lustre owner/group").WithError(err).WithMajor()
 		}
 		index := func() int {
 			for i, allocationSet := range nnfStorage.Spec.AllocationSets {
@@ -1098,31 +1098,31 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		}()
 
 		if index == -1 {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("no ost allocation set").WithFatal()
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("no ost allocation set").WithFatal()
 		}
 
 		allocationSet := nnfStorage.Spec.AllocationSets[index]
 		if len(allocationSet.Nodes) == 0 {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("zero length node array for OST").WithFatal()
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("zero length node array for OST").WithFatal()
 		}
 
-		dwsv1alpha4.InheritParentLabels(clientMount, nnfStorage)
-		dwsv1alpha4.AddOwnerLabels(clientMount, nnfStorage)
+		dwsv1alpha5.InheritParentLabels(clientMount, nnfStorage)
+		dwsv1alpha5.AddOwnerLabels(clientMount, nnfStorage)
 
 		clientMount.Spec.Node = allocationSet.Nodes[0].Name
-		clientMount.Spec.DesiredState = dwsv1alpha4.ClientMountStateMounted
-		clientMount.Spec.Mounts = []dwsv1alpha4.ClientMountInfo{
+		clientMount.Spec.DesiredState = dwsv1alpha5.ClientMountStateMounted
+		clientMount.Spec.Mounts = []dwsv1alpha5.ClientMountInfo{
 			{
 				Type:       nnfStorage.Spec.FileSystemType,
 				TargetType: "directory",
 				MountPath:  getTempClientMountDir(nnfStorage, index),
-				Device: dwsv1alpha4.ClientMountDevice{
-					Type: dwsv1alpha4.ClientMountDeviceTypeLustre,
-					Lustre: &dwsv1alpha4.ClientMountDeviceLustre{
+				Device: dwsv1alpha5.ClientMountDevice{
+					Type: dwsv1alpha5.ClientMountDeviceTypeLustre,
+					Lustre: &dwsv1alpha5.ClientMountDeviceLustre{
 						FileSystemName: nnfStorage.Status.FileSystemName,
 						MgsAddresses:   nnfStorage.Status.MgsAddress,
 					},
-					DeviceReference: &dwsv1alpha4.ClientMountDeviceReference{
+					DeviceReference: &dwsv1alpha5.ClientMountDeviceReference{
 						ObjectReference: corev1.ObjectReference{
 							Name:      nnfNodeStorageName(nnfStorage, index, 0),
 							Namespace: allocationSet.Nodes[0].Name,
@@ -1137,7 +1137,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		}
 
 		if err := r.Create(ctx, clientMount); err != nil {
-			return &ctrl.Result{}, dwsv1alpha4.NewResourceError("could not create lustre owner/group ClientMount resource").WithError(err).WithMajor()
+			return &ctrl.Result{}, dwsv1alpha5.NewResourceError("could not create lustre owner/group ClientMount resource").WithError(err).WithMajor()
 		}
 
 		log.Info("Created clientMount for setting Lustre owner/group")
@@ -1146,7 +1146,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	if clientMount.Status.Error != nil {
-		return &ctrl.Result{}, dwsv1alpha4.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
+		return &ctrl.Result{}, dwsv1alpha5.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 	}
 
 	if len(clientMount.Status.Mounts) == 0 {
@@ -1154,12 +1154,12 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 	}
 
 	switch clientMount.Status.Mounts[0].State {
-	case dwsv1alpha4.ClientMountStateMounted:
+	case dwsv1alpha5.ClientMountStateMounted:
 		if !clientMount.Status.Mounts[0].Ready {
 			return &ctrl.Result{}, nil
 		}
 
-		clientMount.Spec.DesiredState = dwsv1alpha4.ClientMountStateUnmounted
+		clientMount.Spec.DesiredState = dwsv1alpha5.ClientMountStateUnmounted
 		if err := r.Update(ctx, clientMount); err != nil {
 			if !apierrors.IsConflict(err) {
 				return &ctrl.Result{}, err
@@ -1171,7 +1171,7 @@ func (r *NnfStorageReconciler) setLustreOwnerGroup(ctx context.Context, nnfStora
 		log.Info("Updated clientMount to unmount Lustre owner/group mount")
 
 		return &ctrl.Result{}, nil
-	case dwsv1alpha4.ClientMountStateUnmounted:
+	case dwsv1alpha5.ClientMountStateUnmounted:
 		if !clientMount.Status.Mounts[0].Ready {
 			return &ctrl.Result{}, nil
 		}
@@ -1198,15 +1198,15 @@ func getTempClientMountDir(nnfStorage *nnfv1alpha7.NnfStorage, index int) string
 // Get the status from all the child NnfNodeStorage resources and use them to build the status
 // for the NnfStorage.
 func (r *NnfStorageReconciler) aggregateClientMountStatus(ctx context.Context, storage *nnfv1alpha7.NnfStorage, deleting bool) error {
-	clientMountList := &dwsv1alpha4.ClientMountList{}
-	matchLabels := dwsv1alpha4.MatchingOwner(storage)
+	clientMountList := &dwsv1alpha5.ClientMountList{}
+	matchLabels := dwsv1alpha5.MatchingOwner(storage)
 
 	listOptions := []client.ListOption{
 		matchLabels,
 	}
 
 	if err := r.List(ctx, clientMountList, listOptions...); err != nil {
-		return dwsv1alpha4.NewResourceError("could not list ClientMounts").WithError(err)
+		return dwsv1alpha5.NewResourceError("could not list ClientMounts").WithError(err)
 	}
 
 	for _, clientMount := range clientMountList.Items {
@@ -1216,7 +1216,7 @@ func (r *NnfStorageReconciler) aggregateClientMountStatus(ctx context.Context, s
 			continue
 		}
 		if clientMount.Status.Error != nil {
-			return dwsv1alpha4.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
+			return dwsv1alpha5.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 		}
 	}
 
@@ -1229,7 +1229,7 @@ func (r *NnfStorageReconciler) aggregateClientMountStatus(ctx context.Context, s
 // to the NnfStorage.
 func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnfv1alpha7.NnfStorage) (nodeStoragesState, error) {
 	// Delete any clientmounts that were created by the NnfStorage.
-	deleteStatus, err := dwsv1alpha4.DeleteChildren(ctx, r.Client, []dwsv1alpha4.ObjectList{&dwsv1alpha4.ClientMountList{}}, storage)
+	deleteStatus, err := dwsv1alpha5.DeleteChildren(ctx, r.Client, []dwsv1alpha5.ObjectList{&dwsv1alpha5.ClientMountList{}}, storage)
 	if err != nil {
 		return nodeStoragesExist, err
 	}
@@ -1242,14 +1242,14 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		return nodeStoragesExist, nil
 	}
 
-	childObjects := []dwsv1alpha4.ObjectList{
+	childObjects := []dwsv1alpha5.ObjectList{
 		&nnfv1alpha7.NnfNodeStorageList{},
 		&nnfv1alpha7.NnfNodeBlockStorageList{},
 	}
 
 	if storage.Spec.FileSystemType == "lustre" {
 		// Delete OST0 first so that PreUnmount commands can happen
-		ost0DeleteStatus, err := dwsv1alpha4.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetOST0Label: "true"})
+		ost0DeleteStatus, err := dwsv1alpha5.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetOST0Label: "true"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1270,7 +1270,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 
 		// Then, delete the rest of the OSTs and MDTs so we can drop the claim on the NnfLustreMgt
 		// resource. This will trigger an lctl command to run to remove the fsname from the MGT.
-		ostDeleteStatus, err := dwsv1alpha4.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "ost"})
+		ostDeleteStatus, err := dwsv1alpha5.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "ost"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1288,7 +1288,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 			return nodeStoragesExist, nil
 		}
 
-		mdtDeleteStatus, err := dwsv1alpha4.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "mdt"})
+		mdtDeleteStatus, err := dwsv1alpha5.DeleteChildrenWithLabelsParallel(ctx, r.Client, childObjects, storage, client.MatchingLabels{nnfv1alpha7.AllocationSetLabel: "mdt"})
 		if err != nil {
 			return nodeStoragesExist, err
 		}
@@ -1310,7 +1310,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		// since this may be an MGT made as part of a jobdw
 		released, err := r.releaseLustreMgt(ctx, storage)
 		if err != nil {
-			return nodeStoragesExist, dwsv1alpha4.NewResourceError("could not release LustreMGT resource").WithError(err)
+			return nodeStoragesExist, dwsv1alpha5.NewResourceError("could not release LustreMGT resource").WithError(err)
 		}
 
 		if !released {
@@ -1328,7 +1328,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		}
 	}
 
-	nodeStorageDeleteStatus, err := dwsv1alpha4.DeleteChildrenParallel(ctx, r.Client, childObjects, storage)
+	nodeStorageDeleteStatus, err := dwsv1alpha5.DeleteChildrenParallel(ctx, r.Client, childObjects, storage)
 	if err != nil {
 		return nodeStoragesExist, err
 	}
@@ -1338,7 +1338,7 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 	}
 
 	// Delete any remaining child objects including the MGT allocation set for Lustre
-	deleteStatus, err = dwsv1alpha4.DeleteChildren(ctx, r.Client, r.getChildObjects(), storage)
+	deleteStatus, err = dwsv1alpha5.DeleteChildren(ctx, r.Client, r.getChildObjects(), storage)
 	if err != nil {
 		return nodeStoragesExist, err
 	}
@@ -1382,7 +1382,7 @@ func (r *NnfStorageReconciler) releaseLustreMgt(ctx context.Context, storage *nn
 
 			return true, nil
 		}
-		return false, dwsv1alpha4.NewResourceError("could not get nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
+		return false, dwsv1alpha5.NewResourceError("could not get nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
 	}
 
 	// Remove our claim from the spec section.
@@ -1403,7 +1403,7 @@ func (r *NnfStorageReconciler) releaseLustreMgt(ctx context.Context, storage *nn
 
 	if updateResource {
 		if err := r.Update(ctx, nnfLustreMgt); err != nil {
-			return false, dwsv1alpha4.NewResourceError("could not remove reference from nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
+			return false, dwsv1alpha5.NewResourceError("could not remove reference from nnfLustreMgt: %v", client.ObjectKeyFromObject(nnfLustreMgt)).WithError(err)
 		}
 	}
 
@@ -1454,7 +1454,7 @@ func (r *NnfStorageReconciler) getLustreOST0(ctx context.Context, storage *nnfv1
 
 	// Get al the NnfNodeStorages for the OSTs
 	nnfNodeStorageList := &nnfv1alpha7.NnfNodeStorageList{}
-	matchLabels := dwsv1alpha4.MatchingOwner(storage)
+	matchLabels := dwsv1alpha5.MatchingOwner(storage)
 	matchLabels[nnfv1alpha7.AllocationSetLabel] = "ost"
 
 	listOptions := []client.ListOption{
@@ -1462,7 +1462,7 @@ func (r *NnfStorageReconciler) getLustreOST0(ctx context.Context, storage *nnfv1
 	}
 
 	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
-		return nil, dwsv1alpha4.NewResourceError("could not list NnfNodeStorages").WithError(err)
+		return nil, dwsv1alpha5.NewResourceError("could not list NnfNodeStorages").WithError(err)
 	}
 
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
@@ -1510,9 +1510,9 @@ func getLustreMappingFromStorage(storage *nnfv1alpha7.NnfStorage) map[string][]s
 	return componentMap
 }
 
-func (r *NnfStorageReconciler) getChildObjects() []dwsv1alpha4.ObjectList {
-	return []dwsv1alpha4.ObjectList{
-		&dwsv1alpha4.ClientMountList{},
+func (r *NnfStorageReconciler) getChildObjects() []dwsv1alpha5.ObjectList {
+	return []dwsv1alpha5.ObjectList{
+		&dwsv1alpha5.ClientMountList{},
 		&nnfv1alpha7.NnfNodeStorageList{},
 		&nnfv1alpha7.NnfNodeBlockStorageList{},
 		&nnfv1alpha7.NnfLustreMGTList{},
@@ -1526,8 +1526,8 @@ func (r *NnfStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha7.NnfStorage{}).
-		Watches(&nnfv1alpha7.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha4.OwnerLabelMapFunc)).
-		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha4.OwnerLabelMapFunc)).
-		Watches(&dwsv1alpha4.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha4.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha7.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha5.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha7.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha5.OwnerLabelMapFunc)).
+		Watches(&dwsv1alpha5.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha5.OwnerLabelMapFunc)).
 		Complete(r)
 }

@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -65,7 +66,7 @@ type NnfLustreMGTReconciler struct {
 	client.Client
 	Log          logr.Logger
 	Scheme       *kruntime.Scheme
-	ChildObjects []dwsv1alpha4.ObjectList
+	ChildObjects []dwsv1alpha5.ObjectList
 
 	ControllerType ControllerType
 }
@@ -138,7 +139,7 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// the FsNameStart field in the spec.
 		if nnfLustreMgt.Spec.FsNameStartReference != (corev1.ObjectReference{}) {
 			if nnfLustreMgt.Spec.FsNameStartReference.Kind != reflect.TypeOf(corev1.ConfigMap{}).Name() {
-				return ctrl.Result{}, dwsv1alpha4.NewResourceError("lustre MGT start reference does not have kind '%s'", reflect.TypeOf(corev1.ConfigMap{}).Name()).WithFatal().WithUser()
+				return ctrl.Result{}, dwsv1alpha5.NewResourceError("lustre MGT start reference does not have kind '%s'", reflect.TypeOf(corev1.ConfigMap{}).Name()).WithFatal().WithUser()
 			}
 
 			configMap := &corev1.ConfigMap{
@@ -149,13 +150,13 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 
 			if err := r.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return ctrl.Result{}, dwsv1alpha4.NewResourceError("could not get Lustre MGT start fsname config map: %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
+				return ctrl.Result{}, dwsv1alpha5.NewResourceError("could not get Lustre MGT start fsname config map: %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
 			}
 
 			if configMap.Data != nil {
 				if _, exists := configMap.Data["NextFsName"]; exists {
 					if len(configMap.Data["NextFsName"]) != 8 {
-						return ctrl.Result{}, dwsv1alpha4.NewResourceError("starting fsname from config map: %v was not 8 characters", client.ObjectKeyFromObject(configMap)).WithError(err).WithFatal()
+						return ctrl.Result{}, dwsv1alpha5.NewResourceError("starting fsname from config map: %v was not 8 characters", client.ObjectKeyFromObject(configMap)).WithError(err).WithFatal()
 					}
 
 					fsnameNext = configMap.Data["NextFsName"]
@@ -263,7 +264,7 @@ func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt
 	// of the next fsname
 	if nnfLustreMgt.Spec.FsNameStartReference != (corev1.ObjectReference{}) {
 		if nnfLustreMgt.Spec.FsNameStartReference.Kind != reflect.TypeOf(corev1.ConfigMap{}).Name() {
-			return nil, dwsv1alpha4.NewResourceError("lustre MGT start reference does not have kind '%s'", reflect.TypeOf(corev1.ConfigMap{}).Name()).WithFatal().WithUser()
+			return nil, dwsv1alpha5.NewResourceError("lustre MGT start reference does not have kind '%s'", reflect.TypeOf(corev1.ConfigMap{}).Name()).WithFatal().WithUser()
 		}
 
 		// Get used fsname Config map
@@ -275,7 +276,7 @@ func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt
 		}
 
 		if err := r.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-			return nil, dwsv1alpha4.NewResourceError("could not get Lustre MGT start fsname config map: %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
+			return nil, dwsv1alpha5.NewResourceError("could not get Lustre MGT start fsname config map: %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
 		}
 
 		if configMap.Data == nil {
@@ -287,7 +288,7 @@ func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt
 			if apierrors.IsConflict(err) {
 				return &ctrl.Result{Requeue: true}, nil
 			}
-			return nil, dwsv1alpha4.NewResourceError("could not update Lustre MGT used fsname config map:  %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
+			return nil, dwsv1alpha5.NewResourceError("could not update Lustre MGT used fsname config map:  %v", client.ObjectKeyFromObject(configMap)).WithError(err).WithMajor()
 		}
 	}
 
@@ -369,7 +370,7 @@ func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha7.NnfLus
 					return nil
 				}
 
-				return dwsv1alpha4.NewResourceError("unable to remove fsname '%s' from MGT", fsname).WithError(err).WithMajor()
+				return dwsv1alpha5.NewResourceError("unable to remove fsname '%s' from MGT", fsname).WithError(err).WithMajor()
 			}
 		}
 	}
@@ -443,7 +444,7 @@ func (r *NnfLustreMGTReconciler) RunCommands(nnfLustreMgt *nnfv1alpha7.NnfLustre
 
 	for _, commandLine := range commandLines {
 		if _, err := command.Run(commandLine, log); err != nil {
-			return dwsv1alpha4.NewResourceError("unable to run MGT command: %s", commandLine).WithError(err).WithMajor()
+			return dwsv1alpha5.NewResourceError("unable to run MGT command: %s", commandLine).WithError(err).WithMajor()
 		}
 	}
 

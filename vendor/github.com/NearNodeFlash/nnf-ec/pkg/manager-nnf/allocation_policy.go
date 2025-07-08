@@ -112,8 +112,8 @@ func NewAllocationPolicy(config AllocationConfig, oem map[string]interface{}) Al
 
 /* ------------------------------ Spare Allocation Policy --------------------- */
 
-// Required number of drives for the Spare Allocation Policy
-const SpareAllocationPolicyRequiredDriveCount = 16
+const SpareAllocationPolicyExpectedDriveCount = 16
+const SpareAllocationPolicyMinimumDriveCount = 14
 
 type SpareAllocationPolicy struct {
 	compliance     AllocationComplianceType
@@ -137,7 +137,7 @@ func (p *SpareAllocationPolicy) Initialize(capacityBytes uint64) error {
 		return !!!(storage[i].UnallocatedBytes() < storage[j].UnallocatedBytes())
 	})
 
-	count := SpareAllocationPolicyRequiredDriveCount
+	count := SpareAllocationPolicyExpectedDriveCount
 	if len(storage) < count {
 		count = len(storage)
 	}
@@ -161,8 +161,8 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 
 	if p.compliance != RelaxedAllocationComplianceType {
 
-		if len(p.storage) != SpareAllocationPolicyRequiredDriveCount {
-			return fmt.Errorf("Insufficient drive count. Required: %d Available: %d", SpareAllocationPolicyRequiredDriveCount, len(p.storage))
+		if len(p.storage) < SpareAllocationPolicyMinimumDriveCount {
+			return fmt.Errorf("Insufficient drive count. Required: %d Available: %d", SpareAllocationPolicyMinimumDriveCount, len(p.storage))
 		}
 
 		roundUpToMultiple := func(n, m uint64) uint64 { // Round 'n' up to a multiple of 'm'
@@ -170,8 +170,8 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 		}
 
 		// Validate each drive can contribute sufficient capacity towards the entire pool.
-		poolCapacityBytes := roundUpToMultiple(p.capacityBytes, SpareAllocationPolicyRequiredDriveCount)
-		driveCapacityBytes := roundUpToMultiple(poolCapacityBytes/SpareAllocationPolicyRequiredDriveCount, 4096)
+		poolCapacityBytes := roundUpToMultiple(p.capacityBytes, SpareAllocationPolicyMinimumDriveCount)
+		driveCapacityBytes := roundUpToMultiple(poolCapacityBytes/SpareAllocationPolicyMinimumDriveCount, 4096)
 
 		for _, s := range p.storage {
 			if driveCapacityBytes > s.UnallocatedBytes() {

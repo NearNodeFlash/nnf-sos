@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, 2021, 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -27,23 +27,53 @@ import (
 	"github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec"
 )
 
-// The Fabric Monitor is responsible for ensuring that the fabriic and related sub-resource
+// NewFabricMonitor - The Fabric Monitor is responsible for ensuring that the fabriic and related sub-resource
 // are updated with the latest information from the switch. This runs as a background
 // thread, and periodically queries the fabric.
-func NewFabricMonitor(f *Fabric) *monitor {
-	return &monitor{fabric: f}
+func NewMonitor(f *Fabric, i time.Duration) *monitor {
+	return &monitor{fabric: f, interval: i}
 }
 
 type monitor struct {
-	fabric *Fabric
+	fabric   *Fabric
+	interval time.Duration
+}
+
+// StartFabricMonitor starts the fabric monitor in a background goroutine if the period is non-zero.
+func StartFabricMonitor(fabric *Fabric) {
+	defaultFabricMonitorPeriod := 60 * time.Second
+	fabricMonitorPeriod := defaultFabricMonitorPeriod
+	if periodStr := os.Getenv("NNF_FABRIC_MONITOR_PERIOD"); periodStr != "" {
+		if d, err := time.ParseDuration(periodStr); err == nil {
+			fabricMonitorPeriod = d
+		} else {
+			if fabric != nil && !fabric.log.IsZero() {
+				fabric.log.Info("Invalid NNF_FABRIC_MONITOR_PERIOD, using default", "value", fabricMonitorPeriod, "error", err)
+			}
+		}
+	}
+
+	// A period of 0 means don't start the monitor.
+	if fabricMonitorPeriod == 0 {
+		if fabric != nil && !fabric.log.IsZero() {
+			fabric.log.Info("Not starting fabric monitor", "monitorPeriod", fabricMonitorPeriod)
+		}
+		return
+	}
+
+	mon := NewMonitor(fabric, fabricMonitorPeriod)
+	go mon.Run()
+	if fabric != nil && !fabric.log.IsZero() {
+		fabric.log.Info("Started fabric monitor", "monitorPeriod", fabricMonitorPeriod)
+	}
+
 }
 
 // Run Fabric Monitor forever
 func (m *monitor) Run() {
 
 	for {
-
-		time.Sleep(time.Second * 60)
+		time.Sleep(m.interval)
 
 		for idx := range m.fabric.switches {
 			s := &m.fabric.switches[idx]
@@ -62,13 +92,13 @@ func (m *monitor) Run() {
 					}
 
 					for _, event := range events {
-						physPortId, isDown := m.getEventInfo(event)
+						physPortID, isDown := m.getEventInfo(event)
 
-						if physPortId == invalidPhysicalPortId {
+						if physPortID == invalidPhysicalPortId {
 							continue
 						}
 
-						if p := s.findPortByPhysicalPortId(physPortId); p != nil {
+						if p := s.findPortByPhysicalPortId(physPortID); p != nil {
 							p.notify(isDown)
 						}
 					}

@@ -625,6 +625,8 @@ func (s *StorageService) EventHandler(e event.Event) error {
 		}
 
 		log.Info("Storage Service Enabled", "health", s.health)
+
+		nvme.StartNVMeMonitor(s.log)
 	}
 
 	// Check for storage pool events

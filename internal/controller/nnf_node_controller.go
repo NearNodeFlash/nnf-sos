@@ -51,7 +51,7 @@ import (
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
@@ -185,8 +185,8 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	return nil
 }
 
-// EventHandler implements event.Subscription. Every Upstream or Downstream event runs the reconciler
-// so all the NNF Node server/drive status stays current.
+// EventHandler implements event.Subscription. Every Upstream, Downstream, or NvmeStateChange event runs the reconciler
+// to keep NNF Node server/drive status current.
 func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
 	log := r.Log.WithValues("nnf-ec event", "node-up/node-down")
 
@@ -198,8 +198,15 @@ func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
 	downstreamLinkEstablished := e.Is(msgreg.DownstreamLinkEstablishedFabric("", "")) || e.Is(msgreg.DegradedDownstreamLinkEstablishedFabric("", ""))
 	downstreamLinkDropped := e.Is(msgreg.DownstreamLinkDroppedFabric("", ""))
 
-	// Check if the event is one that we care about
-	if !upstreamLinkEstablished && !upstreamLinkDropped && !downstreamLinkEstablished && !downstreamLinkDropped {
+	// Drive state change events
+	nvmeStateChange := e.Is(msgreg.NvmeStateChangeNnf("", "", ""))
+
+	// If we don't care about the event, exit
+	if !upstreamLinkEstablished &&
+		!upstreamLinkDropped &&
+		!downstreamLinkEstablished &&
+		!downstreamLinkDropped &&
+		!nvmeStateChange {
 		return nil
 	}
 
@@ -282,7 +289,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	systemConfig := &dwsv1alpha4.SystemConfiguration{}
+	systemConfig := &dwsv1alpha5.SystemConfiguration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: "default", Namespace: corev1.NamespaceDefault}, systemConfig); err != nil {
 		log.Info("Could not get system configuration")
 		return ctrl.Result{}, nil
@@ -426,7 +433,7 @@ func updateDrives(node *nnfv1alpha7.NnfNode, log logr.Logger) error {
 		storageId := storageEndpoint.OdataId[strings.LastIndex(storageEndpoint.OdataId, "/")+1:]
 		storage := &sf.StorageV190Storage{}
 		if err := storageService.StorageIdGet(storageId, storage); err != nil {
-			log.Error(err, fmt.Sprintf("Failed to retrive Storage %s", storageId))
+			log.Error(err, fmt.Sprintf("Failed to retrieve Storage %s", storageId))
 			return err
 		}
 
@@ -501,7 +508,7 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nnfv1alpha7.NnfNode{}).
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
-		Watches(&dwsv1alpha4.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
+		Watches(&dwsv1alpha5.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		WatchesRawSource(&source.Channel{Source: r.Events}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

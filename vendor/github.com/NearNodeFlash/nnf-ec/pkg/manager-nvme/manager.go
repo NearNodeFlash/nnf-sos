@@ -172,6 +172,20 @@ type ProvidingVolume struct {
 	VolumeId string
 }
 
+// Calculate a drive's health from its current state
+func resourceHealthFromState(state sf.ResourceState) sf.ResourceHealth {
+	switch state {
+	case sf.ENABLED_RST:
+		return sf.OK_RH
+	case sf.DISABLED_RST:
+		return sf.WARNING_RH
+	case sf.UNAVAILABLE_OFFLINE_RST, sf.ABSENT_RST:
+		return sf.CRITICAL_RH
+	default:
+		return sf.CRITICAL_RH
+	}
+}
+
 // TODO: We may want to put this manager under a resource block
 //   /​redfish/​v1/​ResourceBlocks/​{ResourceBlockId} // <- Rabbit
 //   /​redfish/​v1/​ResourceBlocks/​{ResourceBlockId}/​Systems/{​ComputerSystemId} // <- Also Rabbit & Computes
@@ -410,6 +424,8 @@ func (s *Storage) initialize() error {
 			}
 
 			s.log.Info("identify common namespace attempt failed, retrying", "retryCount", retryCount)
+		} else if ns == nil {
+			return fmt.Errorf("Initialize Storage %s: IdentifyNamespace returned nil without error", s.id)
 		} else {
 			identifySuccess = true
 		}
@@ -418,7 +434,6 @@ func (s *Storage) initialize() error {
 	// Workaround for SSST drives that improperly report only one NumberOfLBAFormats, but actually
 	// support two - with the second being the most performant 4096 sector size.
 	if ns.NumberOfLBAFormats == 1 {
-
 		if ((1 << ns.LBAFormats[1].LBADataSize) == 4096) && (ns.LBAFormats[1].RelativePerformance == 0) {
 			log.Info("Incorrect number of LBA formats", "expected", 2, "actual", ns.NumberOfLBAFormats)
 			ns.NumberOfLBAFormats = 2
@@ -479,10 +494,16 @@ vol_loop:
 		volIdsToDelete = append(volIdsToDelete, vol.id)
 	}
 
+	var errs []error
 	for _, volId := range volIdsToDelete {
 		if err := s.deleteVolume(volId); err != nil {
-			return err
+			s.log.Error(err, "Failed to delete volume during purge", "volumeId", volId)
+			errs = append(errs, fmt.Errorf("volume %s: %w", volId, err))
 		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("purgeVolumes encountered errors: %v", errs)
 	}
 
 	return nil
@@ -503,7 +524,7 @@ func (s *Storage) getStatus() (stat sf.ResourceStatus) {
 		stat.State = sf.UNAVAILABLE_OFFLINE_RST
 		stat.Health = sf.CRITICAL_RH
 	} else {
-		stat.Health = sf.OK_RH
+		stat.Health = resourceHealthFromState(s.state)
 		stat.State = s.state
 	}
 
@@ -552,19 +573,19 @@ func (s *Storage) deleteVolume(volumeId string) error {
 			log := volume.log
 
 			log.V(2).Info("Deleting namespace")
-			if err := s.device.DeleteNamespace(volume.namespaceId); err != nil {
-				log.Error(err, "Delete namespace failed")
-				return err
+			err := s.device.DeleteNamespace(volume.namespaceId)
+			if err != nil {
+				log.Error(err, "Delete namespace failed, removing from in-memory state anyway", "capacity", volume.capacityBytes)
+			} else {
+				log.V(1).Info("Deleted namespace", "capacity", volume.capacityBytes)
 			}
-			log.V(1).Info("Deleted namespace", "capacity", volume.capacityBytes)
 
+			// Whether or not there was an error, delete the volume in memory
 			s.unallocatedBytes += volume.capacityBytes
+			copy(s.volumes[idx:], s.volumes[idx+1:])
+			s.volumes = s.volumes[:len(s.volumes)-1]
 
-			// remove the volume from the array
-			copy(s.volumes[idx:], s.volumes[idx+1:]) // shift left 1 at idx
-			s.volumes = s.volumes[:len(s.volumes)-1] // truncate tail
-
-			return nil
+			return err
 		}
 	}
 
@@ -603,6 +624,11 @@ func (s *Storage) recoverStorageVolumes() error {
 		ns, err := s.device.IdentifyNamespace(nsid)
 		if err != nil {
 			log.Error(err, "Failed to identify namespace")
+			continue
+		}
+		if ns == nil {
+			log.Error(fmt.Errorf("IdentifyNamespace returned nil without error"), "Failed to identify namespace")
+			continue
 		}
 
 		blockSizeBytes := uint64(1 << ns.LBAFormats[ns.FormattedLBASize.Format].LBADataSize)
@@ -633,6 +659,14 @@ func (s *Storage) findVolume(volumeId string) *Volume {
 	return nil
 }
 
+func (s *Storage) notify(newState sf.ResourceState) {
+	if newState != s.state {
+		s.state = newState
+		event.EventManager.Publish(msgreg.NvmeStateChangeNnf(strconv.FormatInt(s.slot, 10), s.modelNumber, s.serialNumber))
+	}
+}
+
+// Getters for common volume operations
 func (v *Volume) Id() string                               { return v.id }
 func (v *Volume) GetOdataId() string                       { return v.storage.OdataId() + "/Volumes/" + v.id }
 func (v *Volume) GetCapacityBytes() uint64                 { return uint64(v.capacityBytes) }
@@ -695,6 +729,9 @@ func (v *Volume) WaitFormatComplete() error {
 	if err != nil {
 		return err
 	}
+	if ns == nil {
+		return fmt.Errorf("IdentifyNamespace returned nil without error")
+	}
 
 	stalledCount := 0
 	for ns.Utilization != 0 {
@@ -710,6 +747,9 @@ func (v *Volume) WaitFormatComplete() error {
 		ns, err = v.storage.device.IdentifyNamespace(v.namespaceId)
 		if err != nil {
 			return err
+		}
+		if ns == nil {
+			return fmt.Errorf("IdentifyNamespace returned nil without error")
 		}
 
 		if lastUtilization == ns.Utilization {
@@ -1221,7 +1261,7 @@ func (mgr *Manager) StorageIdControllersControllerIdGet(storageId, controllerId 
 		return ec.NewErrNotFound().WithError(err).WithCause(fmt.Sprintf("Storage Controller fabric endpoint not found: Storage: %s Controller: %s", storageId, controllerId))
 	}
 
-	percentageUsage, err := s.device.GetWearLevelAsPercentageUsed()
+	percentageUsage, err := GetWearLevelAsPercentageUsed(s.device)
 	if err != nil {
 		return ec.NewErrInternalServerError().WithError(err).WithCause(fmt.Sprintf("Storage Controller failed to retrieve SMART data: Storage: %s", storageId))
 	}
@@ -1292,6 +1332,10 @@ func (mgr *Manager) StorageIdVolumeIdGet(storageId, volumeId string, model *sf.V
 	ns, err := s.device.IdentifyNamespace(nvme.NamespaceIdentifier(v.namespaceId))
 	if err != nil {
 		v.log.Error(err, "Identify Namespace Failed")
+		return ec.NewErrInternalServerError()
+	}
+	if ns == nil {
+		v.log.Error(fmt.Errorf("IdentifyNamespace returned nil without error"), "Identify Namespace Failed")
 		return ec.NewErrInternalServerError()
 	}
 
