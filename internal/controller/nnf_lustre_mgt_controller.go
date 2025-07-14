@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
@@ -396,7 +395,7 @@ func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustr
 			}
 
 			if err != nil {
-				commandStatus.Error = dwsv1alpha4.NewResourceError("error running MGT command").WithError(err)
+				commandStatus.Error = dwsv1alpha5.NewResourceError("error running MGT command").WithError(err)
 				commandStatus.Ready = false
 			} else {
 				commandStatus.Error = nil

@@ -125,7 +125,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.
 	storage.Status.Access.Servers = []dwsv1alpha5.Node{{
 		Name:   storage.Name,
-		Status: dwsv1alpha5.ResourceStatus(nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus()),
+		Status: nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
 	}}
 
 	// Populate compute status'
@@ -142,7 +142,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Access.Computes = append(storage.Status.Access.Computes,
 				dwsv1alpha5.Node{
 					Name:   server.Hostname,
-					Status: dwsv1alpha5.ResourceStatus(server.Status.ConvertToDWSResourceStatus()),
+					Status: server.Status.ConvertToDWSResourceStatus(),
 				})
 		}
 	}
@@ -153,7 +153,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		device := &storage.Status.Devices[idx]
 
 		device.Slot = drive.Slot
-		device.Status = dwsv1alpha5.ResourceStatus(drive.Status.ConvertToDWSResourceStatus())
+		device.Status = drive.Status.ConvertToDWSResourceStatus()
 
 		if drive.Status == nnfv1alpha7.ResourceReady {
 			wearLevel := drive.WearLevel
@@ -217,7 +217,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Status = dwsv1alpha5.DrainedStatus
 			storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
 		} else {
-			storage.Status.Status = dwsv1alpha5.ResourceStatus(nnfNode.Status.Status.ConvertToDWSResourceStatus())
+			storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
 		}
 	}
 

@@ -31,9 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	unsafe "unsafe"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
@@ -822,7 +820,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha7.NnfStorage, workflow *dwsv1alpha5.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha4.WorkflowState, log logr.Logger) (*nnfv1alpha7.NnfAccess, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha7.NnfStorage, workflow *dwsv1alpha5.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha5.WorkflowState, log logr.Logger) (*nnfv1alpha7.NnfAccess, error) {
 	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, parentDwIndex)
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {
@@ -936,34 +934,23 @@ func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *
 }
 
 func handleWorkflowError(err error, driverStatus *dwsv1alpha5.WorkflowDriverStatus) {
-
 	e, ok := err.(*dwsv1alpha5.ResourceErrorInfo)
-	if !ok {
-		// Errors embedded in sos resources are still using dwsv1alpha4.
-		oldError, ok := err.(*dwsv1alpha4.ResourceErrorInfo)
-		if !ok {
+	if ok {
+		status, err := e.Severity.ToStatus()
+		if err != nil {
 			driverStatus.Status = dwsv1alpha5.StatusError
 			driverStatus.Message = "Internal error: " + err.Error()
 			driverStatus.Error = err.Error()
-
-			return
+		} else {
+			driverStatus.Status = status
+			driverStatus.Message = e.GetUserMessage()
+			driverStatus.Error = e.Error()
 		}
-
-		// If the error was a dwsv1alpha4 resource error, convert it to v1alpha5
-		e = (*dwsv1alpha5.ResourceErrorInfo)(unsafe.Pointer(oldError))
-	}
-
-	status, err := e.Severity.ToStatus()
-	if err != nil {
+	} else {
 		driverStatus.Status = dwsv1alpha5.StatusError
 		driverStatus.Message = "Internal error: " + err.Error()
 		driverStatus.Error = err.Error()
-	} else {
-		driverStatus.Status = status
-		driverStatus.Message = e.GetUserMessage()
-		driverStatus.Error = e.Error()
 	}
-
 }
 
 func handleWorkflowErrorByIndex(err error, workflow *dwsv1alpha5.Workflow, index int) {

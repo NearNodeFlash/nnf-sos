@@ -39,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	dwparse "github.com/DataWorkflowServices/dws/utils/dwdparse"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
@@ -766,7 +765,7 @@ var _ = Describe("Integration Test", func() {
 					Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
 					Expect(access.ObjectMeta.OwnerReferences).To(ContainElement(ownerRef))
 					Expect(access.Spec).To(MatchFields(IgnoreExtras, Fields{
-						"TeardownState": Equal(dwsv1alpha4.StatePostRun),
+						"TeardownState": Equal(dwsv1alpha5.StatePostRun),
 						"DesiredState":  Equal("mounted"),
 						"Target":        Equal("single"),
 					}))
@@ -1162,7 +1161,7 @@ var _ = Describe("Integration Test", func() {
 			Expect(k8sClient.Delete(context.TODO(), lustre)).To(Succeed())
 		})
 
-		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha4.WorkflowState) {
+		validateNnfAccessHasCorrectTeardownState := func(state dwsv1alpha5.WorkflowState) {
 			Expect(workflow.Status.DirectiveBreakdowns).To(HaveLen(1))
 
 			access := &nnfv1alpha7.NnfAccess{
@@ -1215,7 +1214,7 @@ var _ = Describe("Integration Test", func() {
 				Expect(workflow.Status.State).To(Equal(dwsv1alpha5.StateDataIn))
 
 				By("Check that NNF Access is created, with deletion in post-run")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StatePostRun)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha5.StatePostRun)
 
 				By("Advancing to post run, ensure NNF Access is deleted")
 				advanceStateAndCheckReady(dwsv1alpha5.StatePreRun, workflow)
@@ -1241,11 +1240,11 @@ var _ = Describe("Integration Test", func() {
 				advanceStateAndCheckReady(dwsv1alpha5.StatePreRun, workflow)
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha5.StateTeardown)
 
 				By("Advancing to post run, ensure NNF Access is still set for deletion in data-out")
 				advanceStateAndCheckReady(dwsv1alpha5.StatePostRun, workflow)
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha5.StateTeardown)
 
 				By("Advancing to data-out, ensure NNF Access is deleted")
 				advanceStateAndCheckReady(dwsv1alpha5.StateDataOut, workflow)
@@ -1266,7 +1265,7 @@ var _ = Describe("Integration Test", func() {
 				Expect(workflow.Status.State).To(Equal(dwsv1alpha5.StateDataIn))
 
 				By("Validate NNF Access is created, with deletion in data-out")
-				validateNnfAccessHasCorrectTeardownState(dwsv1alpha4.StateTeardown)
+				validateNnfAccessHasCorrectTeardownState(dwsv1alpha5.StateTeardown)
 
 				advanceStateAndCheckReady(dwsv1alpha5.StatePreRun, workflow)
 				advanceStateAndCheckReady(dwsv1alpha5.StatePostRun, workflow)
@@ -1300,7 +1299,7 @@ var _ = Describe("Integration Test", func() {
 				}
 				dwsv1alpha5.AddWorkflowLabels(dm, workflow)
 				dwsv1alpha5.AddOwnerLabels(dm, workflow)
-				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha4.StatePostRun)
+				nnfv1alpha7.AddDataMovementTeardownStateLabel(dm, dwsv1alpha5.StatePostRun)
 
 				Expect(k8sClient.Create(context.TODO(), dm)).To(Succeed())
 
