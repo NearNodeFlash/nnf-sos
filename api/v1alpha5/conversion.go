@@ -33,7 +33,7 @@ import (
 
 	dwsv1alpha2 "github.com/DataWorkflowServices/dws/api/v1alpha2"
 	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	utilconversion "github.com/NearNodeFlash/nnf-sos/github/cluster-api/util/conversion"
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,14 +43,14 @@ var convertlog = logf.Log.V(2).WithName("convert-v1alpha5")
 
 func (src *NnfAccess) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfAccess To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfAccess)
+	dst := dstRaw.(*nnfv1alpha8.NnfAccess)
 
-	if err := Convert_v1alpha5_NnfAccess_To_v1alpha7_NnfAccess(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfAccess_To_v1alpha8_NnfAccess(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfAccess{}
+	restored := &nnfv1alpha8.NnfAccess{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -62,10 +62,10 @@ func (src *NnfAccess) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfAccess) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfAccess)
+	src := srcRaw.(*nnfv1alpha8.NnfAccess)
 	convertlog.Info("Convert NnfAccess From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfAccess_To_v1alpha5_NnfAccess(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfAccess_To_v1alpha5_NnfAccess(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -75,14 +75,14 @@ func (dst *NnfAccess) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfContainerProfile To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfContainerProfile)
+	dst := dstRaw.(*nnfv1alpha8.NnfContainerProfile)
 
-	if err := Convert_v1alpha5_NnfContainerProfile_To_v1alpha7_NnfContainerProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfContainerProfile_To_v1alpha8_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfContainerProfile{}
+	restored := &nnfv1alpha8.NnfContainerProfile{}
 	hasAnno, err := utilconversion.UnmarshalData(src, restored)
 	if err != nil {
 		return err
@@ -94,10 +94,10 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	if hasAnno {
 		if restored.Data.NnfSpec != nil {
 			if dst.Data.NnfSpec == nil {
-				dst.Data.NnfSpec = &nnfv1alpha7.NnfPodSpec{}
+				dst.Data.NnfSpec = &nnfv1alpha8.NnfPodSpec{}
 			}
-			dst.Data.NnfSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.Containers...)
-			dst.Data.NnfSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfSpec.InitContainers...)
+			dst.Data.NnfSpec.Containers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfSpec.Containers...)
+			dst.Data.NnfSpec.InitContainers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfSpec.InitContainers...)
 			dst.Data.NnfSpec.Volumes = append([]corev1.Volume(nil), restored.Data.NnfSpec.Volumes...)
 
 			if restored.Data.NnfSpec.TerminationGracePeriodSeconds != nil {
@@ -116,19 +116,19 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 		}
 		if restored.Data.NnfMPISpec != nil {
 			if dst.Data.NnfMPISpec == nil {
-				dst.Data.NnfMPISpec = &nnfv1alpha7.NnfMPISpec{}
+				dst.Data.NnfMPISpec = &nnfv1alpha8.NnfMPISpec{}
 			}
 
-			dst.Data.NnfMPISpec.Launcher.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.Containers...)
-			dst.Data.NnfMPISpec.Launcher.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.InitContainers...)
+			dst.Data.NnfMPISpec.Launcher.Containers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.Containers...)
+			dst.Data.NnfMPISpec.Launcher.InitContainers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfMPISpec.Launcher.InitContainers...)
 			dst.Data.NnfMPISpec.Launcher.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Launcher.Volumes...)
 			dst.Data.NnfMPISpec.Launcher.TerminationGracePeriodSeconds = restored.Data.NnfMPISpec.Launcher.TerminationGracePeriodSeconds
 			dst.Data.NnfMPISpec.Launcher.ShareProcessNamespace = restored.Data.NnfMPISpec.Launcher.ShareProcessNamespace
 			dst.Data.NnfMPISpec.Launcher.ImagePullSecrets = append([]corev1.LocalObjectReference(nil), restored.Data.NnfMPISpec.Launcher.ImagePullSecrets...)
 			dst.Data.NnfMPISpec.Launcher.AutomountServiceAccountToken = restored.Data.NnfMPISpec.Launcher.AutomountServiceAccountToken
 
-			dst.Data.NnfMPISpec.Worker.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.Containers...)
-			dst.Data.NnfMPISpec.Worker.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.InitContainers...)
+			dst.Data.NnfMPISpec.Worker.Containers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.Containers...)
+			dst.Data.NnfMPISpec.Worker.InitContainers = append([]nnfv1alpha8.NnfContainer(nil), restored.Data.NnfMPISpec.Worker.InitContainers...)
 			dst.Data.NnfMPISpec.Worker.Volumes = append([]corev1.Volume(nil), restored.Data.NnfMPISpec.Worker.Volumes...)
 			dst.Data.NnfMPISpec.Worker.TerminationGracePeriodSeconds = restored.Data.NnfMPISpec.Worker.TerminationGracePeriodSeconds
 			dst.Data.NnfMPISpec.Worker.ShareProcessNamespace = restored.Data.NnfMPISpec.Worker.ShareProcessNamespace
@@ -147,13 +147,13 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	} else {
 		if src.Data.Spec != nil {
 			if dst.Data.NnfSpec == nil {
-				dst.Data.NnfSpec = &nnfv1alpha7.NnfPodSpec{}
+				dst.Data.NnfSpec = &nnfv1alpha8.NnfPodSpec{}
 			}
 			dst.Data.NnfSpec.FromCorePodSpec(src.Data.Spec)
 		}
 		if src.Data.MPISpec != nil {
 			if dst.Data.NnfMPISpec == nil {
-				dst.Data.NnfMPISpec = &nnfv1alpha7.NnfMPISpec{}
+				dst.Data.NnfMPISpec = &nnfv1alpha8.NnfMPISpec{}
 			}
 			if src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher] != nil {
 				dst.Data.NnfMPISpec.Launcher.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec)
@@ -162,7 +162,7 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 				dst.Data.NnfMPISpec.Worker.FromCorePodSpec(&src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec)
 			}
 
-			dst.Data.NnfMPISpec.CopyOffload = src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName == nnfv1alpha7.CopyOffloadServiceAccountName
+			dst.Data.NnfMPISpec.CopyOffload = src.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName == nnfv1alpha8.CopyOffloadServiceAccountName
 
 			if src.Data.MPISpec.SlotsPerWorker != nil {
 				if dst.Data.NnfMPISpec.SlotsPerWorker == nil {
@@ -177,10 +177,10 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfContainerProfile)
+	src := srcRaw.(*nnfv1alpha8.NnfContainerProfile)
 	convertlog.Info("Convert NnfContainerProfile From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfContainerProfile_To_v1alpha5_NnfContainerProfile(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -210,7 +210,7 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 		dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeWorker].Template.Spec = *src.Data.NnfMPISpec.Worker.ToCorePodSpec()
 
 		if src.Data.NnfMPISpec.CopyOffload {
-			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName = nnfv1alpha7.CopyOffloadServiceAccountName
+			dst.Data.MPISpec.MPIReplicaSpecs[mpiv2beta1.MPIReplicaTypeLauncher].Template.Spec.ServiceAccountName = nnfv1alpha8.CopyOffloadServiceAccountName
 		}
 
 		if src.Data.NnfMPISpec.SlotsPerWorker != nil {
@@ -227,14 +227,14 @@ func (dst *NnfContainerProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfDataMovement) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfDataMovement To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfDataMovement)
+	dst := dstRaw.(*nnfv1alpha8.NnfDataMovement)
 
-	if err := Convert_v1alpha5_NnfDataMovement_To_v1alpha7_NnfDataMovement(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfDataMovement_To_v1alpha8_NnfDataMovement(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfDataMovement{}
+	restored := &nnfv1alpha8.NnfDataMovement{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -246,10 +246,10 @@ func (src *NnfDataMovement) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfDataMovement) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfDataMovement)
+	src := srcRaw.(*nnfv1alpha8.NnfDataMovement)
 	convertlog.Info("Convert NnfDataMovement From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfDataMovement_To_v1alpha5_NnfDataMovement(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfDataMovement_To_v1alpha5_NnfDataMovement(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -259,14 +259,14 @@ func (dst *NnfDataMovement) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfDataMovementManager) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfDataMovementManager To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfDataMovementManager)
+	dst := dstRaw.(*nnfv1alpha8.NnfDataMovementManager)
 
-	if err := Convert_v1alpha5_NnfDataMovementManager_To_v1alpha7_NnfDataMovementManager(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfDataMovementManager_To_v1alpha8_NnfDataMovementManager(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfDataMovementManager{}
+	restored := &nnfv1alpha8.NnfDataMovementManager{}
 	hasAnno, err := utilconversion.UnmarshalData(src, restored)
 	if err != nil {
 		return err
@@ -276,8 +276,8 @@ func (src *NnfDataMovementManager) ConvertTo(dstRaw conversion.Hub) error {
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 
 	if hasAnno {
-		dst.Spec.PodSpec.Containers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.Containers...)
-		dst.Spec.PodSpec.InitContainers = append([]nnfv1alpha7.NnfContainer(nil), restored.Spec.PodSpec.InitContainers...)
+		dst.Spec.PodSpec.Containers = append([]nnfv1alpha8.NnfContainer(nil), restored.Spec.PodSpec.Containers...)
+		dst.Spec.PodSpec.InitContainers = append([]nnfv1alpha8.NnfContainer(nil), restored.Spec.PodSpec.InitContainers...)
 		dst.Spec.PodSpec.Volumes = append([]corev1.Volume(nil), restored.Spec.PodSpec.Volumes...)
 
 		if restored.Spec.PodSpec.TerminationGracePeriodSeconds != nil {
@@ -301,10 +301,10 @@ func (src *NnfDataMovementManager) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfDataMovementManager) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfDataMovementManager)
+	src := srcRaw.(*nnfv1alpha8.NnfDataMovementManager)
 	convertlog.Info("Convert NnfDataMovementManager From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfDataMovementManager_To_v1alpha5_NnfDataMovementManager(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -316,14 +316,14 @@ func (dst *NnfDataMovementManager) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfDataMovementProfile) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfDataMovementProfile To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfDataMovementProfile)
+	dst := dstRaw.(*nnfv1alpha8.NnfDataMovementProfile)
 
-	if err := Convert_v1alpha5_NnfDataMovementProfile_To_v1alpha7_NnfDataMovementProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfDataMovementProfile_To_v1alpha8_NnfDataMovementProfile(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfDataMovementProfile{}
+	restored := &nnfv1alpha8.NnfDataMovementProfile{}
 	hasAnno, err := utilconversion.UnmarshalData(src, restored)
 	if err != nil {
 		return err
@@ -339,10 +339,10 @@ func (src *NnfDataMovementProfile) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfDataMovementProfile) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfDataMovementProfile)
+	src := srcRaw.(*nnfv1alpha8.NnfDataMovementProfile)
 	convertlog.Info("Convert NnfDataMovementProfile From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfDataMovementProfile_To_v1alpha5_NnfDataMovementProfile(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -352,14 +352,14 @@ func (dst *NnfDataMovementProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfLustreMGT) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfLustreMGT To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfLustreMGT)
+	dst := dstRaw.(*nnfv1alpha8.NnfLustreMGT)
 
-	if err := Convert_v1alpha5_NnfLustreMGT_To_v1alpha7_NnfLustreMGT(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfLustreMGT_To_v1alpha8_NnfLustreMGT(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfLustreMGT{}
+	restored := &nnfv1alpha8.NnfLustreMGT{}
 	hasAnno, err := utilconversion.UnmarshalData(src, restored)
 	if err != nil {
 		return err
@@ -368,18 +368,18 @@ func (src *NnfLustreMGT) ConvertTo(dstRaw conversion.Hub) error {
 	// hub-specific then copy it into 'dst' from 'restored'.
 	// Otherwise, you may comment out UnmarshalData() until it's needed.
 	if hasAnno {
-		dst.Status.CommandList = append([]nnfv1alpha7.NnfLustreMGTStatusCommand(nil), restored.Status.CommandList...)
-		dst.Spec.CommandList = append([]nnfv1alpha7.NnfLustreMGTSpecCommand(nil), restored.Spec.CommandList...)
+		dst.Status.CommandList = append([]nnfv1alpha8.NnfLustreMGTStatusCommand(nil), restored.Status.CommandList...)
+		dst.Spec.CommandList = append([]nnfv1alpha8.NnfLustreMGTSpecCommand(nil), restored.Spec.CommandList...)
 	}
 
 	return nil
 }
 
 func (dst *NnfLustreMGT) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfLustreMGT)
+	src := srcRaw.(*nnfv1alpha8.NnfLustreMGT)
 	convertlog.Info("Convert NnfLustreMGT From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfLustreMGT_To_v1alpha5_NnfLustreMGT(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -389,14 +389,14 @@ func (dst *NnfLustreMGT) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfNode) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfNode To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfNode)
+	dst := dstRaw.(*nnfv1alpha8.NnfNode)
 
-	if err := Convert_v1alpha5_NnfNode_To_v1alpha7_NnfNode(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfNode_To_v1alpha8_NnfNode(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfNode{}
+	restored := &nnfv1alpha8.NnfNode{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -408,10 +408,10 @@ func (src *NnfNode) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfNode) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfNode)
+	src := srcRaw.(*nnfv1alpha8.NnfNode)
 	convertlog.Info("Convert NnfNode From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfNode_To_v1alpha5_NnfNode(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfNode_To_v1alpha5_NnfNode(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -421,14 +421,14 @@ func (dst *NnfNode) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfNodeBlockStorage) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfNodeBlockStorage To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfNodeBlockStorage)
+	dst := dstRaw.(*nnfv1alpha8.NnfNodeBlockStorage)
 
-	if err := Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha7_NnfNodeBlockStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfNodeBlockStorage_To_v1alpha8_NnfNodeBlockStorage(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfNodeBlockStorage{}
+	restored := &nnfv1alpha8.NnfNodeBlockStorage{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -440,10 +440,10 @@ func (src *NnfNodeBlockStorage) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfNodeBlockStorage) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfNodeBlockStorage)
+	src := srcRaw.(*nnfv1alpha8.NnfNodeBlockStorage)
 	convertlog.Info("Convert NnfNodeBlockStorage From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfNodeBlockStorage_To_v1alpha5_NnfNodeBlockStorage(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -453,14 +453,14 @@ func (dst *NnfNodeBlockStorage) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfNodeECData) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfNodeECData To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfNodeECData)
+	dst := dstRaw.(*nnfv1alpha8.NnfNodeECData)
 
-	if err := Convert_v1alpha5_NnfNodeECData_To_v1alpha7_NnfNodeECData(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfNodeECData_To_v1alpha8_NnfNodeECData(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfNodeECData{}
+	restored := &nnfv1alpha8.NnfNodeECData{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -472,10 +472,10 @@ func (src *NnfNodeECData) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfNodeECData) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfNodeECData)
+	src := srcRaw.(*nnfv1alpha8.NnfNodeECData)
 	convertlog.Info("Convert NnfNodeECData From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfNodeECData_To_v1alpha5_NnfNodeECData(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfNodeECData_To_v1alpha5_NnfNodeECData(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -485,14 +485,14 @@ func (dst *NnfNodeECData) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfNodeStorage) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfNodeStorage To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfNodeStorage)
+	dst := dstRaw.(*nnfv1alpha8.NnfNodeStorage)
 
-	if err := Convert_v1alpha5_NnfNodeStorage_To_v1alpha7_NnfNodeStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfNodeStorage_To_v1alpha8_NnfNodeStorage(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfNodeStorage{}
+	restored := &nnfv1alpha8.NnfNodeStorage{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -504,10 +504,10 @@ func (src *NnfNodeStorage) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfNodeStorage) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfNodeStorage)
+	src := srcRaw.(*nnfv1alpha8.NnfNodeStorage)
 	convertlog.Info("Convert NnfNodeStorage From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfNodeStorage_To_v1alpha5_NnfNodeStorage(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -517,14 +517,14 @@ func (dst *NnfNodeStorage) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfPortManager) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfPortManager To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfPortManager)
+	dst := dstRaw.(*nnfv1alpha8.NnfPortManager)
 
-	if err := Convert_v1alpha5_NnfPortManager_To_v1alpha7_NnfPortManager(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfPortManager_To_v1alpha8_NnfPortManager(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfPortManager{}
+	restored := &nnfv1alpha8.NnfPortManager{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -536,10 +536,10 @@ func (src *NnfPortManager) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfPortManager) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfPortManager)
+	src := srcRaw.(*nnfv1alpha8.NnfPortManager)
 	convertlog.Info("Convert NnfPortManager From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfPortManager_To_v1alpha5_NnfPortManager(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfPortManager_To_v1alpha5_NnfPortManager(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -549,14 +549,14 @@ func (dst *NnfPortManager) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfStorage) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfStorage To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfStorage)
+	dst := dstRaw.(*nnfv1alpha8.NnfStorage)
 
-	if err := Convert_v1alpha5_NnfStorage_To_v1alpha7_NnfStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfStorage_To_v1alpha8_NnfStorage(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfStorage{}
+	restored := &nnfv1alpha8.NnfStorage{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -568,10 +568,10 @@ func (src *NnfStorage) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfStorage) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfStorage)
+	src := srcRaw.(*nnfv1alpha8.NnfStorage)
 	convertlog.Info("Convert NnfStorage From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfStorage_To_v1alpha5_NnfStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfStorage_To_v1alpha5_NnfStorage(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -581,14 +581,14 @@ func (dst *NnfStorage) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfStorageProfile To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfStorageProfile)
+	dst := dstRaw.(*nnfv1alpha8.NnfStorageProfile)
 
-	if err := Convert_v1alpha5_NnfStorageProfile_To_v1alpha7_NnfStorageProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfStorageProfile_To_v1alpha8_NnfStorageProfile(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfStorageProfile{}
+	restored := &nnfv1alpha8.NnfStorageProfile{}
 	hasAnno, err := utilconversion.UnmarshalData(src, restored)
 	if err != nil {
 		return err
@@ -614,10 +614,10 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfStorageProfile)
+	src := srcRaw.(*nnfv1alpha8.NnfStorageProfile)
 	convertlog.Info("Convert NnfStorageProfile From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfStorageProfile_To_v1alpha5_NnfStorageProfile(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -632,14 +632,14 @@ func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
 
 func (src *NnfSystemStorage) ConvertTo(dstRaw conversion.Hub) error {
 	convertlog.Info("Convert NnfSystemStorage To Hub", "name", src.GetName(), "namespace", src.GetNamespace())
-	dst := dstRaw.(*nnfv1alpha7.NnfSystemStorage)
+	dst := dstRaw.(*nnfv1alpha8.NnfSystemStorage)
 
-	if err := Convert_v1alpha5_NnfSystemStorage_To_v1alpha7_NnfSystemStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha5_NnfSystemStorage_To_v1alpha8_NnfSystemStorage(src, dst, nil); err != nil {
 		return err
 	}
 
 	// Manually restore data.
-	restored := &nnfv1alpha7.NnfSystemStorage{}
+	restored := &nnfv1alpha8.NnfSystemStorage{}
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
@@ -651,10 +651,10 @@ func (src *NnfSystemStorage) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 func (dst *NnfSystemStorage) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*nnfv1alpha7.NnfSystemStorage)
+	src := srcRaw.(*nnfv1alpha8.NnfSystemStorage)
 	convertlog.Info("Convert NnfSystemStorage From Hub", "name", src.GetName(), "namespace", src.GetNamespace())
 
-	if err := Convert_v1alpha7_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(src, dst, nil); err != nil {
+	if err := Convert_v1alpha8_NnfSystemStorage_To_v1alpha5_NnfSystemStorage(src, dst, nil); err != nil {
 		return err
 	}
 
@@ -841,42 +841,42 @@ func Convert_v1alpha4_ResourceErrorInfo_To_v1alpha2_ResourceErrorInfo(in *dwsv1a
 // The conversion-gen tool dropped these from zz_generated.conversion.go to
 // force us to acknowledge that we are addressing the conversion requirements.
 
-func Convert_v1alpha7_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *nnfv1alpha7.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in, out, s)
+func Convert_v1alpha8_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in *nnfv1alpha8.NnfLustreMGTSpec, out *NnfLustreMGTSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfLustreMGTSpec_To_v1alpha5_NnfLustreMGTSpec(in, out, s)
 }
 
-func Convert_v1alpha7_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *nnfv1alpha7.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in, out, s)
+func Convert_v1alpha8_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in *nnfv1alpha8.NnfLustreMGTStatus, out *NnfLustreMGTStatus, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfLustreMGTStatus_To_v1alpha5_NnfLustreMGTStatus(in, out, s)
 }
 
-func Convert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in *nnfv1alpha7.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in, out, s)
+func Convert_v1alpha8_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in *nnfv1alpha8.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfStorageProfileLustreData_To_v1alpha5_NnfStorageProfileLustreData(in, out, s)
 }
 
-func Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *nnfv1alpha7.NnfStorageProfileLustreData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(in, out, s)
+func Convert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha8_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *nnfv1alpha8.NnfStorageProfileLustreData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageProfileLustreData_To_v1alpha8_NnfStorageProfileLustreData(in, out, s)
 }
 
-func Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *nnfv1alpha7.NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
-	return autoConvert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(in, out, s)
+func Convert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha8_NnfStorageProfileLustreCmdLines(in *NnfStorageProfileLustreCmdLines, out *nnfv1alpha8.NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfStorageProfileLustreCmdLines_To_v1alpha8_NnfStorageProfileLustreCmdLines(in, out, s)
 }
 
-func Convert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *nnfv1alpha7.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
+func Convert_v1alpha8_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in *nnfv1alpha8.NnfDataMovementProfileData, out *NnfDataMovementProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfDataMovementProfileData_To_v1alpha5_NnfDataMovementProfileData(in, out, s)
 }
 
-func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in *NnfContainerProfileData, out *nnfv1alpha7.NnfContainerProfileData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha7_NnfContainerProfileData(in, out, s)
+func Convert_v1alpha5_NnfContainerProfileData_To_v1alpha8_NnfContainerProfileData(in *NnfContainerProfileData, out *nnfv1alpha8.NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfContainerProfileData_To_v1alpha8_NnfContainerProfileData(in, out, s)
 }
 
-func Convert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *nnfv1alpha7.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
+func Convert_v1alpha8_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in *nnfv1alpha8.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfContainerProfileData_To_v1alpha5_NnfContainerProfileData(in, out, s)
 }
 
-func Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *nnfv1alpha7.NnfDataMovementManagerSpec, s apiconversion.Scope) error {
-	return autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha7_NnfDataMovementManagerSpec(in, out, s)
+func Convert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha8_NnfDataMovementManagerSpec(in *NnfDataMovementManagerSpec, out *nnfv1alpha8.NnfDataMovementManagerSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha5_NnfDataMovementManagerSpec_To_v1alpha8_NnfDataMovementManagerSpec(in, out, s)
 }
 
-func Convert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *nnfv1alpha7.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s apiconversion.Scope) error {
-	return autoConvert_v1alpha7_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in, out, s)
+func Convert_v1alpha8_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in *nnfv1alpha8.NnfDataMovementManagerSpec, out *NnfDataMovementManagerSpec, s apiconversion.Scope) error {
+	return autoConvert_v1alpha8_NnfDataMovementManagerSpec_To_v1alpha5_NnfDataMovementManagerSpec(in, out, s)
 }
