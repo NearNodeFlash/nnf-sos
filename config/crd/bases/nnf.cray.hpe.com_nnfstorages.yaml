@@ -1070,6 +1070,359 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: READY
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    name: v1alpha8
+    schema:
+      openAPIV3Schema:
+        description: NnfStorage is the Schema for the storages API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NnfStorageSpec defines the specification for requesting generic storage on a set
+              of available NNF Nodes. This object is related to a #DW for NNF Storage, with the WLM
+              making the determination for which NNF Nodes it wants to utilize.
+            properties:
+              allocationSets:
+                description: |-
+                  AllocationSets is a list of different types of storage allocations to make. Each
+                  AllocationSet describes an entire allocation spanning multiple Rabbits. For example,
+                  an AllocationSet could be all of the OSTs in a Lustre filesystem, or all of the raw
+                  block devices in a raw block configuration.
+                items:
+                  description: NnfStorageAllocationSetSpec defines the details for
+                    an allocation set
+                  properties:
+                    backFs:
+                      description: BackFs is the type of backing filesystem to use.
+                      enum:
+                      - ldiskfs
+                      - zfs
+                      type: string
+                    capacity:
+                      description: |-
+                        Capacity defines the capacity, in bytes, of this storage specification. The NNF Node itself
+                        may split the storage among the available drives operating in the NNF Node.
+                      format: int64
+                      type: integer
+                    commandVariables:
+                      description: Extra variable substitutions to make for commands
+                      items:
+                        description: CommandVariablesSpec contains information about
+                          a variable that should be substituted in a command line
+                        properties:
+                          indexed:
+                            description: |-
+                              Indexed determines whether to use the same value for each allocation, or to use
+                              a different value based on the index of the allocation.
+                            type: boolean
+                          indexedValues:
+                            description: |-
+                              IndexedValues is a list of strings values for the variable. The list length should
+                              be the same as the allocation count in the NnfNodeStorageSpec.
+                            items:
+                              type: string
+                            type: array
+                          name:
+                            description: Name of the variable
+                            type: string
+                          value:
+                            description: Value for the variable
+                            type: string
+                        type: object
+                      type: array
+                    mgsAddress:
+                      description: |-
+                        MgsAddress is the NID of the MGS when a pre-existing MGS is
+                        provided in the NnfStorageProfile
+                      type: string
+                    name:
+                      description: Name is a human readable label for this set of
+                        allocations (e.g., xfs)
+                      type: string
+                    nodes:
+                      description: Nodes is the list of Rabbit nodes to make allocations
+                        on
+                      items:
+                        description: NnfStorageAllocationNodes identifies the node
+                          and properties of the allocation to make on that node
+                        properties:
+                          count:
+                            description: Number of allocations to make on this node
+                            type: integer
+                          name:
+                            description: Name of the node to make the allocation on
+                            type: string
+                        required:
+                        - count
+                        - name
+                        type: object
+                      type: array
+                    persistentMgsReference:
+                      description: |-
+                        PersistentMgsReference is a reference to a persistent storage that is providing
+                        the external MGS.
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        fieldPath:
+                          description: |-
+                            If referring to a piece of an object instead of an entire object, this string
+                            should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                            For example, if the object reference is to a container within a pod, this would take on a value like:
+                            "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                            the event) or if no container name is specified "spec.containers[2]" (container with
+                            index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                            referencing a part of an object.
+                          type: string
+                        kind:
+                          description: |-
+                            Kind of the referent.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                          type: string
+                        name:
+                          description: |-
+                            Name of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                          type: string
+                        resourceVersion:
+                          description: |-
+                            Specific resourceVersion to which this reference is made, if any.
+                            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                          type: string
+                        uid:
+                          description: |-
+                            UID of the referent.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    sharedAllocation:
+                      description: |-
+                        SharedAllocation shares a single block storage allocation between multiple file system allocations
+                        (within the same workflow) on a Rabbit
+                      type: boolean
+                    targetType:
+                      description: TargetType is the type of Lustre target to be created.
+                      enum:
+                      - mgt
+                      - mdt
+                      - mgtmdt
+                      - ost
+                      type: string
+                  required:
+                  - capacity
+                  - name
+                  - nodes
+                  - sharedAllocation
+                  type: object
+                type: array
+              fileSystemType:
+                default: raw
+                description: |-
+                  FileSystemType defines the type of the desired filesystem, or raw
+                  block device.
+                enum:
+                - raw
+                - lvm
+                - zfs
+                - xfs
+                - gfs2
+                - lustre
+                type: string
+              groupID:
+                description: Group ID for file system
+                format: int32
+                type: integer
+              userID:
+                description: User ID for file system
+                format: int32
+                type: integer
+            required:
+            - allocationSets
+            - groupID
+            - userID
+            type: object
+          status:
+            description: NnfStorageStatus defines the observed status of NNF Storage.
+            properties:
+              allocationSets:
+                description: |-
+                  AllocationsSets holds the status information for each of the AllocationSets
+                  from the spec.
+                items:
+                  description: NnfStorageAllocationSetStatus contains the status information
+                    for an allocation set
+                  properties:
+                    allocationCount:
+                      description: |-
+                        AllocationCount is the total number of allocations that currently
+                        exist
+                      type: integer
+                    ready:
+                      type: boolean
+                  required:
+                  - allocationCount
+                  type: object
+                type: array
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              fileSystemName:
+                description: FileSystemName is the fsname parameter for the Lustre
+                  filesystem.
+                maxLength: 8
+                type: string
+              lustreComponents:
+                description: |-
+                  LustreComponents defines that list of NNF Nodes that are used for the components (e.g. OSTs)
+                  in the lustre filesystem.
+                properties:
+                  mdts:
+                    description: MTDs is the list of NNF nodes being used as MDTs.
+                    items:
+                      type: string
+                    type: array
+                  mgtmdts:
+                    description: MGTMDTs is the list of NNF nodes being used as combined
+                      MGTMDTs.
+                    items:
+                      type: string
+                    type: array
+                  mgts:
+                    description: MGTs is the list of NNF nodes being used as MGTs.
+                    items:
+                      type: string
+                    type: array
+                  nnfNodes:
+                    description: |-
+                      NNfNodes is the list of NNF nodes being used for this filesystem. This is a unique list of
+                      node names.
+                    items:
+                      type: string
+                    type: array
+                  osts:
+                    description: OSTs is the list of NNF nodes being used as OSTs.
+                    items:
+                      type: string
+                    type: array
+                type: object
+              lustreMgtReference:
+                description: |-
+                  LustgreMgtReference is an object reference to the NnfLustreMGT resource used
+                  by the NnfStorage
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              mgsAddress:
+                description: MgsAddress is the NID of the MGS.
+                type: string
+              ready:
+                description: Ready reflects the status of this NNF Storage
+                type: boolean
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}
