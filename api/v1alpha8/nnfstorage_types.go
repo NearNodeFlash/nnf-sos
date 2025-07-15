@@ -20,7 +20,7 @@
 package v1alpha8
 
 import (
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -179,7 +179,7 @@ type NnfStorageStatus struct {
 	// from the spec.
 	AllocationSets []NnfStorageAllocationSetStatus `json:"allocationSets,omitempty"`
 
-	dwsv1alpha4.ResourceError `json:",inline"`
+	dwsv1alpha5.ResourceError `json:",inline"`
 
 	// Ready reflects the status of this NNF Storage
 	Ready bool `json:"ready,omitempty"`

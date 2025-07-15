@@ -20,7 +20,7 @@
 package v1alpha8
 
 import (
-	dwsv1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
+	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 )
@@ -95,22 +95,22 @@ func (rst NnfResourceStatusType) UpdateIfWorseThan(status *NnfResourceStatusType
 	}
 }
 
-func (rst NnfResourceStatusType) ConvertToDWSResourceStatus() dwsv1alpha4.ResourceStatus {
+func (rst NnfResourceStatusType) ConvertToDWSResourceStatus() dwsv1alpha5.ResourceStatus {
 	switch rst {
 	case ResourceStarting:
-		return dwsv1alpha4.StartingStatus
+		return dwsv1alpha5.StartingStatus
 	case ResourceReady:
-		return dwsv1alpha4.ReadyStatus
+		return dwsv1alpha5.ReadyStatus
 	case ResourceDisabled:
-		return dwsv1alpha4.DisabledStatus
+		return dwsv1alpha5.DisabledStatus
 	case ResourceNotPresent:
-		return dwsv1alpha4.NotPresentStatus
+		return dwsv1alpha5.NotPresentStatus
 	case ResourceOffline:
-		return dwsv1alpha4.OfflineStatus
+		return dwsv1alpha5.OfflineStatus
 	case ResourceFailed:
-		return dwsv1alpha4.FailedStatus
+		return dwsv1alpha5.FailedStatus
 	default:
-		return dwsv1alpha4.UnknownStatus
+		return dwsv1alpha5.UnknownStatus
 	}
 }
 

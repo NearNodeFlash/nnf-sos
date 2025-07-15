@@ -8,3 +8,4 @@ extra_go_dirs: mount-daemon,pkg
 # that ArgoCD can sync them.
 extra_config_dirs: config/examples,config/ports,config/dws
 
+alternate_main: api/v1alpha7/nnfaccess_types.go
