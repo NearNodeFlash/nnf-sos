@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 )
 
 var _ = Describe("NnfSystemStorage Controller Test", func() {
@@ -42,11 +42,11 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		"rabbit-systemstorage-node-1",
 		"rabbit-systemstorage-node-2"}
 
-	nnfNodes := [2]*nnfv1alpha7.NnfNode{}
+	nnfNodes := [2]*nnfv1alpha8.NnfNode{}
 	nodes := [2]*corev1.Node{}
 
 	var systemConfiguration *dwsv1alpha5.SystemConfiguration
-	var storageProfile *nnfv1alpha7.NnfStorageProfile
+	var storageProfile *nnfv1alpha8.NnfStorageProfile
 	var setup sync.Once
 
 	BeforeEach(func() {
@@ -216,7 +216,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeName,
 					Labels: map[string]string{
-						nnfv1alpha7.RabbitNodeSelectorLabel: "true",
+						nnfv1alpha8.RabbitNodeSelectorLabel: "true",
 					},
 				},
 				Status: corev1.NodeStatus{
@@ -231,14 +231,14 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 
 			Expect(k8sClient.Create(context.TODO(), nodes[i])).To(Succeed())
 
-			nnfNodes[i] = &nnfv1alpha7.NnfNode{
+			nnfNodes[i] = &nnfv1alpha8.NnfNode{
 				TypeMeta: metav1.TypeMeta{},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-nlc",
 					Namespace: nodeName,
 				},
-				Spec: nnfv1alpha7.NnfNodeSpec{
-					State: nnfv1alpha7.ResourceEnable,
+				Spec: nnfv1alpha8.NnfNodeSpec{
+					State: nnfv1alpha8.ResourceEnable,
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), nnfNodes[i])).To(Succeed())
@@ -267,14 +267,14 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha7.NnfStorageProfile{}
+		profExpected := &nnfv1alpha8.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
 
 		for i := range nodeNames {
 			Expect(k8sClient.Delete(context.TODO(), nnfNodes[i])).To(Succeed())
-			tempNnfNode := &nnfv1alpha7.NnfNode{}
+			tempNnfNode := &nnfv1alpha8.NnfNode{}
 			Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodes[i]), tempNnfNode)
 			}).ShouldNot(Succeed())
@@ -295,21 +295,21 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 
 	Describe("Create NnfSystemStorage", func() {
 		It("Creates basic system storage", func() {
-			nnfSystemStorage := &nnfv1alpha7.NnfSystemStorage{
+			nnfSystemStorage := &nnfv1alpha8.NnfSystemStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-system-storage",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha7.NnfSystemStorageSpec{
+				Spec: nnfv1alpha8.NnfSystemStorageSpec{
 					Type:             "raw",
-					ComputesTarget:   nnfv1alpha7.ComputesTargetAll,
+					ComputesTarget:   nnfv1alpha8.ComputesTargetAll,
 					MakeClientMounts: false,
 					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
 						Namespace: storageProfile.GetNamespace(),
-						Kind:      reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name(),
+						Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorageProfile{}).Name(),
 					},
 				},
 			}
@@ -355,21 +355,21 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		})
 
 		It("Creates even system storage", func() {
-			nnfSystemStorage := &nnfv1alpha7.NnfSystemStorage{
+			nnfSystemStorage := &nnfv1alpha8.NnfSystemStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-system-storage",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha7.NnfSystemStorageSpec{
+				Spec: nnfv1alpha8.NnfSystemStorageSpec{
 					Type:             "raw",
-					ComputesTarget:   nnfv1alpha7.ComputesTargetEven,
+					ComputesTarget:   nnfv1alpha8.ComputesTargetEven,
 					MakeClientMounts: false,
 					Shared:           true,
 					Capacity:         1073741824,
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
 						Namespace: storageProfile.GetNamespace(),
-						Kind:      reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name(),
+						Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorageProfile{}).Name(),
 					},
 				},
 			}
@@ -415,14 +415,14 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		})
 
 		It("Creates system storage with index map", func() {
-			nnfSystemStorage := &nnfv1alpha7.NnfSystemStorage{
+			nnfSystemStorage := &nnfv1alpha8.NnfSystemStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-system-storage",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha7.NnfSystemStorageSpec{
+				Spec: nnfv1alpha8.NnfSystemStorageSpec{
 					Type:             "raw",
-					ComputesTarget:   nnfv1alpha7.ComputesTargetPattern,
+					ComputesTarget:   nnfv1alpha8.ComputesTargetPattern,
 					ComputesPattern:  []int{0, 1, 2, 3, 4},
 					MakeClientMounts: false,
 					Shared:           true,
@@ -430,7 +430,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
 						Namespace: storageProfile.GetNamespace(),
-						Kind:      reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name(),
+						Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorageProfile{}).Name(),
 					},
 				},
 			}
@@ -476,14 +476,14 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		})
 
 		It("Creates system storage with excluded Rabbits and computes", func() {
-			nnfSystemStorage := &nnfv1alpha7.NnfSystemStorage{
+			nnfSystemStorage := &nnfv1alpha8.NnfSystemStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-system-storage",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha7.NnfSystemStorageSpec{
+				Spec: nnfv1alpha8.NnfSystemStorageSpec{
 					Type:             "raw",
-					ComputesTarget:   nnfv1alpha7.ComputesTargetAll,
+					ComputesTarget:   nnfv1alpha8.ComputesTargetAll,
 					ExcludeRabbits:   []string{nodeNames[0]},
 					ExcludeComputes:  []string{"1-4", "1-5", "1-6"},
 					MakeClientMounts: false,
@@ -492,7 +492,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					StorageProfile: corev1.ObjectReference{
 						Name:      storageProfile.GetName(),
 						Namespace: storageProfile.GetNamespace(),
-						Kind:      reflect.TypeOf(nnfv1alpha7.NnfStorageProfile{}).Name(),
+						Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorageProfile{}).Name(),
 					},
 				},
 			}

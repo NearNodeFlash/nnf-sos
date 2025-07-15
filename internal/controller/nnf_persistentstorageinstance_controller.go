@@ -38,7 +38,7 @@ import (
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -152,8 +152,8 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, dwsv1alpha5.NewResourceError("").WithUserMessage("creating persistent MGT does not accept 'capacity' argument").WithFatal().WithUser()
 		}
 		labels := persistentStorage.GetLabels()
-		if _, ok := labels[nnfv1alpha7.StandaloneMGTLabel]; !ok {
-			labels[nnfv1alpha7.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
+		if _, ok := labels[nnfv1alpha8.StandaloneMGTLabel]; !ok {
+			labels[nnfv1alpha8.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
 			persistentStorage.SetLabels(labels)
 			if err := r.Update(ctx, persistentStorage); err != nil {
 				if !apierrors.IsConflict(err) {
@@ -192,7 +192,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	} else if persistentStorage.Spec.State == dwsv1alpha5.PSIStateActive {
 		// Wait for the NnfStorage to be ready before marking the persistent storage
 		// state as "active"
-		nnfStorage := &nnfv1alpha7.NnfStorage{}
+		nnfStorage := &nnfv1alpha8.NnfStorage{}
 		if err := r.Get(ctx, req.NamespacedName, nnfStorage); err != nil {
 			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
@@ -259,9 +259,9 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 
 func (r *PersistentStorageReconciler) getChildObjects() []dwsv1alpha5.ObjectList {
 	return []dwsv1alpha5.ObjectList{
-		&nnfv1alpha7.NnfStorageList{},
+		&nnfv1alpha8.NnfStorageList{},
 		&dwsv1alpha5.ServersList{},
-		&nnfv1alpha7.NnfStorageProfileList{},
+		&nnfv1alpha8.NnfStorageProfileList{},
 	}
 }
 
@@ -272,7 +272,7 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha5.PersistentStorageInstance{}).
 		Owns(&dwsv1alpha5.Servers{}).
-		Owns(&nnfv1alpha7.NnfStorage{}).
-		Owns(&nnfv1alpha7.NnfStorageProfile{}).
+		Owns(&nnfv1alpha8.NnfStorage{}).
+		Owns(&nnfv1alpha8.NnfStorageProfile{}).
 		Complete(r)
 }

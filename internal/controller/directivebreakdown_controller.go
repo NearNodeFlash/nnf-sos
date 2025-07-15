@@ -43,7 +43,7 @@ import (
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -622,7 +622,7 @@ func populateStorageAllocationSet(a *dwsv1alpha5.StorageAllocationSet, strategy 
 func (r *DirectiveBreakdownReconciler) getChildObjects() []dwsv1alpha5.ObjectList {
 	return []dwsv1alpha5.ObjectList{
 		&dwsv1alpha5.ServersList{},
-		&nnfv1alpha7.NnfStorageProfileList{},
+		&nnfv1alpha8.NnfStorageProfileList{},
 		&dwsv1alpha5.PersistentStorageInstanceList{},
 	}
 }
@@ -635,6 +635,6 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&dwsv1alpha5.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha5.Servers{}).
 		Owns(&dwsv1alpha5.PersistentStorageInstance{}).
-		Owns(&nnfv1alpha7.NnfStorageProfile{}).
+		Owns(&nnfv1alpha8.NnfStorageProfile{}).
 		Complete(r)
 }
