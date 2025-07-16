@@ -1,9 +1,0 @@
-apiVersion: nnf.cray.hpe.com/v1alpha5
-kind: NnfNodeECData
-metadata:
-  labels:
-    app.kubernetes.io/name: nnf-sos
-    app.kubernetes.io/managed-by: kustomize
-  name: nnfnodeecdata-sample
-spec:
-  # TODO(user): Add fields here
