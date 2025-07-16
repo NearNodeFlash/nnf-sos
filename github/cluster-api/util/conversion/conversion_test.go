@@ -19,7 +19,7 @@ package conversion
 import (
 	"testing"
 
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -30,85 +30,85 @@ import (
 
 var (
 	oldNnfAccessGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfAccess",
 	}
 
 	oldNnfContainerProfileGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfContainerProfile",
 	}
 
 	oldNnfDataMovementGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfDataMovement",
 	}
 
 	oldNnfDataMovementManagerGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfDataMovementManager",
 	}
 
 	oldNnfDataMovementProfileGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfDataMovementProfile",
 	}
 
 	oldNnfLustreMGTGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfLustreMGT",
 	}
 
 	oldNnfNodeGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfNode",
 	}
 
 	oldNnfNodeBlockStorageGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfNodeBlockStorage",
 	}
 
 	oldNnfNodeECDataGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfNodeECData",
 	}
 
 	oldNnfNodeStorageGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfNodeStorage",
 	}
 
 	oldNnfPortManagerGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfPortManager",
 	}
 
 	oldNnfStorageGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfStorage",
 	}
 
 	oldNnfStorageProfileGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfStorageProfile",
 	}
 
 	oldNnfSystemStorageGVK = schema.GroupVersionKind{
-		Group:   nnfv1alpha7.GroupVersion.Group,
+		Group:   nnfv1alpha8.GroupVersion.Group,
 		Version: "v1old",
 		Kind:    "NnfSystemStorage",
 	}
@@ -120,14 +120,14 @@ func TestMarshalData(t *testing.T) {
 	g := NewWithT(t)
 
 	t.Run("NnfAccess should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfAccess{
+		src := &nnfv1alpha8.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfAccessSpec{
+			Spec: nnfv1alpha8.NnfAccessSpec{
 				DesiredState: "mounted",
 				UserID:       1551,
 				GroupID:      2442,
@@ -150,13 +150,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfAccess should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfAccess{
+		src := &nnfv1alpha8.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfAccess"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfAccess"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -170,14 +170,14 @@ func TestMarshalData(t *testing.T) {
 		prerun := int64(345)
 		userid := uint32(7667)
 		groupid := uint32(8448)
-		src := &nnfv1alpha7.NnfContainerProfile{
+		src := &nnfv1alpha8.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Data: nnfv1alpha7.NnfContainerProfileData{
+			Data: nnfv1alpha8.NnfContainerProfileData{
 				PreRunTimeoutSeconds: &prerun,
 				UserID:               &userid,
 				GroupID:              &groupid,
@@ -200,13 +200,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfContainerProfile should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfContainerProfile{
+		src := &nnfv1alpha8.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfContainerProfile"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfContainerProfile"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -217,20 +217,20 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovement should write source object to destination", func(*testing.T) {
-		destpath := &nnfv1alpha7.NnfDataMovementSpecSourceDestination{
+		destpath := &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
 			Path: "little/red",
 		}
-		srcpath := &nnfv1alpha7.NnfDataMovementSpecSourceDestination{
+		srcpath := &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
 			Path: "/dev/null",
 		}
-		src := &nnfv1alpha7.NnfDataMovement{
+		src := &nnfv1alpha8.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfDataMovementSpec{
+			Spec: nnfv1alpha8.NnfDataMovementSpec{
 				Destination: destpath,
 				Source:      srcpath,
 			},
@@ -251,13 +251,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovement should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovement{
+		src := &nnfv1alpha8.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfDataMovement"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfDataMovement"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -268,14 +268,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementManager should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementManager{
+		src := &nnfv1alpha8.NnfDataMovementManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfDataMovementManagerSpec{
+			Spec: nnfv1alpha8.NnfDataMovementManagerSpec{
 				HostPath:  "/this/dir",
 				MountPath: "/mnts",
 			},
@@ -296,13 +296,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementManager should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementManager{
+		src := &nnfv1alpha8.NnfDataMovementManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfDataMovementManager"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfDataMovementManager"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -313,14 +313,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementProfile should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementProfile{
+		src := &nnfv1alpha8.NnfDataMovementProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Data: nnfv1alpha7.NnfDataMovementProfileData{
+			Data: nnfv1alpha8.NnfDataMovementProfileData{
 				Command:     "mpirun is cool",
 				StatCommand: "stat --something",
 			},
@@ -341,13 +341,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementProfile should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementProfile{
+		src := &nnfv1alpha8.NnfDataMovementProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfDataMovementProfile"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfDataMovementProfile"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -359,14 +359,14 @@ func TestMarshalData(t *testing.T) {
 
 	t.Run("NnfLustreMGT should write source object to destination", func(*testing.T) {
 		blacklist := []string{"black-fly", "black bird"}
-		src := &nnfv1alpha7.NnfLustreMGT{
+		src := &nnfv1alpha8.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfLustreMGTSpec{
+			Spec: nnfv1alpha8.NnfLustreMGTSpec{
 				FsNameStart:     "aaaa-pizza",
 				FsNameBlackList: blacklist,
 			},
@@ -388,13 +388,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfLustreMGT should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfLustreMGT{
+		src := &nnfv1alpha8.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfLustreMGT"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfLustreMGT"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -405,14 +405,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNode should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNode{
+		src := &nnfv1alpha8.NnfNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfNodeSpec{
+			Spec: nnfv1alpha8.NnfNodeSpec{
 				Name: "rabbit-1",
 				Pod:  "nnf-thingy-122",
 			},
@@ -433,13 +433,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNode should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNode{
+		src := &nnfv1alpha8.NnfNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfNode"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfNode"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -450,17 +450,17 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeBlockStorage should write source object to destination", func(*testing.T) {
-		alloc := []nnfv1alpha7.NnfNodeBlockStorageAllocationSpec{
+		alloc := []nnfv1alpha8.NnfNodeBlockStorageAllocationSpec{
 			{Access: []string{"rabbit-44", "rabbit-10002"}},
 		}
-		src := &nnfv1alpha7.NnfNodeBlockStorage{
+		src := &nnfv1alpha8.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfNodeBlockStorageSpec{
+			Spec: nnfv1alpha8.NnfNodeBlockStorageSpec{
 				Allocations: alloc,
 			},
 		}
@@ -480,13 +480,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeBlockStorage should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeBlockStorage{
+		src := &nnfv1alpha8.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfNodeBlockStorage"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfNodeBlockStorage"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -497,18 +497,18 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeECData should write source object to destination", func(*testing.T) {
-		elem1 := nnfv1alpha7.NnfNodeECPrivateData{"element1": "the world"}
-		priv := map[string]nnfv1alpha7.NnfNodeECPrivateData{
+		elem1 := nnfv1alpha8.NnfNodeECPrivateData{"element1": "the world"}
+		priv := map[string]nnfv1alpha8.NnfNodeECPrivateData{
 			"thing1": elem1,
 		}
-		src := &nnfv1alpha7.NnfNodeECData{
+		src := &nnfv1alpha8.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Status: nnfv1alpha7.NnfNodeECDataStatus{
+			Status: nnfv1alpha8.NnfNodeECDataStatus{
 				Data: priv,
 			},
 		}
@@ -529,13 +529,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeECData should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeECData{
+		src := &nnfv1alpha8.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfNodeECData"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfNodeECData"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -546,14 +546,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeStorage should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeStorage{
+		src := &nnfv1alpha8.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfNodeStorageSpec{
+			Spec: nnfv1alpha8.NnfNodeStorageSpec{
 				UserID:         4997,
 				GroupID:        2112,
 				FileSystemType: "gfs2",
@@ -576,13 +576,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeStorage should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeStorage{
+		src := &nnfv1alpha8.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfNodeStorage"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfNodeStorage"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -593,14 +593,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfPortManager should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfPortManager{
+		src := &nnfv1alpha8.NnfPortManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfPortManagerSpec{
+			Spec: nnfv1alpha8.NnfPortManagerSpec{
 				SystemConfiguration: corev1.ObjectReference{
 					Namespace: "willy-wonka",
 					Name:      "candy-land",
@@ -623,13 +623,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfPortManager should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfPortManager{
+		src := &nnfv1alpha8.NnfPortManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfPortManager"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfPortManager"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -640,14 +640,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorage should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorage{
+		src := &nnfv1alpha8.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfStorageSpec{
+			Spec: nnfv1alpha8.NnfStorageSpec{
 				FileSystemType: "gfs2",
 				UserID:         4004,
 				GroupID:        2992,
@@ -670,13 +670,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorage should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorage{
+		src := &nnfv1alpha8.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfStorage"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfStorage"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -687,15 +687,15 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorageProfile should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorageProfile{
+		src := &nnfv1alpha8.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Data: nnfv1alpha7.NnfStorageProfileData{
-				LustreStorage: nnfv1alpha7.NnfStorageProfileLustreData{
+			Data: nnfv1alpha8.NnfStorageProfileData{
+				LustreStorage: nnfv1alpha8.NnfStorageProfileLustreData{
 					ExternalMGS: "kfi@1:this@that",
 				},
 			},
@@ -715,13 +715,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorageProfile should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorageProfile{
+		src := &nnfv1alpha8.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfStorageProfile"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfStorageProfile"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -732,14 +732,14 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfSystemStorage should write source object to destination", func(*testing.T) {
-		src := &nnfv1alpha7.NnfSystemStorage{
+		src := &nnfv1alpha8.NnfSystemStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 				Labels: map[string]string{
 					"label1": "",
 				},
 			},
-			Spec: nnfv1alpha7.NnfSystemStorageSpec{
+			Spec: nnfv1alpha8.NnfSystemStorageSpec{
 				ClientMountPath: "/on/this",
 			},
 		}
@@ -758,13 +758,13 @@ func TestMarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfSystemStorage should append the annotation", func(*testing.T) {
-		src := &nnfv1alpha7.NnfSystemStorage{
+		src := &nnfv1alpha8.NnfSystemStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
 		}
 		dst := &unstructured.Unstructured{}
-		dst.SetGroupVersionKind(nnfv1alpha7.GroupVersion.WithKind("NnfSystemStorage"))
+		dst.SetGroupVersionKind(nnfv1alpha8.GroupVersion.WithKind("NnfSystemStorage"))
 		dst.SetName("test-1")
 		dst.SetAnnotations(map[string]string{
 			"annotation": "1",
@@ -781,7 +781,7 @@ func TestUnmarshalData(t *testing.T) {
 	g := NewWithT(t)
 
 	t.Run("NnfAccess should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfAccess{
+		src := &nnfv1alpha8.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -803,7 +803,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfAccess{
+		dst := &nnfv1alpha8.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -828,7 +828,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfAccess{
+		dst := &nnfv1alpha8.NnfAccess{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -843,7 +843,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfContainerProfile should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfContainerProfile{
+		src := &nnfv1alpha8.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -865,7 +865,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfContainerProfile{
+		dst := &nnfv1alpha8.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -890,7 +890,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfContainerProfile{
+		dst := &nnfv1alpha8.NnfContainerProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -905,7 +905,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovement should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovement{
+		src := &nnfv1alpha8.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -927,7 +927,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovement{
+		dst := &nnfv1alpha8.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -952,7 +952,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovement{
+		dst := &nnfv1alpha8.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -967,7 +967,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementManager should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementManager{
+		src := &nnfv1alpha8.NnfDataMovementManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -989,7 +989,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovementManager{
+		dst := &nnfv1alpha8.NnfDataMovementManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1014,7 +1014,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovementManager{
+		dst := &nnfv1alpha8.NnfDataMovementManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1029,7 +1029,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfDataMovementProfile should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfDataMovementProfile{
+		src := &nnfv1alpha8.NnfDataMovementProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1051,7 +1051,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovementProfile{
+		dst := &nnfv1alpha8.NnfDataMovementProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1076,7 +1076,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfDataMovementProfile{
+		dst := &nnfv1alpha8.NnfDataMovementProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1091,7 +1091,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfLustreMGT should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfLustreMGT{
+		src := &nnfv1alpha8.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1113,7 +1113,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfLustreMGT{
+		dst := &nnfv1alpha8.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1138,7 +1138,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfLustreMGT{
+		dst := &nnfv1alpha8.NnfLustreMGT{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1153,7 +1153,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNode should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNode{
+		src := &nnfv1alpha8.NnfNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1175,7 +1175,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNode{
+		dst := &nnfv1alpha8.NnfNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1200,7 +1200,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNode{
+		dst := &nnfv1alpha8.NnfNode{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1215,7 +1215,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeBlockStorage should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeBlockStorage{
+		src := &nnfv1alpha8.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1237,7 +1237,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeBlockStorage{
+		dst := &nnfv1alpha8.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1262,7 +1262,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeBlockStorage{
+		dst := &nnfv1alpha8.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1277,7 +1277,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeECData should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeECData{
+		src := &nnfv1alpha8.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1299,7 +1299,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeECData{
+		dst := &nnfv1alpha8.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1324,7 +1324,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeECData{
+		dst := &nnfv1alpha8.NnfNodeECData{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1339,7 +1339,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfNodeStorage should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfNodeStorage{
+		src := &nnfv1alpha8.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1361,7 +1361,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeStorage{
+		dst := &nnfv1alpha8.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1386,7 +1386,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfNodeStorage{
+		dst := &nnfv1alpha8.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1401,7 +1401,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfPortManager should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfPortManager{
+		src := &nnfv1alpha8.NnfPortManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1423,7 +1423,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfPortManager{
+		dst := &nnfv1alpha8.NnfPortManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1448,7 +1448,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfPortManager{
+		dst := &nnfv1alpha8.NnfPortManager{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1463,7 +1463,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorage should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorage{
+		src := &nnfv1alpha8.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1485,7 +1485,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfStorage{
+		dst := &nnfv1alpha8.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1510,7 +1510,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfStorage{
+		dst := &nnfv1alpha8.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1525,7 +1525,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfStorageProfile should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfStorageProfile{
+		src := &nnfv1alpha8.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1547,7 +1547,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfStorageProfile{
+		dst := &nnfv1alpha8.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1572,7 +1572,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfStorageProfile{
+		dst := &nnfv1alpha8.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1587,7 +1587,7 @@ func TestUnmarshalData(t *testing.T) {
 	})
 
 	t.Run("NnfSystemStorage should return false without errors if annotation doesn't exist", func(*testing.T) {
-		src := &nnfv1alpha7.NnfSystemStorage{
+		src := &nnfv1alpha8.NnfSystemStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1609,7 +1609,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfSystemStorage{
+		dst := &nnfv1alpha8.NnfSystemStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},
@@ -1634,7 +1634,7 @@ func TestUnmarshalData(t *testing.T) {
 			DataAnnotation: "{\"metadata\":{\"name\":\"test-1\",\"creationTimestamp\":null,\"labels\":{\"label1\":\"\"}},\"spec\":{},\"status\":{}}",
 		})
 
-		dst := &nnfv1alpha7.NnfSystemStorage{
+		dst := &nnfv1alpha8.NnfSystemStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-1",
 			},

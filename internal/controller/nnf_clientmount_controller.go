@@ -45,7 +45,7 @@ import (
 
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -427,7 +427,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha5.OwnerKindLabel]
 	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha5.OwnerNameLabel]
 	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha5.OwnerNamespaceLabel]
-	_, idxExists := clientMount.Labels[nnfv1alpha7.DirectiveIndexLabel]
+	_, idxExists := clientMount.Labels[nnfv1alpha8.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
@@ -435,7 +435,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	}
 
 	// Retrieve the NnfStorage resource
-	storage := &nnfv1alpha7.NnfStorage{
+	storage := &nnfv1alpha8.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ownerName,
 			Namespace: ownerNS,
@@ -449,7 +449,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists = storage.Labels[dwsv1alpha5.OwnerKindLabel]
 	ownerName, ownerNameExists = storage.Labels[dwsv1alpha5.OwnerNameLabel]
 	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha5.OwnerNamespaceLabel]
-	idx, idxExists := storage.Labels[nnfv1alpha7.DirectiveIndexLabel]
+	idx, idxExists := storage.Labels[nnfv1alpha8.DirectiveIndexLabel]
 
 	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
 	// have the expected labels
@@ -465,7 +465,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 			client.MatchingLabels(map[string]string{
 				dwsv1alpha5.WorkflowNameLabel:      ownerName,
 				dwsv1alpha5.WorkflowNamespaceLabel: ownerNS,
-				nnfv1alpha7.DirectiveIndexLabel:    idx,
+				nnfv1alpha8.DirectiveIndexLabel:    idx,
 			}),
 		}
 	} else {
@@ -532,8 +532,8 @@ func getLustreMappingFromServer(server *dwsv1alpha5.Servers) map[string][]string
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha5.ClientMount, index int) (*nnfv1alpha7.NnfNodeStorage, error) {
-	nnfNodeStorage := &nnfv1alpha7.NnfNodeStorage{
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha5.ClientMount, index int) (*nnfv1alpha8.NnfNodeStorage, error) {
+	nnfNodeStorage := &nnfv1alpha8.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
 			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
@@ -545,7 +545,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha5.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha7.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[nnfv1alpha8.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	labels[dwsv1alpha5.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 

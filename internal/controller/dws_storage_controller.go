@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
+	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 )
 
 type DWSStorageReconciler struct {
@@ -103,7 +103,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
-	nnfNode := &nnfv1alpha7.NnfNode{
+	nnfNode := &nnfv1alpha8.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-nlc",
 			Namespace: storage.GetName(),
@@ -125,7 +125,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Populate server status' - Server 0 is reserved as the Rabbit node.
 	storage.Status.Access.Servers = []dwsv1alpha5.Node{{
 		Name:   storage.Name,
-		Status: dwsv1alpha5.ResourceStatus(nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus()),
+		Status: nnfNode.Status.Servers[0].Status.ConvertToDWSResourceStatus(),
 	}}
 
 	// Populate compute status'
@@ -142,7 +142,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Access.Computes = append(storage.Status.Access.Computes,
 				dwsv1alpha5.Node{
 					Name:   server.Hostname,
-					Status: dwsv1alpha5.ResourceStatus(server.Status.ConvertToDWSResourceStatus()),
+					Status: server.Status.ConvertToDWSResourceStatus(),
 				})
 		}
 	}
@@ -153,9 +153,9 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		device := &storage.Status.Devices[idx]
 
 		device.Slot = drive.Slot
-		device.Status = dwsv1alpha5.ResourceStatus(drive.Status.ConvertToDWSResourceStatus())
+		device.Status = drive.Status.ConvertToDWSResourceStatus()
 
-		if drive.Status == nnfv1alpha7.ResourceReady {
+		if drive.Status == nnfv1alpha8.ResourceReady {
 			wearLevel := drive.WearLevel
 			device.Model = drive.Model
 			device.SerialNumber = drive.SerialNumber
@@ -217,7 +217,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			storage.Status.Status = dwsv1alpha5.DrainedStatus
 			storage.Status.Message = fmt.Sprintf("Kubernetes node is tainted with %s", nodeState.nnfTaint)
 		} else {
-			storage.Status.Status = dwsv1alpha5.ResourceStatus(nnfNode.Status.Status.ConvertToDWSResourceStatus())
+			storage.Status.Status = nnfNode.Status.Status.ConvertToDWSResourceStatus()
 		}
 	}
 
@@ -273,7 +273,7 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha5.Storage{}).
-		Watches(&nnfv1alpha7.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
+		Watches(&nnfv1alpha8.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
 		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
 		Complete(r)
 }
