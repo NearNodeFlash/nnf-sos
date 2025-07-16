@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nnfv1alpha5 "github.com/NearNodeFlash/nnf-sos/api/v1alpha5"
 	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
@@ -77,24 +76,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfAccess resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfAccess{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfAccess resource via hub and via spoke v1alpha6", func() {
@@ -168,24 +149,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfContainerProfile resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfContainerProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfContainerProfile resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfContainerProfile{}
@@ -249,24 +212,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfDataMovement resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfDataMovement{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfDataMovement resource via hub and via spoke v1alpha6", func() {
@@ -341,24 +286,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfDataMovementManager resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfDataMovementManager{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfDataMovementManager resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfDataMovementManager{}
@@ -422,24 +349,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfDataMovementProfile resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfDataMovementProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfDataMovementProfile resource via hub and via spoke v1alpha6", func() {
@@ -509,24 +418,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfLustreMGT resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfLustreMGT{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfLustreMGT resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfLustreMGT{}
@@ -594,24 +485,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNode resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfNode{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfNode resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfNode{}
@@ -675,24 +548,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfNodeBlockStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha6", func() {
@@ -760,24 +615,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNodeECData resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfNodeECData{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfNodeECData resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfNodeECData{}
@@ -841,24 +678,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfNodeStorage resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfNodeStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfNodeStorage resource via hub and via spoke v1alpha6", func() {
@@ -928,24 +747,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfPortManager resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfPortManager{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfPortManager resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfPortManager{}
@@ -1013,24 +814,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfStorage resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfStorage resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfStorage{}
@@ -1096,24 +879,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfStorageProfile resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfStorageProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfStorageProfile resource via hub and via spoke v1alpha6", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha6.NnfStorageProfile{}
@@ -1177,24 +942,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), expected)
 				}).ShouldNot(Succeed())
 			}
-		})
-
-		It("reads NnfSystemStorage resource via hub and via spoke v1alpha5", func() {
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha5.NnfSystemStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfSystemStorage resource via hub and via spoke v1alpha6", func() {
