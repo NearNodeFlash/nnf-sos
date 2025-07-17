@@ -377,6 +377,9 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 sed -i '/^$USER/d' /etc/passwd
 echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /etc/passwd
 cp /etc/passwd /config/
+cp -a /home/$USER/. /mnt/$USER/
+chown -R $UID:$GID /mnt/$USER
+chmod 700 /mnt/$USER
 exit 0
 `
 	// Replace the user and UID/GID
@@ -394,6 +397,7 @@ exit 0
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "passwd", MountPath: "/config"},
+			{Name: "user-home", MountPath: "/mnt/" + c.username},
 		},
 	})
 }
@@ -445,7 +449,7 @@ exit 1
 		// And use the necessary volumes to support the UID/GID
 		VolumeMounts: []corev1.VolumeMount{
 			{MountPath: "/etc/passwd", Name: "passwd", SubPath: "passwd"},
-			{MountPath: "/home/mpiuser/.ssh", Name: "ssh-auth"},
+			{MountPath: fmt.Sprintf("/home/%s/.ssh", c.username), Name: "ssh-auth"},
 		},
 	})
 }
@@ -455,6 +459,12 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 	// Add volume for /etc/passwd to map user to UID/GID
 	spec.Volumes = append(spec.Volumes, corev1.Volume{
 		Name: "passwd",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+	spec.Volumes = append(spec.Volumes, corev1.Volume{
+		Name: "user-home",
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
@@ -492,6 +502,10 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 			Name:      "passwd",
 			MountPath: "/etc/passwd",
 			SubPath:   "passwd",
+		})
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      "user-home",
+			MountPath: "/home/" + c.username,
 		})
 
 		// Create SecurityContext if necessary
