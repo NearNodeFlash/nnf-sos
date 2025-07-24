@@ -1,13 +1,11 @@
 module github.com/NearNodeFlash/nnf-sos
 
-go 1.22.0
-
-toolchain go1.22.5
+go 1.23.9
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20250610194327-bc91fef8e840
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250708135942-4a4d148d7772
-	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250702200322-db4e4089d5e0
+	github.com/DataWorkflowServices/dws v0.0.1-0.20250723211939-273b728aedb8
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250724135550-b3af7cc19bd6
+	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250723210100-233d628095b4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
