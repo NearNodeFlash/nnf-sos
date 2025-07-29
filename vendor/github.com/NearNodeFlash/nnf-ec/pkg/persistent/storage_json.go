@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -22,7 +22,6 @@ package persistent
 import (
 	"encoding/json"
 	"io/ioutil"
-
 )
 
 func NewJsonFilePersistentStorageProvider(filename string) PersistentStorageProvider {
@@ -34,16 +33,22 @@ type jsonFilePersisentStorageProvider struct {
 }
 
 func (p *jsonFilePersisentStorageProvider) NewPersistentStorageInterface(name string, readOnly bool) (PersistentStorageApi, error) {
+	log := GetLogger()
+	log.Info("Opening JSON file storage", "file", p.filename, "name", name, "readOnly", readOnly)
+
 	content, err := ioutil.ReadFile(p.filename)
 	if err != nil {
+		log.Error(err, "Failed to read JSON file", "file", p.filename)
 		return nil, err
 	}
 
 	var payload map[string]map[string]string
 	if err := json.Unmarshal(content, &payload); err != nil {
+		log.Error(err, "Failed to unmarshal JSON content", "file", p.filename)
 		return nil, err
 	}
 
+	log.Info("Successfully opened JSON file storage", "name", name)
 	return &jsonPersistentStorageInterface{data: payload[name]}, nil
 }
 
@@ -66,7 +71,3 @@ func (*jsonPersistentStorageInterface) Delete(key string) error {
 func (*jsonPersistentStorageInterface) Close() error {
 	panic("unimplemented")
 }
-
-
-
-

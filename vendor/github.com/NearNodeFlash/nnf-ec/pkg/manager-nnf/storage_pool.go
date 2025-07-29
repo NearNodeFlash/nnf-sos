@@ -49,7 +49,7 @@ type StoragePool struct {
 	missingVolumes   []storagePoolPersistentVolumeInfo
 
 	// Original persistent volume information from KV store
-	persistentVolumes []storagePoolPersistentVolumeInfo
+	persistedVolumes []storagePoolPersistentVolumeInfo
 
 	storageGroupIds []string
 	fileSystemId    string
@@ -123,16 +123,33 @@ func (p *StoragePool) findStorageGroupByEndpoint(endpoint *Endpoint) *StorageGro
 	return nil
 }
 
+// recoverVolumes attempts to restore the state of volumes in the storage pool based on
+// the provided slice of persisted volume information. It updates the pool's internal
+// lists of persisted, missing, and providing volumes by:
+//   - Skipping and marking as missing any volumes with an invalid namespace ID.
+//   - Attempting to locate the corresponding storage device and namespace for each volume.
+//   - Marking volumes as missing if the storage device or namespace cannot be found.
+//   - Adding successfully located volumes to the providingVolumes list.
+//
+// Finally, it updates the allocatedVolume field to reflect the current pool capacity.
 func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo) error {
 	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
 	log.Info("recover volumes")
 
-	// Store the persistent volumes information for later use
-	p.persistentVolumes = make([]storagePoolPersistentVolumeInfo, len(volumes))
-	copy(p.persistentVolumes, volumes)
+	// Store the persisted volumes information for later use
+	p.persistedVolumes = make([]storagePoolPersistentVolumeInfo, len(volumes))
+	copy(p.persistedVolumes, volumes)
 
 	for _, volumeInfo := range volumes {
 		log := log.WithValues("serialNumber", volumeInfo.SerialNumber, "namespaceId", volumeInfo.NamespaceID)
+
+		// Consider volumes that have been invalidated (marked with invalid namespace ID) as missing.
+		// They need a replacement.
+		if volumeInfo.NamespaceID == invalidNamespaceID {
+			log.V(2).Info("skipping invalidated volume during recovery")
+			p.missingVolumes = append(p.missingVolumes, volumeInfo)
+			continue
+		}
 
 		// Locate the NVMe Storage device by Serial Number
 		storage := p.storageService.findStorage(volumeInfo.SerialNumber)
@@ -165,16 +182,31 @@ func (p *StoragePool) recoverVolumes(volumes []storagePoolPersistentVolumeInfo) 
 	return nil
 }
 
-// Rescan namespaces associated to set the missing volumes list
+// checkVolumes validates the current state of volumes in the storage pool by rescanning
+// associated storage devices and updating the pool's volume tracking lists.
+//
+// This method performs the following operations:
+//  1. Rescans all storage devices that should contain volumes for this pool to refresh
+//     their namespace information and detect any changes in device state
+//  2. Clears and rebuilds both the missingVolumes and providingVolumes lists to ensure
+//     they accurately reflect the current state
+//  3. Attempts to recover volumes from persistent storage information, identifying
+//     which volumes are still available and which are missing or invalid
+//  4. Updates the pool's internal state to reflect any volumes that may have become
+//     unavailable due to device failures, disconnections, or other issues
+//
+// The method is typically called during pool initialization, recovery operations,
+// or when storage device states may have changed. It ensures the pool maintains
+// an accurate view of its available storage resources.
 func (p *StoragePool) checkVolumes() error {
 	log := p.storageService.log.WithValues(storagePoolIdKey, p.id)
 	log.Info("check volumes")
 
 	// Rescan the storages to ensure our namespace information is up to date
-	volumes := make([]storagePoolPersistentVolumeInfo, len(p.persistentVolumes))
-	copy(volumes, p.persistentVolumes)
+	volumesInPool := make([]storagePoolPersistentVolumeInfo, len(p.persistedVolumes))
+	copy(volumesInPool, p.persistedVolumes)
 
-	for _, pv := range volumes {
+	for _, pv := range volumesInPool {
 		log := log.WithValues("serialNumber", pv.SerialNumber, "namespaceId", pv.NamespaceID)
 		storage := p.storageService.findStorage(pv.SerialNumber)
 		if storage == nil {
@@ -187,7 +219,7 @@ func (p *StoragePool) checkVolumes() error {
 	p.missingVolumes = p.missingVolumes[:0]     // Clear the missing volumes list
 	p.providingVolumes = p.providingVolumes[:0] // Clear the providing volumes list
 
-	if err := p.recoverVolumes(volumes); err != nil {
+	if err := p.recoverVolumes(volumesInPool); err != nil {
 		log.Error(err, "Failed to recover volumes")
 		return err
 	}
@@ -268,16 +300,55 @@ func (p *StoragePool) replaceMissingVolumes() error {
 			pv.Storage.SerialNumber(),
 			pv.VolumeId), p)
 
-		// TODO: Find the serialnumber/volumeid in any other storage pools and
-		// invalidate that volumeid to prevent reuse. Should probably store
-		// that new value some how too.
-		// OR
-		// Patch all the storage pools and don't allow a particular storeage pool to be patched in isolation
+		// Invalidate this volume in any other storage pools to prevent reuse
+		if err := p.invalidateVolumeInOtherPools(pv.Storage.SerialNumber(), pv.Storage.FindVolume(pv.VolumeId).GetNamespaceId()); err != nil {
+			log.Error(err, "Failed to invalidate volume in other storage pools", "serialNumber", pv.Storage.SerialNumber(), "namespaceId", pv.Storage.FindVolume(pv.VolumeId).GetNamespaceId())
+			// This is not a fatal error, continue with the replacement
+		}
 	}
 
 	// We've replaced all the missing volumes, so clear the list
 	p.missingVolumes = nil
 
+	return nil
+}
+
+// invalidateVolumeInOtherPools finds and invalidates the specified volume in any other storage pools
+// to prevent reuse of the same volume in multiple pools. It replaces the namespace ID with a
+// nonsense value (0xFFFFFFFF) in the persistent volume information of other pools.
+func (p *StoragePool) invalidateVolumeInOtherPools(serialNumber string, namespaceID nvme2.NamespaceIdentifier) error {
+	log := p.storageService.log.WithValues(storagePoolIdKey, p.id, "targetSerialNumber", serialNumber, "targetNamespaceId", namespaceID)
+	log.V(2).Info("invalidating volume in other storage pools")
+
+	invalidatedPools := 0
+
+	// Check all other storage pools in the service
+	for i := range p.storageService.pools {
+		otherPool := &p.storageService.pools[i]
+		if otherPool.id == p.id {
+			continue // Skip self
+		}
+
+		poolModified := false
+
+		// Check persistent volumes
+		for j := range otherPool.persistedVolumes {
+			persistentVol := &otherPool.persistedVolumes[j]
+			if persistentVol.SerialNumber == serialNumber && persistentVol.NamespaceID == namespaceID {
+				log.Info("invalidating persistent volume in storage pool", "otherPoolId", otherPool.id, "originalNamespaceId", persistentVol.NamespaceID)
+
+				// Replace with a nonsense namespace ID to prevent reuse
+				persistentVol.NamespaceID = invalidNamespaceID
+				poolModified = true
+			}
+		}
+
+		if poolModified {
+			invalidatedPools++
+		}
+	}
+
+	log.V(2).Info("volume invalidation complete", "invalidatedPools", invalidatedPools)
 	return nil
 }
 
@@ -356,6 +427,9 @@ func (p *StoragePool) deallocateVolumes() error {
 
 const storagePoolRegistryPrefix = "SP"
 
+// Invalid namespace ID used to mark volumes as unusable
+const invalidNamespaceID = nvme2.NamespaceIdentifier(0xFFFFFFFF)
+
 const (
 	// Allocation Log Entry is recorded after the storage pool successfully allocates the backing storage resources (i.e. NVMe Namespaces)
 	storagePoolStorageCreateStartLogEntryType uint32 = iota
@@ -430,8 +504,8 @@ func (p *StoragePool) GenerateStateData(state uint32) ([]byte, error) {
 		}
 
 		// Store the persistent volumes information for later use
-		p.persistentVolumes = make([]storagePoolPersistentVolumeInfo, len(entry.Volumes))
-		copy(p.persistentVolumes, entry.Volumes)
+		p.persistedVolumes = make([]storagePoolPersistentVolumeInfo, len(entry.Volumes))
+		copy(p.persistedVolumes, entry.Volumes)
 
 		return json.Marshal(entry)
 	}
