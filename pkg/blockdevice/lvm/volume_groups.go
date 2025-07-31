@@ -100,7 +100,7 @@ func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 	return false, fmt.Errorf("timeout waiting for VG")
 }
 
-func (vg *VolumeGroup) parseArgs(args string) (string, error) {
+func (vg *VolumeGroup) parseArgs(args string, vars map[string]string) (string, error) {
 	deviceNames := []string{}
 	for _, pv := range vg.PhysicalVolumes {
 		deviceNames = append(deviceNames, pv.Device)
@@ -108,9 +108,11 @@ func (vg *VolumeGroup) parseArgs(args string) (string, error) {
 
 	// Initialize the VarHandler substitution variables
 	varHandler := var_handler.NewVarHandler(map[string]string{
-		"$DEVICE_NUM":  fmt.Sprintf("%d", len(deviceNames)),
-		"$DEVICE_LIST": strings.Join(deviceNames, " "),
-		"$VG_NAME":     vg.Name,
+		"$DEVICE_NUM":   fmt.Sprintf("%d", len(deviceNames)),
+		"$DEVICE_NUM-1": fmt.Sprintf("%d", len(deviceNames)-1),
+		"$DEVICE_NUM-2": fmt.Sprintf("%d", len(deviceNames)-2),
+		"$DEVICE_LIST":  strings.Join(deviceNames, " "),
+		"$VG_NAME":      vg.Name,
 	})
 
 	if err := varHandler.ListToVars("$DEVICE_LIST", "$DEVICE"); err != nil {
@@ -121,11 +123,15 @@ func (vg *VolumeGroup) parseArgs(args string) (string, error) {
 		varHandler.AddVar(key, value)
 	}
 
+	for key, value := range vars {
+		varHandler.AddVar(key, value)
+	}
+
 	return varHandler.ReplaceAll(args), nil
 }
 
 func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error) {
-	args, err := vg.parseArgs(rawArgs)
+	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
 	}
@@ -149,7 +155,7 @@ func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error) {
-	args, err := vg.parseArgs(rawArgs)
+	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
 	}
@@ -195,7 +201,7 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error) {
-	args, err := vg.parseArgs(rawArgs)
+	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
 	}
@@ -216,6 +222,59 @@ func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error)
 	}
 
 	return false, nil
+}
+
+func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error) {
+	existingPVs, err := pvsListVolumes(ctx, vg.Log)
+	if err != nil {
+		return false, err
+	}
+
+	// Check check whether all the PVs we know should be used in the VG are currently
+	// added. Extend the VG if necessary
+	extended := false
+	for _, desiredPV := range vg.PhysicalVolumes {
+		for _, existingPV := range existingPVs {
+			if existingPV.Name != desiredPV.Device {
+				continue
+			}
+
+			if existingPV.VGName != "" {
+				if existingPV.VGName != vg.Name {
+					return false, fmt.Errorf("physical volume: %s attached to incorrect volume group: %s. Expected: %s", existingPV.Name, existingPV.VGName, vg.Name)
+				}
+
+				continue
+			}
+
+			args, err := vg.parseArgs(rawArgs, map[string]string{"$DEVICE": desiredPV.Device})
+			if err != nil {
+				return false, err
+			}
+
+			if _, err := command.Run(fmt.Sprintf("vgextend %s", args), vg.Log); err != nil {
+				return false, fmt.Errorf("could not extend volume group: %w", err)
+			}
+
+			extended = true
+		}
+	}
+
+	return extended, nil
+}
+
+func (vg *VolumeGroup) Reduce(ctx context.Context, rawArgs string) (bool, error) {
+	args, err := vg.parseArgs(rawArgs, nil)
+	if err != nil {
+		return false, err
+	}
+
+	// remove any missing PVs from the VG
+	if _, err := command.Run(fmt.Sprintf("vgreduce %s", args), vg.Log); err != nil {
+		return false, fmt.Errorf("could not extend volume group: %w", err)
+	}
+
+	return true, nil
 }
 
 func (vg *VolumeGroup) NumLVs(ctx context.Context) (int, error) {

@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
@@ -364,12 +366,25 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
+	blockDevicesReady := true
+
 	for index, blockDevice := range blockDevices {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-		// Skip allocations that are already created
+		// If the allocation is ready, check whether it's healthy
 		if allocationStatus.Ready {
-			continue
+			healthy, err := blockDevice.CheckHealth(ctx)
+			if err != nil {
+				return nil, dwsv1alpha6.NewResourceError("could not check block device health").WithError(err)
+			}
+			if healthy {
+				continue
+			}
+
+			err = blockDevice.Repair(ctx)
+			if err != nil {
+				return nil, dwsv1alpha6.NewResourceError("could not repair block device").WithError(err)
+			}
 		}
 
 		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
@@ -385,6 +400,15 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			return nil, dwsv1alpha6.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 
+		ready, err := blockDevice.CheckReady(ctx)
+		if !ready {
+			blockDevicesReady = false
+
+			// If the block device isn't ready, don't add the defer function to Deactivate it. If it needs to be
+			// synced, that can only happen while the block device is activated
+			continue
+		}
+
 		deferIndex := index
 		defer func() {
 			_, err = blockDevices[deferIndex].Deactivate(ctx, false)
@@ -392,6 +416,10 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 				allocationStatus.Ready = false
 			}
 		}()
+	}
+
+	if !blockDevicesReady {
+		return &ctrl.Result{RequeueAfter: time.Second * 5}, nil
 	}
 
 	for index, fileSystem := range fileSystems {
@@ -440,6 +468,15 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	return nil, nil
 }
 
+func nnfNameMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
+	return []reconcile.Request{
+		{NamespacedName: types.NamespacedName{
+			Name:      o.GetName(),
+			Namespace: o.GetNamespace(),
+		}},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.Add(r); err != nil {
@@ -449,5 +486,6 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha8.NnfNodeStorage{}).
+		Watches(&nnfv1alpha8.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
 		Complete(r)
 }

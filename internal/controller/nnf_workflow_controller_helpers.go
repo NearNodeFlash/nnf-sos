@@ -358,7 +358,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 func (r *NnfWorkflowReconciler) validatePersistentInstanceForStaging(ctx context.Context, name string, namespace string) error {
 	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
 	if err != nil {
-		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance '%s'", name).WithFatal().WithUser()
+		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("PersistentStorageInstance '%s' not found", name).WithFatal().WithUser()
 	}
 
 	if psi.Spec.FsType == "raw" {
@@ -376,7 +376,7 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceForStaging(ctx context
 func (r *NnfWorkflowReconciler) validatePersistentInstance(ctx context.Context, name string, namespace string) error {
 	psi, err := r.getPersistentStorageInstance(ctx, name, namespace)
 	if err != nil {
-		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance %s", name).WithFatal().WithUser()
+		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("PersistentStorageInstance '%s' not found", name).WithFatal().WithUser()
 	}
 
 	if !psi.DeletionTimestamp.IsZero() {
@@ -396,7 +396,7 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.
 
 	psi, err := r.getPersistentStorageInstance(ctx, args["name"], wf.Namespace)
 	if err != nil {
-		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not get PersistentStorageInstance '%s'", args["name"]).WithFatal().WithUser()
+		return dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("PersistentStorageInstance '%s' not found", args["name"]).WithFatal().WithUser()
 	}
 
 	if !psi.DeletionTimestamp.IsZero() {
