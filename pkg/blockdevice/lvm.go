@@ -43,6 +43,8 @@ type LvmVgCommandArgs struct {
 	Remove    string
 	LockStart string
 	LockStop  string
+	Extend    string
+	Reduce    string
 }
 
 type LvmLvCommandArgs struct {
@@ -50,6 +52,7 @@ type LvmLvCommandArgs struct {
 	Remove     string
 	Activate   string
 	Deactivate string
+	Repair     string
 }
 
 type LvmCommandArgs struct {
@@ -313,4 +316,49 @@ func (l *Lvm) CheckExists(ctx context.Context) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (l *Lvm) CheckHealth(ctx context.Context) (bool, error) {
+	return l.LogicalVolume.IsHealthy(ctx)
+}
+
+func (l *Lvm) CheckReady(ctx context.Context) (bool, error) {
+	return l.LogicalVolume.IsSynced(ctx)
+}
+
+func (l *Lvm) Repair(ctx context.Context) (err error) {
+	for _, pv := range l.PhysicalVolumes {
+		created, err := pv.Create(ctx, l.CommandArgs.PvArgs.Create)
+		if err != nil {
+			return err
+		}
+
+		if created {
+			l.Log.Info("created new PV for rebuild", "Name", pv.Device, "VG", l.VolumeGroup.Name)
+		}
+	}
+
+	if _, err := l.VolumeGroup.Extend(ctx, l.CommandArgs.VgArgs.Extend); err != nil {
+		return err
+	}
+
+	if _, err := l.Activate(ctx); err != nil {
+		return err
+	}
+
+	defer func() {
+		if _, deactivateErr := l.Deactivate(ctx, false); deactivateErr != nil {
+			err = deactivateErr
+		}
+	}()
+
+	if _, err := l.LogicalVolume.Repair(ctx, l.CommandArgs.LvArgs.Repair); err != nil {
+		return err
+	}
+
+	if _, err := l.VolumeGroup.Reduce(ctx, l.CommandArgs.VgArgs.Reduce); err != nil {
+		return err
+	}
+
+	return nil
 }
