@@ -34,6 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
@@ -367,9 +369,20 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	for index, blockDevice := range blockDevices {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-		// Skip allocations that are already created
+		// If the allocation is ready, check whether it's healthy
 		if allocationStatus.Ready {
-			continue
+			healthy, err := blockDevice.CheckHealth(ctx)
+			if err != nil {
+				return nil, dwsv1alpha5.NewResourceError("could not check block device health").WithError(err)
+			}
+			if healthy {
+				continue
+			}
+
+			err = blockDevice.Repair(ctx)
+			if err != nil {
+				return nil, dwsv1alpha5.NewResourceError("could not repair block device").WithError(err)
+			}
 		}
 
 		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
@@ -440,6 +453,15 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	return nil, nil
 }
 
+func nnfNameMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
+	return []reconcile.Request{
+		{NamespacedName: types.NamespacedName{
+			Name:      o.GetName(),
+			Namespace: o.GetNamespace(),
+		}},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.Add(r); err != nil {
@@ -449,5 +471,6 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha8.NnfNodeStorage{}).
+		Watches(&nnfv1alpha8.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
 		Complete(r)
 }

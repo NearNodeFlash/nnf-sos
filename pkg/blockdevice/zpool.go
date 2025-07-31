@@ -31,7 +31,8 @@ import (
 )
 
 type ZpoolCommandArgs struct {
-	Create string
+	Create  string
+	Replace string
 
 	Vars map[string]string
 }
@@ -71,9 +72,7 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 
 	output, err := command.Run("zpool list -H", z.Log)
 	if err != nil {
-		if err != nil {
-			return false, fmt.Errorf("could not list zpools")
-		}
+		return false, fmt.Errorf("could not list zpools")
 	}
 
 	// Check whether the zpool already exists
@@ -88,9 +87,7 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 	}
 
 	if _, err := command.Run(fmt.Sprintf("zpool create %s", z.parseArgs(z.CommandArgs.Create)), z.Log); err != nil {
-		if err != nil {
-			return false, fmt.Errorf("could not create file system: %w", err)
-		}
+		return false, fmt.Errorf("could not create file system: %w", err)
 	}
 
 	return true, nil
@@ -139,23 +136,98 @@ func (z *Zpool) CheckFormatted() (bool, error) {
 func (z *Zpool) CheckExists(ctx context.Context) (bool, error) {
 	output, err := command.Run("zpool list -H", z.Log)
 	if err != nil {
-		if err != nil {
-			return false, fmt.Errorf("could not list zpools")
-		}
+		return false, fmt.Errorf("could not list zpools")
+
 	}
 
 	// Check whether the zpool already exists
 	for _, line := range strings.Split(output, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) > 0 && fields[0] == z.Name {
-			if fields[9] == "ONLINE" {
-				return true, nil
-			}
-			return false, fmt.Errorf("zpool has unexpected health %s", fields[9])
+			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func (z *Zpool) CheckHealth(ctx context.Context) (bool, error) {
+	output, err := command.Run("zpool list -H", z.Log)
+	if err != nil {
+		return false, fmt.Errorf("could not list zpools")
+
+	}
+
+	// Check whether the zpool is healthy
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == z.Name {
+			if fields[9] == "ONLINE" {
+				return true, nil
+			}
+			return false, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (z *Zpool) Repair(ctx context.Context) error {
+	output, err := command.Run(fmt.Sprintf("zpool status -P %s", z.Name), z.Log)
+	if err != nil {
+		return fmt.Errorf("could not list zpools")
+	}
+
+	// Create a map devices
+	deviceMap := map[string]bool{}
+	for _, device := range z.Devices {
+		deviceMap[device] = false
+		// If the device is healthy, fill in the zpool vdev path
+		for _, line := range strings.Split(output, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) > 1 {
+				if strings.HasPrefix(fields[0], device) {
+					if fields[1] == "ONLINE" {
+						deviceMap[device] = true
+					}
+				}
+			}
+		}
+	}
+
+	output, err = command.Run(fmt.Sprintf("zpool status -eP %s", z.Name), z.Log)
+	if err != nil {
+		return fmt.Errorf("could not list zpools")
+	}
+
+	unhealthyVdevs := []string{}
+	for _, line := range strings.Split(output, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 1 {
+			if strings.HasPrefix(fields[0], "/dev") {
+				if fields[1] != "ONLINE" {
+					unhealthyVdevs = append(unhealthyVdevs, fields[0])
+				}
+			}
+		}
+	}
+
+	i := 0
+	for device, healthy := range deviceMap {
+		if !healthy {
+			_, err = command.Run(fmt.Sprintf("zpool replace %s %s", unhealthyVdevs[i], device), z.Log)
+			if err != nil {
+				return fmt.Errorf("could run zpool replace")
+			}
+			//if _, err := command.Run(fmt.Sprintf("zpool replace %s", z.parseArgs(z.CommandArgs.Replace)), z.Log); err != nil {
+			//	return fmt.Errorf("could not run zpool replace: %w", err)
+			//}
+
+			i++
+		}
+	}
+
+	return nil
 }
 
 func ZpoolImportAll(log logr.Logger) (bool, error) {

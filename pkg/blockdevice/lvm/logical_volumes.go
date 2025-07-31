@@ -212,3 +212,43 @@ func (lv *LogicalVolume) Deactivate(ctx context.Context, rawArgs string) (bool, 
 
 	return false, nil
 }
+
+func (lv *LogicalVolume) IsHealthy(ctx context.Context) (bool, error) {
+	existingLVs, err := lvsListVolumes(ctx, lv.Log)
+	if err != nil {
+		return false, err
+	}
+
+	for _, existingLV := range existingLVs {
+		if existingLV.Name == lv.Name && existingLV.VGName == lv.VolumeGroup.Name {
+			if existingLV.LVHealthStatus != "" {
+				return false, nil
+			}
+
+			if existingLV.VGMissingPVCount != "0" {
+				return false, nil
+			}
+
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("could not find logical volume %s", lv.Name)
+}
+
+func (lv *LogicalVolume) Repair(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return true, nil
+	}
+
+	args, err := lv.parseArgs(rawArgs)
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := command.Run(fmt.Sprintf("%s", args), lv.Log); err != nil {
+		return false, fmt.Errorf("could not change repair logical volume %s: %w", lv.Name, err)
+	}
+
+	return true, nil
+}

@@ -37,6 +37,12 @@ type BlockDevice interface {
 	// Check if the block device exists
 	CheckExists(ctx context.Context) (bool, error)
 
+	// Check if the block device is healthy
+	CheckHealth(ctx context.Context) (bool, error)
+
+	// Repair the device if possible
+	Repair(ctx context.Context) error
+
 	// Get device /dev path
 	GetDevice() string
 
