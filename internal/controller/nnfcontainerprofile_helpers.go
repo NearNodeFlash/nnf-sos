@@ -30,26 +30,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
+	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
 	"github.com/go-logr/logr"
 )
 
-func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha5.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
+func getContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha6.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
 	profile, err := findPinnedContainerProfile(ctx, clnt, workflow, index)
 	if err != nil {
 		return nil, err
 	}
 
 	if profile == nil {
-		return nil, dwsv1alpha5.NewResourceError("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha6.NewResourceError("container profile '%s' not found", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	return profile, nil
 }
 
-func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha5.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
+func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha6.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
 	profile := &nnfv1alpha8.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
@@ -62,13 +62,13 @@ func findPinnedContainerProfile(ctx context.Context, clnt client.Client, workflo
 	}
 
 	if !profile.Data.Pinned {
-		return nil, dwsv1alpha5.NewResourceError("expected a pinned container profile '%s', but found one that is not pinned", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha6.NewResourceError("expected a pinned container profile '%s', but found one that is not pinned", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	return profile, nil
 }
 
-func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha5.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
+func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dwsv1alpha6.Workflow, index int) (*nnfv1alpha8.NnfContainerProfile, error) {
 	args, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
 		return nil, err
@@ -91,23 +91,23 @@ func findContainerProfile(ctx context.Context, clnt client.Client, workflow *dws
 	}
 
 	if profile.Data.Pinned {
-		return nil, dwsv1alpha5.NewResourceError("expected container profile that is not pinned '%s', but found one that is pinned", indexedResourceName(workflow, index)).WithFatal()
+		return nil, dwsv1alpha6.NewResourceError("expected container profile that is not pinned '%s', but found one that is pinned", indexedResourceName(workflow, index)).WithFatal()
 	}
 
 	// Determine whether the profile is restricted to a UserID/GroupID.
 	restrictedMsg := "container profile '%s' is restricted to %s %d"
 	if profile.Data.UserID != nil && *profile.Data.UserID != workflow.Spec.UserID {
-		return nil, dwsv1alpha5.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID).WithUser().WithFatal()
+		return nil, dwsv1alpha6.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "UserID", *profile.Data.UserID).WithUser().WithFatal()
 	}
 	if profile.Data.GroupID != nil && *profile.Data.GroupID != workflow.Spec.GroupID {
-		return nil, dwsv1alpha5.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID).WithUser().WithFatal()
+		return nil, dwsv1alpha6.NewResourceError("").WithUserMessage(restrictedMsg, profile.Name, "GroupID", *profile.Data.GroupID).WithUser().WithFatal()
 
 	}
 
 	return profile, nil
 }
 
-func createPinnedContainerProfileIfNecessary(ctx context.Context, clnt client.Client, scheme *kruntime.Scheme, workflow *dwsv1alpha5.Workflow, index int, log logr.Logger) error {
+func createPinnedContainerProfileIfNecessary(ctx context.Context, clnt client.Client, scheme *kruntime.Scheme, workflow *dwsv1alpha6.Workflow, index int, log logr.Logger) error {
 	profile, err := findPinnedContainerProfile(ctx, clnt, workflow, index)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
@@ -132,7 +132,7 @@ func createPinnedContainerProfileIfNecessary(ctx context.Context, clnt client.Cl
 
 	pinnedProfile.Data.Pinned = true
 
-	dwsv1alpha5.AddOwnerLabels(pinnedProfile, workflow)
+	dwsv1alpha6.AddOwnerLabels(pinnedProfile, workflow)
 
 	if err := controllerutil.SetControllerReference(workflow, pinnedProfile, scheme); err != nil {
 		log.Error(err, "failed to set controller reference on profile", "profile", pinnedProfile)

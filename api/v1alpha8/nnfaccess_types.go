@@ -20,7 +20,7 @@
 package v1alpha8
 
 import (
-	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
+	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +37,7 @@ type NnfAccessSpec struct {
 	// be torn down and deleted.
 	// +kubebuilder:validation:Enum:=PreRun;PostRun;Teardown
 	// +kubebuilder:validation:Type:=string
-	TeardownState dwsv1alpha5.WorkflowState `json:"teardownState"`
+	TeardownState dwsv1alpha6.WorkflowState `json:"teardownState"`
 
 	// Target specifies which storage targets the client should mount
 	// - single: Only one of the storage the client can access
@@ -85,7 +85,7 @@ type NnfAccessStatus struct {
 	// Ready signifies whether status.state has been achieved
 	Ready bool `json:"ready"`
 
-	dwsv1alpha5.ResourceError `json:",inline"`
+	dwsv1alpha6.ResourceError `json:",inline"`
 }
 
 //+kubebuilder:object:root=true

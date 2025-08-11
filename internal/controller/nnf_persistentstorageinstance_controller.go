@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
+	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
@@ -69,7 +69,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	metrics.NnfPersistentStorageReconcilesTotal.Inc()
 
-	persistentStorage := &dwsv1alpha5.PersistentStorageInstance{}
+	persistentStorage := &dwsv1alpha6.PersistentStorageInstance{}
 	if err := r.Get(ctx, req.NamespacedName, persistentStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -77,7 +77,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha5.PersistentStorageInstanceStatus](persistentStorage)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha6.PersistentStorageInstanceStatus](persistentStorage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { persistentStorage.Status.SetResourceError(err) }()
 
@@ -93,7 +93,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		// Delete all NnfStorage and Servers children that are owned by this PersistentStorage.
-		deleteStatus, err := dwsv1alpha5.DeleteChildren(ctx, r.Client, r.getChildObjects(), persistentStorage)
+		deleteStatus, err := dwsv1alpha6.DeleteChildren(ctx, r.Client, r.getChildObjects(), persistentStorage)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -129,7 +129,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if persistentStorage.Status.State == "" {
-		persistentStorage.Status.State = dwsv1alpha5.PSIStateCreating
+		persistentStorage.Status.State = dwsv1alpha6.PSIStateCreating
 	}
 
 	argsMap, err := dwdparse.BuildArgsMap(persistentStorage.Spec.DWDirective)
@@ -149,7 +149,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// If this PersistentStorageInstance is for a standalone MGT, add a label so it can be easily found
 	if argsMap["type"] == "lustre" && len(pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
 		if _, exists := argsMap["capacity"]; exists {
-			return ctrl.Result{}, dwsv1alpha5.NewResourceError("").WithUserMessage("creating persistent MGT does not accept 'capacity' argument").WithFatal().WithUser()
+			return ctrl.Result{}, dwsv1alpha6.NewResourceError("").WithUserMessage("creating persistent MGT does not accept 'capacity' argument").WithFatal().WithUser()
 		}
 		labels := persistentStorage.GetLabels()
 		if _, ok := labels[nnfv1alpha8.StandaloneMGTLabel]; !ok {
@@ -165,7 +165,7 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	} else {
 		if _, exists := argsMap["capacity"]; !exists {
-			return ctrl.Result{}, dwsv1alpha5.NewResourceError("").WithUserMessage("creating persistent storage requires 'capacity' argument").WithFatal().WithUser()
+			return ctrl.Result{}, dwsv1alpha6.NewResourceError("").WithUserMessage("creating persistent storage requires 'capacity' argument").WithFatal().WithUser()
 		}
 	}
 
@@ -180,16 +180,16 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	persistentStorage.Status.Servers = v1.ObjectReference{
-		Kind:      reflect.TypeOf(dwsv1alpha5.Servers{}).Name(),
+		Kind:      reflect.TypeOf(dwsv1alpha6.Servers{}).Name(),
 		Name:      servers.Name,
 		Namespace: servers.Namespace,
 	}
 
-	if persistentStorage.Spec.State == dwsv1alpha5.PSIStateDestroying {
+	if persistentStorage.Spec.State == dwsv1alpha6.PSIStateDestroying {
 		if len(persistentStorage.Spec.ConsumerReferences) == 0 {
-			persistentStorage.Status.State = dwsv1alpha5.PSIStateDestroying
+			persistentStorage.Status.State = dwsv1alpha6.PSIStateDestroying
 		}
-	} else if persistentStorage.Spec.State == dwsv1alpha5.PSIStateActive {
+	} else if persistentStorage.Spec.State == dwsv1alpha6.PSIStateActive {
 		// Wait for the NnfStorage to be ready before marking the persistent storage
 		// state as "active"
 		nnfStorage := &nnfv1alpha8.NnfStorage{}
@@ -211,16 +211,16 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		if complete == true {
-			persistentStorage.Status.State = dwsv1alpha5.PSIStateActive
+			persistentStorage.Status.State = dwsv1alpha6.PSIStateActive
 		}
 	}
 
 	return ctrl.Result{}, err
 }
 
-func (r *PersistentStorageReconciler) createServers(ctx context.Context, persistentStorage *dwsv1alpha5.PersistentStorageInstance) (*dwsv1alpha5.Servers, error) {
+func (r *PersistentStorageReconciler) createServers(ctx context.Context, persistentStorage *dwsv1alpha6.PersistentStorageInstance) (*dwsv1alpha6.Servers, error) {
 	log := r.Log.WithValues("PersistentStorage", client.ObjectKeyFromObject(persistentStorage))
-	server := &dwsv1alpha5.Servers{
+	server := &dwsv1alpha6.Servers{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      persistentStorage.Name,
 			Namespace: persistentStorage.Namespace,
@@ -230,8 +230,8 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 	// Create the Servers resource with owner labels and PersistentStorage labels
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, server,
 		func() error {
-			dwsv1alpha5.AddOwnerLabels(server, persistentStorage)
-			dwsv1alpha5.AddPersistentStorageLabels(server, persistentStorage)
+			dwsv1alpha6.AddOwnerLabels(server, persistentStorage)
+			dwsv1alpha6.AddPersistentStorageLabels(server, persistentStorage)
 
 			return ctrl.SetControllerReference(persistentStorage, server, r.Scheme)
 		})
@@ -257,10 +257,10 @@ func (r *PersistentStorageReconciler) createServers(ctx context.Context, persist
 	return server, err
 }
 
-func (r *PersistentStorageReconciler) getChildObjects() []dwsv1alpha5.ObjectList {
-	return []dwsv1alpha5.ObjectList{
+func (r *PersistentStorageReconciler) getChildObjects() []dwsv1alpha6.ObjectList {
+	return []dwsv1alpha6.ObjectList{
 		&nnfv1alpha8.NnfStorageList{},
-		&dwsv1alpha5.ServersList{},
+		&dwsv1alpha6.ServersList{},
 		&nnfv1alpha8.NnfStorageProfileList{},
 	}
 }
@@ -270,8 +270,8 @@ func (r *PersistentStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha5.PersistentStorageInstance{}).
-		Owns(&dwsv1alpha5.Servers{}).
+		For(&dwsv1alpha6.PersistentStorageInstance{}).
+		Owns(&dwsv1alpha6.Servers{}).
 		Owns(&nnfv1alpha8.NnfStorage{}).
 		Owns(&nnfv1alpha8.NnfStorageProfile{}).
 		Complete(r)
