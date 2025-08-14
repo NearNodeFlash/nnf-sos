@@ -108,7 +108,9 @@ func (vg *VolumeGroup) parseArgs(args string, vars map[string]string) (string, e
 
 	// Initialize the VarHandler substitution variables
 	varHandler := var_handler.NewVarHandler(map[string]string{
-		"$DEVICE_NUM":   fmt.Sprintf("%d", len(deviceNames)),
+		"$DEVICE_NUM": fmt.Sprintf("%d", len(deviceNames)),
+		// These are added in case any VG commands need the count of data devices
+		// for a RAID array
 		"$DEVICE_NUM-1": fmt.Sprintf("%d", len(deviceNames)-1),
 		"$DEVICE_NUM-2": fmt.Sprintf("%d", len(deviceNames)-2),
 		"$DEVICE_LIST":  strings.Join(deviceNames, " "),

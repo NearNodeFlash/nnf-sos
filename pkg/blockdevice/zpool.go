@@ -51,7 +51,9 @@ var _ BlockDevice = &Zpool{}
 
 func (z *Zpool) parseArgs(args string, vars map[string]string) string {
 	m := map[string]string{
-		"$DEVICE_NUM":   fmt.Sprintf("%d", len(z.Devices)),
+		"$DEVICE_NUM": fmt.Sprintf("%d", len(z.Devices)),
+		// These are included to be consistent with the variable substitutions
+		// provided for LVM
 		"$DEVICE_NUM-1": fmt.Sprintf("%d", len(z.Devices)-1),
 		"$DEVICE_NUM-2": fmt.Sprintf("%d", len(z.Devices)-2),
 		"$DEVICE_LIST":  strings.Join(z.Devices, " "),
@@ -183,6 +185,10 @@ func (z *Zpool) CheckHealth(ctx context.Context) (bool, error) {
 }
 
 func (z *Zpool) Repair(ctx context.Context) error {
+	if z.CommandArgs.Replace == "" {
+		return nil
+	}
+
 	// "zpool status" doesn't have a json output we can rely on, so we have to scrape the
 	// human readable text.
 	output, err := command.Run(fmt.Sprintf("zpool status -P %s", z.Name), z.Log)

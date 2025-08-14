@@ -75,7 +75,10 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 
 	// Initialize the VarHandler substitution variables
 	varHandler := var_handler.NewVarHandler(map[string]string{
-		"$DEVICE_NUM":   fmt.Sprintf("%d", len(deviceNames)),
+		"$DEVICE_NUM": fmt.Sprintf("%d", len(deviceNames)),
+		// These are used with RAID devices. The --stripes option for lvcreate
+		// excludes any parity devices. Since our variable substitution doesn't
+		// support simple math, we have to create variables for the common cases
 		"$DEVICE_NUM-1": fmt.Sprintf("%d", len(deviceNames)-1),
 		"$DEVICE_NUM-2": fmt.Sprintf("%d", len(deviceNames)-2),
 		"$DEVICE_LIST":  strings.Join(deviceNames, " "),

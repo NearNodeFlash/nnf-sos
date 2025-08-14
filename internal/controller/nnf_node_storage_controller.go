@@ -405,7 +405,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			blockDevicesReady = false
 
 			// If the block device isn't ready, don't add the defer function to Deactivate it. If it needs to be
-			// synced, that can only happen while the block device is activated
+			// synced, that can happen only while the block device is activated
 			continue
 		}
 
@@ -486,6 +486,8 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha8.NnfNodeStorage{}).
-		Watches(&nnfv1alpha8.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
+		// Trigger the reconciler for any changes to the associated NnfNodeBlockStorage. If we're waiting
+		// on the block device paths to get updated, we want to be notified when it happens.
+		Watches(&nnfv1alpha8.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
 		Complete(r)
 }
