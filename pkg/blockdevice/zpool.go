@@ -49,7 +49,7 @@ type Zpool struct {
 // Check that Lvm implements the BlockDevice interface
 var _ BlockDevice = &Zpool{}
 
-func (z *Zpool) parseArgs(args string) string {
+func (z *Zpool) parseArgs(args string, vars map[string]string) string {
 	m := map[string]string{
 		"$DEVICE_NUM":   fmt.Sprintf("%d", len(z.Devices)),
 		"$DEVICE_NUM-1": fmt.Sprintf("%d", len(z.Devices)-1),
@@ -62,8 +62,13 @@ func (z *Zpool) parseArgs(args string) string {
 		m[k] = v
 	}
 
+	for k, v := range vars {
+		m[k] = v
+	}
+
 	// Initialize the VarHandler substitution variables
 	varHandler := var_handler.NewVarHandler(m)
+
 	return varHandler.ReplaceAll(args)
 }
 
@@ -88,7 +93,7 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 		}
 	}
 
-	if _, err := command.Run(fmt.Sprintf("zpool create %s", z.parseArgs(z.CommandArgs.Create)), z.Log); err != nil {
+	if _, err := command.Run(fmt.Sprintf("zpool create %s", z.parseArgs(z.CommandArgs.Create, nil)), z.Log); err != nil {
 		return false, fmt.Errorf("could not create file system: %w", err)
 	}
 
@@ -227,7 +232,14 @@ func (z *Zpool) Repair(ctx context.Context) error {
 	i := 0
 	for device, healthy := range deviceMap {
 		if !healthy {
-			_, err = command.Run(fmt.Sprintf("zpool replace %s %s %s", z.Name, unhealthyDevices[i], device), z.Log)
+			argsMap := map[string]string{
+				"$OLD_DEVICE": unhealthyDevices[i],
+				"$NEW_DEVICE": device,
+			}
+
+			args := z.parseArgs(z.CommandArgs.Replace, argsMap)
+
+			_, err = command.Run(fmt.Sprintf("zpool replace %s", args), z.Log)
 			if err != nil {
 				return fmt.Errorf("could not run zpool replace")
 			}
