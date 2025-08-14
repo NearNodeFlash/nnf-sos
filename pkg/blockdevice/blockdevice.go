@@ -37,9 +37,18 @@ type BlockDevice interface {
 	// Check if the block device exists
 	CheckExists(ctx context.Context) (bool, error)
 
-	// Get device /dev path
-	GetDevice() string
+	// Check if the block device is healthy
+	CheckHealth(ctx context.Context) (bool, error)
+
+	// CheckReady checks whether the block device is ready to be used
+	CheckReady(ctx context.Context) (bool, error)
 
 	// Check if the block device has already been formatted for a file system
 	CheckFormatted() (bool, error)
+
+	// Repair the device if possible
+	Repair(ctx context.Context) error
+
+	// Get device /dev path
+	GetDevice() string
 }
