@@ -232,8 +232,7 @@ func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error)
 		return false, err
 	}
 
-	// Check check whether all the PVs we know should be used in the VG are currently
-	// added. Extend the VG if necessary
+	// Check check whether all the PVs used in the VG are currently added. Extend the VG if necessary
 	extended := false
 	for _, desiredPV := range vg.PhysicalVolumes {
 		for _, existingPV := range existingPVs {
@@ -273,7 +272,7 @@ func (vg *VolumeGroup) Reduce(ctx context.Context, rawArgs string) (bool, error)
 
 	// remove any missing PVs from the VG
 	if _, err := command.Run(fmt.Sprintf("vgreduce %s", args), vg.Log); err != nil {
-		return false, fmt.Errorf("could not extend volume group: %w", err)
+		return false, fmt.Errorf("could not reduce volume group: %w", err)
 	}
 
 	return true, nil
