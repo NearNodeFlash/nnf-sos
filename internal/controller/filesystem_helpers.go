@@ -240,6 +240,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
 
 	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
+	zpool.CommandArgs.Replace = cmdLines.ZpoolReplace
 	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
 	return &zpool, nil
@@ -334,11 +335,14 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	lvmDesc.CommandArgs.VgArgs.LockStart = cmdLines.VgChange.LockStart
 	lvmDesc.CommandArgs.VgArgs.LockStop = cmdLines.VgChange.LockStop
 	lvmDesc.CommandArgs.VgArgs.Remove = cmdLines.VgRemove
+	lvmDesc.CommandArgs.VgArgs.Extend = cmdLines.LVMRebuild.VgExtend
+	lvmDesc.CommandArgs.VgArgs.Reduce = cmdLines.LVMRebuild.VgReduce
 
 	lvmDesc.CommandArgs.LvArgs.Create = cmdLines.LvCreate
 	lvmDesc.CommandArgs.LvArgs.Activate = cmdLines.LvChange.Activate
 	lvmDesc.CommandArgs.LvArgs.Deactivate = cmdLines.LvChange.Deactivate
 	lvmDesc.CommandArgs.LvArgs.Remove = cmdLines.LvRemove
+	lvmDesc.CommandArgs.LvArgs.Repair = cmdLines.LVMRebuild.LvRepair
 
 	return &lvmDesc, nil
 }

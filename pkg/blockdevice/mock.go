@@ -71,3 +71,15 @@ func (m *MockBlockDevice) CheckFormatted() (bool, error) {
 func (m *MockBlockDevice) CheckExists(ctx context.Context) (bool, error) {
 	return true, nil
 }
+
+func (m *MockBlockDevice) CheckHealth(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
+func (m *MockBlockDevice) CheckReady(ctx context.Context) (bool, error) {
+	return true, nil
+}
+
+func (m *MockBlockDevice) Repair(ctx context.Context) error {
+	return nil
+}

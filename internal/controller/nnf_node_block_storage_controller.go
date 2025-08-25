@@ -252,7 +252,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Create a block device in /dev that is accessible on the Rabbit node
 		result, err = r.createBlockDevice(ctx, nodeBlockStorage, i)
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha6.NewResourceError("unable to attache NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
+			return ctrl.Result{}, dwsv1alpha6.NewResourceError("unable to attach NVMe namespace to node for allocation %v", i).WithError(err).WithMajor()
 		}
 		if result != nil {
 			return *result, nil

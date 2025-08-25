@@ -50,6 +50,8 @@ type NnfStorageProfileLustreCmdLines struct {
 	// "mirror", or "draid".  See zpoolconcepts(7).
 	ZpoolCreate string `json:"zpoolCreate,omitempty"`
 
+	ZpoolReplace string `json:"zpoolReplace,omitempty"`
+
 	// Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
 	// Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
 	// Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
@@ -181,6 +183,9 @@ type NnfStorageProfileCmdLines struct {
 	// VgChange specifies the various vgchange commandlines, minus the "vgchange"
 	VgChange NnfStorageProfileLVMVgChangeCmdLines `json:"vgChange,omitempty"`
 
+	// LVMRebuild specifies command lines needed for rebuilding LVM RAID devices
+	LVMRebuild NnfStorageProfileLVMRebuildCmdLines `json:"lvmRebuild,omitempty"`
+
 	// VgCreate specifies the vgcreate commandline, minus the "vgremove".
 	VgRemove string `json:"vgRemove,omitempty"`
 
@@ -206,6 +211,18 @@ type NnfStorageProfileCmdLines struct {
 	// PreUnmount specifies a list of commands to run on the Rabbit before the
 	// file system is deactivated and unmounted.
 	PreUnmount []string `json:"preUnmount,omitempty"`
+}
+
+// NnfStorageProfileLVMVgChangeCmdLines
+type NnfStorageProfileLVMRebuildCmdLines struct {
+	// VgExtend specifies the command for adding PVs to a VG
+	VgExtend string `json:"vgExtend,omitempty"`
+
+	// VgReduce specifies the command for removing PVs from a VG
+	VgReduce string `json:"vgReduce,omitempty"`
+
+	// LvRepair specifies the command for repairing a LV after a drive failure
+	LvRepair string `json:"lvRepair,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines
