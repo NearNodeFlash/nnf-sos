@@ -46,6 +46,10 @@ const (
 	// The storage and filesystem represented by the PSI exists and is ready for use
 	PSIStateActive PersistentStorageInstanceState = "Active"
 
+	// The storage and filesystem represented by the PSI exists, but one or more of the allocations
+	// have degraded storage
+	PSIStateDegraded PersistentStorageInstanceState = "Degraded"
+
 	// A #DW destroy_persistent directive has been issued in a workflow.
 	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be destroyed.
 	// New #DW persistent_dw requests after the PSI enters the 'destroying' state will fail.
@@ -81,7 +85,7 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// Current state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum:=Creating;Active;Destroying
+	// +kubebuilder:validation:Enum:=Creating;Active;Destroying;Degraded
 	State PersistentStorageInstanceState `json:"state"`
 
 	// Error information

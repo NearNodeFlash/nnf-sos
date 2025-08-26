@@ -31,6 +31,7 @@ type ComputesData struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // Computes is the Schema for the computes API
 type Computes struct {
@@ -41,6 +42,7 @@ type Computes struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // ComputesList contains a list of Computes
 type ComputesList struct {
