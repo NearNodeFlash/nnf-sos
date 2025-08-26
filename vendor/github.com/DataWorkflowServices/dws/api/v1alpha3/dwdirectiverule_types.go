@@ -27,6 +27,7 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // DWDirectiveRule is the Schema for the DWDirective API
 type DWDirectiveRule struct {
@@ -37,6 +38,7 @@ type DWDirectiveRule struct {
 }
 
 //+kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // DWDirectiveRuleList contains a list of DWDirective
 type DWDirectiveRuleList struct {
