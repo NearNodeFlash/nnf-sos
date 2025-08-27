@@ -149,10 +149,23 @@ type NnfStorageSpec struct {
 type NnfStorageAllocationSetStatus struct {
 	Ready bool `json:"ready,omitempty"`
 
+	// Health is the health of the AllocationSet
+	Health NnfStorageHealth `json:"health,omitempty"`
+
 	// AllocationCount is the total number of allocations that currently
 	// exist
 	AllocationCount int `json:"allocationCount"`
 }
+
+// NnfStorageHealth is the health for a storage allocation
+// +kubebuilder:validation:Enum=Healthy;Degraded;Faulted
+type NnfStorageHealth string
+
+const (
+	NnfStorageHealthHealthy  NnfStorageHealth = "Healthy"
+	NnfStorageHealthDegraded NnfStorageHealth = "Degraded"
+	NnfStorageHealthFaulted  NnfStorageHealth = "Faulted"
+)
 
 type NnfStorageLustreStatus struct {
 	// MgsAddress is the NID of the MGS.
@@ -180,6 +193,9 @@ type NnfStorageStatus struct {
 	AllocationSets []NnfStorageAllocationSetStatus `json:"allocationSets,omitempty"`
 
 	dwsv1alpha6.ResourceError `json:",inline"`
+
+	// Health is the overall health of the storage
+	Health NnfStorageHealth `json:"health,omitempty"`
 
 	// Ready reflects the status of this NNF Storage
 	Ready bool `json:"ready,omitempty"`

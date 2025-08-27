@@ -802,6 +802,13 @@ spec:
                   description: NnfNodeStorageAllocationStatus defines the allocation
                     status for each allocation in the NnfNodeStorage
                   properties:
+                    health:
+                      description: Health is the health of the individual allocation
+                      enum:
+                      - Healthy
+                      - Degraded
+                      - Faulted
+                      type: string
                     logicalVolume:
                       description: Name of the LVM LV
                       type: string
@@ -843,6 +850,13 @@ spec:
                 - severity
                 - type
                 type: object
+              health:
+                description: Health is the health of all the allocations on the Rabbit
+                enum:
+                - Healthy
+                - Degraded
+                - Faulted
+                type: string
               ready:
                 type: boolean
             type: object

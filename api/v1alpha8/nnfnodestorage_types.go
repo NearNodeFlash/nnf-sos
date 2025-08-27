@@ -103,6 +103,9 @@ type NnfNodeStorageStatus struct {
 	// Allocations is the list of storage allocations that were made
 	Allocations []NnfNodeStorageAllocationStatus `json:"allocations,omitempty"`
 
+	// Health is the health of all the allocations on the Rabbit
+	Health NnfStorageHealth `json:"health,omitempty"`
+
 	Ready bool `json:"ready,omitempty"`
 
 	dwsv1alpha6.ResourceError `json:",inline"`
@@ -115,6 +118,9 @@ type NnfNodeStorageAllocationStatus struct {
 
 	// Name of the LVM LV
 	LogicalVolume string `json:"logicalVolume,omitempty"`
+
+	// Health is the health of the individual allocation
+	Health NnfStorageHealth `json:"health,omitempty"`
 
 	Ready bool `json:"ready,omitempty"`
 }

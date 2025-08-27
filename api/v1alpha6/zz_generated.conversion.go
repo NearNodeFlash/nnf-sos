@@ -518,11 +518,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha8.NnfNodeStorageAllocationStatus)(nil), (*NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(a.(*v1alpha8.NnfNodeStorageAllocationStatus), b.(*NnfNodeStorageAllocationStatus), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageList)(nil), (*v1alpha8.NnfNodeStorageList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha6_NnfNodeStorageList_To_v1alpha8_NnfNodeStorageList(a.(*NnfNodeStorageList), b.(*v1alpha8.NnfNodeStorageList), scope)
 	}); err != nil {
@@ -545,11 +540,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*NnfNodeStorageStatus)(nil), (*v1alpha8.NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha8_NnfNodeStorageStatus(a.(*NnfNodeStorageStatus), b.(*v1alpha8.NnfNodeStorageStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha8.NnfNodeStorageStatus)(nil), (*NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(a.(*v1alpha8.NnfNodeStorageStatus), b.(*NnfNodeStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -665,11 +655,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*NnfStorageAllocationSetStatus)(nil), (*v1alpha8.NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha8_NnfStorageAllocationSetStatus(a.(*NnfStorageAllocationSetStatus), b.(*v1alpha8.NnfStorageAllocationSetStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha8.NnfStorageAllocationSetStatus)(nil), (*NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(a.(*v1alpha8.NnfStorageAllocationSetStatus), b.(*NnfStorageAllocationSetStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -848,11 +833,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha8.NnfStorageStatus)(nil), (*NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(a.(*v1alpha8.NnfStorageStatus), b.(*NnfStorageStatus), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfSystemStorage)(nil), (*v1alpha8.NnfSystemStorage)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha6_NnfSystemStorage_To_v1alpha8_NnfSystemStorage(a.(*NnfSystemStorage), b.(*v1alpha8.NnfSystemStorage), scope)
 	}); err != nil {
@@ -933,6 +913,21 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*v1alpha8.NnfNodeStorageAllocationStatus)(nil), (*NnfNodeStorageAllocationStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(a.(*v1alpha8.NnfNodeStorageAllocationStatus), b.(*NnfNodeStorageAllocationStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha8.NnfNodeStorageStatus)(nil), (*NnfNodeStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(a.(*v1alpha8.NnfNodeStorageStatus), b.(*NnfNodeStorageStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha8.NnfStorageAllocationSetStatus)(nil), (*NnfStorageAllocationSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(a.(*v1alpha8.NnfStorageAllocationSetStatus), b.(*NnfStorageAllocationSetStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*v1alpha8.NnfStorageProfileCmdLines)(nil), (*NnfStorageProfileCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha8_NnfStorageProfileCmdLines_To_v1alpha6_NnfStorageProfileCmdLines(a.(*v1alpha8.NnfStorageProfileCmdLines), b.(*NnfStorageProfileCmdLines), scope)
 	}); err != nil {
@@ -940,6 +935,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha8.NnfStorageProfileLustreCmdLines)(nil), (*NnfStorageProfileLustreCmdLines)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha8_NnfStorageProfileLustreCmdLines_To_v1alpha6_NnfStorageProfileLustreCmdLines(a.(*v1alpha8.NnfStorageProfileLustreCmdLines), b.(*NnfStorageProfileLustreCmdLines), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha8.NnfStorageStatus)(nil), (*NnfStorageStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(a.(*v1alpha8.NnfStorageStatus), b.(*NnfStorageStatus), scope)
 	}); err != nil {
 		return err
 	}
@@ -2443,13 +2443,9 @@ func Convert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha8_NnfNodeStorageA
 func autoConvert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in *v1alpha8.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
 	out.VolumeGroup = in.VolumeGroup
 	out.LogicalVolume = in.LogicalVolume
+	// WARNING: in.Health requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	return nil
-}
-
-// Convert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus is an autogenerated conversion function.
-func Convert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in *v1alpha8.NnfNodeStorageAllocationStatus, out *NnfNodeStorageAllocationStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(in, out, s)
 }
 
 func autoConvert_v1alpha6_NnfNodeStorageList_To_v1alpha8_NnfNodeStorageList(in *NnfNodeStorageList, out *v1alpha8.NnfNodeStorageList, s conversion.Scope) error {
@@ -2535,7 +2531,17 @@ func Convert_v1alpha8_NnfNodeStorageSpec_To_v1alpha6_NnfNodeStorageSpec(in *v1al
 }
 
 func autoConvert_v1alpha6_NnfNodeStorageStatus_To_v1alpha8_NnfNodeStorageStatus(in *NnfNodeStorageStatus, out *v1alpha8.NnfNodeStorageStatus, s conversion.Scope) error {
-	out.Allocations = *(*[]v1alpha8.NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
+	if in.Allocations != nil {
+		in, out := &in.Allocations, &out.Allocations
+		*out = make([]v1alpha8.NnfNodeStorageAllocationStatus, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfNodeStorageAllocationStatus_To_v1alpha8_NnfNodeStorageAllocationStatus(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Allocations = nil
+	}
 	out.Ready = in.Ready
 	if err := Convert_v1alpha3_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
@@ -2549,17 +2555,23 @@ func Convert_v1alpha6_NnfNodeStorageStatus_To_v1alpha8_NnfNodeStorageStatus(in *
 }
 
 func autoConvert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *v1alpha8.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
-	out.Allocations = *(*[]NnfNodeStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
+	if in.Allocations != nil {
+		in, out := &in.Allocations, &out.Allocations
+		*out = make([]NnfNodeStorageAllocationStatus, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha8_NnfNodeStorageAllocationStatus_To_v1alpha6_NnfNodeStorageAllocationStatus(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Allocations = nil
+	}
+	// WARNING: in.Health requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	if err := Convert_v1alpha6_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
-}
-
-// Convert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in *v1alpha8.NnfNodeStorageStatus, out *NnfNodeStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha8_NnfNodeStorageStatus_To_v1alpha6_NnfNodeStorageStatus(in, out, s)
 }
 
 func autoConvert_v1alpha6_NnfPortManager_To_v1alpha8_NnfPortManager(in *NnfPortManager, out *v1alpha8.NnfPortManager, s conversion.Scope) error {
@@ -2861,13 +2873,9 @@ func Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha8_NnfStorageAlloca
 
 func autoConvert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in *v1alpha8.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
+	// WARNING: in.Health requires manual conversion: does not exist in peer-type
 	out.AllocationCount = in.AllocationCount
 	return nil
-}
-
-// Convert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus is an autogenerated conversion function.
-func Convert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in *v1alpha8.NnfStorageAllocationSetStatus, out *NnfStorageAllocationSetStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(in, out, s)
 }
 
 func autoConvert_v1alpha6_NnfStorageList_To_v1alpha8_NnfStorageList(in *NnfStorageList, out *v1alpha8.NnfStorageList, s conversion.Scope) error {
@@ -3482,7 +3490,17 @@ func autoConvert_v1alpha6_NnfStorageStatus_To_v1alpha8_NnfStorageStatus(in *NnfS
 	if err := Convert_v1alpha6_NnfStorageLustreStatus_To_v1alpha8_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
 		return err
 	}
-	out.AllocationSets = *(*[]v1alpha8.NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
+	if in.AllocationSets != nil {
+		in, out := &in.AllocationSets, &out.AllocationSets
+		*out = make([]v1alpha8.NnfStorageAllocationSetStatus, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha6_NnfStorageAllocationSetStatus_To_v1alpha8_NnfStorageAllocationSetStatus(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AllocationSets = nil
+	}
 	if err := Convert_v1alpha3_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
@@ -3499,17 +3517,23 @@ func autoConvert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in *v1al
 	if err := Convert_v1alpha8_NnfStorageLustreStatus_To_v1alpha6_NnfStorageLustreStatus(&in.NnfStorageLustreStatus, &out.NnfStorageLustreStatus, s); err != nil {
 		return err
 	}
-	out.AllocationSets = *(*[]NnfStorageAllocationSetStatus)(unsafe.Pointer(&in.AllocationSets))
+	if in.AllocationSets != nil {
+		in, out := &in.AllocationSets, &out.AllocationSets
+		*out = make([]NnfStorageAllocationSetStatus, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha8_NnfStorageAllocationSetStatus_To_v1alpha6_NnfStorageAllocationSetStatus(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.AllocationSets = nil
+	}
 	if err := Convert_v1alpha6_ResourceError_To_v1alpha3_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
+	// WARNING: in.Health requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
 	return nil
-}
-
-// Convert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus is an autogenerated conversion function.
-func Convert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in *v1alpha8.NnfStorageStatus, out *NnfStorageStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha8_NnfStorageStatus_To_v1alpha6_NnfStorageStatus(in, out, s)
 }
 
 func autoConvert_v1alpha6_NnfSystemStorage_To_v1alpha8_NnfSystemStorage(in *NnfSystemStorage, out *v1alpha8.NnfSystemStorage, s conversion.Scope) error {
