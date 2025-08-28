@@ -940,6 +940,13 @@ spec:
                         AllocationCount is the total number of allocations that currently
                         exist
                       type: integer
+                    health:
+                      description: Health is the health of the AllocationSet
+                      enum:
+                      - Healthy
+                      - Degraded
+                      - Faulted
+                      type: string
                     ready:
                       type: boolean
                   required:
@@ -981,6 +988,13 @@ spec:
                 description: FileSystemName is the fsname parameter for the Lustre
                   filesystem.
                 maxLength: 8
+                type: string
+              health:
+                description: Health is the overall health of the storage
+                enum:
+                - Healthy
+                - Degraded
+                - Faulted
                 type: string
               lustreComponents:
                 description: |-
