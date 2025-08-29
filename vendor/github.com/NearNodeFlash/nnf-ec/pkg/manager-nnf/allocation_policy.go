@@ -161,8 +161,9 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 
 	if p.compliance != RelaxedAllocationComplianceType {
 
-		if len(p.storage) < SpareAllocationPolicyMinimumDriveCount {
-			return fmt.Errorf("Insufficient drive count. Required: %d Available: %d", SpareAllocationPolicyMinimumDriveCount, len(p.storage))
+		driveCount := uint64(len(p.storage))
+		if driveCount < SpareAllocationPolicyMinimumDriveCount {
+			return fmt.Errorf("Insufficient drive count. Required: %d Available: %d", SpareAllocationPolicyMinimumDriveCount, driveCount)
 		}
 
 		roundUpToMultiple := func(n, m uint64) uint64 { // Round 'n' up to a multiple of 'm'
@@ -170,8 +171,8 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 		}
 
 		// Validate each drive can contribute sufficient capacity towards the entire pool.
-		poolCapacityBytes := roundUpToMultiple(p.capacityBytes, SpareAllocationPolicyMinimumDriveCount)
-		driveCapacityBytes := roundUpToMultiple(poolCapacityBytes/SpareAllocationPolicyMinimumDriveCount, 4096)
+		poolCapacityBytes := roundUpToMultiple(p.capacityBytes, driveCount)
+		driveCapacityBytes := roundUpToMultiple(poolCapacityBytes/driveCount, 4096)
 
 		for _, s := range p.storage {
 			if driveCapacityBytes > s.UnallocatedBytes() {
@@ -180,7 +181,7 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 		}
 
 		// Adjust the pool's capacity such that it is a multiple of the number drives.
-		p.capacityBytes = driveCapacityBytes * uint64(len(p.storage))
+		p.capacityBytes = driveCapacityBytes * driveCount
 	}
 
 	if availableBytes < p.capacityBytes {
@@ -193,7 +194,8 @@ func (p *SpareAllocationPolicy) CheckAndAdjustCapacity() error {
 // Allocate - allocate the storage
 func (p *SpareAllocationPolicy) Allocate() ([]nvme.ProvidingVolume, error) {
 
-	perStorageCapacityBytes := p.capacityBytes / uint64(len(p.storage))
+	driveCount := uint64(len(p.storage))
+	perStorageCapacityBytes := p.capacityBytes / driveCount
 	remainingCapacityBytes := p.capacityBytes
 
 	volumes := []nvme.ProvidingVolume{}
@@ -204,7 +206,7 @@ func (p *SpareAllocationPolicy) Allocate() ([]nvme.ProvidingVolume, error) {
 		// Leftover bytes are placed on trailing volume; note that this
 		// is never the case for strict allocation in which the requested
 		// allocation must be a multiple of the storage size.
-		if idx == len(p.storage)-1 {
+		if idx == int(driveCount-1) {
 			capacityBytes = remainingCapacityBytes
 		}
 
