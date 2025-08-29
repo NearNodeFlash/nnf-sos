@@ -37,14 +37,20 @@ type lvsReport struct {
 }
 
 type lvsLogicalVolume struct {
-	Name   string `json:"lv_name"`
-	VGName string `json:"vg_name"`
-	Attrs  string `json:"lv_attr"`
-	Size   string `json:"lv_size"`
+	Name             string `json:"lv_name"`
+	VGName           string `json:"vg_name"`
+	Attrs            string `json:"lv_attr"`
+	Size             string `json:"lv_size"`
+	PVCount          string `json:"pv_count"`
+	VGMissingPVCount string `json:"vg_missing_pv_count"`
+	LVHealthStatus   string `json:"lv_health_status"`
+	LVTags           string `json:"lv_tags"`
+	SyncPercent      string `json:"sync_percent"`
+	LVLayout         string `json:"lv_layout"`
 }
 
 func lvsListVolumes(ctx context.Context, log logr.Logger) ([]lvsLogicalVolume, error) {
-	output, err := command.Run("lvs --nolock --reportformat json", log)
+	output, err := command.Run("lvs -o all --nolock --reportformat json", log)
 	if err != nil {
 		return nil, fmt.Errorf("could not list logical volumes: %w", err)
 	}

@@ -22,745 +22,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha5
-    schema:
-      openAPIV3Schema:
-        description: NnfStorageProfile is the Schema for the nnfstorageprofiles API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          data:
-            description: NnfStorageProfileData defines the desired state of NnfStorageProfile
-            properties:
-              default:
-                default: false
-                description: Default is true if this instance is the default resource
-                  to use
-                type: boolean
-              gfs2Storage:
-                description: GFS2Storage defines the GFS2-specific configuration
-                properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
-                    properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
-                        properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
-                            type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
-                            type: string
-                        type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
-                      sharedVg:
-                        default: false
-                        description: |-
-                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
-                          LVM VolumeGroup
-                        type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
-                    type: object
-                  storageLabels:
-                    description: |-
-                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                      labels constraint. This restricts allocations to Storage resources with these labels
-                    items:
-                      type: string
-                    type: array
-                type: object
-              lustreStorage:
-                description: LustreStorage defines the Lustre-specific configuration
-                properties:
-                  capacityMdt:
-                    default: 5GiB
-                    description: |-
-                      CapacityMDT specifies the size of the MDT device.  This is also
-                      used for a combined MGT+MDT device.
-                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
-                    type: string
-                  capacityMgt:
-                    default: 5GiB
-                    description: CapacityMGT specifies the size of the MGT device.
-                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
-                    type: string
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      OST capacity requested in the DirectiveBreakdown
-                    type: string
-                  combinedMgtMdt:
-                    default: false
-                    description: CombinedMGTMDT indicates whether the MGT and MDT
-                      should be created on the same target device
-                    type: boolean
-                  exclusiveMdt:
-                    default: false
-                    description: ExclusiveMDT indicates that the MDT should not be
-                      colocated with any other target on the chosen server.
-                    type: boolean
-                  externalMgs:
-                    description: |-
-                      ExternalMGS specifies the use of an existing MGS rather than creating one. This can
-                      be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
-                      Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
-                      is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
-                      be picked from the pool.
-                    type: string
-                  mdtCommandlines:
-                    description: MdtCmdLines contains commands to create an MDT target.
-                    properties:
-                      mkfs:
-                        description: |-
-                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
-                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
-                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
-                        type: string
-                      mountTarget:
-                        description: |-
-                          MountTarget specifies the mount command line for the lustre target.
-                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
-                          argument to mkfs.lustre instead.
-                        type: string
-                      postActivate:
-                        description: |-
-                          PostActivate specifies a list of commands to run on the Rabbit after the
-                          Lustre target has been activated
-                        items:
-                          type: string
-                        type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
-                      preDeactivate:
-                        description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
-                        items:
-                          type: string
-                        type: array
-                      zpoolCreate:
-                        description: |-
-                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
-                          This is where you may specify zpool create options, and the virtual device (vdev) such as
-                          "mirror", or "draid".  See zpoolconcepts(7).
-                        type: string
-                    type: object
-                  mdtOptions:
-                    description: MdtOptions contains options to use for libraries
-                      used for an MDT target.
-                    properties:
-                      colocateComputes:
-                        default: false
-                        description: |-
-                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a workflow
-                        type: boolean
-                      count:
-                        description: Count specifies how many Lustre targets to create
-                        minimum: 1
-                        type: integer
-                      scale:
-                        description: Scale provides a unitless value to determine
-                          how many Lustre targets to create
-                        maximum: 10
-                        minimum: 1
-                        type: integer
-                      storageLabels:
-                        description: |-
-                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                          labels constraint. This restricts allocations to Storage resources with these labels
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - colocateComputes
-                    type: object
-                  mgtCommandlines:
-                    description: MgtCmdLines contains commands to create an MGT target.
-                    properties:
-                      mkfs:
-                        description: |-
-                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
-                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
-                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
-                        type: string
-                      mountTarget:
-                        description: |-
-                          MountTarget specifies the mount command line for the lustre target.
-                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
-                          argument to mkfs.lustre instead.
-                        type: string
-                      postActivate:
-                        description: |-
-                          PostActivate specifies a list of commands to run on the Rabbit after the
-                          Lustre target has been activated
-                        items:
-                          type: string
-                        type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
-                      preDeactivate:
-                        description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
-                        items:
-                          type: string
-                        type: array
-                      zpoolCreate:
-                        description: |-
-                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
-                          This is where you may specify zpool create options, and the virtual device (vdev) such as
-                          "mirror", or "draid".  See zpoolconcepts(7).
-                        type: string
-                    type: object
-                  mgtMdtCommandlines:
-                    description: MgtMdtCmdLines contains commands to create a combined
-                      MGT/MDT target.
-                    properties:
-                      mkfs:
-                        description: |-
-                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
-                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
-                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
-                        type: string
-                      mountTarget:
-                        description: |-
-                          MountTarget specifies the mount command line for the lustre target.
-                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
-                          argument to mkfs.lustre instead.
-                        type: string
-                      postActivate:
-                        description: |-
-                          PostActivate specifies a list of commands to run on the Rabbit after the
-                          Lustre target has been activated
-                        items:
-                          type: string
-                        type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
-                      preDeactivate:
-                        description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
-                        items:
-                          type: string
-                        type: array
-                      zpoolCreate:
-                        description: |-
-                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
-                          This is where you may specify zpool create options, and the virtual device (vdev) such as
-                          "mirror", or "draid".  See zpoolconcepts(7).
-                        type: string
-                    type: object
-                  mgtMdtOptions:
-                    description: MgtMdtOptions contains options to use for libraries
-                      used for a combined MGT/MDT target.
-                    properties:
-                      colocateComputes:
-                        default: false
-                        description: |-
-                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a workflow
-                        type: boolean
-                      count:
-                        description: Count specifies how many Lustre targets to create
-                        minimum: 1
-                        type: integer
-                      scale:
-                        description: Scale provides a unitless value to determine
-                          how many Lustre targets to create
-                        maximum: 10
-                        minimum: 1
-                        type: integer
-                      storageLabels:
-                        description: |-
-                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                          labels constraint. This restricts allocations to Storage resources with these labels
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - colocateComputes
-                    type: object
-                  mgtOptions:
-                    description: MgtOptions contains options to use for libraries
-                      used for an MGT target.
-                    properties:
-                      colocateComputes:
-                        default: false
-                        description: |-
-                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a workflow
-                        type: boolean
-                      count:
-                        description: Count specifies how many Lustre targets to create
-                        minimum: 1
-                        type: integer
-                      scale:
-                        description: Scale provides a unitless value to determine
-                          how many Lustre targets to create
-                        maximum: 10
-                        minimum: 1
-                        type: integer
-                      storageLabels:
-                        description: |-
-                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                          labels constraint. This restricts allocations to Storage resources with these labels
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - colocateComputes
-                    type: object
-                  mountCompute:
-                    description: MountCompute specifies mount options for making the
-                      Lustre client mount on the Compute.
-                    type: string
-                  mountRabbit:
-                    description: MountRabbit specifies mount options for making the
-                      Lustre client mount on the Rabbit.
-                    type: string
-                  ostCommandlines:
-                    description: OstCmdLines contains commands to create an OST target.
-                    properties:
-                      mkfs:
-                        description: |-
-                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
-                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
-                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
-                        type: string
-                      mountTarget:
-                        description: |-
-                          MountTarget specifies the mount command line for the lustre target.
-                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
-                          argument to mkfs.lustre instead.
-                        type: string
-                      postActivate:
-                        description: |-
-                          PostActivate specifies a list of commands to run on the Rabbit after the
-                          Lustre target has been activated
-                        items:
-                          type: string
-                        type: array
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
-                        items:
-                          type: string
-                        type: array
-                      preDeactivate:
-                        description: |-
-                          PreDeactivate specifies a list of commands to run on the Rabbit before the
-                          Lustre target is deactivated
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
-                        items:
-                          type: string
-                        type: array
-                      zpoolCreate:
-                        description: |-
-                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
-                          This is where you may specify zpool create options, and the virtual device (vdev) such as
-                          "mirror", or "draid".  See zpoolconcepts(7).
-                        type: string
-                    type: object
-                  ostOptions:
-                    description: OstOptions contains options to use for libraries
-                      used for an OST target.
-                    properties:
-                      colocateComputes:
-                        default: false
-                        description: |-
-                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
-                          to the compute nodes in a workflow
-                        type: boolean
-                      count:
-                        description: Count specifies how many Lustre targets to create
-                        minimum: 1
-                        type: integer
-                      scale:
-                        description: Scale provides a unitless value to determine
-                          how many Lustre targets to create
-                        maximum: 10
-                        minimum: 1
-                        type: integer
-                      storageLabels:
-                        description: |-
-                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                          labels constraint. This restricts allocations to Storage resources with these labels
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - colocateComputes
-                    type: object
-                  standaloneMgtPoolName:
-                    description: |-
-                      StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
-                      a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
-                      Multiple pools can be created.
-                    type: string
-                type: object
-              pinned:
-                default: false
-                description: Pinned is true if this instance is describing an active
-                  storage resource
-                type: boolean
-              rawStorage:
-                description: RawStorage defines the Raw-specific configuration
-                properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
-                    properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
-                        properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
-                            type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
-                            type: string
-                        type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
-                      sharedVg:
-                        default: false
-                        description: |-
-                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
-                          LVM VolumeGroup
-                        type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
-                    type: object
-                  storageLabels:
-                    description: |-
-                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                      labels constraint. This restricts allocations to Storage resources with these labels
-                    items:
-                      type: string
-                    type: array
-                type: object
-              xfsStorage:
-                description: XFSStorage defines the XFS-specific configuration
-                properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
-                    properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
-                        properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
-                            type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
-                            type: string
-                        type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
-                      sharedVg:
-                        default: false
-                        description: |-
-                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
-                          LVM VolumeGroup
-                        type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
-                    type: object
-                  storageLabels:
-                    description: |-
-                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-                      labels constraint. This restricts allocations to Storage resources with these labels
-                    items:
-                      type: string
-                    type: array
-                type: object
-            type: object
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-        type: object
-    served: true
-    storage: false
-    subresources: {}
-  - additionalPrinterColumns:
-    - description: True if this is the default instance
-      jsonPath: .data.default
-      name: DEFAULT
-      type: boolean
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
     name: v1alpha6
     schema:
       openAPIV3Schema:
@@ -1452,7 +713,7 @@ spec:
           metadata:
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources: {}
   - additionalPrinterColumns:
@@ -2072,6 +1333,767 @@ spec:
                         description: LvRemove specifies the lvcreate commandline,
                           minus the "lvremove".
                         type: string
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
+                        items:
+                          type: string
+                        type: array
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
+                        type: string
+                      sharedVg:
+                        default: false
+                        description: |-
+                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
+                          LVM VolumeGroup
+                        type: boolean
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
+                        type: string
+                    type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
+                type: object
+            type: object
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources: {}
+  - additionalPrinterColumns:
+    - description: True if this is the default instance
+      jsonPath: .data.default
+      name: DEFAULT
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha8
+    schema:
+      openAPIV3Schema:
+        description: NnfStorageProfile is the Schema for the nnfstorageprofiles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          data:
+            description: NnfStorageProfileData defines the desired state of NnfStorageProfile
+            properties:
+              default:
+                default: false
+                description: Default is true if this instance is the default resource
+                  to use
+                type: boolean
+              gfs2Storage:
+                description: GFS2Storage defines the GFS2-specific configuration
+                properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
+                        items:
+                          type: string
+                        type: array
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
+                        type: string
+                      sharedVg:
+                        default: false
+                        description: |-
+                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
+                          LVM VolumeGroup
+                        type: boolean
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
+                        type: string
+                    type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
+                type: object
+              lustreStorage:
+                description: LustreStorage defines the Lustre-specific configuration
+                properties:
+                  capacityMdt:
+                    default: 5GiB
+                    description: |-
+                      CapacityMDT specifies the size of the MDT device.  This is also
+                      used for a combined MGT+MDT device.
+                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
+                    type: string
+                  capacityMgt:
+                    default: 5GiB
+                    description: CapacityMGT specifies the size of the MGT device.
+                    pattern: ^\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$
+                    type: string
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      OST capacity requested in the DirectiveBreakdown
+                    type: string
+                  clientCommandLines:
+                    description: ClientCmdLines contains commands to mount a Lustre
+                      client
+                    properties:
+                      mountCompute:
+                        description: MountCompute specifies mount options for making
+                          the Lustre client mount on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for making
+                          the Lustre client mount on the Rabbit.
+                        type: string
+                      rabbitPostMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
+                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
+                          it afterward.
+                        items:
+                          type: string
+                        type: array
+                      rabbitPreUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
+                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  combinedMgtMdt:
+                    default: false
+                    description: CombinedMGTMDT indicates whether the MGT and MDT
+                      should be created on the same target device
+                    type: boolean
+                  exclusiveMdt:
+                    default: false
+                    description: ExclusiveMDT indicates that the MDT should not be
+                      colocated with any other target on the chosen server.
+                    type: boolean
+                  externalMgs:
+                    description: |-
+                      ExternalMGS specifies the use of an existing MGS rather than creating one. This can
+                      be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
+                      Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
+                      is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
+                      be picked from the pool.
+                    type: string
+                  mdtCommandlines:
+                    description: MdtCmdLines contains commands to create an MDT target.
+                    properties:
+                      mkfs:
+                        description: |-
+                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
+                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
+                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
+                        type: string
+                      mountTarget:
+                        description: |-
+                          MountTarget specifies the mount command line for the lustre target.
+                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      zpoolCreate:
+                        description: |-
+                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
+                          This is where you may specify zpool create options, and the virtual device (vdev) such as
+                          "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                      zpoolReplace:
+                        type: string
+                    type: object
+                  mdtOptions:
+                    description: MdtOptions contains options to use for libraries
+                      used for an MDT target.
+                    properties:
+                      colocateComputes:
+                        default: false
+                        description: |-
+                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a workflow
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - colocateComputes
+                    type: object
+                  mgtCommandlines:
+                    description: MgtCmdLines contains commands to create an MGT target.
+                    properties:
+                      mkfs:
+                        description: |-
+                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
+                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
+                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
+                        type: string
+                      mountTarget:
+                        description: |-
+                          MountTarget specifies the mount command line for the lustre target.
+                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      zpoolCreate:
+                        description: |-
+                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
+                          This is where you may specify zpool create options, and the virtual device (vdev) such as
+                          "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                      zpoolReplace:
+                        type: string
+                    type: object
+                  mgtMdtCommandlines:
+                    description: MgtMdtCmdLines contains commands to create a combined
+                      MGT/MDT target.
+                    properties:
+                      mkfs:
+                        description: |-
+                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
+                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
+                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
+                        type: string
+                      mountTarget:
+                        description: |-
+                          MountTarget specifies the mount command line for the lustre target.
+                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      zpoolCreate:
+                        description: |-
+                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
+                          This is where you may specify zpool create options, and the virtual device (vdev) such as
+                          "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                      zpoolReplace:
+                        type: string
+                    type: object
+                  mgtMdtOptions:
+                    description: MgtMdtOptions contains options to use for libraries
+                      used for a combined MGT/MDT target.
+                    properties:
+                      colocateComputes:
+                        default: false
+                        description: |-
+                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a workflow
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - colocateComputes
+                    type: object
+                  mgtOptions:
+                    description: MgtOptions contains options to use for libraries
+                      used for an MGT target.
+                    properties:
+                      colocateComputes:
+                        default: false
+                        description: |-
+                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a workflow
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - colocateComputes
+                    type: object
+                  ostCommandlines:
+                    description: OstCmdLines contains commands to create an OST target.
+                    properties:
+                      mkfs:
+                        description: |-
+                          Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
+                          Use the --mkfsoptions argument to specify the zfs create options.  See zfsprops(7).
+                          Use the --mountfsoptions argument to specify persistent mount options for the lustre targets.
+                        type: string
+                      mountTarget:
+                        description: |-
+                          MountTarget specifies the mount command line for the lustre target.
+                          For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
+                          argument to mkfs.lustre instead.
+                        type: string
+                      postActivate:
+                        description: |-
+                          PostActivate specifies a list of commands to run on the Rabbit after the
+                          Lustre target has been activated
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: |-
+                          PreDeactivate specifies a list of commands to run on the Rabbit before the
+                          Lustre target is deactivated
+                        items:
+                          type: string
+                        type: array
+                      zpoolCreate:
+                        description: |-
+                          ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
+                          This is where you may specify zpool create options, and the virtual device (vdev) such as
+                          "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                      zpoolReplace:
+                        type: string
+                    type: object
+                  ostOptions:
+                    description: OstOptions contains options to use for libraries
+                      used for an OST target.
+                    properties:
+                      colocateComputes:
+                        default: false
+                        description: |-
+                          ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
+                          to the compute nodes in a workflow
+                        type: boolean
+                      count:
+                        description: Count specifies how many Lustre targets to create
+                        minimum: 1
+                        type: integer
+                      scale:
+                        description: Scale provides a unitless value to determine
+                          how many Lustre targets to create
+                        maximum: 10
+                        minimum: 1
+                        type: integer
+                      storageLabels:
+                        description: |-
+                          Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                          labels constraint. This restricts allocations to Storage resources with these labels
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - colocateComputes
+                    type: object
+                  preMountMGTCommands:
+                    description: PreMountMGTCmds contains commands to be run on the
+                      MGT after all Lustre targets are created and activated
+                    items:
+                      type: string
+                    type: array
+                  standaloneMgtPoolName:
+                    description: |-
+                      StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
+                      a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
+                      Multiple pools can be created.
+                    type: string
+                type: object
+              pinned:
+                default: false
+                description: Pinned is true if this instance is describing an active
+                  storage resource
+                type: boolean
+              rawStorage:
+                description: RawStorage defines the Raw-specific configuration
+                properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
+                      mkfs:
+                        description: Mkfs specifies the mkfs commandline, minus the
+                          "mkfs".
+                        type: string
+                      mountCompute:
+                        description: MountCompute specifies mount options for mounting
+                          on the Compute.
+                        type: string
+                      mountRabbit:
+                        description: MountRabbit specifies mount options for mounting
+                          on the Rabbit.
+                        type: string
+                      postMount:
+                        description: |-
+                          PostMount specifies a list of commands to run on the Rabbit after the
+                          file system has been activated and mounted.
+                        items:
+                          type: string
+                        type: array
+                      preUnmount:
+                        description: |-
+                          PreUnmount specifies a list of commands to run on the Rabbit before the
+                          file system is deactivated and unmounted.
+                        items:
+                          type: string
+                        type: array
+                      pvCreate:
+                        description: PvCreate specifies the pvcreate commandline,
+                          minus the "pvcreate".
+                        type: string
+                      pvRemove:
+                        description: PvRemove specifies the pvremove commandline,
+                          minus the "pvremove".
+                        type: string
+                      sharedVg:
+                        default: false
+                        description: |-
+                          SharedVg specifies that allocations from a workflow on the same Rabbit should share an
+                          LVM VolumeGroup
+                        type: boolean
+                      vgChange:
+                        description: VgChange specifies the various vgchange commandlines,
+                          minus the "vgchange"
+                        properties:
+                          lockStart:
+                            description: The vgchange commandline for lockStart, minus
+                              the "vgchange" command
+                            type: string
+                          lockStop:
+                            description: The vgchange commandline for lockStop, minus
+                              the "vgchange" command
+                            type: string
+                        type: object
+                      vgCreate:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgcreate".
+                        type: string
+                      vgRemove:
+                        description: VgCreate specifies the vgcreate commandline,
+                          minus the "vgremove".
+                        type: string
+                    type: object
+                  storageLabels:
+                    description: |-
+                      Storagelabels defines a list of labels that are added to the DirectiveBreakdown
+                      labels constraint. This restricts allocations to Storage resources with these labels
+                    items:
+                      type: string
+                    type: array
+                type: object
+              xfsStorage:
+                description: XFSStorage defines the XFS-specific configuration
+                properties:
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  commandlines:
+                    description: CmdLines contains commands to create volumes and
+                      filesystems.
+                    properties:
+                      lvChange:
+                        description: LvChange specifies the various lvchange commandlines,
+                          minus the "lvchange"
+                        properties:
+                          activate:
+                            description: The lvchange commandline for activate, minus
+                              the "lvchange" command
+                            type: string
+                          deactivate:
+                            description: The lvchange commandline for deactivate,
+                              minus the "lvchange" command
+                            type: string
+                        type: object
+                      lvCreate:
+                        description: LvCreate specifies the lvcreate commandline,
+                          minus the "lvcreate".
+                        type: string
+                      lvRemove:
+                        description: LvRemove specifies the lvcreate commandline,
+                          minus the "lvremove".
+                        type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".

@@ -191,6 +191,7 @@ type ClientMountStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="The desired state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.allReady",description="True if desired state is achieved"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"

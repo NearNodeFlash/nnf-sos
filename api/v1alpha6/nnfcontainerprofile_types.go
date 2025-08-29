@@ -116,6 +116,7 @@ type NnfContainerProfileStorage struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // NnfContainerProfile is the Schema for the nnfcontainerprofiles API
 type NnfContainerProfile struct {
@@ -126,6 +127,7 @@ type NnfContainerProfile struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // NnfContainerProfileList contains a list of NnfContainerProfile
 type NnfContainerProfileList struct {

@@ -1,9 +1,8 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20250610194327-bc91fef8e840
-## explicit; go 1.22.0
-github.com/DataWorkflowServices/dws/api/v1alpha2
+# github.com/DataWorkflowServices/dws v0.0.1-0.20250826235427-3ba3755ecbb4
+## explicit; go 1.23.9
 github.com/DataWorkflowServices/dws/api/v1alpha3
 github.com/DataWorkflowServices/dws/api/v1alpha4
-github.com/DataWorkflowServices/dws/api/v1alpha5
+github.com/DataWorkflowServices/dws/api/v1alpha6
 github.com/DataWorkflowServices/dws/config/crd/bases
 github.com/DataWorkflowServices/dws/config/webhook
 github.com/DataWorkflowServices/dws/controllers
@@ -15,13 +14,13 @@ github.com/DataWorkflowServices/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250708135942-4a4d148d7772
-## explicit; go 1.22.0
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250827135601-4d150db05d08
+## explicit; go 1.23.9
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
 github.com/NearNodeFlash/lustre-fs-operator/config/webhook
-# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250702200322-db4e4089d5e0
-## explicit; go 1.22.0
+# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250829141301-67f617d97f7b
+## explicit; go 1.23.9
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
 github.com/NearNodeFlash/nnf-ec/pkg

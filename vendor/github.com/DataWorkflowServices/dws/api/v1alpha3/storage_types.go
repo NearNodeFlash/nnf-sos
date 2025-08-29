@@ -138,6 +138,7 @@ type StorageStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="State",type="string",JSONPath=".spec.state",description="State of the storage resource"
 //+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.status",description="Status of the storage resource"
 //+kubebuilder:printcolumn:name="Mode",type="string",JSONPath=".spec.mode",description="State of live updates"

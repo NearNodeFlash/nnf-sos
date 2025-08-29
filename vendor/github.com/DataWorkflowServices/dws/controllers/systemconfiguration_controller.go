@@ -26,7 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	dwsv1alpha5 "github.com/DataWorkflowServices/dws/api/v1alpha5"
+	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/internal/controller/metrics"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	"github.com/go-logr/logr"
@@ -48,7 +48,7 @@ type SystemConfigurationReconciler struct {
 	client.Client
 	Log          logr.Logger
 	Scheme       *runtime.Scheme
-	ChildObjects []dwsv1alpha5.ObjectList
+	ChildObjects []dwsv1alpha6.ObjectList
 }
 
 // +kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch;create;update;patch;delete
@@ -61,7 +61,7 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	metrics.DwsReconcilesTotal.Inc()
 
-	systemConfiguration := &dwsv1alpha5.SystemConfiguration{}
+	systemConfiguration := &dwsv1alpha6.SystemConfiguration{}
 	if err := r.Get(ctx, req.NamespacedName, systemConfiguration); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -71,7 +71,7 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// Create a status updater that handles the call to r.Status().Update() if any of the fields
 	// in systemConfiguration.Status{} change
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha5.SystemConfigurationStatus](systemConfiguration)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha6.SystemConfigurationStatus](systemConfiguration)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { systemConfiguration.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -81,7 +81,7 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha5.DeleteChildren(ctx, r.Client, r.ChildObjects, systemConfiguration)
+		deleteStatus, err := dwsv1alpha6.DeleteChildren(ctx, r.Client, r.ChildObjects, systemConfiguration)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -118,7 +118,7 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	for _, storageNode := range systemConfiguration.Spec.StorageNodes {
 		// Create a storage resource for each storage node listed in the system configuration
-		storage := &dwsv1alpha5.Storage{
+		storage := &dwsv1alpha6.Storage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      storageNode.Name,
 				Namespace: corev1.NamespaceDefault,
@@ -127,16 +127,16 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		result, err := ctrl.CreateOrUpdate(ctx, r.Client, storage,
 			func() error {
-				dwsv1alpha5.AddOwnerLabels(storage, systemConfiguration)
+				dwsv1alpha6.AddOwnerLabels(storage, systemConfiguration)
 				labels := storage.GetLabels()
-				labels[dwsv1alpha5.StorageTypeLabel] = storageNode.Type
+				labels[dwsv1alpha6.StorageTypeLabel] = storageNode.Type
 				storage.SetLabels(labels)
 
 				return ctrl.SetControllerReference(systemConfiguration, storage, r.Scheme)
 			})
 
 		if err != nil {
-			return ctrl.Result{}, dwsv1alpha5.NewResourceError("CreateOrUpdate failed for storage: %v", client.ObjectKeyFromObject(storage)).WithError(err)
+			return ctrl.Result{}, dwsv1alpha6.NewResourceError("CreateOrUpdate failed for storage: %v", client.ObjectKeyFromObject(storage)).WithError(err)
 		}
 
 		if result == controllerutil.OperationResultCreated {
@@ -153,12 +153,12 @@ func (r *SystemConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *SystemConfigurationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.ChildObjects = []dwsv1alpha5.ObjectList{
-		&dwsv1alpha5.StorageList{},
+	r.ChildObjects = []dwsv1alpha6.ObjectList{
+		&dwsv1alpha6.StorageList{},
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dwsv1alpha5.SystemConfiguration{}).
-		Owns(&dwsv1alpha5.Storage{}).
+		For(&dwsv1alpha6.SystemConfiguration{}).
+		Owns(&dwsv1alpha6.Storage{}).
 		Complete(r)
 }

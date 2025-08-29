@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,8 +20,12 @@
 package persistent
 
 import (
+	"time"
+
 	"github.com/dgraph-io/badger/v3"
 )
+
+const garbageCollectPeriod = 24 * time.Hour
 
 func NewLocalPersistentStorageProvider() PersistentStorageProvider {
 	return &localPersistentStorageProvider{}
@@ -40,27 +44,51 @@ type localPersistentStorage struct {
 }
 
 func (s *localPersistentStorage) open(path string, readOnly bool) (err error) {
+	log := GetLogger().WithValues("path", path, "readOnly", readOnly)
+	log.Info("BadgerDB: Opening database")
+
 	opts := badger.DefaultOptions(path)
 	opts.SyncWrites = true
-	//opts.ReadOnly = readOnly // Causes ErrLogTruncate
 	opts.BypassLockGuard = readOnly
+	opts.VerifyValueChecksum = true
 
-	// Shrink the in-memory and on-disk size to a more manageable 8 MiB and 16 MiB, respectively;
+	// Shrink the in-memory and on-disk size to a more manageable 8 MiB and 32 MiB, respectively;
 	// We use very little data and the 64 MiB and 256 MiB defaults will cause OOM issues in kubernetes.
-	// 8MiB seems to be the lower limit within badger, anything smaller and badger will complain with
+	// 8MiB seems to be the lower limit within badger, anything smaller and badger complains with
 	//   """
 	//   Valuethreshold 1048576 greater than max batch size of 629145. Either reduce opt.ValueThreshold
 	//   or increase opt.MaxTableSize.
 	//   """
 	opts.MemTableSize = 8 << 20
-	opts.BlockCacheSize = 16 << 20
+	opts.BlockCacheSize = 32 << 20 // Increased to 32 MiB for better cache hit ratio
 
 	s.DB, err = badger.Open(opts)
-	return err
+	if err != nil {
+		log.Error(err, "BadgerDB: Failed to open database")
+		return err
+	}
+
+	log.WithValues("mem_table_size", opts.MemTableSize, "block_cache_size", opts.BlockCacheSize).Info("BadgerDB: Database opened successfully")
+
+	// Run garbage collection on existing database during initialization
+	// Skip GC for read-only databases to avoid potential issues
+	if !readOnly {
+		s.RunPeriodicGC(garbageCollectPeriod)
+	}
+
+	return nil
 }
 
 func (s *localPersistentStorage) Close() error {
-	return s.DB.Close()
+	log := GetLogger()
+	log.Info("BadgerDB: Closing database")
+	err := s.DB.Close()
+	if err != nil {
+		log.Error(err, "BadgerDB: Failed to close database")
+	} else {
+		log.Info("BadgerDB: Database closed successfully")
+	}
+	return err
 }
 
 func (s *localPersistentStorage) View(fn func(PersistentStorageTransactionApi) error) error {
@@ -82,6 +110,38 @@ func (s *localPersistentStorage) Delete(key string) error {
 	}
 
 	return txn.Commit()
+}
+
+func (s *localPersistentStorage) RunGC() error {
+	log := GetLogger().WithName("gc")
+	log.Info("BadgerDB: Starting garbage collection")
+
+	err := s.DB.RunValueLogGC(0.5)
+	if err != nil {
+		if err == badger.ErrNoRewrite {
+			log.Info("BadgerDB: GC completed - no rewrite needed")
+			return nil
+		}
+		log.Error(err, "BadgerDB: GC failed")
+		return err
+	}
+	log.Info("BadgerDB: GC completed successfully")
+	return nil
+}
+
+func (s *localPersistentStorage) RunPeriodicGC(interval time.Duration) {
+	log := GetLogger().WithName("periodic-gc").WithValues("interval", interval)
+	log.Info("BadgerDB: Starting periodic GC")
+
+	ticker := time.NewTicker(interval)
+	go func() {
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := s.RunGC(); err != nil {
+				log.Error(err, "BadgerDB: Periodic GC encountered error")
+			}
+		}
+	}()
 }
 
 type localPersistentStorageTransaction struct {
