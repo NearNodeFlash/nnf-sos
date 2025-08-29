@@ -38,6 +38,7 @@ type SystemStatusData struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 // SystemStatus is the Schema for the systemstatuses API
 type SystemStatus struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -47,6 +48,7 @@ type SystemStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 // SystemStatusList contains a list of SystemStatus
 type SystemStatusList struct {
 	metav1.TypeMeta `json:",inline"`

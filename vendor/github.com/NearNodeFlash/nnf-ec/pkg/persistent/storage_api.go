@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Hewlett Packard Enterprise Development LP
+ * Copyright 2022-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,15 +17,37 @@
  * limitations under the License.
  */
 
+// Package persistent provides persistent storage functionality for key-value operations.
+// This package implements durable storage mechanisms with support for various backends.
 package persistent
 
+import (
+	"github.com/NearNodeFlash/nnf-ec/pkg/ec"
+	"github.com/go-logr/logr"
+)
+
+// Package-level logger that can be configured
+var packageLogger ec.Logger = logr.Discard()
+
+// SetLogger configures the package-level logger for all persistent storage operations
+func SetLogger(log ec.Logger) {
+	packageLogger = log.WithName("persistent")
+}
+
+// GetLogger returns the current package logger
+func GetLogger() ec.Logger {
+	return packageLogger
+}
+
+// StorageProvider is the default storage provider instance for the package
 var StorageProvider = NewLocalPersistentStorageProvider()
 
+// PersistentStorageProvider provides methods for creating persistent storage interfaces
 type PersistentStorageProvider interface {
 	NewPersistentStorageInterface(path string, readOnly bool) (PersistentStorageApi, error)
 }
 
-// Persistent Storage API provides an interface for interacting with persistent storage
+// PersistentStorageApi provides an interface for interacting with persistent storage.
 type PersistentStorageApi interface {
 	View(func(txn PersistentStorageTransactionApi) error) error
 	Update(func(txn PersistentStorageTransactionApi) error) error
@@ -34,7 +56,7 @@ type PersistentStorageApi interface {
 	Close() error
 }
 
-// Persistent Storage Transaction API provides an interface for interacting with persistent storage transactions
+// PersistentStorageTransactionApi provides an interface for interacting with persistent storage transactions
 type PersistentStorageTransactionApi interface {
 	NewIterator(prefix string) PersistentStorageIteratorApi
 	Set(key string, value []byte) error

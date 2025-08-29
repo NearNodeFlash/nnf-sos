@@ -11,14 +11,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-dataworkflowservices-github-io-v1alpha5-workflow
+      path: /mutate-dataworkflowservices-github-io-v1alpha6-workflow
   failurePolicy: Fail
   name: mworkflow.kb.io
   rules:
   - apiGroups:
     - dataworkflowservices.github.io
     apiVersions:
-    - v1alpha5
+    - v1alpha6
     operations:
     - CREATE
     resources:
@@ -37,14 +37,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-dataworkflowservices-github-io-v1alpha5-workflow
+      path: /validate-dataworkflowservices-github-io-v1alpha6-workflow
   failurePolicy: Fail
   name: vworkflow.kb.io
   rules:
   - apiGroups:
     - dataworkflowservices.github.io
     apiVersions:
-    - v1alpha5
+    - v1alpha6
     operations:
     - CREATE
     - UPDATE

@@ -1,9 +1,0 @@
-apiVersion: nnf.cray.hpe.com/v1alpha5
-kind: NnfLustreMGT
-metadata:
-  labels:
-    app.kubernetes.io/name: nnf-sos
-    app.kubernetes.io/managed-by: kustomize
-  name: nnflustremgt-sample
-spec:
-  # TODO(user): Add fields here

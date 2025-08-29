@@ -27,687 +27,6 @@ spec:
       jsonPath: .status.status
       name: STATUS
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    - description: Job ID
-      jsonPath: .spec.jobID
-      name: JOBID
-      priority: 1
-      type: integer
-    - description: Desired state
-      jsonPath: .spec.desiredState
-      name: DESIREDSTATE
-      priority: 1
-      type: string
-    - description: Time of most recent desiredState change
-      jsonPath: .status.desiredStateChange
-      name: DESIREDSTATECHANGE
-      priority: 1
-      type: date
-    - description: Duration of last state change
-      jsonPath: .status.elapsedTimeLastState
-      name: ELAPSEDTIMELASTSTATE
-      priority: 1
-      type: string
-    name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: Workflow is the Schema for the workflows API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: WorkflowSpec defines the desired state of Workflow
-            properties:
-              desiredState:
-                description: |-
-                  Desired state for the workflow to be in. Unless progressing to the teardown state,
-                  this can only be set to the next state when the current desired state has been achieved.
-                enum:
-                - Proposal
-                - Setup
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
-                - Teardown
-                type: string
-              dwDirectives:
-                description: 'List of #DW strings from a WLM job script'
-                items:
-                  type: string
-                type: array
-              groupID:
-                description: |-
-                  GroupID specifies the group ID for the workflow. The Group ID is used by the various states
-                  in the workflow to ensure the group has permissions to perform certain actions. Used in
-                  conjunction with User ID to run subtasks with UserID:GroupID credentials.
-                format: int32
-                type: integer
-              hurry:
-                default: false
-                description: |-
-                  Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
-                  The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
-                  The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
-                type: boolean
-              jobID:
-                type: integer
-              userID:
-                description: |-
-                  UserID specifies the user ID for the workflow. The User ID is used by the various states
-                  in the workflow to ensure the user has permissions to perform certain actions. Used in
-                  conjunction with Group ID to run subtasks with UserID:GroupID credentials
-                format: int32
-                type: integer
-              wlmID:
-                type: string
-            required:
-            - desiredState
-            - dwDirectives
-            - groupID
-            - jobID
-            - userID
-            - wlmID
-            type: object
-          status:
-            description: WorkflowStatus defines the observed state of the Workflow
-            properties:
-              computes:
-                description: Reference to Computes
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  fieldPath:
-                    description: |-
-                      If referring to a piece of an object instead of an entire object, this string
-                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within a pod, this would take on a value like:
-                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]" (container with
-                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                      referencing a part of an object.
-                    type: string
-                  kind:
-                    description: |-
-                      Kind of the referent.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                    type: string
-                  resourceVersion:
-                    description: |-
-                      Specific resourceVersion to which this reference is made, if any.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                    type: string
-                  uid:
-                    description: |-
-                      UID of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              desiredStateChange:
-                description: Time of the most recent desiredState change
-                format: date-time
-                type: string
-              directiveBreakdowns:
-                description: |-
-                  List of #DW directive breakdowns indicating to WLM what to allocate on what Server
-                  1 DirectiveBreakdown per #DW Directive that requires storage
-                items:
-                  description: ObjectReference contains enough information to let
-                    you inspect or modify the referred object.
-                  properties:
-                    apiVersion:
-                      description: API version of the referent.
-                      type: string
-                    fieldPath:
-                      description: |-
-                        If referring to a piece of an object instead of an entire object, this string
-                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within a pod, this would take on a value like:
-                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]" (container with
-                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                        referencing a part of an object.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind of the referent.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                      type: string
-                    name:
-                      description: |-
-                        Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                      type: string
-                    resourceVersion:
-                      description: |-
-                        Specific resourceVersion to which this reference is made, if any.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                      type: string
-                    uid:
-                      description: |-
-                        UID of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                      type: string
-                  type: object
-                  x-kubernetes-map-type: atomic
-                type: array
-              drivers:
-                description: List of registered drivers and related status.  Updated
-                  by drivers.
-                items:
-                  description: WorkflowDriverStatus defines the status information
-                    provided by integration drivers.
-                  properties:
-                    completeTime:
-                      description: CompleteTime reflects the time that the workflow
-                        reconciler marks the driver complete
-                      format: date-time
-                      type: string
-                    completed:
-                      type: boolean
-                    driverID:
-                      type: string
-                    dwdIndex:
-                      type: integer
-                    error:
-                      description: |-
-                        Driver error string. This is not rolled up into the workflow's
-                        overall status section
-                      type: string
-                    lastHB:
-                      format: int64
-                      type: integer
-                    message:
-                      description: Message provides additional details on the current
-                        status of the resource
-                      type: string
-                    status:
-                      description: |-
-                        User readable reason.
-                        For the CDS driver, this could be the state of the underlying
-                        data movement request:  Pending, Queued, Running, Completed or Error
-                      enum:
-                      - Pending
-                      - Queued
-                      - Running
-                      - Completed
-                      - Error
-                      - DriverWait
-                      type: string
-                    taskID:
-                      type: string
-                    watchState:
-                      description: WorkflowState is the enumeration of the state of
-                        the workflow
-                      enum:
-                      - Proposal
-                      - Setup
-                      - DataIn
-                      - PreRun
-                      - PostRun
-                      - DataOut
-                      - Teardown
-                      type: string
-                  required:
-                  - completed
-                  - driverID
-                  - dwdIndex
-                  - lastHB
-                  - taskID
-                  - watchState
-                  type: object
-                type: array
-              elapsedTimeLastState:
-                description: Duration of the last state change
-                type: string
-              env:
-                additionalProperties:
-                  type: string
-                description: "Set of DW environment variable settings for WLM to apply
-                  to the job.\n\t\t- DW_JOB_STRIPED\n\t\t- DW_JOB_PRIVATE\n\t\t- DW_JOB_STRIPED_CACHE\n\t\t-
-                  DW_JOB_LDBAL_CACHE\n\t\t- DW_PERSISTENT_STRIPED_{resname}"
-                type: object
-              message:
-                description: Message provides additional details on the current status
-                  of the resource
-                type: string
-              ready:
-                description: |-
-                  Ready can be 'True', 'False'
-                  Indicates whether State has been reached.
-                type: boolean
-              readyChange:
-                description: Time of the most recent desiredState's achieving Ready
-                  status
-                format: date-time
-                type: string
-              state:
-                description: |-
-                  The state the resource is currently transitioning to.
-                  Updated by the controller once started.
-                enum:
-                - Proposal
-                - Setup
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
-                - Teardown
-                type: string
-              status:
-                description: User readable reason and status message
-                enum:
-                - Completed
-                - DriverWait
-                - Error
-                type: string
-            required:
-            - ready
-            type: object
-        type: object
-    served: true
-    storage: false
-    subresources: {}
-  - additionalPrinterColumns:
-    - description: Current state
-      jsonPath: .status.state
-      name: STATE
-      type: string
-    - description: True if current state is achieved
-      jsonPath: .status.ready
-      name: READY
-      type: boolean
-    - description: Indicates achievement of current state
-      jsonPath: .status.status
-      name: STATUS
-      type: string
-    - description: Job ID
-      jsonPath: .spec.jobID
-      name: JOBID
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
-    - description: Desired state
-      jsonPath: .spec.desiredState
-      name: DESIREDSTATE
-      priority: 1
-      type: string
-    - description: Time of most recent desiredState change
-      jsonPath: .status.desiredStateChange
-      name: DESIREDSTATECHANGE
-      priority: 1
-      type: date
-    - description: Duration of last state change
-      jsonPath: .status.elapsedTimeLastState
-      name: ELAPSEDTIMELASTSTATE
-      priority: 1
-      type: string
-    - description: UID
-      jsonPath: .spec.userID
-      name: UID
-      priority: 1
-      type: string
-    - description: GID
-      jsonPath: .spec.groupID
-      name: GID
-      priority: 1
-      type: string
-    name: v1alpha2
-    schema:
-      openAPIV3Schema:
-        description: Workflow is the Schema for the workflows API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: WorkflowSpec defines the desired state of Workflow
-            properties:
-              desiredState:
-                description: |-
-                  Desired state for the workflow to be in. Unless progressing to the teardown state,
-                  this can only be set to the next state when the current desired state has been achieved.
-                enum:
-                - Proposal
-                - Setup
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
-                - Teardown
-                type: string
-              dwDirectives:
-                description: 'List of #DW strings from a WLM job script'
-                items:
-                  type: string
-                type: array
-              groupID:
-                description: |-
-                  GroupID specifies the group ID for the workflow. The Group ID is used by the various states
-                  in the workflow to ensure the group has permissions to perform certain actions. Used in
-                  conjunction with User ID to run subtasks with UserID:GroupID credentials.
-                format: int32
-                type: integer
-              hurry:
-                default: false
-                description: |-
-                  Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
-                  The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
-                  The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
-                type: boolean
-              jobID:
-                anyOf:
-                - type: integer
-                - type: string
-                description: |-
-                  JobID is the WLM job ID that corresponds to this workflow, and is
-                  set by the WLM when it creates the workflow resource.
-                x-kubernetes-int-or-string: true
-              userID:
-                description: |-
-                  UserID specifies the user ID for the workflow. The User ID is used by the various states
-                  in the workflow to ensure the user has permissions to perform certain actions. Used in
-                  conjunction with Group ID to run subtasks with UserID:GroupID credentials
-                format: int32
-                type: integer
-              wlmID:
-                description: |-
-                  WLMID identifies the Workflow Manager (WLM), and is set by the WLM
-                  when it creates the workflow resource.
-                type: string
-            required:
-            - desiredState
-            - dwDirectives
-            - groupID
-            - jobID
-            - userID
-            - wlmID
-            type: object
-          status:
-            description: WorkflowStatus defines the observed state of the Workflow
-            properties:
-              computes:
-                description: Reference to Computes
-                properties:
-                  apiVersion:
-                    description: API version of the referent.
-                    type: string
-                  fieldPath:
-                    description: |-
-                      If referring to a piece of an object instead of an entire object, this string
-                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                      For example, if the object reference is to a container within a pod, this would take on a value like:
-                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                      the event) or if no container name is specified "spec.containers[2]" (container with
-                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                      referencing a part of an object.
-                    type: string
-                  kind:
-                    description: |-
-                      Kind of the referent.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  namespace:
-                    description: |-
-                      Namespace of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                    type: string
-                  resourceVersion:
-                    description: |-
-                      Specific resourceVersion to which this reference is made, if any.
-                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                    type: string
-                  uid:
-                    description: |-
-                      UID of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                    type: string
-                type: object
-                x-kubernetes-map-type: atomic
-              desiredStateChange:
-                description: Time of the most recent desiredState change
-                format: date-time
-                type: string
-              directiveBreakdowns:
-                description: |-
-                  List of #DW directive breakdowns indicating to WLM what to allocate on what Server
-                  1 DirectiveBreakdown per #DW Directive that requires storage
-                items:
-                  description: ObjectReference contains enough information to let
-                    you inspect or modify the referred object.
-                  properties:
-                    apiVersion:
-                      description: API version of the referent.
-                      type: string
-                    fieldPath:
-                      description: |-
-                        If referring to a piece of an object instead of an entire object, this string
-                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                        For example, if the object reference is to a container within a pod, this would take on a value like:
-                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                        the event) or if no container name is specified "spec.containers[2]" (container with
-                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                        referencing a part of an object.
-                      type: string
-                    kind:
-                      description: |-
-                        Kind of the referent.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                      type: string
-                    name:
-                      description: |-
-                        Name of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      type: string
-                    namespace:
-                      description: |-
-                        Namespace of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                      type: string
-                    resourceVersion:
-                      description: |-
-                        Specific resourceVersion to which this reference is made, if any.
-                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                      type: string
-                    uid:
-                      description: |-
-                        UID of the referent.
-                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                      type: string
-                  type: object
-                  x-kubernetes-map-type: atomic
-                type: array
-              drivers:
-                description: List of registered drivers and related status.  Updated
-                  by drivers.
-                items:
-                  description: WorkflowDriverStatus defines the status information
-                    provided by integration drivers.
-                  properties:
-                    completeTime:
-                      description: CompleteTime reflects the time that the workflow
-                        reconciler marks the driver complete
-                      format: date-time
-                      type: string
-                    completed:
-                      type: boolean
-                    driverID:
-                      type: string
-                    dwdIndex:
-                      type: integer
-                    error:
-                      description: |-
-                        Driver error string. This is not rolled up into the workflow's
-                        overall status section
-                      type: string
-                    lastHB:
-                      format: int64
-                      type: integer
-                    message:
-                      description: Message provides additional details on the current
-                        status of the resource
-                      type: string
-                    status:
-                      description: |-
-                        User readable reason.
-                        For the CDS driver, this could be the state of the underlying
-                        data movement request
-                      enum:
-                      - Pending
-                      - Queued
-                      - Running
-                      - Completed
-                      - TransientCondition
-                      - Error
-                      - DriverWait
-                      type: string
-                    taskID:
-                      type: string
-                    watchState:
-                      description: WorkflowState is the enumeration of the state of
-                        the workflow
-                      enum:
-                      - Proposal
-                      - Setup
-                      - DataIn
-                      - PreRun
-                      - PostRun
-                      - DataOut
-                      - Teardown
-                      type: string
-                  required:
-                  - completed
-                  - driverID
-                  - dwdIndex
-                  - lastHB
-                  - taskID
-                  - watchState
-                  type: object
-                type: array
-              elapsedTimeLastState:
-                description: Duration of the last state change
-                type: string
-              env:
-                additionalProperties:
-                  type: string
-                description: "Set of DW environment variable settings for WLM to apply
-                  to the job.\n\t\t- DW_JOB_STRIPED\n\t\t- DW_JOB_PRIVATE\n\t\t- DW_JOB_STRIPED_CACHE\n\t\t-
-                  DW_JOB_LDBAL_CACHE\n\t\t- DW_PERSISTENT_STRIPED_{resname}"
-                type: object
-              message:
-                description: Message provides additional details on the current status
-                  of the resource
-                type: string
-              ready:
-                description: |-
-                  Ready can be 'True', 'False'
-                  Indicates whether State has been reached.
-                type: boolean
-              readyChange:
-                description: Time of the most recent desiredState's achieving Ready
-                  status
-                format: date-time
-                type: string
-              state:
-                description: |-
-                  The state the resource is currently transitioning to.
-                  Updated by the controller once started.
-                enum:
-                - Proposal
-                - Setup
-                - DataIn
-                - PreRun
-                - PostRun
-                - DataOut
-                - Teardown
-                type: string
-              status:
-                description: |-
-                  User readable reason and status message.
-                  - Completed: The workflow has reached the state in workflow.Status.State.
-                  - DriverWait: The underlying drivers are currently running.
-                  - TransientCondition: A driver has encountered an error that might be recoverable.
-                  - Error: A driver has encountered an error that will not recover.
-                enum:
-                - Completed
-                - DriverWait
-                - TransientCondition
-                - Error
-                type: string
-            required:
-            - ready
-            type: object
-        type: object
-    served: true
-    storage: false
-    subresources: {}
-  - additionalPrinterColumns:
-    - description: Current state
-      jsonPath: .status.state
-      name: STATE
-      type: string
-    - description: True if current state is achieved
-      jsonPath: .status.ready
-      name: READY
-      type: boolean
-    - description: Indicates achievement of current state
-      jsonPath: .status.status
-      name: STATUS
-      type: string
     - description: Job ID
       jsonPath: .spec.jobID
       name: JOBID
@@ -1066,7 +385,7 @@ spec:
             - ready
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources: {}
   - additionalPrinterColumns:
@@ -1440,7 +759,7 @@ spec:
             - ready
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources: {}
   - additionalPrinterColumns:
@@ -1489,6 +808,387 @@ spec:
       priority: 1
       type: string
     name: v1alpha5
+    schema:
+      openAPIV3Schema:
+        description: Workflow is the Schema for the workflows API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: WorkflowSpec defines the desired state of Workflow
+            properties:
+              desiredState:
+                description: |-
+                  Desired state for the workflow to be in. Unless progressing to the teardown state,
+                  this can only be set to the next state when the current desired state has been achieved.
+                enum:
+                - Proposal
+                - Setup
+                - DataIn
+                - PreRun
+                - PostRun
+                - DataOut
+                - Teardown
+                type: string
+              dwDirectives:
+                description: 'List of #DW strings from a WLM job script'
+                items:
+                  type: string
+                type: array
+              forceReady:
+                default: false
+                description: |-
+                  ForceReady will cause the workflow to move to 'Ready' even if the underlying drivers haven't finished. This should only be used when the
+                  driver supports it.
+                type: boolean
+              groupID:
+                description: |-
+                  GroupID specifies the group ID for the workflow. The Group ID is used by the various states
+                  in the workflow to ensure the group has permissions to perform certain actions. Used in
+                  conjunction with User ID to run subtasks with UserID:GroupID credentials.
+                format: int32
+                type: integer
+              hurry:
+                default: false
+                description: |-
+                  Hurry indicates that the workflow's driver should kill the job in a hurry when this workflow enters its teardown state.
+                  The driver must release all resources and unmount any filesystems that were mounted as part of the workflow, though some drivers would have done this anyway as part of their teardown state.
+                  The driver must also kill any in-progress data transfers, or skip any data transfers that have not yet begun.
+                type: boolean
+              jobID:
+                anyOf:
+                - type: integer
+                - type: string
+                description: |-
+                  JobID is the WLM job ID that corresponds to this workflow, and is
+                  set by the WLM when it creates the workflow resource.
+                x-kubernetes-int-or-string: true
+              userID:
+                description: |-
+                  UserID specifies the user ID for the workflow. The User ID is used by the various states
+                  in the workflow to ensure the user has permissions to perform certain actions. Used in
+                  conjunction with Group ID to run subtasks with UserID:GroupID credentials
+                format: int32
+                type: integer
+              wlmID:
+                description: |-
+                  WLMID identifies the Workflow Manager (WLM), and is set by the WLM
+                  when it creates the workflow resource.
+                type: string
+            required:
+            - desiredState
+            - dwDirectives
+            - forceReady
+            - groupID
+            - jobID
+            - userID
+            - wlmID
+            type: object
+          status:
+            description: WorkflowStatus defines the observed state of the Workflow
+            properties:
+              computes:
+                description: Reference to Computes
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              desiredStateChange:
+                description: Time of the most recent desiredState change
+                format: date-time
+                type: string
+              directiveBreakdowns:
+                description: |-
+                  List of #DW directive breakdowns indicating to WLM what to allocate on what Server
+                  1 DirectiveBreakdown per #DW Directive that requires storage
+                items:
+                  description: ObjectReference contains enough information to let
+                    you inspect or modify the referred object.
+                  properties:
+                    apiVersion:
+                      description: API version of the referent.
+                      type: string
+                    fieldPath:
+                      description: |-
+                        If referring to a piece of an object instead of an entire object, this string
+                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                        the event) or if no container name is specified "spec.containers[2]" (container with
+                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                        referencing a part of an object.
+                      type: string
+                    kind:
+                      description: |-
+                        Kind of the referent.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                      type: string
+                    name:
+                      description: |-
+                        Name of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      type: string
+                    namespace:
+                      description: |-
+                        Namespace of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                      type: string
+                    resourceVersion:
+                      description: |-
+                        Specific resourceVersion to which this reference is made, if any.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                      type: string
+                    uid:
+                      description: |-
+                        UID of the referent.
+                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                      type: string
+                  type: object
+                  x-kubernetes-map-type: atomic
+                type: array
+              drivers:
+                description: List of registered drivers and related status.  Updated
+                  by drivers.
+                items:
+                  description: WorkflowDriverStatus defines the status information
+                    provided by integration drivers.
+                  properties:
+                    completeTime:
+                      description: CompleteTime reflects the time that the workflow
+                        reconciler marks the driver complete
+                      format: date-time
+                      type: string
+                    completed:
+                      type: boolean
+                    driverID:
+                      type: string
+                    dwdIndex:
+                      type: integer
+                    error:
+                      description: |-
+                        Driver error string. This is not rolled up into the workflow's
+                        overall status section
+                      type: string
+                    lastHB:
+                      format: int64
+                      type: integer
+                    message:
+                      description: Message provides additional details on the current
+                        status of the resource
+                      type: string
+                    status:
+                      description: |-
+                        User readable reason.
+                        For the CDS driver, this could be the state of the underlying
+                        data movement request
+                      enum:
+                      - Pending
+                      - Queued
+                      - Running
+                      - Completed
+                      - TransientCondition
+                      - Error
+                      - DriverWait
+                      type: string
+                    taskID:
+                      type: string
+                    watchState:
+                      description: WorkflowState is the enumeration of the state of
+                        the workflow
+                      enum:
+                      - Proposal
+                      - Setup
+                      - DataIn
+                      - PreRun
+                      - PostRun
+                      - DataOut
+                      - Teardown
+                      type: string
+                  required:
+                  - completed
+                  - driverID
+                  - dwdIndex
+                  - lastHB
+                  - taskID
+                  - watchState
+                  type: object
+                type: array
+              elapsedTimeLastState:
+                description: Duration of the last state change
+                type: string
+              env:
+                additionalProperties:
+                  type: string
+                description: "Set of DW environment variable settings for WLM to apply
+                  to the job.\n\t\t- DW_JOB_STRIPED\n\t\t- DW_JOB_PRIVATE\n\t\t- DW_JOB_STRIPED_CACHE\n\t\t-
+                  DW_JOB_LDBAL_CACHE\n\t\t- DW_PERSISTENT_STRIPED_{resname}"
+                type: object
+              message:
+                description: Message provides additional details on the current status
+                  of the resource
+                type: string
+              ready:
+                description: |-
+                  Ready can be 'True', 'False'
+                  Indicates whether State has been reached.
+                type: boolean
+              readyChange:
+                description: Time of the most recent desiredState's achieving Ready
+                  status
+                format: date-time
+                type: string
+              requires:
+                description: |-
+                  Requires contains a list of features that the controller has determined must be enabled for this Workflow.
+                  This list is an internal interpretation of the corresponding list in the DirectiveBreakdown.Status and will not necessarily represent everything found there.
+                  External users must refer to the list in DirectiveBreakdown.Status.
+                items:
+                  type: string
+                type: array
+              state:
+                description: |-
+                  The state the resource is currently transitioning to.
+                  Updated by the controller once started.
+                enum:
+                - Proposal
+                - Setup
+                - DataIn
+                - PreRun
+                - PostRun
+                - DataOut
+                - Teardown
+                type: string
+              status:
+                description: |-
+                  User readable reason and status message.
+                  - Completed: The workflow has reached the state in workflow.Status.State.
+                  - DriverWait: The underlying drivers are currently running.
+                  - TransientCondition: A driver has encountered an error that might be recoverable.
+                  - Error: A driver has encountered an error that will not recover.
+                enum:
+                - Completed
+                - DriverWait
+                - TransientCondition
+                - Error
+                type: string
+              workflowToken:
+                description: |-
+                  WorkflowToken is the Secret that contains the per-Workflow token, when one
+                  is being used.
+                properties:
+                  secretName:
+                    type: string
+                  secretNamespace:
+                    type: string
+                required:
+                - secretName
+                - secretNamespace
+                type: object
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources: {}
+  - additionalPrinterColumns:
+    - description: Current state
+      jsonPath: .status.state
+      name: STATE
+      type: string
+    - description: True if current state is achieved
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - description: Indicates achievement of current state
+      jsonPath: .status.status
+      name: STATUS
+      type: string
+    - description: Job ID
+      jsonPath: .spec.jobID
+      name: JOBID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    - description: Desired state
+      jsonPath: .spec.desiredState
+      name: DESIREDSTATE
+      priority: 1
+      type: string
+    - description: Time of most recent desiredState change
+      jsonPath: .status.desiredStateChange
+      name: DESIREDSTATECHANGE
+      priority: 1
+      type: date
+    - description: Duration of last state change
+      jsonPath: .status.elapsedTimeLastState
+      name: ELAPSEDTIMELASTSTATE
+      priority: 1
+      type: string
+    - description: UID
+      jsonPath: .spec.userID
+      name: UID
+      priority: 1
+      type: string
+    - description: GID
+      jsonPath: .spec.groupID
+      name: GID
+      priority: 1
+      type: string
+    name: v1alpha6
     schema:
       openAPIV3Schema:
         description: Workflow is the Schema for the workflows API

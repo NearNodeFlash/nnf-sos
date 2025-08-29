@@ -75,6 +75,7 @@ type NnfDataMovementManagerStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if manager readied all resoures"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Hewlett Packard Enterprise Development LP
+ * Copyright 2020-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -364,6 +364,7 @@ func (s *Storage) initialize() error {
 
 	ctrl, err := s.device.IdentifyController(0)
 	if err != nil {
+		s.notify(sf.UNAVAILABLE_OFFLINE_RST)
 		return fmt.Errorf("Initialize Storage %s: Failed to identify common controller: Error: %w", s.id, err)
 	}
 
@@ -420,6 +421,8 @@ func (s *Storage) initialize() error {
 		ns, err = s.device.IdentifyNamespace(CommonNamespaceIdentifier)
 		if err != nil {
 			if retryCount >= 2 {
+				// After retries, this is likely a system-level failure
+				s.notify(sf.UNAVAILABLE_OFFLINE_RST)
 				return fmt.Errorf("Initialize Storage %s: Failed to identify common namespace, retried %d times: Error: %w", s.id, retryCount, err)
 			}
 
@@ -464,11 +467,19 @@ func (s *Storage) purge() error {
 
 	namespaces, err := s.device.ListNamespaces(0)
 	if err != nil {
+		// System-level failure when listing namespaces
+		if isSystemLevelError(err) {
+			s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		return err
 	}
 
 	for _, nsid := range namespaces {
 		if err := s.device.DeleteNamespace(nsid); err != nil {
+			// System-level failure when deleting namespace during purge
+			if isSystemLevelError(err) {
+				s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+			}
 			return err
 		}
 	}
@@ -540,19 +551,23 @@ func (s *Storage) createVolume(desiredCapacityInBytes uint64) (*Volume, error) {
 	actualCapacityBytes := roundUpToMultiple(desiredCapacityInBytes, s.blockSizeBytes)
 
 	s.log.V(2).Info("Creating namespace", "capacityInBytes", actualCapacityBytes, "formatIndex", s.lbaFormatIndex)
-	namespaceId, guid, err := s.device.CreateNamespace(actualCapacityBytes/s.blockSizeBytes, s.lbaFormatIndex)
+	namespaceID, guid, err := s.device.CreateNamespace(actualCapacityBytes/s.blockSizeBytes, s.lbaFormatIndex)
 	if err != nil {
+		// Only publish error events for system-level failures
+		if isSystemLevelError(err) {
+			s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		return nil, err
 	}
 
-	id := strconv.Itoa(int(namespaceId))
+	id := strconv.Itoa(int(namespaceID))
 
-	log := s.log.WithName(id).WithValues(namespaceIdKey, namespaceId)
+	log := s.log.WithName(id).WithValues(namespaceIdKey, namespaceID)
 	log.V(1).Info("Created namespace")
 
 	volume := Volume{
 		id:            id,
-		namespaceId:   namespaceId,
+		namespaceId:   namespaceID,
 		guid:          guid,
 		capacityBytes: actualCapacityBytes,
 		storage:       s,
@@ -575,6 +590,10 @@ func (s *Storage) deleteVolume(volumeId string) error {
 			log.V(2).Info("Deleting namespace")
 			err := s.device.DeleteNamespace(volume.namespaceId)
 			if err != nil {
+				// Only publish error events for system-level failures
+				if isSystemLevelError(err) {
+					s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+				}
 				log.Error(err, "Delete namespace failed, removing from in-memory state anyway", "capacity", volume.capacityBytes)
 			} else {
 				log.V(1).Info("Deleted namespace", "capacity", volume.capacityBytes)
@@ -599,6 +618,10 @@ func (s *Storage) formatVolume(volumeID string) error {
 
 			log.V(2).Info("Format namespace")
 			if err := s.device.FormatNamespace(volume.namespaceId); err != nil {
+				// Only publish error events for system-level failures
+				if isSystemLevelError(err) {
+					s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+				}
 				log.Error(err, "Format namespace failure")
 				return err
 			}
@@ -614,6 +637,10 @@ func (s *Storage) formatVolume(volumeID string) error {
 func (s *Storage) recoverStorageVolumes() error {
 	namespaces, err := s.device.ListNamespaces(0)
 	if err != nil {
+		// Only publish error events for system-level failures
+		if isSystemLevelError(err) {
+			s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		s.log.Error(err, "Failed to list device namespaces")
 	}
 
@@ -623,6 +650,10 @@ func (s *Storage) recoverStorageVolumes() error {
 
 		ns, err := s.device.IdentifyNamespace(nsid)
 		if err != nil {
+			// Only publish error events for system-level failures
+			if isSystemLevelError(err) {
+				s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+			}
 			log.Error(err, "Failed to identify namespace")
 			continue
 		}
@@ -647,6 +678,66 @@ func (s *Storage) recoverStorageVolumes() error {
 	}
 
 	return nil
+}
+
+// isSystemLevelError determines if an error represents a system-level failure
+// (hardware, communication, etc.) rather than an expected operational failure
+// (insufficient capacity, namespace already exists, etc.).
+// System-level errors should trigger ResourceState event publishing.
+func isSystemLevelError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check if it's an NVMe command error with a specific status code
+	var cmdErr *nvme.CommandError
+	if errors.As(err, &cmdErr) {
+		switch cmdErr.StatusCode {
+		// Expected operational failures - don't publish events
+		case nvme.NamespaceAlreadyAttached:
+			return false
+		case nvme.NamespaceNotAttached:
+			return false
+		case 0x0A: // Namespace Insufficient Capacity
+			return false
+		case 0x0B: // Namespace Identifier Unavailable
+			return false
+		case 0x0C: // Namespace Already Exists
+			return false
+		case 0x15: // Invalid Namespace Identifier (operational - bad request)
+			return false
+		case 0x02: // Invalid Field in Command (operational - bad parameters)
+			return false
+		default:
+			// Unknown status codes are considered system-level errors
+			// This includes hardware failures, communication timeouts, etc.
+			return true
+		}
+	}
+
+	// Check for mock device operational errors
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "Insufficient capacity") ||
+		strings.Contains(errMsg, "Could not find free namespace") ||
+		strings.Contains(errMsg, "Namespace Already Exists") ||
+		strings.Contains(errMsg, "already has controller") ||
+		strings.Contains(errMsg, "already has controller") ||
+		strings.Contains(errMsg, "not found") {
+		return false
+	}
+
+	// Check for CLI parsing errors (not system-level)
+	if strings.Contains(errMsg, "NSID not found in response output") {
+		return false
+	}
+
+	// All other errors are considered system-level failures:
+	// - Device communication errors
+	// - Hardware failures
+	// - Timeout errors
+	// - Permission/access errors
+	// - Unknown NVMe status codes
+	return true
 }
 
 func (s *Storage) findVolume(volumeId string) *Volume {
@@ -727,6 +818,10 @@ func (v *Volume) WaitFormatComplete() error {
 	log.V(2).Info("Wait for format completion")
 	ns, err := v.storage.device.IdentifyNamespace(v.namespaceId)
 	if err != nil {
+		// System-level failure when identifying namespace during format wait
+		if isSystemLevelError(err) {
+			v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		return err
 	}
 	if ns == nil {
@@ -746,6 +841,10 @@ func (v *Volume) WaitFormatComplete() error {
 
 		ns, err = v.storage.device.IdentifyNamespace(v.namespaceId)
 		if err != nil {
+			// System-level failure when re-identifying namespace during format wait
+			if isSystemLevelError(err) {
+				v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+			}
 			return err
 		}
 		if ns == nil {
@@ -808,9 +907,17 @@ func (v *Volume) attach(controllerIndex uint16) error {
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceAlreadyAttached {
+				// Only publish error events for system-level failures
+				if isSystemLevelError(err) {
+					v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+				}
 				return err
 			}
 		} else {
+			// Non-CommandError types - check if system-level
+			if isSystemLevelError(err) {
+				v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+			}
 			return err
 		}
 	}
@@ -834,9 +941,17 @@ func (v *Volume) detach(controllerIndex uint16) error {
 		var cmdErr *nvme.CommandError
 		if errors.As(err, &cmdErr) {
 			if cmdErr.StatusCode != nvme.NamespaceNotAttached {
+				// Only publish error events for system-level failures
+				if isSystemLevelError(err) {
+					v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+				}
 				return err
 			}
 		} else {
+			// Non-CommandError types - check if system-level
+			if isSystemLevelError(err) {
+				v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+			}
 			return err
 		}
 	}
@@ -866,6 +981,10 @@ func (v *Volume) AttachControllerIfUnattached(controllerIndex uint16) error {
 	attachedControllers, err := v.listAttachedControllers()
 	if err != nil {
 		log.Error(err, "failed to list attached controllers")
+		// System-level failure when listing attached controllers
+		if isSystemLevelError(err) {
+			v.storage.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		return err
 	}
 
@@ -1332,6 +1451,10 @@ func (mgr *Manager) StorageIdVolumeIdGet(storageId, volumeId string, model *sf.V
 	ns, err := s.device.IdentifyNamespace(nvme.NamespaceIdentifier(v.namespaceId))
 	if err != nil {
 		v.log.Error(err, "Identify Namespace Failed")
+		// System-level failure when identifying namespace for volume retrieval
+		if isSystemLevelError(err) {
+			s.notify(sf.UNAVAILABLE_OFFLINE_RST)
+		}
 		return ec.NewErrInternalServerError()
 	}
 	if ns == nil {
