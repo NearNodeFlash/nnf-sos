@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -89,12 +90,19 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var controller string
+	var defaultLeaseDuration int64
+	var defaultRenewDeadline int64
+	var defaultRetryPeriod int64
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&controller, "controller", "node", "The controller type to run (node, storage)")
+	flag.Int64Var(&defaultLeaseDuration, "leader-elect-lease-duration", 15, "The duration, in seconds, that non-leader candidates must wait before acquiring leadership.")
+	flag.Int64Var(&defaultRenewDeadline, "leader-elect-renew-deadline", 10, "The duration, in seconds, that the leader must wait before renewing its leadership.")
+	flag.Int64Var(&defaultRetryPeriod, "leader-elect-retry-period", 2, "The duration, in seconds, that the leader must wait before retrying to acquire leadership.")
 
 	nnfopts := nnf.BindFlags(flag.CommandLine)
 
@@ -107,11 +115,19 @@ func main() {
 
 	setupLog.Info("GOMAXPROCS", "value", runtime.GOMAXPROCS(0))
 
+	setupLog.Info("Lease duration", "duration", defaultLeaseDuration)
+	setupLog.Info("Renew deadline", "deadline", defaultRenewDeadline)
+	setupLog.Info("Retry period", "period", defaultRetryPeriod)
+
 	nnfCtrl := newNnfControllerInitializer(controller)
 	if nnfCtrl == nil {
 		setupLog.Info("unsupported controller type", "controller", controller)
 		os.Exit(1)
 	}
+
+	var leaseDuration time.Duration = time.Duration(defaultLeaseDuration) * time.Second
+	var renewDeadline time.Duration = time.Duration(defaultRenewDeadline) * time.Second
+	var retryPeriod time.Duration = time.Duration(defaultRetryPeriod) * time.Second
 
 	options := ctrl.Options{
 		Scheme:                 scheme,
@@ -119,6 +135,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "6cf68fa5.cray.hpe.com",
+		LeaseDuration:          &leaseDuration,
+		RenewDeadline:          &renewDeadline,
+		RetryPeriod:            &retryPeriod,
 	}
 
 	nnfCtrl.SetNamespaces(&options)

@@ -24,4 +24,14 @@ spec:
         - "--health-probe-bind-address=:8081"
         - "--metrics-bind-address=127.0.0.1:8080"
         - "--leader-elect"
+        - "--leader-elect-lease-duration=$(LEASEDURATION)"
+        - "--leader-elect-renew-deadline=$(RENEWDEADLINE)"
+        - "--leader-elect-retry-period=$(RETRYPERIOD)"
         - "--controller=storage"
+        env:
+        - name: LEASEDURATION
+          value: '120'
+        - name: RENEWDEADLINE
+          value: '60'
+        - name: RETRYPERIOD
+          value: '20'
