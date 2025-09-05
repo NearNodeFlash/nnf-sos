@@ -319,10 +319,20 @@ func (l *Lvm) CheckExists(ctx context.Context) (bool, error) {
 }
 
 func (l *Lvm) CheckHealth(ctx context.Context) (bool, error) {
+	// If there is no LV, then consider the block device healthy
+	if l.CommandArgs.LvArgs.Create == "" {
+		return true, nil
+	}
+
 	return l.LogicalVolume.IsHealthy(ctx)
 }
 
 func (l *Lvm) CheckReady(ctx context.Context) (bool, error) {
+	// If there is no LV, then consider the block device ready
+	if l.CommandArgs.LvArgs.Create == "" {
+		return true, nil
+	}
+
 	return l.LogicalVolume.IsSynced(ctx)
 }
 
