@@ -19,7 +19,7 @@ github.com/HewlettPackard/structex
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
 github.com/NearNodeFlash/lustre-fs-operator/config/webhook
-# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250829141301-67f617d97f7b
+# github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250902204910-828ccfe450c3
 ## explicit; go 1.23.9
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/nvme
 github.com/NearNodeFlash/nnf-ec/internal/switchtec/pkg/switchtec
