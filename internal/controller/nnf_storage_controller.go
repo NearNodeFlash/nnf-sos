@@ -210,6 +210,19 @@ func (r *NnfStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	overallHealth := nnfv1alpha8.NnfStorageHealthHealthy
+	for i := range storage.Spec.AllocationSets {
+		health, err := r.aggregateNodeStorageHealth(ctx, storage, i)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if health != nnfv1alpha8.NnfStorageHealthHealthy {
+			overallHealth = health
+		}
+	}
+	storage.Status.Health = overallHealth
+
 	// Collect status information from the NnfNodeBlockStorage resources and aggregate it into the
 	// NnfStorage
 	for i := range storage.Spec.AllocationSets {
@@ -836,6 +849,45 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 	}
 
 	return nil, nil
+}
+
+func (r *NnfStorageReconciler) aggregateNodeStorageHealth(ctx context.Context, storage *nnfv1alpha8.NnfStorage, allocationSetIndex int) (nnfv1alpha8.NnfStorageHealth, error) {
+	nnfNodeStorageList := &nnfv1alpha8.NnfNodeStorageList{}
+	matchLabels := dwsv1alpha6.MatchingOwner(storage)
+	matchLabels[nnfv1alpha8.AllocationSetLabel] = storage.Spec.AllocationSets[allocationSetIndex].Name
+
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+
+	if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
+		return nnfv1alpha8.NnfStorageHealthHealthy, dwsv1alpha6.NewResourceError("could not list NnfNodeStorages").WithError(err)
+	}
+
+	// make a map with empty data of the Rabbit names to allow easy searching
+	nodeNameMap := map[string]struct{}{}
+	for _, node := range storage.Spec.AllocationSets[allocationSetIndex].Nodes {
+		nodeNameMap[node.Name] = struct{}{}
+	}
+
+	// Prune out any nnfNodeStorages that aren't listed in the NnfStorage. This can happen if the
+	// NnfStorage was modified after it was created, as is the case with NnfStorages from an NnfSystemStorage
+	nnfNodeStorages := []nnfv1alpha8.NnfNodeStorage{}
+	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
+		if _, exists := nodeNameMap[nnfNodeStorage.GetNamespace()]; exists {
+			nnfNodeStorages = append(nnfNodeStorages, nnfNodeStorage)
+		}
+	}
+
+	storage.Status.AllocationSets[allocationSetIndex].Health = nnfv1alpha8.NnfStorageHealthHealthy
+	for _, nnfNodeStorage := range nnfNodeStorages {
+		if nnfNodeStorage.Status.Health != nnfv1alpha8.NnfStorageHealthHealthy {
+			storage.Status.AllocationSets[allocationSetIndex].Health = nnfNodeStorage.Status.Health
+			return nnfNodeStorage.Status.Health, nil
+		}
+	}
+
+	return nnfv1alpha8.NnfStorageHealthHealthy, nil
 }
 
 func (r *NnfStorageReconciler) getLustreMgt(ctx context.Context, nnfStorage *nnfv1alpha8.NnfStorage) (*nnfv1alpha8.NnfLustreMGT, error) {

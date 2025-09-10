@@ -264,6 +264,10 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return *result, nil
 	}
 
+	if err := r.checkAllocations(ctx, nnfNodeStorage, blockDevices); err != nil {
+		return ctrl.Result{}, dwsv1alpha6.NewResourceError("unable to check storage allocation").WithError(err).WithMajor()
+	}
+
 	for _, allocation := range nnfNodeStorage.Status.Allocations {
 		if !allocation.Ready {
 			nnfNodeStorage.Status.Ready = false
@@ -363,6 +367,35 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 	return nil, nil
 }
 
+// CheckAllocations checks the health of the allocations and tries to repair any that are unhealthy
+func (r *NnfNodeStorageReconciler) checkAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, blockDevices []blockdevice.BlockDevice) error {
+	overallHealth := nnfv1alpha8.NnfStorageHealthHealthy
+	for index, blockDevice := range blockDevices {
+		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
+		healthy, err := blockDevice.CheckHealth(ctx)
+		if err != nil {
+			return dwsv1alpha6.NewResourceError("could not check block device health").WithError(err)
+		}
+
+		if healthy {
+			allocationStatus.Health = nnfv1alpha8.NnfStorageHealthHealthy
+			continue
+		}
+		allocationStatus.Health = nnfv1alpha8.NnfStorageHealthDegraded
+		nnfNodeStorage.Status.Health = nnfv1alpha8.NnfStorageHealthDegraded
+		overallHealth = nnfv1alpha8.NnfStorageHealthDegraded
+
+		err = blockDevice.Repair(ctx)
+		if err != nil {
+			return dwsv1alpha6.NewResourceError("could not repair block device").WithError(err)
+		}
+	}
+
+	nnfNodeStorage.Status.Health = overallHealth
+
+	return nil
+}
+
 func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
@@ -371,20 +404,9 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	for index, blockDevice := range blockDevices {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
-		// If the allocation is ready, check whether it's healthy
+		// If the allocation is ready, skip it
 		if allocationStatus.Ready {
-			healthy, err := blockDevice.CheckHealth(ctx)
-			if err != nil {
-				return nil, dwsv1alpha6.NewResourceError("could not check block device health").WithError(err)
-			}
-			if healthy {
-				continue
-			}
-
-			err = blockDevice.Repair(ctx)
-			if err != nil {
-				return nil, dwsv1alpha6.NewResourceError("could not repair block device").WithError(err)
-			}
+			continue
 		}
 
 		ran, err := blockDevice.Create(ctx, allocationStatus.Ready)
