@@ -870,8 +870,8 @@ func (r *NnfStorageReconciler) aggregateNodeStorageHealth(ctx context.Context, s
 		nodeNameMap[node.Name] = struct{}{}
 	}
 
-	// prune out any entries that aren't in the NnfStorage. This can happen if the NnfStorage was modified
-	// after it was created, as is the case with NnfStorages from an NnfSystemStorage
+	// Prune out any nnfNodeStorages that aren't listed in the NnfStorage. This can happen if the
+	// NnfStorage was modified after it was created, as is the case with NnfStorages from an NnfSystemStorage
 	nnfNodeStorages := []nnfv1alpha8.NnfNodeStorage{}
 	for _, nnfNodeStorage := range nnfNodeStorageList.Items {
 		if _, exists := nodeNameMap[nnfNodeStorage.GetNamespace()]; exists {
