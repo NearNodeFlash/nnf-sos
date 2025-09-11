@@ -212,6 +212,9 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 		if complete == true {
 			persistentStorage.Status.State = dwsv1alpha6.PSIStateActive
+			if nnfStorage.Status.Health != nnfv1alpha8.NnfStorageHealthHealthy {
+				persistentStorage.Status.State = dwsv1alpha6.PSIStateDegraded
+			}
 		}
 	}
 
