@@ -919,7 +919,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.DesiredState = "mounted"
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
-			access.Spec.Target = "single"
+			access.Spec.Target = "shared"
 			access.Spec.MakeClientMounts = true
 			access.Spec.MountPath = buildComputeMountPath(workflow, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
