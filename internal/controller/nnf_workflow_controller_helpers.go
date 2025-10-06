@@ -723,6 +723,8 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 	}
 
 	healthyMgts := make(map[string]corev1.ObjectReference)
+	degradedMgts := make(map[string]corev1.ObjectReference)
+
 	for _, persistentStorage := range persistentStorageList.Items {
 		// Find the NnfStorage for the PersistentStorage so we can check its status and get the MGT LNid
 		nnfStorage := &nnfv1alpha8.NnfStorage{
@@ -779,29 +781,46 @@ func (r *NnfWorkflowReconciler) getLustreMgsFromPool(ctx context.Context, pool s
 			continue
 		}
 
-		// The MGT is healthy from what we can tell, so add it to the map of healthy MGTs
-		healthyMgts[nnfStorage.Status.MgsAddress] = corev1.ObjectReference{
-			Kind:      reflect.TypeOf(dwsv1alpha6.PersistentStorageInstance{}).Name(),
-			Name:      persistentStorage.Name,
-			Namespace: persistentStorage.Namespace,
+		if persistentStorage.Status.State == dwsv1alpha6.PSIStateActive {
+			// The MGT is healthy from what we can tell, so add it to the map of healthy MGTs
+			healthyMgts[nnfStorage.Status.MgsAddress] = corev1.ObjectReference{
+				Kind:      reflect.TypeOf(dwsv1alpha6.PersistentStorageInstance{}).Name(),
+				Name:      persistentStorage.Name,
+				Namespace: persistentStorage.Namespace,
+			}
+		} else if persistentStorage.Status.State == dwsv1alpha6.PSIStateDegraded {
+			// The MGT is degraded. If there are no healthy MGTs, we'll fall back to using a degraded one
+			degradedMgts[nnfStorage.Status.MgsAddress] = corev1.ObjectReference{
+				Kind:      reflect.TypeOf(dwsv1alpha6.PersistentStorageInstance{}).Name(),
+				Name:      persistentStorage.Name,
+				Namespace: persistentStorage.Namespace,
+			}
 		}
 	}
 
-	// Check to make sure there's at least one MGT we can use
-	if len(healthyMgts) == 0 {
-		return corev1.ObjectReference{}, "", dwsv1alpha6.NewResourceError("").WithUserMessage("no healthy MGSs found for pool: %s", pool).WithMajor()
+	mgtMap := make(map[string]corev1.ObjectReference)
+	if len(healthyMgts) != 0 {
+		for k, v := range healthyMgts {
+			mgtMap[k] = v
+		}
+	} else if len(degradedMgts) != 0 {
+		for k, v := range degradedMgts {
+			mgtMap[k] = v
+		}
+	} else {
+		return corev1.ObjectReference{}, "", dwsv1alpha6.NewResourceError("").WithUserMessage("no MGSs found for pool: %s", pool).WithMajor()
 	}
 
 	// Choose an MGT at random from the map
-	i := rand.Intn(len(healthyMgts))
-	for mgsAddress, persistentStorageReference := range healthyMgts {
+	i := rand.Intn(len(mgtMap))
+	for mgsAddress, persistentStorageReference := range mgtMap {
 		if i == 0 {
 			return persistentStorageReference, mgsAddress, nil
 		}
 		i--
 	}
 
-	return corev1.ObjectReference{}, "", dwsv1alpha6.NewResourceError("no MGS successfully picked. Map length %d", len(healthyMgts)).WithFatal()
+	return corev1.ObjectReference{}, "", dwsv1alpha6.NewResourceError("no MGS successfully picked. Map length %d", len(mgtMap)).WithFatal()
 }
 
 func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context, path string, log logr.Logger) *lusv1beta1.LustreFileSystem {

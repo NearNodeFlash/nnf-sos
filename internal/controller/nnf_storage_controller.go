@@ -298,8 +298,8 @@ func (r *NnfStorageReconciler) addPersistentStorageReference(ctx context.Context
 		return dwsv1alpha6.NewResourceError("").WithUserMessage("PersistentStorage '%v' not found", client.ObjectKeyFromObject(persistentStorage)).WithMajor()
 	}
 
-	if persistentStorage.Status.State != dwsv1alpha6.PSIStateActive {
-		return dwsv1alpha6.NewResourceError("").WithUserMessage("PersistentStorage is not active").WithFatal()
+	if persistentStorage.Status.State != dwsv1alpha6.PSIStateActive && persistentStorage.Status.State != dwsv1alpha6.PSIStateDegraded {
+		return dwsv1alpha6.NewResourceError("").WithUserMessage("PersistentStorage is not usable").WithFatal()
 	}
 
 	// Add a consumer reference to the persistent storage for this directive
