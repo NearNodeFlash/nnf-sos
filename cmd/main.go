@@ -380,88 +380,88 @@ func (c *storageController) SetupReconcilers(mgr manager.Manager, opts *nnf.Opti
 	var err error
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfStorageProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfStorageProfile")
 			return err
 		}
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfContainerProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfContainerProfile")
 			return err
 		}
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfDataMovementProfile{}).SetupWebhookWithManager(mgr); err != nil {
 			ctrl.Log.Error(err, "unable to create webhook", "webhook", "NnfDataMovementProfile")
 			return err
 		}
 	}
 
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfAccess{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfAccess{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfAccess")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfDataMovement{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfDataMovement{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfDataMovement")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfDataMovementManager{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfDataMovementManager{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfDataMovementManager")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfLustreMGT{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfLustreMGT{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfLustreMGT")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfNode{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfNode{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNode")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfNodeBlockStorage{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfNodeBlockStorage{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeBlockStorage")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfNodeECData{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfNodeECData{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeECData")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfNodeStorage{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfNodeStorage{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfNodeStorage")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfPortManager{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfPortManager{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfPortManager")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfStorage{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfStorage{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfStorage")
 			os.Exit(1)
 		}
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&nnfv1alpha8.NnfSystemStorage{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&nnfv1alpha9.NnfSystemStorage{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "NnfSystemStorage")
 			os.Exit(1)
 		}
