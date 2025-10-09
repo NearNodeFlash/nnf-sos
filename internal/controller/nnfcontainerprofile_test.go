@@ -31,17 +31,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
 // createNnfContainerProfile creates the given profile in the "default" namespace.
 // When expectSuccess=false, we expect to find that it was failed by the webhook.
-func createNnfContainerProfile(containerProfile *nnfv1alpha8.NnfContainerProfile, expectSuccess bool) *nnfv1alpha8.NnfContainerProfile {
+func createNnfContainerProfile(containerProfile *nnfv1alpha9.NnfContainerProfile, expectSuccess bool) *nnfv1alpha9.NnfContainerProfile {
 	// Place NnfContainerProfiles in "default" for the test environment.
 	containerProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
 	profKey := client.ObjectKeyFromObject(containerProfile)
-	profExpected := &nnfv1alpha8.NnfContainerProfile{}
+	profExpected := &nnfv1alpha9.NnfContainerProfile{}
 	err := k8sClient.Get(context.TODO(), profKey, profExpected)
 	Expect(err).ToNot(BeNil())
 	Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -62,26 +62,26 @@ func createNnfContainerProfile(containerProfile *nnfv1alpha8.NnfContainerProfile
 }
 
 // basicNnfContainerProfile creates a simple NnfContainerProfile struct.
-func basicNnfContainerProfile(name string, storages []nnfv1alpha8.NnfContainerProfileStorage) *nnfv1alpha8.NnfContainerProfile {
+func basicNnfContainerProfile(name string, storages []nnfv1alpha9.NnfContainerProfileStorage) *nnfv1alpha9.NnfContainerProfile {
 
 	// default storages if not supplied, optional by default
 	if len(storages) == 0 {
-		storages = []nnfv1alpha8.NnfContainerProfileStorage{
+		storages = []nnfv1alpha9.NnfContainerProfileStorage{
 			{Name: "DW_JOB_foo_local_storage", Optional: true},
 			{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 			{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 		}
 	}
 
-	containerProfile := &nnfv1alpha8.NnfContainerProfile{
+	containerProfile := &nnfv1alpha9.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Data: nnfv1alpha8.NnfContainerProfileData{
+		Data: nnfv1alpha9.NnfContainerProfileData{
 			Pinned:   false,
 			Storages: storages,
-			NnfSpec: &nnfv1alpha8.NnfPodSpec{
-				Containers: []nnfv1alpha8.NnfContainer{
+			NnfSpec: &nnfv1alpha9.NnfPodSpec{
+				Containers: []nnfv1alpha9.NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"true"}},
 				},
 			},
@@ -92,7 +92,7 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha8.NnfContainerPr
 }
 
 // createBasicNnfContainerProfile creates a simple default container profile.
-func createBasicNnfContainerProfile(storages []nnfv1alpha8.NnfContainerProfileStorage) *nnfv1alpha8.NnfContainerProfile {
+func createBasicNnfContainerProfile(storages []nnfv1alpha9.NnfContainerProfileStorage) *nnfv1alpha9.NnfContainerProfile {
 	containerProfile := basicNnfContainerProfile("sample-"+uuid.NewString()[:8], storages)
 	return createNnfContainerProfile(containerProfile, true)
 }
