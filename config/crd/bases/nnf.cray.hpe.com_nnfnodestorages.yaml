@@ -848,6 +848,285 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .status.ready
+      name: READY
+      type: string
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha9
+    schema:
+      openAPIV3Schema:
+        description: NnfNodeStorage is the Schema for the NnfNodeStorage API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              NnfNodeStorageSpec defines the desired storage attributes on a NNF Node.
+              Storage spec are created on bequest of the user and fullfilled by the NNF Node Controller.
+            properties:
+              blockReference:
+                description: BlockReference is an object reference to an NnfNodeBlockStorage
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              capacity:
+                description: Capacity of an individual allocation
+                format: int64
+                type: integer
+              commandVariables:
+                description: Extra variable substitutions to make for commands
+                items:
+                  description: CommandVariablesSpec contains information about a variable
+                    that should be substituted in a command line
+                  properties:
+                    indexed:
+                      description: |-
+                        Indexed determines whether to use the same value for each allocation, or to use
+                        a different value based on the index of the allocation.
+                      type: boolean
+                    indexedValues:
+                      description: |-
+                        IndexedValues is a list of strings values for the variable. The list length should
+                        be the same as the allocation count in the NnfNodeStorageSpec.
+                      items:
+                        type: string
+                      type: array
+                    name:
+                      description: Name of the variable
+                      type: string
+                    value:
+                      description: Value for the variable
+                      type: string
+                  type: object
+                type: array
+              count:
+                description: |-
+                  Count is the number of allocations to make on this node. All of the allocations will
+                  be created with the same parameters
+                minimum: 0
+                type: integer
+              fileSystemType:
+                default: raw
+                description: |-
+                  FileSystemType defines the type of the desired filesystem, or raw
+                  block device.
+                enum:
+                - raw
+                - lvm
+                - zfs
+                - xfs
+                - gfs2
+                - lustre
+                type: string
+              groupID:
+                description: Group ID for file system
+                format: int32
+                type: integer
+              lustreStorage:
+                description: |-
+                  LustreStorageSpec describes the Lustre target created here, if
+                  FileSystemType specifies a Lustre target.
+                properties:
+                  backFs:
+                    description: BackFs is the type of backing filesystem to use.
+                    enum:
+                    - ldiskfs
+                    - zfs
+                    type: string
+                  fileSystemName:
+                    description: FileSystemName is the fsname parameter for the Lustre
+                      filesystem.
+                    maxLength: 8
+                    type: string
+                  lustreComponents:
+                    description: |-
+                      LustreComponents defines that list of NNF Nodes that are used for the components (e.g. OSTs)
+                      in the lustre filesystem. This information is helpful when creating the lustre filesystem and
+                      using PostMount commands (e.g. to set the striping).
+                    properties:
+                      mdts:
+                        description: MTDs is the list of NNF nodes being used as MDTs.
+                        items:
+                          type: string
+                        type: array
+                      mgtmdts:
+                        description: MGTMDTs is the list of NNF nodes being used as
+                          combined MGTMDTs.
+                        items:
+                          type: string
+                        type: array
+                      mgts:
+                        description: MGTs is the list of NNF nodes being used as MGTs.
+                        items:
+                          type: string
+                        type: array
+                      nnfNodes:
+                        description: |-
+                          NNfNodes is the list of NNF nodes being used for this filesystem. This is a unique list of
+                          node names.
+                        items:
+                          type: string
+                        type: array
+                      osts:
+                        description: OSTs is the list of NNF nodes being used as OSTs.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  mgsAddress:
+                    description: |-
+                      MgsAddress is the NID of the MGS to use. This is used only when
+                      creating MDT and OST targets.
+                    type: string
+                  startIndex:
+                    description: |-
+                      StartIndex is used to order a series of MDTs or OSTs.  This is used only
+                      when creating MDT and OST targets. If count in the NnfNodeStorageSpec is more
+                      than 1, then StartIndex is the index of the first allocation, and the indexes
+                      increment from there.
+                    minimum: 0
+                    type: integer
+                  targetType:
+                    description: TargetType is the type of Lustre target to be created.
+                    enum:
+                    - mgt
+                    - mdt
+                    - mgtmdt
+                    - ost
+                    type: string
+                type: object
+              sharedAllocation:
+                description: SharedAllocation is used when a single NnfNodeBlockStorage
+                  allocation is used by multiple NnfNodeStorage allocations
+                type: boolean
+              userID:
+                description: User ID for file system
+                format: int32
+                type: integer
+            required:
+            - count
+            - groupID
+            - sharedAllocation
+            - userID
+            type: object
+          status:
+            description: NnfNodeStorageStatus defines the status for NnfNodeStorage
+            properties:
+              allocations:
+                description: Allocations is the list of storage allocations that were
+                  made
+                items:
+                  description: NnfNodeStorageAllocationStatus defines the allocation
+                    status for each allocation in the NnfNodeStorage
+                  properties:
+                    logicalVolume:
+                      description: Name of the LVM LV
+                      type: string
+                    ready:
+                      type: boolean
+                    volumeGroup:
+                      description: Name of the LVM VG
+                      type: string
+                  type: object
+                type: array
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              ready:
+                type: boolean
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

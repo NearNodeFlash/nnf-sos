@@ -407,7 +407,7 @@ $(CONVERSION_GEN): $(LOCALBIN) # Build conversion-gen from tools folder.
 # The SRC_DIRS value is a space-separated list of paths to old versions.
 # The --input-dirs value is a single path item; specify multiple --input-dirs
 # parameters if you have multiple old versions.
-SRC_DIRS=./api/v1alpha6 ./api/v1alpha7
+SRC_DIRS=./api/v1alpha6 ./api/v1alpha7 ./api/v1alpha8
 generate-go-conversions: $(CONVERSION_GEN) ## Generate conversions go code
 	$(MAKE) clean-generated-conversions SRC_DIRS="$(SRC_DIRS)"
 	$(CONVERSION_GEN) \
