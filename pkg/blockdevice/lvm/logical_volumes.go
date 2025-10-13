@@ -84,7 +84,7 @@ func (lv *LogicalVolume) parseArgs(args string) (string, error) {
 		"$DEVICE_LIST":  strings.Join(deviceNames, " "),
 		"$VG_NAME":      lv.VolumeGroup.Name,
 		"$LV_NAME":      lv.Name,
-		"$LV_SIZE":      fmt.Sprintf("%vK", (lv.Size / 1000)),
+		"$LV_SIZE":      fmt.Sprintf("%vk", (lv.Size / 1024)),
 		"$PERCENT_VG":   fmt.Sprintf("%v", lv.PercentVG) + "%VG",
 	})
 

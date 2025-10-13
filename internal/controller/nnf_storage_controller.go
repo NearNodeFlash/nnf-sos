@@ -66,6 +66,8 @@ const (
 	// Minimum size of lustre allocation sizes. If a user requests less than this, then the capacity
 	// is set to this value.
 	minimumLustreAllocationSizeInBytes = 4000000000
+
+	lvmSharedAllocationOverhead = 2 ^ 20*4*16
 )
 
 type nodeStoragesState bool
@@ -396,7 +398,7 @@ func (r *NnfStorageReconciler) createNodeBlockStorage(ctx context.Context, nnfSt
 						capacity = minimumLustreAllocationSizeInBytes
 					}
 					if allocationSet.SharedAllocation {
-						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity * int64(node.Count)
+						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = (capacity * int64(node.Count)) + (lvmSharedAllocationOverhead * int64(node.Count))
 					} else {
 						nnfNodeBlockStorage.Spec.Allocations[i].Capacity = capacity
 					}
