@@ -1,0 +1,169 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: computenodefenceevents.nnf.cray.hpe.com
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+spec:
+  group: nnf.cray.hpe.com
+  names:
+    kind: ComputeNodeFenceEvent
+    listKind: ComputeNodeFenceEventList
+    plural: computenodefenceevents
+    singular: computenodefenceevent
+    shortNames:
+    - cnfe
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        description: ComputeNodeFenceEvent tracks fencing events for compute nodes accessing GFS2 filesystems
+        type: object
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ComputeNodeFenceEventSpec defines the desired fencing action
+            type: object
+            required:
+            - computeNodeName
+            - action
+            properties:
+              computeNodeName:
+                description: Name of the compute node to fence/unfence
+                type: string
+                minLength: 1
+              action:
+                description: Fencing action to perform
+                type: string
+                enum:
+                - fence
+                - unfence
+              gfs2Filesystem:
+                description: Specific GFS2 filesystem to fence from (if empty, applies to all)
+                type: string
+              reason:
+                description: Reason for the fencing action
+                type: string
+              priority:
+                description: Priority of the fencing action (higher numbers = higher priority)
+                type: integer
+                minimum: 0
+                maximum: 100
+                default: 50
+              timeoutSeconds:
+                description: Timeout for the fencing action in seconds
+                type: integer
+                minimum: 1
+                maximum: 3600
+                default: 300
+          status:
+            description: ComputeNodeFenceEventStatus defines the observed state
+            type: object
+            properties:
+              state:
+                description: Current state of the fencing event
+                type: string
+                enum:
+                - pending
+                - in-progress
+                - completed
+                - failed
+                - timeout
+                default: pending
+              message:
+                description: Human readable message about the current state
+                type: string
+              startTime:
+                description: Time when fencing action started
+                type: string
+                format: date-time
+              completionTime:
+                description: Time when fencing action completed
+                type: string
+                format: date-time
+              affectedResources:
+                description: List of NnfNodeBlockStorage resources affected by this fencing event
+                type: array
+                items:
+                  type: object
+                  properties:
+                    namespace:
+                      type: string
+                    name:
+                      type: string
+                    storageGroups:
+                      type: array
+                      items:
+                        type: string
+                  required:
+                  - namespace
+                  - name
+              lastTransitionTime:
+                description: Last time the state transitioned
+                type: string
+                format: date-time
+    additionalPrinterColumns:
+    - name: Compute Node
+      type: string
+      jsonPath: .spec.computeNodeName
+    - name: Action
+      type: string
+      jsonPath: .spec.action
+    - name: State
+      type: string
+      jsonPath: .status.state
+    - name: GFS2 Filesystem
+      type: string
+      jsonPath: .spec.gfs2Filesystem
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    subresources:
+      status: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gfs2-fence-agent
+  namespace: nnf-sos
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gfs2-fence-agent
+rules:
+- apiGroups: ["nnf.cray.hpe.com"]
+  resources: ["nnfstorages", "nnfnodestorages", "nnfnodeblockstorage", "computenodefenceevents"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: ["nnf.cray.hpe.com"]
+  resources: ["computenodefenceevents/status"]
+  verbs: ["get", "update", "patch"]
+- apiGroups: ["dataworkflowservices.github.io"]
+  resources: ["computes", "storages"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gfs2-fence-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gfs2-fence-agent
+subjects:
+- kind: ServiceAccount
+  name: gfs2-fence-agent
+  namespace: nnf-sos

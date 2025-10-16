@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gfs2-fence-controller
+  namespace: nnf-sos
+  labels:
+    app: gfs2-fence-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gfs2-fence-controller
+  template:
+    metadata:
+      labels:
+        app: gfs2-fence-controller
+    spec:
+      serviceAccountName: gfs2-fence-agent
+      containers:
+      - name: fence-controller
+        image: alpine:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Install required tools
+          apk add --no-cache bash kubectl jq curl
+
+          # Copy scripts from ConfigMap
+          cp /scripts/fence-event-controller.sh /usr/local/bin/
+          cp /scripts/gfs2-compute-fence-agent.sh /usr/local/bin/
+          chmod +x /usr/local/bin/*.sh
+
+          # Start the controller
+          exec /usr/local/bin/fence-event-controller.sh
+        env:
+        - name: KUBECTL_CMD
+          value: "kubectl"
+        - name: FENCE_NAMESPACE
+          value: "nnf-sos"
+        - name: POLL_INTERVAL
+          value: "10"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: FENCE_SCRIPT
+          value: "/usr/local/bin/gfs2-compute-fence-agent.sh"
+        volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ps aux | grep fence-event-controller.sh | grep -v grep"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ps aux | grep fence-event-controller.sh | grep -v grep"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+      volumes:
+      - name: scripts
+        configMap:
+          name: gfs2-fence-scripts
+          defaultMode: 0755
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gfs2-fence-scripts
+  namespace: nnf-sos
+data:
+  fence-event-controller.sh: |
+    #!/bin/bash
+    # This file will be populated with the fence-event-controller.sh script content
+    # For deployment, copy the content from the script file
+    echo "ConfigMap content should be populated during deployment"
+    exit 1
+  gfs2-compute-fence-agent.sh: |
+    #!/bin/bash
+    # This file will be populated with the gfs2-compute-fence-agent.sh script content
+    # For deployment, copy the content from the script file
+    echo "ConfigMap content should be populated during deployment"
+    exit 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gfs2-fence-controller
+  namespace: nnf-sos
+  labels:
+    app: gfs2-fence-controller
+spec:
+  selector:
+    app: gfs2-fence-controller
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

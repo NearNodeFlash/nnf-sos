@@ -1,0 +1,63 @@
+[Unit]
+Description=GFS2 Compute Node Fence Monitor
+Documentation=file:///usr/local/share/doc/gfs2-fencing/GFS2-Fencing-Agent.md
+After=network-online.target
+Wants=network-online.target
+PartOf=cluster.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Environment
+Environment=FENCE_AGENT=/usr/local/bin/k8s-gfs2-fence-agent.sh
+Environment=LOG_FILE=/var/log/gfs2-fence-integration.log
+Environment=FENCE_TIMEOUT=300
+
+# Main executable
+ExecStart=/usr/local/bin/gfs2-fence-integration-example.sh monitor
+
+# Restart policy
+Restart=always
+RestartSec=30
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Resource limits
+MemoryLimit=256M
+CPUQuota=50%
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/log /tmp
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RemoveIPC=yes
+
+# Capabilities (required for network operations and file access)
+CapabilityBoundingSet=CAP_NET_RAW CAP_DAC_OVERRIDE CAP_FOWNER
+AmbientCapabilities=CAP_NET_RAW CAP_DAC_OVERRIDE CAP_FOWNER
+
+# Standard I/O
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gfs2-fence-monitor
+
+# Graceful shutdown
+TimeoutStopSec=60
+KillMode=mixed
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
