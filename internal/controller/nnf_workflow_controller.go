@@ -695,9 +695,6 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	if err := r.Get(ctx, client.ObjectKeyFromObject(dmm), dmm); err != nil {
 		return nil, dwsv1alpha6.NewResourceError("could not get NnfDataMovementManager %v", client.ObjectKeyFromObject(dmm)).WithError(err).WithUserMessage("could not determine data movement readiness")
 	}
-	if !dmm.Status.Ready {
-		return Requeue("pending data movement readiness").withObject(dmm).after(2 * time.Second), nil
-	}
 
 	// Retrieve the target storage that is to perform the data movement.
 	// For copy_in, the destination is the Rabbit and therefore the target
