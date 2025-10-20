@@ -9596,7 +9596,7 @@ spec:
         required:
         - data
         type: object
-    served: true
+    served: false
     storage: false
   - name: v1alpha8
     schema:

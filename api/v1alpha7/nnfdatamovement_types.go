@@ -219,6 +219,7 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Status of current state"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
