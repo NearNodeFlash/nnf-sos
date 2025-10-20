@@ -1,19 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- nnf_v1alpha6_nnfaccess.yaml
-- nnf_v1alpha6_nnfcontainerprofile.yaml
-- nnf_v1alpha6_nnfdatamovement.yaml
-- nnf_v1alpha6_nnfdatamovementmanager.yaml
-- nnf_v1alpha6_nnfdatamovementprofile.yaml
-- nnf_v1alpha6_nnflustremgt.yaml
-- nnf_v1alpha6_nnfnode.yaml
-- nnf_v1alpha6_nnfnodeblockstorage.yaml
-- nnf_v1alpha6_nnfnodeecdata.yaml
-- nnf_v1alpha6_nnfnodestorage.yaml
-- nnf_v1alpha6_nnfportmanager.yaml
-- nnf_v1alpha6_nnfstorage.yaml
-- nnf_v1alpha6_nnfstorageprofile.yaml
-- nnf_v1alpha6_nnfsystemstorage.yaml
 - nnf_v1alpha7_nnfaccess.yaml
 - nnf_v1alpha7_nnfcontainerprofile.yaml
 - nnf_v1alpha7_nnfdatamovement.yaml
