@@ -42,4 +42,18 @@ resources:
 - nnf_v1alpha8_nnfstorage.yaml
 - nnf_v1alpha8_nnfstorageprofile.yaml
 - nnf_v1alpha8_nnfsystemstorage.yaml
+- nnf_v1alpha9_nnfaccess.yaml
+- nnf_v1alpha9_nnfcontainerprofile.yaml
+- nnf_v1alpha9_nnfdatamovement.yaml
+- nnf_v1alpha9_nnfdatamovementmanager.yaml
+- nnf_v1alpha9_nnfdatamovementprofile.yaml
+- nnf_v1alpha9_nnflustremgt.yaml
+- nnf_v1alpha9_nnfnode.yaml
+- nnf_v1alpha9_nnfnodeblockstorage.yaml
+- nnf_v1alpha9_nnfnodeecdata.yaml
+- nnf_v1alpha9_nnfnodestorage.yaml
+- nnf_v1alpha9_nnfportmanager.yaml
+- nnf_v1alpha9_nnfstorage.yaml
+- nnf_v1alpha9_nnfstorageprofile.yaml
+- nnf_v1alpha9_nnfsystemstorage.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
