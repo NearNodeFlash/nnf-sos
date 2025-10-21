@@ -42,7 +42,7 @@ import (
 
 	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -110,7 +110,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	metrics.NnfNodeStorageReconcilesTotal.Inc()
 
-	nnfNodeStorage := &nnfv1alpha8.NnfNodeStorage{}
+	nnfNodeStorage := &nnfv1alpha9.NnfNodeStorage{}
 	if err := r.Get(ctx, req.NamespacedName, nnfNodeStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -126,7 +126,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// so when we would normally call "return ctrl.Result{}, nil", at that time
 	// "err" is nil - and if permitted we will update err with the result of
 	// the r.Update()
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha8.NnfNodeStorageStatus](nnfNodeStorage)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha9.NnfNodeStorageStatus](nnfNodeStorage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nnfNodeStorage.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -142,7 +142,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha8.NnfNodeBlockStorage{
+		nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
 				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -207,7 +207,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Initialize the status section with empty allocation statuses.
 	if len(nnfNodeStorage.Status.Allocations) == 0 {
-		nnfNodeStorage.Status.Allocations = make([]nnfv1alpha8.NnfNodeStorageAllocationStatus, nnfNodeStorage.Spec.Count)
+		nnfNodeStorage.Status.Allocations = make([]nnfv1alpha9.NnfNodeStorageAllocationStatus, nnfNodeStorage.Spec.Count)
 		for i := range nnfNodeStorage.Status.Allocations {
 			nnfNodeStorage.Status.Allocations[i].Ready = false
 		}
@@ -218,7 +218,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Add a finalizer to the NnfNodeBlockStorage. This will block its deletion until the NnfNodeStorage
 	// is completely torn down
-	nnfNodeBlockStorage := &nnfv1alpha8.NnfNodeBlockStorage{
+	nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfNodeStorage.Spec.BlockReference.Name,
 			Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -281,7 +281,7 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage), "index", index)
 
 	blockDevice, fileSystem, err := getBlockDeviceAndFileSystem(ctx, r.Client, nnfNodeStorage, index, log)
@@ -368,8 +368,8 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 }
 
 // CheckAllocations checks the health of the allocations and tries to repair any that are unhealthy
-func (r *NnfNodeStorageReconciler) checkAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, blockDevices []blockdevice.BlockDevice) error {
-	overallHealth := nnfv1alpha8.NnfStorageHealthHealthy
+func (r *NnfNodeStorageReconciler) checkAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, blockDevices []blockdevice.BlockDevice) error {
+	overallHealth := nnfv1alpha9.NnfStorageHealthHealthy
 	for index, blockDevice := range blockDevices {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 		healthy, err := blockDevice.CheckHealth(ctx)
@@ -378,12 +378,12 @@ func (r *NnfNodeStorageReconciler) checkAllocations(ctx context.Context, nnfNode
 		}
 
 		if healthy {
-			allocationStatus.Health = nnfv1alpha8.NnfStorageHealthHealthy
+			allocationStatus.Health = nnfv1alpha9.NnfStorageHealthHealthy
 			continue
 		}
-		allocationStatus.Health = nnfv1alpha8.NnfStorageHealthDegraded
-		nnfNodeStorage.Status.Health = nnfv1alpha8.NnfStorageHealthDegraded
-		overallHealth = nnfv1alpha8.NnfStorageHealthDegraded
+		allocationStatus.Health = nnfv1alpha9.NnfStorageHealthDegraded
+		nnfNodeStorage.Status.Health = nnfv1alpha9.NnfStorageHealthDegraded
+		overallHealth = nnfv1alpha9.NnfStorageHealthDegraded
 
 		err = blockDevice.Repair(ctx)
 		if err != nil {
@@ -396,7 +396,7 @@ func (r *NnfNodeStorageReconciler) checkAllocations(ctx context.Context, nnfNode
 	return nil
 }
 
-func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
+func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, blockDevices []blockdevice.BlockDevice, fileSystems []filesystem.FileSystem) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeStorage", client.ObjectKeyFromObject(nnfNodeStorage))
 
 	blockDevicesReady := true
@@ -507,9 +507,9 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&nnfv1alpha8.NnfNodeStorage{}).
+		For(&nnfv1alpha9.NnfNodeStorage{}).
 		// Trigger the reconciler for any changes to the associated NnfNodeBlockStorage. If we're waiting
 		// on the block device paths to get updated, we want to be notified when it happens.
-		Watches(&nnfv1alpha8.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
+		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
 		Complete(r)
 }
