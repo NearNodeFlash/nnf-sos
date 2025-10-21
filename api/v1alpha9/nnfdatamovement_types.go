@@ -20,7 +20,7 @@
 package v1alpha9
 
 import (
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -198,7 +198,7 @@ type NnfDataMovementStatus struct {
 	// updates to the Data Movement resource.
 	CommandStatus *NnfDataMovementCommandStatus `json:"commandStatus,omitempty"`
 
-	dwsv1alpha6.ResourceError `json:",inline"`
+	dwsv1alpha7.ResourceError `json:",inline"`
 }
 
 // Types describing the various data movement status conditions.
@@ -264,7 +264,7 @@ const (
 	DataMovementInitiatorLabel = "dm.cray.hpe.com/initiator"
 )
 
-func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha6.WorkflowState) {
+func AddDataMovementTeardownStateLabel(object metav1.Object, state dwsv1alpha7.WorkflowState) {
 	labels := object.GetLabels()
 	if labels == nil {
 		labels = make(map[string]string)

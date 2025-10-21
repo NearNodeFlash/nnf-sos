@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,7 +17,21 @@
  * limitations under the License.
  */
 
-// The following tag tells conversion-gen to generate conversion routines, and
-// it tells conversion-gen the name of the hub version.
-// +k8s:conversion-gen=github.com/DataWorkflowServices/dws/api/v1alpha7
-package v1alpha4
+package v1alpha7
+
+import (
+	ctrl "sigs.k8s.io/controller-runtime"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+// log is for logging in this package.
+var computeslog = logf.Log.WithName("computes-resource")
+
+// SetupWebhookWithManager will setup the manager to manage the webhooks
+func (r *Computes) SetupWebhookWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewWebhookManagedBy(mgr).
+		For(r).
+		Complete()
+}
+
+// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

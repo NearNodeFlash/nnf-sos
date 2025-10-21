@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha7
 
 // ResourceState is the enumeration of the state of a DWS resource
 // +kubebuilder:validation:Enum:=Enabled;Disabled

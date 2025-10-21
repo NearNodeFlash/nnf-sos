@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha7
 
 import (
 	"fmt"
@@ -168,6 +168,11 @@ type WorkflowSpec struct {
 	// +kubebuilder:default:=false
 	Hurry bool `json:"hurry,omitempty"`
 
+	// ForceReady will cause the workflow to move to 'Ready' even if the underlying drivers haven't finished. This should only be used when the
+	// driver supports it.
+	// +kubebuilder:default:=false
+	ForceReady bool `json:"forceReady"`
+
 	// List of #DW strings from a WLM job script
 	DWDirectives []string `json:"dwDirectives"`
 }
@@ -266,7 +271,7 @@ type WorkflowTokenSecret struct {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:unservedversion
+//+kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if current state is achieved"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Indicates achievement of current state"
@@ -292,7 +297,6 @@ func (c *Workflow) GetStatus() updater.Status[*WorkflowStatus] {
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:unservedversion
 
 // WorkflowList contains a list of Workflows
 type WorkflowList struct {

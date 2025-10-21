@@ -25,341 +25,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha3
-    schema:
-      openAPIV3Schema:
-        description: DirectiveBreakdown is the Schema for the directivebreakdown API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: DirectiveBreakdownSpec defines the directive string to breakdown
-            properties:
-              directive:
-                description: 'Directive is a copy of the #DW for this breakdown'
-                type: string
-              userID:
-                description: User ID of the user associated with the job
-                format: int32
-                type: integer
-            required:
-            - directive
-            - userID
-            type: object
-          status:
-            description: DirectiveBreakdownStatus defines the storage information
-              WLM needs to select NNF Nodes and request storage from the selected
-              nodes
-            properties:
-              compute:
-                description: Compute is the compute breakdown for the directive
-                properties:
-                  constraints:
-                    description: Constraints to use when picking compute nodes
-                    properties:
-                      location:
-                        description: Location is a list of location constraints
-                        items:
-                          description: |-
-                            ComputeLocationConstraint describes a constraints on which compute nodes can be used with
-                            a directive based on their location
-                          properties:
-                            access:
-                              items:
-                                properties:
-                                  priority:
-                                    description: Priority specifies whether the location
-                                      constraint is mandatory or best effort
-                                    enum:
-                                    - mandatory
-                                    - bestEffort
-                                    type: string
-                                  type:
-                                    description: Type is the relationship between
-                                      the compute nodes and the resource in the Reference
-                                    enum:
-                                    - physical
-                                    - network
-                                    type: string
-                                required:
-                                - priority
-                                - type
-                                type: object
-                              type: array
-                            reference:
-                              description: Reference is an object reference to a resource
-                                that contains the location information
-                              properties:
-                                apiVersion:
-                                  description: API version of the referent.
-                                  type: string
-                                fieldPath:
-                                  description: |-
-                                    If referring to a piece of an object instead of an entire object, this string
-                                    should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                                    For example, if the object reference is to a container within a pod, this would take on a value like:
-                                    "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                                    the event) or if no container name is specified "spec.containers[2]" (container with
-                                    index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                                    referencing a part of an object.
-                                  type: string
-                                kind:
-                                  description: |-
-                                    Kind of the referent.
-                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                                  type: string
-                                name:
-                                  description: |-
-                                    Name of the referent.
-                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                  type: string
-                                namespace:
-                                  description: |-
-                                    Namespace of the referent.
-                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                                  type: string
-                                resourceVersion:
-                                  description: |-
-                                    Specific resourceVersion to which this reference is made, if any.
-                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                                  type: string
-                                uid:
-                                  description: |-
-                                    UID of the referent.
-                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                                  type: string
-                              type: object
-                              x-kubernetes-map-type: atomic
-                          required:
-                          - access
-                          - reference
-                          type: object
-                        type: array
-                    type: object
-                type: object
-              error:
-                description: Error information
-                properties:
-                  debugMessage:
-                    description: Internal debug message for the error
-                    type: string
-                  severity:
-                    description: |-
-                      Indication of how severe the error is. Minor will likely succeed, Major may
-                      succeed, and Fatal will never succeed.
-                    enum:
-                    - Minor
-                    - Major
-                    - Fatal
-                    type: string
-                  type:
-                    description: Internal or user error
-                    enum:
-                    - Internal
-                    - User
-                    - WLM
-                    type: string
-                  userMessage:
-                    description: Optional user facing message if the error is relevant
-                      to an end user
-                    type: string
-                required:
-                - debugMessage
-                - severity
-                - type
-                type: object
-              ready:
-                description: Ready indicates whether AllocationSets have been generated
-                  (true) or not (false)
-                type: boolean
-              requires:
-                description: Requires tells the WLM about any driver-specific features
-                  it must enable for the job; it is assumed that the WLM knows about
-                  the driver-specific features and that if the users are specifying
-                  these then the WLM knows how to enable them
-                items:
-                  type: string
-                type: array
-              storage:
-                description: Storage is the storage breakdown for the directive
-                properties:
-                  allocationSets:
-                    description: 'AllocationSets lists the allocations required to
-                      fulfill the #DW Directive'
-                    items:
-                      description: StorageAllocationSet defines the details of an
-                        allocation set
-                      properties:
-                        allocationStrategy:
-                          description: AllocationStrategy specifies the way to determine
-                            the number of allocations of the MinimumCapacity required
-                            for this AllocationSet.
-                          enum:
-                          - AllocatePerCompute
-                          - AllocateAcrossServers
-                          - AllocateSingleServer
-                          type: string
-                        constraints:
-                          description: |-
-                            Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used
-                            for this AllocationSet
-                          properties:
-                            colocation:
-                              description: |-
-                                Colocation is a list of constraints for which Storage resources
-                                to pick in relation to Storage resources for other allocation sets.
-                              items:
-                                description: |-
-                                  AllocationSetColocationConstraint specifies how to colocate storage resources.
-                                  A colocation constraint specifies how the location(s) of an allocation set should be
-                                  selected with relation to other allocation sets. Locations for allocation sets with the
-                                  same colocation key should be picked according to the colocation type.
-                                properties:
-                                  key:
-                                    description: |-
-                                      Key shared by all the allocation sets that have their location constrained
-                                      in relation to each other.
-                                    type: string
-                                  type:
-                                    description: Type of colocation constraint
-                                    enum:
-                                    - exclusive
-                                    type: string
-                                required:
-                                - key
-                                - type
-                                type: object
-                              type: array
-                            count:
-                              description: Count is the number of the allocations
-                                to make
-                              minimum: 1
-                              type: integer
-                            labels:
-                              description: Labels is a list of labels is used to filter
-                                the Storage resources
-                              items:
-                                type: string
-                              type: array
-                            scale:
-                              description: Scale is a hint for the number of allocations
-                                to make based on a 1-10 value
-                              maximum: 10
-                              minimum: 1
-                              type: integer
-                          type: object
-                        label:
-                          description: |-
-                            Label is an identifier used to communicate from the DWS interface to internal interfaces
-                            the filesystem use of this AllocationSet.
-                          enum:
-                          - raw
-                          - xfs
-                          - gfs2
-                          - mgt
-                          - mdt
-                          - mgtmdt
-                          - ost
-                          type: string
-                        minimumCapacity:
-                          description: |-
-                            MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
-                            will use the storage.
-                          format: int64
-                          minimum: 1
-                          type: integer
-                      required:
-                      - allocationStrategy
-                      - label
-                      - minimumCapacity
-                      type: object
-                    type: array
-                  lifetime:
-                    description: Lifetime is the duration of the allocation
-                    enum:
-                    - job
-                    - persistent
-                    type: string
-                  reference:
-                    description: Reference is an ObjectReference to another resource
-                    properties:
-                      apiVersion:
-                        description: API version of the referent.
-                        type: string
-                      fieldPath:
-                        description: |-
-                          If referring to a piece of an object instead of an entire object, this string
-                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-                          For example, if the object reference is to a container within a pod, this would take on a value like:
-                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
-                          the event) or if no container name is specified "spec.containers[2]" (container with
-                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
-                          referencing a part of an object.
-                        type: string
-                      kind:
-                        description: |-
-                          Kind of the referent.
-                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-                        type: string
-                      name:
-                        description: |-
-                          Name of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                        type: string
-                      namespace:
-                        description: |-
-                          Namespace of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
-                        type: string
-                      resourceVersion:
-                        description: |-
-                          Specific resourceVersion to which this reference is made, if any.
-                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
-                        type: string
-                      uid:
-                        description: |-
-                          UID of the referent.
-                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
-                        type: string
-                    type: object
-                    x-kubernetes-map-type: atomic
-                required:
-                - lifetime
-                type: object
-            required:
-            - ready
-            type: object
-        type: object
-    served: false
-    storage: false
-    subresources:
-      status: {}
-  - additionalPrinterColumns:
-    - description: True if allocation sets have been generated
-      jsonPath: .status.ready
-      name: READY
-      type: boolean
-    - jsonPath: .status.error.severity
-      name: ERROR
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
     name: v1alpha4
     schema:
       openAPIV3Schema:
@@ -1015,7 +680,7 @@ spec:
             - ready
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -1031,6 +696,341 @@ spec:
       name: AGE
       type: date
     name: v1alpha6
+    schema:
+      openAPIV3Schema:
+        description: DirectiveBreakdown is the Schema for the directivebreakdown API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DirectiveBreakdownSpec defines the directive string to breakdown
+            properties:
+              directive:
+                description: 'Directive is a copy of the #DW for this breakdown'
+                type: string
+              userID:
+                description: User ID of the user associated with the job
+                format: int32
+                type: integer
+            required:
+            - directive
+            - userID
+            type: object
+          status:
+            description: DirectiveBreakdownStatus defines the storage information
+              WLM needs to select NNF Nodes and request storage from the selected
+              nodes
+            properties:
+              compute:
+                description: Compute is the compute breakdown for the directive
+                properties:
+                  constraints:
+                    description: Constraints to use when picking compute nodes
+                    properties:
+                      location:
+                        description: Location is a list of location constraints
+                        items:
+                          description: |-
+                            ComputeLocationConstraint describes a constraints on which compute nodes can be used with
+                            a directive based on their location
+                          properties:
+                            access:
+                              items:
+                                properties:
+                                  priority:
+                                    description: Priority specifies whether the location
+                                      constraint is mandatory or best effort
+                                    enum:
+                                    - mandatory
+                                    - bestEffort
+                                    type: string
+                                  type:
+                                    description: Type is the relationship between
+                                      the compute nodes and the resource in the Reference
+                                    enum:
+                                    - physical
+                                    - network
+                                    type: string
+                                required:
+                                - priority
+                                - type
+                                type: object
+                              type: array
+                            reference:
+                              description: Reference is an object reference to a resource
+                                that contains the location information
+                              properties:
+                                apiVersion:
+                                  description: API version of the referent.
+                                  type: string
+                                fieldPath:
+                                  description: |-
+                                    If referring to a piece of an object instead of an entire object, this string
+                                    should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                    For example, if the object reference is to a container within a pod, this would take on a value like:
+                                    "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                    the event) or if no container name is specified "spec.containers[2]" (container with
+                                    index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                    referencing a part of an object.
+                                  type: string
+                                kind:
+                                  description: |-
+                                    Kind of the referent.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                  type: string
+                                resourceVersion:
+                                  description: |-
+                                    Specific resourceVersion to which this reference is made, if any.
+                                    More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                                  type: string
+                                uid:
+                                  description: |-
+                                    UID of the referent.
+                                    More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                          required:
+                          - access
+                          - reference
+                          type: object
+                        type: array
+                    type: object
+                type: object
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              ready:
+                description: Ready indicates whether AllocationSets have been generated
+                  (true) or not (false)
+                type: boolean
+              requires:
+                description: Requires tells the WLM about any driver-specific features
+                  it must enable for the job; it is assumed that the WLM knows about
+                  the driver-specific features and that if the users are specifying
+                  these then the WLM knows how to enable them
+                items:
+                  type: string
+                type: array
+              storage:
+                description: Storage is the storage breakdown for the directive
+                properties:
+                  allocationSets:
+                    description: 'AllocationSets lists the allocations required to
+                      fulfill the #DW Directive'
+                    items:
+                      description: StorageAllocationSet defines the details of an
+                        allocation set
+                      properties:
+                        allocationStrategy:
+                          description: AllocationStrategy specifies the way to determine
+                            the number of allocations of the MinimumCapacity required
+                            for this AllocationSet.
+                          enum:
+                          - AllocatePerCompute
+                          - AllocateAcrossServers
+                          - AllocateSingleServer
+                          type: string
+                        constraints:
+                          description: |-
+                            Constraint is an additional requirement pertaining to the suitability of Storage resources that may be used
+                            for this AllocationSet
+                          properties:
+                            colocation:
+                              description: |-
+                                Colocation is a list of constraints for which Storage resources
+                                to pick in relation to Storage resources for other allocation sets.
+                              items:
+                                description: |-
+                                  AllocationSetColocationConstraint specifies how to colocate storage resources.
+                                  A colocation constraint specifies how the location(s) of an allocation set should be
+                                  selected with relation to other allocation sets. Locations for allocation sets with the
+                                  same colocation key should be picked according to the colocation type.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key shared by all the allocation sets that have their location constrained
+                                      in relation to each other.
+                                    type: string
+                                  type:
+                                    description: Type of colocation constraint
+                                    enum:
+                                    - exclusive
+                                    type: string
+                                required:
+                                - key
+                                - type
+                                type: object
+                              type: array
+                            count:
+                              description: Count is the number of the allocations
+                                to make
+                              minimum: 1
+                              type: integer
+                            labels:
+                              description: Labels is a list of labels is used to filter
+                                the Storage resources
+                              items:
+                                type: string
+                              type: array
+                            scale:
+                              description: Scale is a hint for the number of allocations
+                                to make based on a 1-10 value
+                              maximum: 10
+                              minimum: 1
+                              type: integer
+                          type: object
+                        label:
+                          description: |-
+                            Label is an identifier used to communicate from the DWS interface to internal interfaces
+                            the filesystem use of this AllocationSet.
+                          enum:
+                          - raw
+                          - xfs
+                          - gfs2
+                          - mgt
+                          - mdt
+                          - mgtmdt
+                          - ost
+                          type: string
+                        minimumCapacity:
+                          description: |-
+                            MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
+                            will use the storage.
+                          format: int64
+                          minimum: 1
+                          type: integer
+                      required:
+                      - allocationStrategy
+                      - label
+                      - minimumCapacity
+                      type: object
+                    type: array
+                  lifetime:
+                    description: Lifetime is the duration of the allocation
+                    enum:
+                    - job
+                    - persistent
+                    type: string
+                  reference:
+                    description: Reference is an ObjectReference to another resource
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      fieldPath:
+                        description: |-
+                          If referring to a piece of an object instead of an entire object, this string
+                          should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within a pod, this would take on a value like:
+                          "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]" (container with
+                          index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                          referencing a part of an object.
+                        type: string
+                      kind:
+                        description: |-
+                          Kind of the referent.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                        type: string
+                      name:
+                        description: |-
+                          Name of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                        type: string
+                      resourceVersion:
+                        description: |-
+                          Specific resourceVersion to which this reference is made, if any.
+                          More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                        type: string
+                      uid:
+                        description: |-
+                          UID of the referent.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                required:
+                - lifetime
+                type: object
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: True if allocation sets have been generated
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .status.error.severity
+      name: ERROR
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha7
     schema:
       openAPIV3Schema:
         description: DirectiveBreakdown is the Schema for the directivebreakdown API
