@@ -50,7 +50,7 @@ var (
 
 // NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
-// +kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha8-nnfdatamovementprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfdatamovementprofiles,verbs=create;update,versions=v1alpha8,name=vnnfdatamovementprofile.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-nnf-cray-hpe-com-v1alpha9-nnfdatamovementprofile,mutating=false,failurePolicy=fail,sideEffects=None,groups=nnf.cray.hpe.com,resources=nnfdatamovementprofiles,verbs=create;update,versions=v1alpha9,name=vnnfdatamovementprofile.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &NnfDataMovementProfile{}
 
