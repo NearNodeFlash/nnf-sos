@@ -98,6 +98,7 @@ type NnfDriveStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".spec.state",description="Current desired state"
 //+kubebuilder:printcolumn:name="HEALTH",type="string",JSONPath=".status.health",description="Health of node"
 //+kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status",description="Current status of node"

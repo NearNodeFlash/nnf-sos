@@ -44,6 +44,7 @@ type NnfNodeECPrivateData map[string]string
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 
 // NnfNodeECData is the Schema for the nnfnodeecdata API
 type NnfNodeECData struct {

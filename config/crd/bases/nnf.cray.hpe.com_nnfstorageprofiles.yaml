@@ -22,7 +22,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha6
+    name: v1alpha7
     schema:
       openAPIV3Schema:
         description: NnfStorageProfile is the Schema for the nnfstorageprofiles API
@@ -724,7 +724,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha7
+    name: v1alpha8
     schema:
       openAPIV3Schema:
         description: NnfStorageProfile is the Schema for the nnfstorageprofiles API
@@ -777,6 +777,23 @@ spec:
                         description: LvRemove specifies the lvcreate commandline,
                           minus the "lvremove".
                         type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -949,6 +966,8 @@ spec:
                           This is where you may specify zpool create options, and the virtual device (vdev) such as
                           "mirror", or "draid".  See zpoolconcepts(7).
                         type: string
+                      zpoolReplace:
+                        type: string
                     type: object
                   mdtOptions:
                     description: MdtOptions contains options to use for libraries
@@ -1015,6 +1034,8 @@ spec:
                           This is where you may specify zpool create options, and the virtual device (vdev) such as
                           "mirror", or "draid".  See zpoolconcepts(7).
                         type: string
+                      zpoolReplace:
+                        type: string
                     type: object
                   mgtMdtCommandlines:
                     description: MgtMdtCmdLines contains commands to create a combined
@@ -1051,6 +1072,8 @@ spec:
                           ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
                           This is where you may specify zpool create options, and the virtual device (vdev) such as
                           "mirror", or "draid".  See zpoolconcepts(7).
+                        type: string
+                      zpoolReplace:
                         type: string
                     type: object
                   mgtMdtOptions:
@@ -1148,6 +1171,8 @@ spec:
                           This is where you may specify zpool create options, and the virtual device (vdev) such as
                           "mirror", or "draid".  See zpoolconcepts(7).
                         type: string
+                      zpoolReplace:
+                        type: string
                     type: object
                   ostOptions:
                     description: OstOptions contains options to use for libraries
@@ -1230,6 +1255,23 @@ spec:
                         description: LvRemove specifies the lvcreate commandline,
                           minus the "lvremove".
                         type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -1333,6 +1375,23 @@ spec:
                         description: LvRemove specifies the lvcreate commandline,
                           minus the "lvremove".
                         type: string
+                      lvmRebuild:
+                        description: LVMRebuild specifies command lines needed for
+                          rebuilding LVM RAID devices
+                        properties:
+                          lvRepair:
+                            description: LvRepair specifies the command for repairing
+                              a LV after a drive failure
+                            type: string
+                          vgExtend:
+                            description: VgExtend specifies the command for adding
+                              PVs to a VG
+                            type: string
+                          vgReduce:
+                            description: VgReduce specifies the command for removing
+                              PVs from a VG
+                            type: string
+                        type: object
                       mkfs:
                         description: Mkfs specifies the mkfs commandline, minus the
                           "mkfs".
@@ -1426,7 +1485,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha8
+    name: v1alpha9
     schema:
       openAPIV3Schema:
         description: NnfStorageProfile is the Schema for the nnfstorageprofiles API

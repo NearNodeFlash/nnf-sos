@@ -121,6 +121,7 @@ type NnfDataMovementProfileData struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 // +kubebuilder:printcolumn:name="DEFAULT",type="boolean",JSONPath=".data.default",description="True if this is the default instance"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -133,6 +134,7 @@ type NnfDataMovementProfile struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:unservedversion
 
 // NnfDataMovementProfileList contains a list of NnfDataMovementProfile
 type NnfDataMovementProfileList struct {

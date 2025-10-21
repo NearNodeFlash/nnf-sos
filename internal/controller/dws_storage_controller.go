@@ -38,7 +38,7 @@ import (
 
 	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
 type DWSStorageReconciler struct {
@@ -103,7 +103,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// Ensure the storage resource is updated with the latest NNF Node resource status
-	nnfNode := &nnfv1alpha8.NnfNode{
+	nnfNode := &nnfv1alpha9.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-nlc",
 			Namespace: storage.GetName(),
@@ -155,7 +155,7 @@ func (r *DWSStorageReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		device.Slot = drive.Slot
 		device.Status = drive.Status.ConvertToDWSResourceStatus()
 
-		if drive.Status == nnfv1alpha8.ResourceReady {
+		if drive.Status == nnfv1alpha9.ResourceReady {
 			wearLevel := drive.WearLevel
 			device.Model = drive.Model
 			device.SerialNumber = drive.SerialNumber
@@ -273,7 +273,7 @@ func (r *DWSStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dwsv1alpha6.Storage{}).
-		Watches(&nnfv1alpha8.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
+		Watches(&nnfv1alpha9.NnfNode{}, handler.EnqueueRequestsFromMapFunc(nnfNodeMapFunc)).
 		Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(nodeMapFunc)).
 		Complete(r)
 }

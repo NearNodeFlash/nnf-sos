@@ -22,7 +22,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha6
+    name: v1alpha7
     schema:
       openAPIV3Schema:
         description: NnfDataMovementProfile is the Schema for the nnfdatamovementprofiles
@@ -52,6 +52,9 @@ spec:
                     SRC: source for the data movement
                     DEST destination for the data movement
                 type: string
+                x-kubernetes-validations:
+                - rule: '!self.contains("dcp") || (self.contains("$HOSTFILE") && self.contains("$UID")
+                    && self.contains("$GID") && self.contains("$SRC") && self.contains("$DEST"))'
               createDestDir:
                 default: true
                 description: |-
@@ -90,6 +93,9 @@ spec:
                   Placeholder for where to inject the SETPRIV command to become the
                   UID/GID\n  \t\t  inherited from the workflow.\n  PATH: Path to stat"
                 type: string
+                x-kubernetes-validations:
+                - rule: '!self.contains("mkdir") || (self.contains("$HOSTFILE") &&
+                    self.contains("$SETPRIV") && self.contains("$PATH"))'
               pinned:
                 default: false
                 description: Pinned is true if this instance is an immutable copy
@@ -112,6 +118,8 @@ spec:
                     UID: User ID that is inherited from the Workflow
                     GID: Group ID that is inherited from the Workflow
                 type: string
+                x-kubernetes-validations:
+                - rule: '!self.contains("setpriv") || (self.contains("$UID") && self.contains("$GID"))'
               slots:
                 default: 8
                 description: |-
@@ -131,6 +139,9 @@ spec:
                   Placeholder for where to inject the SETPRIV command to become the
                   UID/GID\n  \t\t  inherited from the workflow.\n  PATH: Path to stat"
                 type: string
+                x-kubernetes-validations:
+                - rule: '!self.contains("stat") || (self.contains("$HOSTFILE") &&
+                    self.contains("$SETPRIV") && self.contains("$PATH"))'
               storeStdout:
                 default: false
                 description: |-
@@ -168,7 +179,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha7
+    name: v1alpha8
     schema:
       openAPIV3Schema:
         description: NnfDataMovementProfile is the Schema for the nnfdatamovementprofiles
@@ -325,7 +336,7 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha8
+    name: v1alpha9
     schema:
       openAPIV3Schema:
         description: NnfDataMovementProfile is the Schema for the nnfdatamovementprofiles
