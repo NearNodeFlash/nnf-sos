@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha6
+package v1alpha7
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,10 +25,10 @@ import (
 )
 
 // log is for logging in this package.
-var serverslog = logf.Log.WithName("servers-resource")
+var dwdirectiverulelog = logf.Log.WithName("dwdirectiverule-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *Servers) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *DWDirectiveRule) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()

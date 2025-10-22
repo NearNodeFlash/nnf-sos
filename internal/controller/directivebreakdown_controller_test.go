@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
@@ -53,12 +53,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Creates a DirectiveBreakdown with a jobdw", func() {
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs capacity=1GiB",
 			},
 		}
@@ -71,7 +71,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(BeTrue())
 		Expect(directiveBreakdown.Status.Requires).Should(BeEmpty())
 
-		servers := &dwsv1alpha6.Servers{
+		servers := &dwsv1alpha7.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      directiveBreakdown.GetName(),
 				Namespace: directiveBreakdown.GetNamespace(),
@@ -104,12 +104,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Creates a DirectiveBreakdown with a jobdw having required daemons", func() {
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs requires=copy-offload capacity=1GiB",
 			},
 		}
@@ -131,12 +131,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Verifies DirectiveBreakdowns with persistent storage", func() {
 		By("Creating a DirectiveBreakdown with create_persistent")
-		directiveBreakdownOne := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdownOne := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "create-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW create_persistent name=persistent-storage type=xfs capacity=1GiB",
 			},
 		}
@@ -148,7 +148,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return directiveBreakdownOne.Status.Ready
 		}).Should(BeTrue())
 
-		persistentStorage := &dwsv1alpha6.PersistentStorageInstance{
+		persistentStorage := &dwsv1alpha7.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "persistent-storage",
 				Namespace: directiveBreakdownOne.GetNamespace(),
@@ -159,12 +159,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed(), "Create the PersistentStorageInstance resource")
 
 		By("Creating a DirectiveBreakdown with persistentdw")
-		directiveBreakdownTwo := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdownTwo := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "use-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW persistentdw name=persistent-storage",
 			},
 		}
@@ -195,12 +195,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-lustre-jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB",
 			},
 		}
@@ -222,12 +222,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-xfs-jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs capacity=1GiB",
 			},
 		}
@@ -249,12 +249,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-lustre-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW create_persistent name=persistent-lustre type=lustre",
 			},
 		}

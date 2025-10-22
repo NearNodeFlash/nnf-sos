@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha6
+package v1alpha7
 
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,10 +25,10 @@ import (
 )
 
 // log is for logging in this package.
-var systemconfigurationlog = logf.Log.WithName("systemconfiguration-resource")
+var systemstatuslog = logf.Log.WithName("systemstatus-resource")
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *SystemConfiguration) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *SystemStatus) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha7
 
 import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -45,6 +45,10 @@ const (
 
 	// The storage and filesystem represented by the PSI exists and is ready for use
 	PSIStateActive PersistentStorageInstanceState = "Active"
+
+	// The storage and filesystem represented by the PSI exists, but one or more of the allocations
+	// have degraded storage
+	PSIStateDegraded PersistentStorageInstanceState = "Degraded"
 
 	// A #DW destroy_persistent directive has been issued in a workflow.
 	// Once all other workflows with persistent_dw reservations on the PSI complete, the PSI will be destroyed.
@@ -81,7 +85,7 @@ type PersistentStorageInstanceStatus struct {
 	Servers corev1.ObjectReference `json:"servers,omitempty"`
 
 	// Current state of the PersistentStorageInstance
-	// +kubebuilder:validation:Enum:=Creating;Active;Destroying
+	// +kubebuilder:validation:Enum:=Creating;Active;Destroying;Degraded
 	State PersistentStorageInstanceState `json:"state"`
 
 	// Error information
@@ -89,8 +93,8 @@ type PersistentStorageInstanceStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
-// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
@@ -105,6 +109,22 @@ type PersistentStorageInstance struct {
 
 func (psi *PersistentStorageInstance) GetStatus() updater.Status[*PersistentStorageInstanceStatus] {
 	return &psi.Status
+}
+
+// IsUsable looks at the status of the PersistentStorageInstance and determines whether the
+// storage can be used.
+func (psi *PersistentStorageInstance) IsUsable() bool {
+	if psi.Status.State == PSIStateActive {
+		return true
+	}
+
+	// Degraded means that a drive has failed in a RAID array. The storage is still usable in this
+	// state
+	if psi.Status.State == PSIStateDegraded {
+		return true
+	}
+
+	return false
 }
 
 //+kubebuilder:object:root=true

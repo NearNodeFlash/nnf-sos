@@ -17,7 +17,23 @@
  * limitations under the License.
  */
 
-// The following tag tells conversion-gen to generate conversion routines, and
-// it tells conversion-gen the name of the hub version.
-// +k8s:conversion-gen=github.com/DataWorkflowServices/dws/api/v1alpha6
-package v1alpha3
+// Package v1alpha7 contains API Schema definitions for the dataworkflowservices v1alpha7 API group
+// +kubebuilder:object:generate=true
+// +groupName=dataworkflowservices.github.io
+package v1alpha7
+
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
+)
+
+var (
+	// GroupVersion is group version used to register these objects
+	GroupVersion = schema.GroupVersion{Group: "dataworkflowservices.github.io", Version: "v1alpha7"}
+
+	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+
+	// AddToScheme adds the types in this group-version to the given scheme.
+	AddToScheme = SchemeBuilder.AddToScheme
+)

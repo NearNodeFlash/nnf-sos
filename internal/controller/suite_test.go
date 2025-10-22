@@ -45,7 +45,7 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
@@ -94,8 +94,8 @@ var envVars = []envSetting{
 	{"NNF_TEST_ENVIRONMENT", "true"},
 }
 
-func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha6.DWDirectiveRule, error) {
-	ruleset := dwsv1alpha6.DWDirectiveRule{}
+func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha7.DWDirectiveRule, error) {
+	ruleset := dwsv1alpha7.DWDirectiveRule{}
 
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
@@ -135,7 +135,7 @@ var _ = BeforeSuite(func() {
 	// before calling envtest.Start().
 	// Then add the scheme to envtest.CRDInstallOptions.
 
-	err = dwsv1alpha6.AddToScheme(scheme.Scheme)
+	err = dwsv1alpha7.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = lusv1beta1.AddToScheme(scheme.Scheme)
@@ -208,7 +208,7 @@ var _ = BeforeSuite(func() {
 		Start webhooks
 	*/
 
-	err = (&dwsv1alpha6.Workflow{}).SetupWebhookWithManager(k8sManager)
+	err = (&dwsv1alpha7.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&lusv1beta1.LustreFileSystem{}).SetupWebhookWithManager(k8sManager)

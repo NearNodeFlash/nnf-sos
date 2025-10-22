@@ -28,7 +28,7 @@ import (
 	unsafe "unsafe"
 
 	v1alpha4 "github.com/DataWorkflowServices/dws/api/v1alpha4"
-	v1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	apiv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	v1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -923,23 +923,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha4.ResourceErrorInfo)(nil), (*v1alpha6.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_ResourceErrorInfo_To_v1alpha6_ResourceErrorInfo(a.(*v1alpha4.ResourceErrorInfo), b.(*v1alpha6.ResourceErrorInfo), scope)
+	if err := s.AddConversionFunc((*v1alpha4.ResourceErrorInfo)(nil), (*apiv1alpha7.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ResourceErrorInfo_To_v1alpha7_ResourceErrorInfo(a.(*v1alpha4.ResourceErrorInfo), b.(*apiv1alpha7.ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha4.ResourceError)(nil), (*v1alpha6.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(a.(*v1alpha4.ResourceError), b.(*v1alpha6.ResourceError), scope)
+	if err := s.AddConversionFunc((*v1alpha4.ResourceError)(nil), (*apiv1alpha7.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(a.(*v1alpha4.ResourceError), b.(*apiv1alpha7.ResourceError), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha6.ResourceErrorInfo)(nil), (*v1alpha4.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha6_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(a.(*v1alpha6.ResourceErrorInfo), b.(*v1alpha4.ResourceErrorInfo), scope)
+	if err := s.AddConversionFunc((*apiv1alpha7.ResourceErrorInfo)(nil), (*v1alpha4.ResourceErrorInfo)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_ResourceErrorInfo_To_v1alpha4_ResourceErrorInfo(a.(*apiv1alpha7.ResourceErrorInfo), b.(*v1alpha4.ResourceErrorInfo), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddConversionFunc((*v1alpha6.ResourceError)(nil), (*v1alpha4.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(a.(*v1alpha6.ResourceError), b.(*v1alpha4.ResourceError), scope)
+	if err := s.AddConversionFunc((*apiv1alpha7.ResourceError)(nil), (*v1alpha4.ResourceError)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(a.(*apiv1alpha7.ResourceError), b.(*v1alpha4.ResourceError), scope)
 	}); err != nil {
 		return err
 	}
@@ -1112,7 +1112,7 @@ func Convert_v1alpha9_NnfAccessList_To_v1alpha7_NnfAccessList(in *v1alpha9.NnfAc
 
 func autoConvert_v1alpha7_NnfAccessSpec_To_v1alpha9_NnfAccessSpec(in *NnfAccessSpec, out *v1alpha9.NnfAccessSpec, s conversion.Scope) error {
 	out.DesiredState = in.DesiredState
-	out.TeardownState = v1alpha6.WorkflowState(in.TeardownState)
+	out.TeardownState = apiv1alpha7.WorkflowState(in.TeardownState)
 	out.Target = in.Target
 	out.UserID = in.UserID
 	out.GroupID = in.GroupID
@@ -1153,7 +1153,7 @@ func Convert_v1alpha9_NnfAccessSpec_To_v1alpha7_NnfAccessSpec(in *v1alpha9.NnfAc
 func autoConvert_v1alpha7_NnfAccessStatus_To_v1alpha9_NnfAccessStatus(in *NnfAccessStatus, out *v1alpha9.NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -1167,7 +1167,7 @@ func Convert_v1alpha7_NnfAccessStatus_To_v1alpha9_NnfAccessStatus(in *NnfAccessS
 func autoConvert_v1alpha9_NnfAccessStatus_To_v1alpha7_NnfAccessStatus(in *v1alpha9.NnfAccessStatus, out *NnfAccessStatus, s conversion.Scope) error {
 	out.State = in.State
 	out.Ready = in.Ready
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -1742,7 +1742,7 @@ func autoConvert_v1alpha7_NnfDataMovementStatus_To_v1alpha9_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*v1alpha9.NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -1761,7 +1761,7 @@ func autoConvert_v1alpha9_NnfDataMovementStatus_To_v1alpha7_NnfDataMovementStatu
 	out.EndTime = (*metav1.MicroTime)(unsafe.Pointer(in.EndTime))
 	out.Restarts = in.Restarts
 	out.CommandStatus = (*NnfDataMovementCommandStatus)(unsafe.Pointer(in.CommandStatus))
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -1948,7 +1948,7 @@ func autoConvert_v1alpha7_NnfLustreMGTStatus_To_v1alpha9_NnfLustreMGTStatus(in *
 	} else {
 		out.CommandList = nil
 	}
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -1973,7 +1973,7 @@ func autoConvert_v1alpha9_NnfLustreMGTStatus_To_v1alpha7_NnfLustreMGTStatus(in *
 	} else {
 		out.CommandList = nil
 	}
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -2009,7 +2009,7 @@ func Convert_v1alpha9_NnfLustreMGTStatusClaim_To_v1alpha7_NnfLustreMGTStatusClai
 func autoConvert_v1alpha7_NnfLustreMGTStatusCommand_To_v1alpha9_NnfLustreMGTStatusCommand(in *NnfLustreMGTStatusCommand, out *v1alpha9.NnfLustreMGTStatusCommand, s conversion.Scope) error {
 	out.Reference = in.Reference
 	out.Ready = in.Ready
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -2023,7 +2023,7 @@ func Convert_v1alpha7_NnfLustreMGTStatusCommand_To_v1alpha9_NnfLustreMGTStatusCo
 func autoConvert_v1alpha9_NnfLustreMGTStatusCommand_To_v1alpha7_NnfLustreMGTStatusCommand(in *v1alpha9.NnfLustreMGTStatusCommand, out *NnfLustreMGTStatusCommand, s conversion.Scope) error {
 	out.Reference = in.Reference
 	out.Ready = in.Ready
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -2292,7 +2292,7 @@ func Convert_v1alpha9_NnfNodeBlockStorageSpec_To_v1alpha7_NnfNodeBlockStorageSpe
 
 func autoConvert_v1alpha7_NnfNodeBlockStorageStatus_To_v1alpha9_NnfNodeBlockStorageStatus(in *NnfNodeBlockStorageStatus, out *v1alpha9.NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]v1alpha9.NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	out.PodStartTime = in.PodStartTime
@@ -2307,7 +2307,7 @@ func Convert_v1alpha7_NnfNodeBlockStorageStatus_To_v1alpha9_NnfNodeBlockStorageS
 
 func autoConvert_v1alpha9_NnfNodeBlockStorageStatus_To_v1alpha7_NnfNodeBlockStorageStatus(in *v1alpha9.NnfNodeBlockStorageStatus, out *NnfNodeBlockStorageStatus, s conversion.Scope) error {
 	out.Allocations = *(*[]NnfNodeBlockStorageAllocationStatus)(unsafe.Pointer(&in.Allocations))
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	out.PodStartTime = in.PodStartTime
@@ -2639,7 +2639,7 @@ func autoConvert_v1alpha7_NnfNodeStorageStatus_To_v1alpha9_NnfNodeStorageStatus(
 		out.Allocations = nil
 	}
 	out.Ready = in.Ready
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -2664,7 +2664,7 @@ func autoConvert_v1alpha9_NnfNodeStorageStatus_To_v1alpha7_NnfNodeStorageStatus(
 	}
 	// WARNING: in.Health requires manual conversion: does not exist in peer-type
 	out.Ready = in.Ready
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -3629,7 +3629,7 @@ func autoConvert_v1alpha7_NnfStorageStatus_To_v1alpha9_NnfStorageStatus(in *NnfS
 	} else {
 		out.AllocationSets = nil
 	}
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	out.Ready = in.Ready
@@ -3656,7 +3656,7 @@ func autoConvert_v1alpha9_NnfStorageStatus_To_v1alpha7_NnfStorageStatus(in *v1al
 	} else {
 		out.AllocationSets = nil
 	}
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	// WARNING: in.Health requires manual conversion: does not exist in peer-type
@@ -3788,7 +3788,7 @@ func Convert_v1alpha9_NnfSystemStorageSpec_To_v1alpha7_NnfSystemStorageSpec(in *
 
 func autoConvert_v1alpha7_NnfSystemStorageStatus_To_v1alpha9_NnfSystemStorageStatus(in *NnfSystemStorageStatus, out *v1alpha9.NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	if err := Convert_v1alpha4_ResourceError_To_v1alpha6_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha4_ResourceError_To_v1alpha7_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil
@@ -3801,7 +3801,7 @@ func Convert_v1alpha7_NnfSystemStorageStatus_To_v1alpha9_NnfSystemStorageStatus(
 
 func autoConvert_v1alpha9_NnfSystemStorageStatus_To_v1alpha7_NnfSystemStorageStatus(in *v1alpha9.NnfSystemStorageStatus, out *NnfSystemStorageStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
-	if err := Convert_v1alpha6_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
+	if err := Convert_v1alpha7_ResourceError_To_v1alpha4_ResourceError(&in.ResourceError, &out.ResourceError, s); err != nil {
 		return err
 	}
 	return nil

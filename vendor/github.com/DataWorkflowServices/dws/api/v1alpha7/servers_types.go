@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha7
 
 import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -63,6 +63,9 @@ type ServersSpec struct {
 type ServersStatusStorage struct {
 	// Allocation size in bytes
 	AllocationSize int64 `json:"allocationSize"`
+
+	// Ready indicates whether all the allocations on the server have been successfully created
+	Ready bool `json:"ready"`
 }
 
 // ServersStatusAllocationSet is the status of a set of allocations
@@ -87,8 +90,8 @@ type ServersStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
-// +kubebuilder:unservedversion
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if allocation sets have been generated"
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"

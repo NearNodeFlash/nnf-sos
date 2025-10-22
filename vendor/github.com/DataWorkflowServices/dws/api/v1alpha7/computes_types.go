@@ -17,36 +17,49 @@
  * limitations under the License.
  */
 
-package v1alpha3
+package v1alpha7
 
 import (
-	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// ComputesData defines the compute nodes that are assigned to the workflow
+type ComputesData struct {
+	// Name is the identifer name for the compute node
+	Name string `json:"name"`
+}
 
 //+kubebuilder:object:root=true
-// +kubebuilder:unservedversion
+//+kubebuilder:storageversion
 
-// DWDirectiveRule is the Schema for the DWDirective API
-type DWDirectiveRule struct {
+// Computes is the Schema for the computes API
+type Computes struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec []dwdparse.DWDirectiveRuleSpec `json:"spec,omitempty"`
+	Data []ComputesData `json:"data,omitempty"`
 }
 
 //+kubebuilder:object:root=true
-// +kubebuilder:unservedversion
 
-// DWDirectiveRuleList contains a list of DWDirective
-type DWDirectiveRuleList struct {
+// ComputesList contains a list of Computes
+type ComputesList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DWDirectiveRule `json:"items"`
+	Items           []Computes `json:"items"`
+}
+
+func (c *ComputesList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range c.Items {
+		objectList = append(objectList, &c.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {
-	SchemeBuilder.Register(&DWDirectiveRule{}, &DWDirectiveRuleList{})
+	SchemeBuilder.Register(&Computes{}, &ComputesList{})
 }
