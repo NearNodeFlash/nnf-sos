@@ -25,21 +25,45 @@ import (
 )
 
 type NnfStorageProfileLustreClientCmdLines struct {
-	// PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-	// target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-	// it afterward.
-	RabbitPostMount []string `json:"rabbitPostMount,omitempty"`
-
-	// PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-	// Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-	// unmounting it afterward.
-	RabbitPreUnmount []string `json:"rabbitPreUnmount,omitempty"`
 
 	// MountRabbit specifies mount options for making the Lustre client mount on the Rabbit.
 	MountRabbit string `json:"mountRabbit,omitempty"`
 
+	// RabbitPostSetup specifies a list of commands to run on the Rabbit with a Lustre client mounted after the Lustre file system
+	// has been set up. This includes mounting the Lustre filesystem beforehand and unmounting it afterward.
+	RabbitPostSetup []string `json:"rabbitPostSetup,omitempty"`
+
+	// RabbitPreTeardown specifies a list of commands to run on the Rabbit with a Lustre client mounted before the
+	// Lustre file system is torn down. This includes mounting the Lustre filesystem beforehand and
+	// unmounting it afterward.
+	RabbitPreTeardown []string `json:"rabbitPreTeardown,omitempty"`
+
 	// MountCompute specifies mount options for making the Lustre client mount on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
+
+	// RabbitPreMount specifies a list of commands to run on the Rabbit before a Lustre client is mounted
+	RabbitPreMount []string `json:"rabbitPreMount,omitempty"`
+
+	// RabbitPostMount specifies a list of commands to run on the Rabbit after a Lustre client is mounted
+	RabbitPostMount []string `json:"rabbitPostMount,omitempty"`
+
+	// RabbitPreUnmount specifies a list of commands to run on the Rabbit before a Lustre client is unmounted
+	RabbitPreUnmount []string `json:"rabbitPreUnmount,omitempty"`
+
+	// RabbitPostUnmount specifies a list of commands to run on the Rabbit after a Lustre client is unmounted
+	RabbitPostUnmount []string `json:"rabbitPostUnmount,omitempty"`
+
+	// ComputePreMount specifies a list of commands to run on the Compute node before a Lustre client is mounted
+	ComputePreMount []string `json:"computePreMount,omitempty"`
+
+	// ComputePostMount specifies a list of commands to run on the Compute node after a Lustre client is mounted
+	ComputePostMount []string `json:"computePostMount,omitempty"`
+
+	// ComputePreUnmount specifies a list of commands to run on the Compute node before a Lustre client is unmounted
+	ComputePreUnmount []string `json:"computePreUnmount,omitempty"`
+
+	// ComputePostUnmount specifies a list of commands to run on the Compute node after a Lustre client is unmounted
+	ComputePostUnmount []string `json:"computePostUnmount,omitempty"`
 }
 
 // NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities
@@ -160,17 +184,7 @@ type NnfStorageProfileLustreData struct {
 	PreMountMGTCmds []string `json:"preMountMGTCommands,omitempty"`
 }
 
-// NnfStorageProfileCmdLines defines commandlines to use for mkfs, and other utilities for storage
-// allocations that use LVM and a simple file system type (e.g., gfs2)
-type NnfStorageProfileCmdLines struct {
-	// Mkfs specifies the mkfs commandline, minus the "mkfs".
-	Mkfs string `json:"mkfs,omitempty"`
-
-	// SharedVg specifies that allocations from a workflow on the same Rabbit should share an
-	// LVM VolumeGroup
-	// +kubebuilder:default:=false
-	SharedVg bool `json:"sharedVg,omitempty"`
-
+type NnfStorageProfileRabbitBlockDeviceCommands struct {
 	// PvCreate specifies the pvcreate commandline, minus the "pvcreate".
 	PvCreate string `json:"pvCreate,omitempty"`
 
@@ -198,19 +212,111 @@ type NnfStorageProfileCmdLines struct {
 	// LvRemove specifies the lvcreate commandline, minus the "lvremove".
 	LvRemove string `json:"lvRemove,omitempty"`
 
-	// MountRabbit specifies mount options for mounting on the Rabbit.
-	MountRabbit string `json:"mountRabbit,omitempty"`
+	// UserCommands allows admins to specify commands that can be run at various
+	// points the Rabbit workflow
+	UserCommands NnfStorageProfileBlockDeviceUserCommands `json:"userCommands,omitempty"`
+}
 
-	// PostMount specifies a list of commands to run on the Rabbit after the
-	// file system has been activated and mounted.
+type NnfStorageProfileComputeBlockDeviceCommands struct {
+	// VgChange specifies the various vgchange commandlines, minus the "vgchange"
+	VgChange NnfStorageProfileLVMVgChangeCmdLines `json:"vgChange,omitempty"`
+
+	// LvChange specifies the various lvchange commandlines, minus the "lvchange"
+	LvChange NnfStorageProfileLVMLvChangeCmdLines `json:"lvChange,omitempty"`
+
+	// UserCommands allows admins to specify commands that can be run at various
+	// points the Rabbit workflow
+	UserCommands NnfStorageProfileBlockDeviceUserCommands `json:"userCommands,omitempty"`
+}
+
+type NnfStorageProfileBlockDevice struct {
+	// SharedVg specifies that allocations from a workflow on the same Rabbit should share an
+	// LVM VolumeGroup
+	// +kubebuilder:default:=false
+	SharedVg bool `json:"sharedVg,omitempty"`
+
+	// RabbitCommands specifies the commands that are run on the Rabbit nodes
+	RabbitCommands NnfStorageProfileRabbitBlockDeviceCommands `json:"rabbitCommands,omitempty"`
+
+	// ComputeCommands specifies the commands that are run on the Compute nodes
+	ComputeCommands NnfStorageProfileComputeBlockDeviceCommands `json:"computeCommands,omitempty"`
+}
+
+type NnfStorageProfileBlockDeviceUserCommands struct {
+	// PreActivate specifies a list of commands to run before the block device is activated
+	PreActivate []string `json:"preActivate,omitempty"`
+
+	// PostActivate specifies a list of commands to run after the block device is activated
+	PostActivate []string `json:"postActivate,omitempty"`
+
+	// PreDeactivate specifies a list of commands to run before the block device is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
+	// PostDeactivate specifies a list of commands to run after the block device is deactivated
+	PostDeactivate []string `json:"postDeactivate,omitempty"`
+}
+
+type NnfStorageProfileRabbitFileSystemCommands struct {
+	// Mkfs specifies the mkfs commandline, minus the "mkfs".
+	Mkfs string `json:"mkfs,omitempty"`
+
+	// Mount specifies mount options for mounting on the Rabbit.
+	Mount string `json:"mount,omitempty"`
+
+	// UserServerCommands specifies commands that can be run on the Rabbit during file system set up
+	// and teardown
+	UserServerCommands NnfStorageProfileFileSystemUserServerCommands `json:"userServerCommands,omitempty"`
+
+	// UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+	// as a client during DataIn, PreRun, PostRun, and DataOut
+	UserClientCommands NnfStorageProfileFileSystemUserClientCommands `json:"userClientCommands,omitempty"`
+}
+
+type NnfStorageProfileComputeFileSystemCommands struct {
+	// Mount specifies mount options for mounting on the Rabbit.
+	Mount string `json:"mount,omitempty"`
+
+	// UserClientCommands specifies commands that can be run on the Compute node when the file system is
+	// mounted/unmounted in PreRun and PostRun
+	UserClientCommands NnfStorageProfileFileSystemUserClientCommands `json:"userClientCommands,omitempty"`
+}
+
+type NnfStorageProfileFileSystem struct {
+	// RabbitCommands specifies the commands that are run on the Rabbit nodes
+	RabbitCommands NnfStorageProfileRabbitFileSystemCommands `json:"rabbitCommands,omitempty"`
+
+	// ComputeCommands specifies the commands that are run on the Compute nodes
+	ComputeCommands NnfStorageProfileComputeFileSystemCommands `json:"computeCommands,omitempty"`
+}
+
+type NnfStorageProfileFileSystemUserClientCommands struct {
+	// PreMount specifies a list of commands to run before the file system is mounted
+	PreMount []string `json:"preMount,omitempty"`
+
+	// PostMount specifies a list of commands to run after the file system is mounted
 	PostMount []string `json:"postMount,omitempty"`
 
-	// MountCompute specifies mount options for mounting on the Compute.
-	MountCompute string `json:"mountCompute,omitempty"`
-
-	// PreUnmount specifies a list of commands to run on the Rabbit before the
-	// file system is deactivated and unmounted.
+	// PreUnmount specifies a list of commands to run before the file system is unmounted
 	PreUnmount []string `json:"preUnmount,omitempty"`
+
+	// PostUnmount specifies a list of commands to run after the file system is unmounted
+	PostUnmount []string `json:"postUnmount,omitempty"`
+}
+
+type NnfStorageProfileFileSystemUserServerCommands struct {
+	// PostActivate specifies a list of commands to run after the file system is activated
+	PostActivate []string `json:"postActivate,omitempty"`
+
+	// PostActivate specifies a list of commands to run before the file system is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
+	// PostSetup specifies a list of commands to run after the file system is setup. The file system
+	// is mounted on the Rabbit when these commands are run
+	PostSetup []string `json:"postSetup,omitempty"`
+
+	// PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+	// is mounted on the Rabbit when these commands are run
+	PreTeardown []string `json:"preTeardown,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines
@@ -245,8 +351,14 @@ type NnfStorageProfileLVMLvChangeCmdLines struct {
 
 // NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
-	// CmdLines contains commands to create volumes and filesystems.
-	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+	// FileSystemCommands specifies commands that are run when configuring the file system
+	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
+
+	// BlockDeviceCommands specifies commands that are run when configuring the block device
+	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
+
+	// SharedAllocation is used to share an allocation across multiple clients
+	SharedAllocation bool `json:"sharedAllocation,omitempty"`
 
 	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
 	// labels constraint. This restricts allocations to Storage resources with these labels
@@ -259,8 +371,14 @@ type NnfStorageProfileGFS2Data struct {
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
-	// CmdLines contains commands to create volumes and filesystems.
-	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+	// FileSystemCommands specifies commands that are run when configuring the file system
+	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
+
+	// BlockDeviceCommands specifies commands that are run when configuring the block device
+	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
+
+	// SharedAllocation is used to share an allocation across multiple clients
+	SharedAllocation bool `json:"sharedAllocation,omitempty"`
 
 	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
 	// labels constraint. This restricts allocations to Storage resources with these labels
@@ -273,8 +391,14 @@ type NnfStorageProfileXFSData struct {
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
-	// CmdLines contains commands to create volumes and filesystems.
-	CmdLines NnfStorageProfileCmdLines `json:"commandlines,omitempty"`
+	// FileSystemCommands specifies commands that are run when configuring the file system
+	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
+
+	// BlockDeviceCommands specifies commands that are run when configuring the block device
+	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
+
+	// SharedAllocation is used to share an allocation across multiple clients
+	SharedAllocation bool `json:"sharedAllocation,omitempty"`
 
 	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
 	// labels constraint. This restricts allocations to Storage resources with these labels

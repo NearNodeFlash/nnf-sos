@@ -279,6 +279,14 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 	}
 
 	if shouldMount {
+		ran, err := blockDevice.PreActivate(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run block device PreActivate commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PreActivate commands")
+		}
+
 		activated, err := blockDevice.Activate(ctx)
 		if err != nil && clientMountInfo.Device.Type == dwsv1alpha7.ClientMountDeviceTypeLVM {
 			// If we weren't able to activate the block device, then rescan for the NVMe namespaces. If the rescan is
@@ -311,6 +319,22 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
 		}
 
+		ran, err = blockDevice.PostActivate(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run block device PostActivate commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PostActivate commands")
+		}
+
+		ran, err = fileSystem.PreMount(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run file system PreMount commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PreMount commands", "Mount path", clientMountInfo.MountPath)
+		}
+
 		mounted, err := fileSystem.Mount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to mount file system").WithError(err).WithMajor()
@@ -336,13 +360,45 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			}
 		}
 
+		ran, err = fileSystem.PostMount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run file system PostMount commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PostMount commands", "Mount path", clientMountInfo.MountPath)
+		}
+
 	} else {
+		ran, err := fileSystem.PreUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run file system PreUnmount commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PreUnmount commands", "Mount path", clientMountInfo.MountPath)
+		}
+
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
 		}
 		if unmounted {
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
+		}
+
+		ran, err = fileSystem.PostUnmount(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run file system PostUnmount commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PostUnmount commands", "Mount path", clientMountInfo.MountPath)
+		}
+
+		ran, err = blockDevice.PreDeactivate(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run block device PreDeactivate commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PreDeactivate commands")
 		}
 
 		// If this is an unmount on a compute node, we can fully deactivate the block device since we won't use it
@@ -373,6 +429,15 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		if deactivated {
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
 		}
+
+		ran, err = blockDevice.PostDeactivate(ctx, clientMount.Status.Mounts[index].Ready)
+		if err != nil {
+			return dwsv1alpha7.NewResourceError("unable to run block device PostDeactivate commands").WithError(err).WithMajor()
+		}
+		if ran {
+			log.Info("Ran PostDeactivate commands")
+		}
+
 	}
 
 	return nil
@@ -577,11 +642,11 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 
 	switch nnfNodeStorage.Spec.FileSystemType {
 	case "raw":
-		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.RawStorage.CmdLines.SharedVg
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.RawStorage.BlockDeviceCommands.SharedVg
 	case "xfs":
-		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.XFSStorage.CmdLines.SharedVg
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.XFSStorage.BlockDeviceCommands.SharedVg
 	case "gfs2":
-		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.GFS2Storage.CmdLines.SharedVg
+		nnfNodeStorage.Spec.SharedAllocation = nnfStorageProfile.Data.GFS2Storage.BlockDeviceCommands.SharedVg
 	}
 
 	return nnfNodeStorage, nil

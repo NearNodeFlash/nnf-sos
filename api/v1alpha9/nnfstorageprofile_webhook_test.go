@@ -179,7 +179,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 		nnfProfile.ObjectMeta.Name = pinnedResourceName
 		nnfProfile.ObjectMeta.Namespace = otherNamespaceName
 		nnfProfile.Data.Pinned = true
-		nnfProfile.Data.RawStorage.CmdLines.LvRemove = "lvremove $VG_NAME"
+		nnfProfile.Data.RawStorage.BlockDeviceCommands.RabbitCommands.LvRemove = "lvremove $VG_NAME"
 
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Eventually(func() error {
@@ -188,7 +188,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Pinned).To(BeTrue())
-		newProfile.Data.RawStorage.CmdLines.LvRemove = "lvremove $VG_NAME/$LV_NAME"
+		newProfile.Data.RawStorage.BlockDeviceCommands.RabbitCommands.LvRemove = "lvremove $VG_NAME/$LV_NAME"
 		Expect(k8sClient.Update(context.TODO(), newProfile)).To(Succeed())
 	})
 

@@ -314,7 +314,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 
 		lustreOST0 := nnfNodeStorage.Spec.FileSystemType == "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType == "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex == 0
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
-			ran, err = fileSystem.PreUnmount(ctx)
+			ran, err = fileSystem.PreTeardown(ctx, false)
 			if err != nil {
 				return nil, dwsv1alpha7.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
 			}
@@ -323,7 +323,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 			}
 		}
 
-		ran, err = fileSystem.PreDeactivate(ctx)
+		ran, err = fileSystem.PreDeactivate(ctx, false)
 		if err != nil {
 			return nil, dwsv1alpha7.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
 		}
@@ -468,19 +468,19 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			return nil, dwsv1alpha7.NewResourceError("could not run post activate").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Post activate file system", "allocation", index)
+			log.Info("Ran file system PostActivate", "allocation", index)
 		}
 
-		// For lustre, PostMount should only happen on OST0 only. For other file systems, just run
+		// For lustre, PostSetup should only happen on OST0 only. For other file systems, just run
 		// PostMount
 		lustreOST0 := nnfNodeStorage.Spec.FileSystemType == "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType == "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex == 0
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
-			ran, err = fileSystem.PostMount(ctx, allocationStatus.Ready)
+			ran, err = fileSystem.PostSetup(ctx, allocationStatus.Ready)
 			if err != nil {
 				return nil, dwsv1alpha7.NewResourceError("could not run post mount").WithError(err).WithMajor()
 			}
 			if ran {
-				log.Info("Post mount file system", "allocation", index)
+				log.Info("Ran file system PostSetup", "allocation", index)
 			}
 		}
 

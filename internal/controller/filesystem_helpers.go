@@ -89,36 +89,36 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 	switch nnfNodeStorage.Spec.FileSystemType {
 	case "raw":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.BlockDeviceCommands, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.FileSystemCommands, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
 	case "xfs":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.BlockDeviceCommands, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newXfsFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newXfsFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.FileSystemCommands, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
 	case "gfs2":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.BlockDeviceCommands, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newGfs2FileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newGfs2FileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.FileSystemCommands, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create GFS2 file system").WithError(err).WithMajor()
 		}
@@ -246,7 +246,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	return &zpool, nil
 }
 
-func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, cmdLines nnfv1alpha9.NnfStorageProfileCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, blockDeviceCommands nnfv1alpha9.NnfStorageProfileBlockDevice, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	lvmDesc := blockdevice.Lvm{}
 	devices := []string{}
 
@@ -328,21 +328,38 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
 	lvmDesc.LogicalVolume.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
-	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
-	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
+	if _, found := os.LookupEnv("RABBIT_NODE"); found {
+		lvmDesc.CommandArgs.PvArgs.Create = blockDeviceCommands.RabbitCommands.PvCreate
+		lvmDesc.CommandArgs.PvArgs.Remove = blockDeviceCommands.RabbitCommands.PvRemove
 
-	lvmDesc.CommandArgs.VgArgs.Create = cmdLines.VgCreate
-	lvmDesc.CommandArgs.VgArgs.LockStart = cmdLines.VgChange.LockStart
-	lvmDesc.CommandArgs.VgArgs.LockStop = cmdLines.VgChange.LockStop
-	lvmDesc.CommandArgs.VgArgs.Remove = cmdLines.VgRemove
-	lvmDesc.CommandArgs.VgArgs.Extend = cmdLines.LVMRebuild.VgExtend
-	lvmDesc.CommandArgs.VgArgs.Reduce = cmdLines.LVMRebuild.VgReduce
+		lvmDesc.CommandArgs.VgArgs.Create = blockDeviceCommands.RabbitCommands.VgCreate
+		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.RabbitCommands.VgChange.LockStart
+		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.RabbitCommands.VgChange.LockStop
+		lvmDesc.CommandArgs.VgArgs.Remove = blockDeviceCommands.RabbitCommands.VgRemove
+		lvmDesc.CommandArgs.VgArgs.Extend = blockDeviceCommands.RabbitCommands.LVMRebuild.VgExtend
+		lvmDesc.CommandArgs.VgArgs.Reduce = blockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce
 
-	lvmDesc.CommandArgs.LvArgs.Create = cmdLines.LvCreate
-	lvmDesc.CommandArgs.LvArgs.Activate = cmdLines.LvChange.Activate
-	lvmDesc.CommandArgs.LvArgs.Deactivate = cmdLines.LvChange.Deactivate
-	lvmDesc.CommandArgs.LvArgs.Remove = cmdLines.LvRemove
-	lvmDesc.CommandArgs.LvArgs.Repair = cmdLines.LVMRebuild.LvRepair
+		lvmDesc.CommandArgs.LvArgs.Create = blockDeviceCommands.RabbitCommands.LvCreate
+		lvmDesc.CommandArgs.LvArgs.Activate = blockDeviceCommands.RabbitCommands.LvChange.Activate
+		lvmDesc.CommandArgs.LvArgs.Deactivate = blockDeviceCommands.RabbitCommands.LvChange.Deactivate
+		lvmDesc.CommandArgs.LvArgs.Remove = blockDeviceCommands.RabbitCommands.LvRemove
+		lvmDesc.CommandArgs.LvArgs.Repair = blockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair
+
+		lvmDesc.CommandArgs.UserArgs.PreActivate = blockDeviceCommands.RabbitCommands.UserCommands.PreActivate
+		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.RabbitCommands.UserCommands.PostActivate
+		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
+		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
+	} else {
+		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.ComputeCommands.VgChange.LockStart
+		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.ComputeCommands.VgChange.LockStop
+		lvmDesc.CommandArgs.LvArgs.Activate = blockDeviceCommands.ComputeCommands.LvChange.Activate
+		lvmDesc.CommandArgs.LvArgs.Deactivate = blockDeviceCommands.ComputeCommands.LvChange.Deactivate
+
+		lvmDesc.CommandArgs.UserArgs.PreActivate = blockDeviceCommands.ComputeCommands.UserCommands.PreActivate
+		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.ComputeCommands.UserCommands.PostActivate
+		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
+		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
+	}
 
 	return &lvmDesc, nil
 }
@@ -355,7 +372,7 @@ func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nn
 	return &blockDevice, nil
 }
 
-func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, cmdLines nnfv1alpha9.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, fileSystemCommands nnfv1alpha9.NnfStorageProfileFileSystem, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -365,8 +382,22 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
+	if _, found := os.LookupEnv("RABBIT_NODE"); found {
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = fileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = fileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = fileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
+		fs.CommandArgs.PreTeardown = fileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
+	} else {
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
+	}
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
@@ -375,7 +406,7 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return &fs, nil
 }
 
-func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, cmdLines nnfv1alpha9.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, fileSystemCommands nnfv1alpha9.NnfStorageProfileFileSystem, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -385,13 +416,24 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		fs.CommandArgs.Mount = cmdLines.MountRabbit
+		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", fileSystemCommands.RabbitCommands.Mkfs)
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = fileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = fileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = fileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
+		fs.CommandArgs.PreTeardown = fileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
 	} else {
-		fs.CommandArgs.Mount = cmdLines.MountCompute
+		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
 	}
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$CLUSTER_NAME"] = nnfNodeStorage.Namespace
@@ -403,7 +445,7 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return &fs, nil
 }
 
-func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, cmdLines nnfv1alpha9.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, fileSystemCommands nnfv1alpha9.NnfStorageProfileFileSystem, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
 
 	fs.Log = log
@@ -413,13 +455,24 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		fs.CommandArgs.Mount = cmdLines.MountRabbit
+		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Mkfs = fileSystemCommands.RabbitCommands.Mkfs
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = fileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = fileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = fileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
+		fs.CommandArgs.PreTeardown = fileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
 	} else {
-		fs.CommandArgs.Mount = cmdLines.MountCompute
+		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserClientCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserClientCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
 	}
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
@@ -436,11 +489,24 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 		return nil, dwsv1alpha7.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
 	}
 
-	mountCommand := ""
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		mountCommand = clientCmdLines.MountRabbit
+		fs.CommandArgs.Mount = clientCmdLines.MountRabbit
+
+		fs.CommandArgs.PreMount = clientCmdLines.RabbitPreMount
+		fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
+		fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
+		fs.CommandArgs.PostUnmount = clientCmdLines.RabbitPostUnmount
+
+		fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
+		fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
+		fs.CommandArgs.PostSetup = clientCmdLines.RabbitPostSetup
+		fs.CommandArgs.PreTeardown = clientCmdLines.RabbitPreTeardown
 	} else {
-		mountCommand = clientCmdLines.MountCompute
+		fs.CommandArgs.Mount = clientCmdLines.MountCompute
+		fs.CommandArgs.PreMount = clientCmdLines.ComputePreMount
+		fs.CommandArgs.PostMount = clientCmdLines.ComputePostMount
+		fs.CommandArgs.PreUnmount = clientCmdLines.ComputePreUnmount
+		fs.CommandArgs.PostUnmount = clientCmdLines.ComputePostUnmount
 	}
 
 	fs.Log = log
@@ -453,11 +519,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
 	fs.CommandArgs.Mkfs = targetCmdLines.Mkfs
 	fs.CommandArgs.MountTarget = targetCmdLines.MountTarget
-	fs.CommandArgs.Mount = mountCommand
-	fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
-	fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
-	fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
-	fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
+
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents

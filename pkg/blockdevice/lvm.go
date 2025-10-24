@@ -55,10 +55,20 @@ type LvmLvCommandArgs struct {
 	Repair     string
 }
 
+type LvmUserCommandArgs struct {
+	PreActivate    []string
+	PostActivate   []string
+	PreDeactivate  []string
+	PostDeactivate []string
+}
+
 type LvmCommandArgs struct {
-	PvArgs LvmPvCommandArgs
-	VgArgs LvmVgCommandArgs
-	LvArgs LvmLvCommandArgs
+	PvArgs   LvmPvCommandArgs
+	VgArgs   LvmVgCommandArgs
+	LvArgs   LvmLvCommandArgs
+	UserArgs LvmUserCommandArgs
+
+	Vars map[string]string
 }
 
 type Lvm struct {
@@ -371,4 +381,53 @@ func (l *Lvm) Repair(ctx context.Context) (err error) {
 	}
 
 	return nil
+}
+
+func (l *Lvm) RunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
+	if len(commands) == 0 {
+		return false, nil
+	}
+
+	if complete {
+		return false, nil
+	}
+
+	// Build the commands from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+
+	for k, v := range args {
+		l.CommandArgs.Vars[k] = v
+	}
+
+	for _, rawCommand := range commands {
+		formattedCommand, err := l.LogicalVolume.ParseArgs(rawCommand)
+		if err != nil {
+			return false, fmt.Errorf("could not format %s command: %s: %w", phase, rawCommand, err)
+		}
+		l.Log.Info(phase, "command", formattedCommand)
+
+		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
+		}
+	}
+
+	return true, nil
+}
+
+func (l *Lvm) PreActivate(ctx context.Context, complete bool) (bool, error) {
+	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PreActivate, "PreActivate", nil)
+}
+
+func (l *Lvm) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PostActivate, "PostActivate", nil)
+}
+
+func (l *Lvm) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PreDeactivate, "PreDeactivate", nil)
+}
+
+func (l *Lvm) PostDeactivate(ctx context.Context, complete bool) (bool, error) {
+	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PostDeactivate, "PostDeactivate", nil)
 }

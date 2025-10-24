@@ -634,13 +634,13 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			}
 
 			sharedAllocation := false
-			if dwArgs["type"] == "gfs2" && nnfStorageProfile.Data.GFS2Storage.CmdLines.SharedVg {
+			if dwArgs["type"] == "gfs2" && nnfStorageProfile.Data.GFS2Storage.BlockDeviceCommands.SharedVg {
 				sharedAllocation = true
 			}
-			if dwArgs["type"] == "xfs" && nnfStorageProfile.Data.XFSStorage.CmdLines.SharedVg {
+			if dwArgs["type"] == "xfs" && nnfStorageProfile.Data.XFSStorage.BlockDeviceCommands.SharedVg {
 				sharedAllocation = true
 			}
-			if dwArgs["type"] == "raw" && nnfStorageProfile.Data.RawStorage.CmdLines.SharedVg {
+			if dwArgs["type"] == "raw" && nnfStorageProfile.Data.RawStorage.BlockDeviceCommands.SharedVg {
 				sharedAllocation = true
 			}
 

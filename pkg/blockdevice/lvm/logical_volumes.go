@@ -67,7 +67,7 @@ func (lv *LogicalVolume) Exists(ctx context.Context) (bool, error) {
 	return false, nil
 }
 
-func (lv *LogicalVolume) parseArgs(args string) (string, error) {
+func (lv *LogicalVolume) ParseArgs(args string) (string, error) {
 	deviceNames := []string{}
 	for _, pv := range lv.VolumeGroup.PhysicalVolumes {
 		deviceNames = append(deviceNames, pv.Device)
@@ -104,7 +104,7 @@ func (lv *LogicalVolume) Create(ctx context.Context, rawArgs string) (bool, erro
 		return false, nil
 	}
 
-	args, err := lv.parseArgs(rawArgs)
+	args, err := lv.ParseArgs(rawArgs)
 	if err != nil {
 		return false, err
 	}
@@ -132,7 +132,7 @@ func (lv *LogicalVolume) Remove(ctx context.Context, rawArgs string) (bool, erro
 		return false, nil
 	}
 
-	args, err := lv.parseArgs(rawArgs)
+	args, err := lv.ParseArgs(rawArgs)
 	if err != nil {
 		return false, err
 	}
@@ -160,7 +160,7 @@ func (lv *LogicalVolume) Change(ctx context.Context, rawArgs string) (bool, erro
 		return false, nil
 	}
 
-	args, err := lv.parseArgs(rawArgs)
+	args, err := lv.ParseArgs(rawArgs)
 	if err != nil {
 		return false, err
 	}
@@ -246,7 +246,7 @@ func (lv *LogicalVolume) Repair(ctx context.Context, rawArgs string) (bool, erro
 		return true, nil
 	}
 
-	args, err := lv.parseArgs(rawArgs)
+	args, err := lv.ParseArgs(rawArgs)
 	if err != nil {
 		return false, err
 	}
