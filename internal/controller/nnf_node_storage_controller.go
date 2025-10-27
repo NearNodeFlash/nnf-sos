@@ -506,11 +506,13 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	maxReconciles := runtime.GOMAXPROCS(0)
-	return ctrl.NewControllerManagedBy(mgr).
+
+	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha9.NnfNodeStorage{}).
 		// Trigger the reconciler for any changes to the associated NnfNodeBlockStorage. If we're waiting
 		// on the block device paths to get updated, we want to be notified when it happens.
-		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
-		Complete(r)
+		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc))
+
+	return builder.Complete(r)
 }
