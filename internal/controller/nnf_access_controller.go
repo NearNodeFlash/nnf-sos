@@ -1204,23 +1204,35 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			return false, nil
 		}
 
+		// Check if all mounts are ready and in the correct state
+		allMountsReady := true
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State || !mount.Ready {
-				if string(mount.State) == "unmounted" {
-					offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
-					if err != nil {
-						return false, err
-					}
-					// If the compute node is down, then ignore an unmount failure. If the compute node
-					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
-					if offline {
-						log.Info("ignoring status from offline compute node", "node name", clientMount.GetNamespace())
-						continue
-					}
-				}
-
-				return false, nil
+				allMountsReady = false
+				break
 			}
+		}
+
+		// If mounts aren't ready, check if this compute node is offline/fenced
+		// Only do the expensive offline check when we need it to handle failures gracefully
+		if !allMountsReady || access.Spec.DesiredState == "unmounted" {
+			offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+			if err != nil {
+				return false, err
+			}
+
+			// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+			// from this node since it can't respond. The filesystem won't be remounted if the
+			// compute comes back since spec.desiredState is "unmounted"
+			if offline && access.Spec.DesiredState == "unmounted" {
+				log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				continue
+			}
+		}
+
+		// If mounts aren't ready and node isn't offline (or we're not unmounting), return false
+		if !allMountsReady {
+			return false, nil
 		}
 	}
 
@@ -1302,10 +1314,13 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 // checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
 // compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection).
 // It also checks the SystemStatus resource to see if the compute node is marked as Disabled.
+// It also checks for fence response files indicating the node has been fenced.
 func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha9.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, error) {
 	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
 		return false, nil
 	}
+
+	computeName := clientMount.GetNamespace()
 
 	// Find the name of the Rabbit attached to the compute node
 	rabbitName, err := r.getRabbitFromClientMount(ctx, clientMount)
@@ -1314,6 +1329,8 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	// Get the Storage resource for the Rabbit
+	// The Storage controller syncs compute node status from NnfNode.Status.Servers to Storage.Status.Access.Computes
+	// This includes marking fenced compute nodes as offline
 	storage := &dwsv1alpha7.Storage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rabbitName,
@@ -1326,7 +1343,6 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	// Check the status of the compute node in the Storage resource to determine if it's offline
-	computeName := clientMount.GetNamespace()
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
 			if compute.Status == dwsv1alpha7.OfflineStatus {

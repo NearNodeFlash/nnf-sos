@@ -252,14 +252,17 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 
 	var firstError error
 	for i := range clientMount.Spec.Mounts {
+		// If the state is different than the desired state, set Ready to false
+		if clientMount.Status.Mounts[i].State != state {
+			clientMount.Status.Mounts[i].Ready = false
+		}
 
 		var err error
-
 		switch state {
 		case dwsv1alpha7.ClientMountStateMounted:
-			err = r.changeMount(ctx, clientMount, i, true)
+			err = r.changeMount(ctx, clientMount, i, true /* shouldMount */)
 		case dwsv1alpha7.ClientMountStateUnmounted:
-			err = r.changeMount(ctx, clientMount, i, false)
+			err = r.changeMount(ctx, clientMount, i, false /* should(NOT)Mount */)
 		default:
 			return dwsv1alpha7.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
@@ -384,6 +387,11 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 	} else {
 
+		if clientMount.Status.Mounts[index].Ready {
+			log.Info("File system already unmounted, skipping", "Mount path", clientMountInfo.MountPath)
+			return nil
+		}
+
 		ran, err := fileSystem.PreUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PreUnmount commands").WithError(err).WithMajor()
@@ -397,7 +405,6 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
 			return nil
 		}
-
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
@@ -430,6 +437,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
+			log.Error(err, "unable to deactivate block device")
+
 			// Log some debug information to figure out why the deactivate failed
 			devices, err := nvme.NvmeGetNamespaceDevices()
 			if err != nil {
