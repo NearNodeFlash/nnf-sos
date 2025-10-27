@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -30,11 +31,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
@@ -68,6 +71,9 @@ type NnfNodeStorageReconciler struct {
 	sync.Mutex
 	started         bool
 	reconcilerAwake bool
+
+	// GFS2 fence watcher
+	fenceWatcher *GFS2FenceWatcher
 }
 
 func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
@@ -76,6 +82,18 @@ func (r *NnfNodeStorageReconciler) Start(ctx context.Context) error {
 	<-r.SemaphoreForStart
 
 	log.Info("Ready to start")
+
+	// Initialize and start the GFS2 fence watcher
+	var err error
+	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name)
+	if err != nil {
+		log.Error(err, "Failed to create GFS2 fence watcher")
+		// Don't fail startup if watcher fails - log and continue
+	} else {
+		if err := r.fenceWatcher.Start(ctx); err != nil {
+			log.Error(err, "Failed to start GFS2 fence watcher")
+		}
+	}
 
 	r.Lock()
 	r.started = true
@@ -107,6 +125,20 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		r.reconcilerAwake = true
 	}
 	r.Unlock()
+
+	// Check if this reconcile was triggered by a fence request
+	if r.fenceWatcher != nil {
+		if files, err := os.ReadDir(gfs2FenceRequestDir); err == nil && len(files) > 0 {
+			fileNames := make([]string, 0, len(files))
+			for _, f := range files {
+				fileNames = append(fileNames, f.Name())
+			}
+			log.Info("Reconcile triggered - fence request files present",
+				"count", len(files),
+				"directory", gfs2FenceRequestDir,
+				"files", fileNames)
+		}
+	}
 
 	metrics.NnfNodeStorageReconcilesTotal.Inc()
 
@@ -505,11 +537,43 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	maxReconciles := runtime.GOMAXPROCS(0)
-	return ctrl.NewControllerManagedBy(mgr).
+
+	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha9.NnfNodeStorage{}).
 		// Trigger the reconciler for any changes to the associated NnfNodeBlockStorage. If we're waiting
 		// on the block device paths to get updated, we want to be notified when it happens.
-		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
-		Complete(r)
+		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc))
+
+	// Add a custom event source for GFS2 fence requests if the watcher is initialized
+	// Note: The watcher will be initialized in Start(), so this will be set up after that
+	if r.fenceWatcher != nil {
+		builder = builder.WatchesRawSource(&gfs2FenceEventSource{
+			reconcileChan: r.fenceWatcher.GetReconcileChannel(),
+		}, &handler.EnqueueRequestForObject{})
+	}
+
+	return builder.Complete(r)
+}
+
+// gfs2FenceEventSource implements source.Source to feed fence requests into the reconciler
+type gfs2FenceEventSource struct {
+	reconcileChan <-chan reconcile.Request
+}
+
+func (s *gfs2FenceEventSource) Start(ctx context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, prct ...predicate.Predicate) error {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case req, ok := <-s.reconcileChan:
+				if !ok {
+					return
+				}
+				queue.Add(req)
+			}
+		}
+	}()
+	return nil
 }
