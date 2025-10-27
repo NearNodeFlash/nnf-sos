@@ -21,13 +21,16 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
@@ -50,6 +53,7 @@ import (
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -73,9 +77,12 @@ type NnfNodeReconciler struct {
 	types.NamespacedName
 
 	sync.Mutex
-	Events          chan event.GenericEvent
-	started         bool
-	reconcilerAwake bool
+	Events             chan event.GenericEvent
+	started            bool
+	reconcilerAwake    bool
+	requestWatcher     *fsnotify.Watcher       // Watches request directory to trigger BlockStorage reconcile
+	responseWatcher    *fsnotify.Watcher       // Watches response directory to trigger NnfNode reconcile
+	blockStorageEvents chan event.GenericEvent // Channel to trigger BlockStorage reconciles
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch
@@ -175,6 +182,50 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 	// Subscribe to the NNF Event Manager
 	nnfevent.EventManager.Subscribe(r)
+
+	// Initialize fsnotify watcher for fence request directory to trigger BlockStorage reconciles
+	var err error
+	r.blockStorageEvents = make(chan event.GenericEvent, 100)
+	r.requestWatcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create fence request watcher: %w", err)
+	}
+
+	// Create fence request directory if it doesn't exist
+	if err := os.MkdirAll(fence.RequestDir, 0755); err != nil {
+		log.Error(err, "Failed to create fence request directory")
+		return fmt.Errorf("failed to create fence request directory: %w", err)
+	}
+
+	// Add fence request directory to watcher
+	if err := r.requestWatcher.Add(fence.RequestDir); err != nil {
+		log.Error(err, "Failed to add fence request directory to watcher")
+		return fmt.Errorf("failed to add fence request directory to watcher: %w", err)
+	}
+
+	// Start goroutine to watch for fence request files and trigger BlockStorage reconciles
+	go r.watchFenceRequests(ctx, log)
+
+	// Initialize fsnotify watcher for fence response directory to trigger NnfNode reconciles
+	r.responseWatcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("failed to create fence response watcher: %w", err)
+	}
+
+	// Create fence response directory if it doesn't exist
+	if err := os.MkdirAll(fence.ResponseDir, 0755); err != nil {
+		log.Error(err, "Failed to create fence response directory")
+		return fmt.Errorf("failed to create fence response directory: %w", err)
+	}
+
+	// Add fence response directory to watcher
+	if err := r.responseWatcher.Add(fence.ResponseDir); err != nil {
+		log.Error(err, "Failed to add fence response directory to watcher")
+		return fmt.Errorf("failed to add fence response directory to watcher: %w", err)
+	}
+
+	// Start goroutine to watch for fence response files and trigger NnfNode reconciles
+	go r.watchFenceResponses(ctx, log)
 
 	r.Lock()
 	r.started = true
@@ -327,6 +378,13 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		}
 	}
 
+	// Check for fence response files for compute nodes on this Rabbit
+	// This must run after hostnames are populated above
+	if err := r.checkFencedStatus(ctx, node, log); err != nil {
+		log.Error(err, "Failed to check fenced status")
+		// Don't fail the reconcile, just log the error and continue
+	}
+
 	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
 	if found || os.Getenv("ENVIRONMENT") == "kind" {
 		node.Status.LNetNid = "1.2.3.4@tcp"
@@ -411,6 +469,93 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 	return nil
 }
 
+// checkFencedStatus checks for fence response files for any of the compute nodes
+// attached to this Rabbit and marks those compute servers as offline.
+func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1alpha9.NnfNode, log logr.Logger) error {
+	// Check if the fence response directory exists
+	if _, err := os.Stat(fence.ResponseDir); err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist, no fenced computes
+			return nil
+		}
+		// Some other error accessing directory
+		return fmt.Errorf("error checking fence response directory: %w", err)
+	}
+
+	// Read all files in the response directory
+	entries, err := os.ReadDir(fence.ResponseDir)
+	if err != nil {
+		return fmt.Errorf("error reading fence response directory: %w", err)
+	}
+
+	// Build a map of fenced compute nodes from fence response files
+	fencedComputes := make(map[string]bool)
+
+	// Check if any compute node attached to this Rabbit has a fence response file
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		// Read and parse the fence response file
+		responsePath := filepath.Join(fence.ResponseDir, entry.Name())
+		data, err := os.ReadFile(responsePath)
+		if err != nil {
+			log.Error(err, "Failed to read fence response file", "file", responsePath)
+			continue
+		}
+
+		var response struct {
+			TargetNode string `json:"target_node"`
+			Success    bool   `json:"success"`
+		}
+
+		if err := json.Unmarshal(data, &response); err != nil {
+			log.Error(err, "Failed to parse fence response", "file", responsePath)
+			continue
+		}
+
+		log.Info("Found fence response file", "file", entry.Name(), "targetNode", response.TargetNode, "success", response.Success)
+
+		// Track fenced computes
+		if response.Success {
+			fencedComputes[response.TargetNode] = true
+		}
+	}
+
+	log.Info("Fenced computes map", "fencedComputes", fencedComputes)
+
+	// Update all server statuses based on fence state
+	for i := range node.Status.Servers {
+		server := &node.Status.Servers[i]
+		// Skip the Rabbit node itself (ID 0)
+		if server.ID == "0" {
+			continue
+		}
+
+		log.Info("Checking server fence status", "serverID", server.ID, "hostname", server.Hostname, "isFenced", fencedComputes[server.Hostname])
+
+		// Check if this compute has a fence response file
+		if fencedComputes[server.Hostname] {
+			// Mark as fenced only if not already marked
+			if server.Status != nnfv1alpha9.ResourceOffline {
+				log.Info("Marking compute node as fenced/offline", "compute", server.Hostname)
+				node.Status.Servers[i].Status = nnfv1alpha9.ResourceOffline
+				node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
+			}
+		} else {
+			// No fence file exists - if it was previously marked as offline due to fencing,
+			// the status will be refreshed by updateServers() from nnf-ec on the next reconcile
+			// We just need to clear any fence annotations
+			if server.Status == nnfv1alpha9.ResourceOffline {
+				log.Info("Compute node is no longer fenced (fence response removed)", "compute", server.Hostname)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Update the Drives status of the NNF Node if necessary
 func updateDrives(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	storageService := nvme.NewDefaultStorageService()
@@ -483,6 +628,157 @@ func updateDrives(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	}
 
 	return nil
+}
+
+// watchFenceRequests monitors the fence request directory and triggers NnfNodeBlockStorage
+// reconciles for affected resources
+func (r *NnfNodeReconciler) watchFenceRequests(ctx context.Context, log logr.Logger) {
+	log = log.WithValues("component", "fenceRequestWatcher")
+	log.Info("Started watching fence request directory", "dir", fence.RequestDir)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping fence request watcher")
+			r.requestWatcher.Close()
+			return
+
+		case fsEvent, ok := <-r.requestWatcher.Events:
+			if !ok {
+				return
+			}
+
+			// Process Write events for new fence requests
+			if fsEvent.Op&fsnotify.Write == fsnotify.Write {
+				// Brief delay to ensure file is fully flushed
+				time.Sleep(50 * time.Millisecond) // Parse the fence request to get the target node
+				data, err := os.ReadFile(fsEvent.Name)
+				if err != nil {
+					log.Error(err, "Failed to read fence request file", "file", fsEvent.Name)
+					continue
+				}
+
+				var request FenceRequest
+				if err := json.Unmarshal(data, &request); err != nil {
+					log.Error(err, "Failed to parse fence request file", "file", fsEvent.Name)
+					continue
+				}
+
+				log.Info("Detected fence request", "targetNode", request.TargetNode, "requestID", request.RequestID)
+
+				// Find all NnfNodeBlockStorage resources with GFS2 allocations that have access
+				// from this compute node, and trigger their reconciliation
+				r.triggerBlockStorageReconciles(ctx, request.TargetNode, log)
+			}
+
+		case err, ok := <-r.requestWatcher.Errors:
+			if !ok {
+				return
+			}
+			log.Error(err, "Fence request watcher error")
+		}
+	}
+}
+
+// watchFenceResponses watches the fence response directory and triggers NnfNode reconciliation
+// when response files are written (fencing) or deleted (unfencing). This allows the NnfNode to
+// update compute node fenced status.
+func (r *NnfNodeReconciler) watchFenceResponses(ctx context.Context, log logr.Logger) {
+	log = log.WithValues("component", "fenceResponseWatcher")
+	log.Info("Started watching fence response directory", "dir", fence.ResponseDir)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Stopping fence response watcher")
+			r.responseWatcher.Close()
+			return
+
+		case fsEvent, ok := <-r.responseWatcher.Events:
+			if !ok {
+				return
+			}
+
+			// Response write indicates fence operation complete, delete indicates unfencing
+			if fsEvent.Op&(fsnotify.Write|fsnotify.Remove) != 0 {
+				filename := filepath.Base(fsEvent.Name)
+				action := "written"
+				if fsEvent.Op&fsnotify.Remove != 0 {
+					action = "removed"
+				}
+				log.Info("Fence response file event, triggering NnfNode reconcile", "file", filename, "action", action)
+
+				// Trigger reconciliation of this NnfNode
+				r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNode{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      r.Name,
+						Namespace: r.Namespace,
+					},
+				}}
+			}
+
+		case err, ok := <-r.responseWatcher.Errors:
+			if !ok {
+				return
+			}
+			log.Error(err, "Fence response watcher error")
+		}
+	}
+}
+
+// triggerBlockStorageReconciles finds all GFS2 NnfNodeBlockStorage resources that grant access
+// to the given compute node and triggers their reconciliation
+func (r *NnfNodeReconciler) triggerBlockStorageReconciles(ctx context.Context, computeNode string, log logr.Logger) {
+	// List all NnfNodeBlockStorage resources in this namespace
+	blockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
+	if err := r.List(ctx, blockStorageList, client.InNamespace(r.Namespace)); err != nil {
+		log.Error(err, "Failed to list NnfNodeBlockStorage resources")
+		return
+	}
+
+	triggered := 0
+	for _, nnfNodeBlockStorage := range blockStorageList.Items {
+		// Only process GFS2 filesystems
+		allocationSet, hasLabel := nnfNodeBlockStorage.Labels["nnf.cray.hpe.com/allocationset"]
+		if !hasLabel || allocationSet != "gfs2" {
+			continue
+		}
+
+		// Check if this NnfNodeBlockStorage has allocations with access from the compute node
+		hasAccess := false
+		for _, allocation := range nnfNodeBlockStorage.Status.Allocations {
+			if allocation.Accesses != nil {
+				if _, found := allocation.Accesses[computeNode]; found {
+					hasAccess = true
+					break
+				}
+			}
+		}
+
+		if hasAccess {
+			log.Info("Triggering reconcile for GFS2 NnfNodeBlockStorage with compute node access",
+				"nnfNodeBlockStorage", nnfNodeBlockStorage.Name,
+				"computeNode", computeNode)
+
+			// Trigger reconciliation by sending an event
+			r.blockStorageEvents <- event.GenericEvent{
+				Object: &nnfv1alpha9.NnfNodeBlockStorage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nnfNodeBlockStorage.Name,
+						Namespace: nnfNodeBlockStorage.Namespace,
+					},
+				},
+			}
+			triggered++
+		}
+	}
+
+	log.Info("Triggered NnfNodeBlockStorage reconciliations", "count", triggered, "computeNode", computeNode)
+}
+
+// GetBlockStorageEvents returns the channel for triggering BlockStorage reconciles
+func (r *NnfNodeReconciler) GetBlockStorageEvents() chan event.GenericEvent {
+	return r.blockStorageEvents
 }
 
 // If the SystemConfiguration resource changes, generate a reconcile.Request

@@ -21,9 +21,11 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -59,6 +61,7 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 )
 
 const (
@@ -82,6 +85,7 @@ type NnfNodeBlockStorageReconciler struct {
 
 	sync.Mutex
 	Events          chan event.GenericEvent
+	FenceEvents     chan event.GenericEvent // Receives fence events from NnfNode
 	started         bool
 	reconcilerAwake bool
 }
@@ -288,6 +292,28 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	nodeBlockStorage.Status.Ready = true
 
+	// Check for fence requests after all normal BlockStorage operations are complete
+	// This ensures the storage is properly configured before attempting fence operations
+	computeNodes := r.getComputeNodesWithAccess(nodeBlockStorage)
+	if len(computeNodes) > 0 {
+		fenceRequests, err := r.scanFenceRequests(computeNodes, log)
+		if err != nil {
+			log.Error(err, "Failed to scan fence requests")
+			// Don't fail the reconcile, continue
+		} else if len(fenceRequests) > 0 {
+			log.Info("Fence requests detected for compute nodes with access",
+				"blockStorage", nodeBlockStorage.Name,
+				"computeNodes", computeNodes,
+				"requestCount", len(fenceRequests))
+
+			// Process fence requests - delete storage groups to fence the compute nodes
+			if err := r.processFenceRequests(ctx, fenceRequests, log); err != nil {
+				log.Error(err, "Failed to process fence requests")
+				// Don't fail the reconcile, just log the error
+			}
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -423,6 +449,16 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			}
 
 		} else {
+			// Check if this compute node has been fenced before creating/restoring a storage group
+			fenced, err := r.checkComputeFenced(nodeName, log)
+			if err != nil {
+				log.Error(err, "Error checking for fence response", "compute", nodeName)
+				// Continue despite error to avoid blocking reconciliation
+			} else if fenced {
+				log.Info("Skipping storage group creation for fenced compute node", "compute", nodeName, "storageGroupId", storageGroupId)
+				continue
+			}
+
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
 				allocationStatus.Accesses[nodeName] = nnfv1alpha9.NnfNodeBlockStorageAccessStatus{StorageGroupId: storageGroupId}
@@ -644,7 +680,275 @@ func (r *NnfNodeBlockStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi
 }
 
 func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) error {
-	return ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
+	err := ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
+	if err != nil {
+		ecErr, ok := err.(*ec.ControllerError)
+		// If the error is from a 404 error, treat as success (idempotent deletion)
+		if ok && ecErr.StatusCode() == http.StatusNotFound {
+			return nil
+		}
+	}
+	return err
+}
+
+// getComputeNodesWithAccess returns a list of compute node names that have access to this NnfNodeBlockStorage
+func (r *NnfNodeBlockStorageReconciler) getComputeNodesWithAccess(blockStorage *nnfv1alpha9.NnfNodeBlockStorage) []string {
+	computeNodes := make(map[string]bool)
+
+	for _, allocation := range blockStorage.Status.Allocations {
+		if allocation.Accesses != nil {
+			for computeNode := range allocation.Accesses {
+				computeNodes[computeNode] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(computeNodes))
+	for computeNode := range computeNodes {
+		result = append(result, computeNode)
+	}
+	return result
+}
+
+// scanFenceRequests scans the fence request directory for requests targeting any of the given compute nodes
+func (r *NnfNodeBlockStorageReconciler) scanFenceRequests(computeNodes []string, log logr.Logger) ([]*FenceRequest, error) {
+	// Check if fence request directory exists
+	if _, err := os.Stat(fence.RequestDir); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	// Create a map for fast lookup
+	computeNodeMap := make(map[string]bool)
+	for _, node := range computeNodes {
+		computeNodeMap[node] = true
+	}
+
+	// Read all files in the request directory
+	entries, err := os.ReadDir(fence.RequestDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var fenceRequests []*FenceRequest
+
+	// Check each request file to see if it's for this compute node
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		requestFile := filepath.Join(fence.RequestDir, entry.Name())
+		data, err := os.ReadFile(requestFile)
+		if err != nil {
+			log.Error(err, "Failed to read fence request file", "file", requestFile)
+			continue
+		}
+
+		var request FenceRequest
+		if err := json.Unmarshal(data, &request); err != nil {
+			log.Error(err, "Failed to parse fence request file", "file", requestFile)
+			continue
+		}
+
+		// Store the file path for later cleanup
+		request.FilePath = requestFile
+
+		// If this request is for one of our compute nodes, check if already processed
+		if computeNodeMap[request.TargetNode] {
+			// Check if response already exists (handle crash between response write and request delete)
+			responseFilename := filepath.Base(requestFile)
+			responseFile := filepath.Join(fence.ResponseDir, responseFilename)
+			if _, err := os.Stat(responseFile); err == nil {
+				// Response exists but request wasn't deleted - clean up the orphaned request file
+				log.Info("Response already exists for fence request, cleaning up orphaned request file",
+					"requestID", request.RequestID,
+					"computeNode", request.TargetNode,
+					"requestFile", requestFile,
+					"responseFile", responseFile)
+				if err := os.Remove(requestFile); err != nil {
+					log.Error(err, "Failed to remove orphaned fence request file", "file", requestFile)
+				}
+				continue
+			}
+
+			fenceRequests = append(fenceRequests, &request)
+		}
+	}
+
+	return fenceRequests, nil
+}
+
+// processFenceRequests handles fence requests by finding and deleting storage groups for the compute nodes.
+func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context, fenceRequests []*FenceRequest, log logr.Logger) error {
+	// Build a map of compute nodes from the fence requests
+	computeNodeMap := make(map[string]bool)
+	for _, request := range fenceRequests {
+		computeNodeMap[request.TargetNode] = true
+	}
+
+	// List all NnfNodeBlockStorage resources in this rabbit node's namespace
+	nnfNodeBlockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
+	listOptions := []client.ListOption{
+		client.InNamespace(r.Namespace),
+	}
+	if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
+		return err
+	}
+
+	storageGroupsToDelete := []string{}
+
+	// Iterate through each NnfNodeBlockStorage resource
+	for _, blockStorage := range nnfNodeBlockStorageList.Items {
+		// Only process GFS2 filesystems - check the allocationset label
+		allocationSet, hasLabel := blockStorage.Labels["nnf.cray.hpe.com/allocationset"]
+		if !hasLabel || allocationSet != "gfs2" {
+			log.V(1).Info("Skipping non-GFS2 block storage",
+				"blockStorage", blockStorage.Name,
+				"allocationset", allocationSet)
+			continue
+		}
+
+		// Check each allocation for accesses by any of the fenced compute nodes
+		for _, allocation := range blockStorage.Status.Allocations {
+			if allocation.Accesses == nil {
+				continue
+			}
+
+			// Check if any fenced compute node has access to this allocation
+			for computeNode := range computeNodeMap {
+				if access, found := allocation.Accesses[computeNode]; found {
+					storageGroupID := access.StorageGroupId
+					if storageGroupID != "" {
+						log.Info("Found GFS2 storage group for fenced node",
+							"computeNode", computeNode,
+							"storageGroupId", storageGroupID,
+							"blockStorage", blockStorage.Name,
+							"namespace", blockStorage.Namespace,
+							"allocationset", allocationSet)
+						storageGroupsToDelete = append(storageGroupsToDelete, storageGroupID)
+					}
+				}
+			}
+		}
+	}
+
+	// Determine success and message
+	success := false
+	message := ""
+	actionPerformed := "off"
+
+	// Get list of compute nodes for logging
+	computeNodes := make([]string, 0, len(computeNodeMap))
+	for node := range computeNodeMap {
+		computeNodes = append(computeNodes, node)
+	}
+
+	// Delete the storage groups to fence the nodes
+	if len(storageGroupsToDelete) > 0 {
+		log.Info("Deleting GFS2 storage groups to fence nodes",
+			"computeNodes", computeNodes,
+			"storageGroupIds", storageGroupsToDelete,
+			"count", len(storageGroupsToDelete))
+
+		// Get the storage service
+		ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
+
+		deletedCount := 0
+		var deleteErrors []string
+
+		// Delete each storage group
+		for _, storageGroupID := range storageGroupsToDelete {
+			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
+				log.Error(err, "Failed to delete storage group",
+					"storageGroupId", storageGroupID,
+					"computeNodes", computeNodes)
+				deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", storageGroupID, err))
+			} else {
+				log.Info("Successfully deleted storage group",
+					"storageGroupId", storageGroupID,
+					"computeNodes", computeNodes)
+				deletedCount++
+			}
+		}
+
+		// Set success based on whether we deleted all storage groups
+		if deletedCount == len(storageGroupsToDelete) {
+			success = true
+			actionPerformed = "off"
+			message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
+		} else if deletedCount > 0 {
+			success = false
+			message = fmt.Sprintf("Partially fenced node: deleted %d of %d storage groups. Errors: %s",
+				deletedCount, len(storageGroupsToDelete), strings.Join(deleteErrors, "; "))
+		} else {
+			success = false
+			message = fmt.Sprintf("Failed to fence node: could not delete any storage groups. Errors: %s",
+				strings.Join(deleteErrors, "; "))
+		}
+	} else {
+		log.Info("No GFS2 storage groups found for compute nodes", "computeNodes", computeNodes)
+		success = true
+		actionPerformed = "off"
+		message = fmt.Sprintf("No GFS2 storage groups found for compute nodes %v (already fenced or no GFS2 access)", computeNodes)
+	}
+
+	// Process each fence request
+	for _, request := range fenceRequests {
+		// Write response file
+		if err := r.writeFenceResponse(request, success, message, actionPerformed, log); err != nil {
+			log.Error(err, "Failed to write fence response", "requestID", request.RequestID)
+			// Don't delete the request file if we couldn't write the response
+			// The fence agent needs the response to complete the fencing operation
+			continue
+		}
+
+		// Clean up the fence request file after successfully writing the response
+		if request.FilePath != "" {
+			if err := os.Remove(request.FilePath); err != nil {
+				log.Error(err, "Failed to remove fence request file", "file", request.FilePath)
+			} else {
+				log.Info("Removed processed fence request file", "file", request.FilePath)
+			}
+		}
+	}
+
+	return nil
+}
+
+// writeFenceResponse writes a response file for the fence agent
+func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(request *FenceRequest, success bool, message string, actionPerformed string, log logr.Logger) error {
+	// Ensure response directory exists
+	if err := os.MkdirAll(fence.ResponseDir, 0755); err != nil {
+		return err
+	}
+
+	// Use the same filename as the request file for consistency
+	requestFilename := filepath.Base(request.FilePath)
+	responseFile := filepath.Join(fence.ResponseDir, requestFilename)
+
+	// Include all fields from the request in the response
+	response := map[string]interface{}{
+		"request_id":       request.RequestID,
+		"timestamp":        request.Timestamp,
+		"action":           request.Action,
+		"target_node":      request.TargetNode,
+		"recorder_node":    request.RecorderNode,
+		"success":          success,
+		"message":          message,
+		"action_performed": actionPerformed,
+	}
+
+	data, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(responseFile, data, 0644); err != nil {
+		return err
+	}
+
+	log.Info("Wrote fence response", "requestID", request.RequestID, "file", responseFile, "success", success)
+	return nil
 }
 
 // Enqueue all the NnfNodeBlockStorage resources after an nnf-ec node-up/node-down event. If we
@@ -688,6 +992,52 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 	return requests
 }
 
+// checkComputeFenced checks if a fence response file exists for the given compute node,
+// indicating it has been fenced and should not have storage groups restored
+func (r *NnfNodeBlockStorageReconciler) checkComputeFenced(computeName string, log logr.Logger) (bool, error) {
+	// Check if fence response directory exists
+	if _, err := os.Stat(fence.ResponseDir); os.IsNotExist(err) {
+		return false, nil
+	}
+
+	// Read all files in the response directory
+	entries, err := os.ReadDir(fence.ResponseDir)
+	if err != nil {
+		return false, err
+	}
+
+	// Check each response file to see if it's for this compute node
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		responseFile := filepath.Join(fence.ResponseDir, entry.Name())
+		data, err := os.ReadFile(responseFile)
+		if err != nil {
+			log.Error(err, "Failed to read fence response file", "file", responseFile)
+			continue
+		}
+
+		var response struct {
+			TargetNode string `json:"target_node"`
+			Success    bool   `json:"success"`
+		}
+
+		if err := json.Unmarshal(data, &response); err != nil {
+			log.Error(err, "Failed to parse fence response file", "file", responseFile)
+			continue
+		}
+
+		// If this response is for our compute node and the fence was successful, it's fenced
+		if response.TargetNode == computeName && response.Success {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.Add(r); err != nil {
@@ -695,9 +1045,15 @@ func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error
 	}
 
 	// nnf-ec is not thread safe, so we are limited to a single reconcile thread.
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		For(&nnfv1alpha9.NnfNodeBlockStorage{}).
-		WatchesRawSource(&source.Channel{Source: r.Events}, handler.EnqueueRequestsFromMapFunc(r.NnfEcEventEnqueueHandler)).
-		Complete(r)
+		WatchesRawSource(&source.Channel{Source: r.Events}, handler.EnqueueRequestsFromMapFunc(r.NnfEcEventEnqueueHandler))
+
+	// Watch fence events from NnfNode (only if channel was provided)
+	if r.FenceEvents != nil {
+		builder = builder.WatchesRawSource(&source.Channel{Source: r.FenceEvents}, &handler.EnqueueRequestForObject{})
+	}
+
+	return builder.Complete(r)
 }

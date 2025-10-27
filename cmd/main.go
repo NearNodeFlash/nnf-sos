@@ -235,7 +235,7 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 	// Coordinate the startup of the NLC controllers that use EC.
 
 	semNnfNodeDone := make(chan struct{})
-	if err := (&controllers.NnfNodeReconciler{
+	nnfNodeReconciler := &controllers.NnfNodeReconciler{
 		Client:           mgr.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           mgr.GetScheme(),
@@ -243,7 +243,8 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		SemaphoreForDone: semNnfNodeDone,
 		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 		Options:          opts,
-	}).SetupWithManager(mgr); err != nil {
+	}
+	if err := nnfNodeReconciler.SetupWithManager(mgr); err != nil {
 		return err
 	}
 
@@ -266,8 +267,10 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            mgr.GetScheme(),
 		Events:            make(chan event.GenericEvent),
+		FenceEvents:       nnfNodeReconciler.GetBlockStorageEvents(), // Get fence events from NnfNode
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
+		NamespacedName:    types.NamespacedName{Name: "nnf-nlc", Namespace: os.Getenv("NNF_NODE_NAME")},
 		Options:           opts,
 	}).SetupWithManager(mgr); err != nil {
 		return err
