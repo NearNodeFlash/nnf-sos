@@ -21,8 +21,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
@@ -30,20 +32,29 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 )
 
-const (
-	gfs2FenceRequestDir = "/localdisk/gfs2-fencing/requests"
-)
+// FenceRequest represents the structure of a fence request file written by the fence agent
+type FenceRequest struct {
+	RequestID    string `json:"request_id"`
+	Timestamp    string `json:"timestamp"`
+	Action       string `json:"action"`
+	TargetNode   string `json:"target_node"`
+	RecorderNode string `json:"recorder_node"`
+	FilePath     string `json:"-"` // Not from JSON, added when parsing
+}
 
 // GFS2FenceWatcher watches for new files in the GFS2 fencing request directory
 // and triggers reconciliation of the NnfNodeStorage controller
 type GFS2FenceWatcher struct {
-	log           logr.Logger
-	watcher       *fsnotify.Watcher
-	reconcileChan chan reconcile.Request
-	nodeNamespace string
-	nodeName      string
+	log             logr.Logger
+	watcher         *fsnotify.Watcher
+	reconcileChan   chan reconcile.Request
+	nodeNamespace   string
+	nodeName        string
+	pendingRequests map[string][]*FenceRequest // key: targetNode, value: pending fence requests
+	requestsMutex   sync.Mutex
 }
 
 // NewGFS2FenceWatcher creates a new file system watcher for GFS2 fence requests
@@ -54,26 +65,27 @@ func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName string) (*GFS2
 	}
 
 	return &GFS2FenceWatcher{
-		log:           log,
-		watcher:       watcher,
-		reconcileChan: make(chan reconcile.Request, 100),
-		nodeNamespace: nodeNamespace,
-		nodeName:      nodeName,
+		log:             log,
+		watcher:         watcher,
+		reconcileChan:   make(chan reconcile.Request, 100),
+		nodeNamespace:   nodeNamespace,
+		nodeName:        nodeName,
+		pendingRequests: make(map[string][]*FenceRequest),
 	}, nil
 }
 
 // Start begins watching the GFS2 fence request directory
 func (w *GFS2FenceWatcher) Start(ctx context.Context) error {
-	log := w.log.WithValues("watchDir", gfs2FenceRequestDir)
+	log := w.log.WithValues("watchDir", fence.RequestDir)
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(gfs2FenceRequestDir, 0755); err != nil {
+	if err := os.MkdirAll(fence.RequestDir, 0755); err != nil {
 		log.Error(err, "Failed to create GFS2 fence request directory")
 		return err
 	}
 
 	// Add the directory to the watcher
-	if err := w.watcher.Add(gfs2FenceRequestDir); err != nil {
+	if err := w.watcher.Add(fence.RequestDir); err != nil {
 		log.Error(err, "Failed to add directory to watcher")
 		return err
 	}
@@ -88,7 +100,7 @@ func (w *GFS2FenceWatcher) Start(ctx context.Context) error {
 
 // processEvents handles file system events
 func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
-	log := w.log.WithValues("watchDir", gfs2FenceRequestDir)
+	log := w.log.WithValues("watchDir", fence.RequestDir)
 
 	for {
 		select {
@@ -110,11 +122,31 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				// Increment the metric counter
 				metrics.Gfs2FenceRequestsTotal.Inc()
 
-				// Trigger reconciliation - you can parse the filename to determine
-				// which NnfNodeStorage resource to reconcile
+				// Parse the fence request file to get the target node
+				fenceRequest, err := w.ParseFenceRequest(event.Name)
+				if err != nil {
+					log.Error(err, "Failed to parse fence request file", "file", event.Name)
+					// Skip this request if we can't determine the target node
+					continue
+				}
+
+				log.Info("Triggering fence action for compute node", "targetNode", fenceRequest.TargetNode)
+
+				// Store the parsed fence request in the pending requests map
+				w.requestsMutex.Lock()
+				if w.pendingRequests[fenceRequest.TargetNode] == nil {
+					w.pendingRequests[fenceRequest.TargetNode] = []*FenceRequest{}
+				}
+				w.pendingRequests[fenceRequest.TargetNode] = append(w.pendingRequests[fenceRequest.TargetNode], fenceRequest)
+				w.requestsMutex.Unlock()
+
+				// Trigger reconciliation for the target node's NnfNodeStorage.
+				// The rabbit maintains NnfNodeStorage resources for storage it provides to compute nodes.
+				// The reconciler will find GFS2 filesystems shared with this compute node,
+				// locate the associated storage groups, and delete them to fence the node.
 				w.reconcileChan <- reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Name:      w.nodeName,
+						Name:      fenceRequest.TargetNode,
 						Namespace: w.nodeNamespace,
 					},
 				}
@@ -132,6 +164,44 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 // GetReconcileChannel returns the channel that receives reconcile requests
 func (w *GFS2FenceWatcher) GetReconcileChannel() <-chan reconcile.Request {
 	return w.reconcileChan
+}
+
+// GetPendingRequests retrieves and removes pending fence requests for a target node
+func (w *GFS2FenceWatcher) GetPendingRequests(targetNode string) []*FenceRequest {
+	w.requestsMutex.Lock()
+	defer w.requestsMutex.Unlock()
+
+	requests := w.pendingRequests[targetNode]
+	delete(w.pendingRequests, targetNode)
+	return requests
+}
+
+// ParseFenceRequest reads and parses a fence request JSON file
+func (w *GFS2FenceWatcher) ParseFenceRequest(filePath string) (*FenceRequest, error) {
+	log := w.log.WithValues("file", filePath)
+
+	// Read the file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse JSON
+	var request FenceRequest
+	if err := json.Unmarshal(data, &request); err != nil {
+		return nil, err
+	}
+
+	// Store the file path for later cleanup
+	request.FilePath = filePath
+
+	log.Info("Parsed fence request",
+		"requestID", request.RequestID,
+		"targetNode", request.TargetNode,
+		"action", request.Action,
+		"recorderNode", request.RecorderNode)
+
+	return &request, nil
 }
 
 // Stop gracefully stops the watcher

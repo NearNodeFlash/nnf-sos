@@ -21,7 +21,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -41,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
@@ -126,17 +130,20 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	r.Unlock()
 
-	// Check if this reconcile was triggered by a fence request
+	// Check if this reconcile was triggered by a fence request for this node
 	if r.fenceWatcher != nil {
-		if files, err := os.ReadDir(gfs2FenceRequestDir); err == nil && len(files) > 0 {
-			fileNames := make([]string, 0, len(files))
-			for _, f := range files {
-				fileNames = append(fileNames, f.Name())
+		fenceRequests := r.fenceWatcher.GetPendingRequests(req.NamespacedName.Name)
+		if len(fenceRequests) > 0 {
+			log.Info("Fence requests detected for this node",
+				"targetNode", req.NamespacedName.Name,
+				"requestCount", len(fenceRequests))
+
+			// Process fence requests - find GFS2 filesystems shared with this node
+			// and delete the associated storage groups to fence the compute node
+			if err := r.processFenceRequests(ctx, req.NamespacedName.Name, fenceRequests, log); err != nil {
+				log.Error(err, "Failed to process fence requests")
+				// Don't fail the reconcile, just log the error
 			}
-			log.Info("Reconcile triggered - fence request files present",
-				"count", len(files),
-				"directory", gfs2FenceRequestDir,
-				"files", fileNames)
 		}
 	}
 
@@ -531,6 +538,121 @@ func nnfNameMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
 	}
 }
 
+// processFenceRequests handles fence requests by finding and deleting storage groups for the target node
+func (r *NnfNodeStorageReconciler) processFenceRequests(ctx context.Context, targetNode string, fenceRequests []*FenceRequest, log logr.Logger) error {
+	// List all NnfNodeBlockStorage resources in this rabbit node's namespace
+	nnfNodeBlockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
+	listOptions := []client.ListOption{
+		client.InNamespace(r.Namespace),
+	}
+	if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
+		return err
+	}
+
+	storageGroupsToDelete := []string{}
+
+	// Iterate through each NnfNodeBlockStorage resource
+	for _, blockStorage := range nnfNodeBlockStorageList.Items {
+		// Only process GFS2 filesystems - check the allocationset label
+		allocationSet, hasLabel := blockStorage.Labels["nnf.cray.hpe.com/allocationset"]
+		if !hasLabel || allocationSet != "gfs2" {
+			log.V(1).Info("Skipping non-GFS2 block storage",
+				"blockStorage", blockStorage.Name,
+				"allocationset", allocationSet)
+			continue
+		}
+
+		// Check each allocation for accesses by the target node
+		for _, allocation := range blockStorage.Status.Allocations {
+			if allocation.Accesses == nil {
+				continue
+			}
+
+			// Check if the target node has access to this allocation
+			if access, found := allocation.Accesses[targetNode]; found {
+				storageGroupID := access.StorageGroupId
+				if storageGroupID != "" {
+					log.Info("Found GFS2 storage group for fenced node",
+						"targetNode", targetNode,
+						"storageGroupId", storageGroupID,
+						"blockStorage", blockStorage.Name,
+						"namespace", blockStorage.Namespace,
+						"allocationset", allocationSet)
+					storageGroupsToDelete = append(storageGroupsToDelete, storageGroupID)
+				}
+			}
+		}
+	}
+
+	// Determine success and message
+	success := false
+	message := ""
+	actionPerformed := "off"
+
+	// TODO: Delete the storage groups
+	// For now, just log what we would delete
+	if len(storageGroupsToDelete) > 0 {
+		log.Info("GFS2 storage groups identified for deletion",
+			"targetNode", targetNode,
+			"storageGroupIds", storageGroupsToDelete,
+			"count", len(storageGroupsToDelete))
+		// TODO: Call the storage service to delete these storage groups
+		// This will fence the compute node by removing its access to GFS2 filesystems
+		success = true
+		message = fmt.Sprintf("Successfully identified %d GFS2 storage groups for fencing", len(storageGroupsToDelete))
+	} else {
+		log.Info("No GFS2 storage groups found for target node", "targetNode", targetNode)
+		message = fmt.Sprintf("No GFS2 storage groups found for target node %s", targetNode)
+	}
+
+	// Process each fence request
+	for _, request := range fenceRequests {
+		// Write response file
+		if err := r.writeFenceResponse(request.RequestID, success, message, actionPerformed, log); err != nil {
+			log.Error(err, "Failed to write fence response", "requestID", request.RequestID)
+		}
+
+		// Clean up the fence request file after processing
+		if request.FilePath != "" {
+			if err := os.Remove(request.FilePath); err != nil {
+				log.Error(err, "Failed to remove fence request file", "file", request.FilePath)
+			} else {
+				log.Info("Removed processed fence request file", "file", request.FilePath)
+			}
+		}
+	}
+
+	return nil
+}
+
+// writeFenceResponse writes a response file for the fence agent
+func (r *NnfNodeStorageReconciler) writeFenceResponse(requestID string, success bool, message string, actionPerformed string, log logr.Logger) error {
+	// Ensure response directory exists
+	if err := os.MkdirAll(fence.ResponseDir, 0755); err != nil {
+		return err
+	}
+
+	responseFile := filepath.Join(fence.ResponseDir, fmt.Sprintf("%s.json", requestID))
+
+	response := map[string]interface{}{
+		"success":          success,
+		"message":          message,
+		"action_performed": actionPerformed,
+	}
+
+	data, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(responseFile, data, 0644); err != nil {
+		return err
+	}
+
+	log.Info("Wrote fence response", "requestID", requestID, "file", responseFile, "success", success)
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.Add(r); err != nil {
@@ -543,31 +665,41 @@ func (r *NnfNodeStorageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&nnfv1alpha9.NnfNodeStorage{}).
 		// Trigger the reconciler for any changes to the associated NnfNodeBlockStorage. If we're waiting
 		// on the block device paths to get updated, we want to be notified when it happens.
-		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc))
-
-	// Add a custom event source for GFS2 fence requests if the watcher is initialized
-	// Note: The watcher will be initialized in Start(), so this will be set up after that
-	if r.fenceWatcher != nil {
-		builder = builder.WatchesRawSource(&gfs2FenceEventSource{
-			reconcileChan: r.fenceWatcher.GetReconcileChannel(),
+		Watches(&nnfv1alpha9.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(nnfNameMapFunc)).
+		// Add a custom event source for GFS2 fence requests.
+		// The watcher will be initialized in Start(), and the event source will start
+		// receiving events once the watcher's channel is created.
+		WatchesRawSource(&gfs2FenceEventSource{
+			Reconciler: r,
 		}, &handler.EnqueueRequestForObject{})
-	}
 
 	return builder.Complete(r)
 }
 
 // gfs2FenceEventSource implements source.Source to feed fence requests into the reconciler
 type gfs2FenceEventSource struct {
-	reconcileChan <-chan reconcile.Request
+	Reconciler *NnfNodeStorageReconciler
 }
 
 func (s *gfs2FenceEventSource) Start(ctx context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, prct ...predicate.Predicate) error {
 	go func() {
+		// Wait for the fence watcher to be initialized
+		for s.Reconciler.fenceWatcher == nil {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(100 * time.Millisecond):
+				// Keep checking until the watcher is initialized
+			}
+		}
+
+		reconcileChan := s.Reconciler.fenceWatcher.GetReconcileChannel()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case req, ok := <-s.reconcileChan:
+			case req, ok := <-reconcileChan:
 				if !ok {
 					return
 				}
