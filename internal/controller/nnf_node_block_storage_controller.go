@@ -460,6 +460,16 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			}
 
 		} else {
+			// Check if this compute node has been fenced before creating/restoring a storage group
+			fenced, err := r.checkComputeFenced(nodeName, log)
+			if err != nil {
+				log.Error(err, "Error checking for fence response", "compute", nodeName)
+				// Continue despite error to avoid blocking reconciliation
+			} else if fenced {
+				log.Info("Skipping storage group creation for fenced compute node", "compute", nodeName, "storageGroupId", storageGroupId)
+				continue
+			}
+
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
 				allocationStatus.Accesses[nodeName] = nnfv1alpha9.NnfNodeBlockStorageAccessStatus{StorageGroupId: storageGroupId}
@@ -877,6 +887,52 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 	log.Info("Enqueuing resources", "requests", requests)
 
 	return requests
+}
+
+// checkComputeFenced checks if a fence response file exists for the given compute node,
+// indicating it has been fenced and should not have storage groups restored
+func (r *NnfNodeBlockStorageReconciler) checkComputeFenced(computeName string, log logr.Logger) (bool, error) {
+	// Check if fence response directory exists
+	if _, err := os.Stat(fence.ResponseDir); os.IsNotExist(err) {
+		return false, nil
+	}
+
+	// Read all files in the response directory
+	entries, err := os.ReadDir(fence.ResponseDir)
+	if err != nil {
+		return false, err
+	}
+
+	// Check each response file to see if it's for this compute node
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		responseFile := filepath.Join(fence.ResponseDir, entry.Name())
+		data, err := os.ReadFile(responseFile)
+		if err != nil {
+			log.Error(err, "Failed to read fence response file", "file", responseFile)
+			continue
+		}
+
+		var response struct {
+			TargetNode string `json:"target_node"`
+			Success    bool   `json:"success"`
+		}
+
+		if err := json.Unmarshal(data, &response); err != nil {
+			log.Error(err, "Failed to parse fence response file", "file", responseFile)
+			continue
+		}
+
+		// If this response is for our compute node and the fence was successful, it's fenced
+		if response.TargetNode == computeName && response.Success {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // gfs2FenceEventSource is a custom event source for GFS2 fence requests

@@ -21,6 +21,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,6 +50,7 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 	"github.com/NearNodeFlash/nnf-sos/pkg/helpers"
 )
 
@@ -1199,34 +1201,39 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	}
 
 	// Check whether the clientmounts have finished mounting/unmounting
+	// Track how many ClientMounts we've validated (excluding offline/fenced nodes)
+	validatedMounts := 0
 	for _, clientMount := range clientMounts {
+		// Check if this compute node is offline/fenced first, before checking mount status
+		offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+		if err != nil {
+			return false, err
+		}
+
+		// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+		// from this node since it can't respond. The filesystem won't be remounted if the
+		// compute comes back since spec.desiredState is "unmounted"
+		if offline && access.Spec.DesiredState == "unmounted" {
+			log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+			validatedMounts++ // Count as validated so we don't wait for it
+			continue
+		}
+
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
 		}
 
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State || !mount.Ready {
-				if string(mount.State) == "unmounted" {
-					offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
-					if err != nil {
-						return false, err
-					}
-					// If the compute node is down, then ignore an unmount failure. If the compute node
-					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
-					if offline {
-						log.Info("ignoring status from offline compute node", "node name", clientMount.GetNamespace())
-						continue
-					}
-				}
-
 				return false, nil
 			}
 		}
+		validatedMounts++
 	}
 
-	if len(clientMounts) != len(clientList) {
+	if validatedMounts != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+			log.Info("unexpected number of ClientMounts", "found", validatedMounts, "expected", len(clientList))
 		}
 		return false, nil
 	}
@@ -1302,9 +1309,22 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 // checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
 // compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection).
 // It also checks the SystemStatus resource to see if the compute node is marked as Disabled.
+// It also checks for fence response files indicating the node has been fenced.
 func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha9.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, error) {
 	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
 		return false, nil
+	}
+
+	computeName := clientMount.GetNamespace()
+
+	// Check for fence response files indicating this compute node has been fenced
+	fenced, err := r.checkFencedCompute(computeName)
+	if err != nil {
+		r.Log.Error(err, "Error checking for fence response files", "compute", computeName)
+		// Don't fail the reconcile if we can't check fence status, just log and continue
+	} else if fenced {
+		r.Log.Info("Compute node is fenced (fence response file exists)", "compute", computeName)
+		return true, nil
 	}
 
 	// Find the name of the Rabbit attached to the compute node
@@ -1326,7 +1346,6 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	// Check the status of the compute node in the Storage resource to determine if it's offline
-	computeName := clientMount.GetNamespace()
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
 			if compute.Status == dwsv1alpha7.OfflineStatus {
@@ -1351,6 +1370,54 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 
 	if status, found := systemStatus.Data.Nodes[computeName]; found {
 		if status == dwsv1alpha7.SystemNodeStatusDisabled {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// checkFencedCompute checks if a fence response file exists for the given compute node,
+// indicating it has been fenced due to a GFS2 cluster issue
+func (r *NnfAccessReconciler) checkFencedCompute(computeName string) (bool, error) {
+	// Check if fence response directory exists
+	if _, err := os.Stat(fence.ResponseDir); os.IsNotExist(err) {
+		r.Log.Info("Fence response directory does not exist", "dir", fence.ResponseDir)
+		return false, nil
+	}
+
+	// Read all files in the response directory
+	entries, err := os.ReadDir(fence.ResponseDir)
+	if err != nil {
+		r.Log.Error(err, "Failed to read fence response directory", "dir", fence.ResponseDir)
+		return false, err
+	}
+
+	// Check each response file to see if it's for this compute node
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		responseFile := filepath.Join(fence.ResponseDir, entry.Name())
+		data, err := os.ReadFile(responseFile)
+		if err != nil {
+			r.Log.Error(err, "Failed to read fence response file", "file", responseFile)
+			continue
+		}
+
+		var response struct {
+			TargetNode string `json:"target_node"`
+			Success    bool   `json:"success"`
+		}
+
+		if err := json.Unmarshal(data, &response); err != nil {
+			r.Log.Error(err, "Failed to parse fence response file", "file", responseFile)
+			continue
+		}
+
+		// If this response is for our compute node and the fence was successful, consider it offline
+		if response.TargetNode == computeName && response.Success {
 			return true, nil
 		}
 	}
