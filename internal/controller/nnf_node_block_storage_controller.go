@@ -787,7 +787,7 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	// Process each fence request
 	for _, request := range fenceRequests {
 		// Write response file
-		if err := r.writeFenceResponse(request.RequestID, success, message, actionPerformed, log); err != nil {
+		if err := r.writeFenceResponse(request, success, message, actionPerformed, log); err != nil {
 			log.Error(err, "Failed to write fence response", "requestID", request.RequestID)
 		}
 
@@ -805,15 +805,21 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 }
 
 // writeFenceResponse writes a response file for the fence agent
-func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(requestID string, success bool, message string, actionPerformed string, log logr.Logger) error {
+func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(request *FenceRequest, success bool, message string, actionPerformed string, log logr.Logger) error {
 	// Ensure response directory exists
 	if err := os.MkdirAll(fence.ResponseDir, 0755); err != nil {
 		return err
 	}
 
-	responseFile := filepath.Join(fence.ResponseDir, fmt.Sprintf("%s.json", requestID))
+	responseFile := filepath.Join(fence.ResponseDir, fmt.Sprintf("%s.json", request.RequestID))
 
+	// Include all fields from the request in the response
 	response := map[string]interface{}{
+		"request_id":       request.RequestID,
+		"timestamp":        request.Timestamp,
+		"action":           request.Action,
+		"target_node":      request.TargetNode,
+		"recorder_node":    request.RecorderNode,
 		"success":          success,
 		"message":          message,
 		"action_performed": actionPerformed,
@@ -828,7 +834,7 @@ func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(requestID string, suc
 		return err
 	}
 
-	log.Info("Wrote fence response", "requestID", requestID, "file", responseFile, "success", success)
+	log.Info("Wrote fence response", "requestID", request.RequestID, "file", responseFile, "success", success)
 	return nil
 }
 
