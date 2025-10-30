@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
@@ -114,10 +115,13 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				return
 			}
 
-			// Only process file creation events
-			if event.Op&fsnotify.Create == fsnotify.Create {
+			// Only process Write events to avoid race conditions with Create events.
+			if event.Op&fsnotify.Write == fsnotify.Write {
 				filename := filepath.Base(event.Name)
-				log.Info("New fence request file detected", "file", event.Name, "filename", filename)
+				log.Info("Fence request file written (ready to process)", "file", event.Name, "filename", filename)
+
+				// Brief delay to ensure file is fully flushed to disk
+				time.Sleep(50 * time.Millisecond)
 
 				// Increment the metric counter
 				metrics.Gfs2FenceRequestsTotal.Inc()
