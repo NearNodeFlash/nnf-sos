@@ -735,20 +735,53 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	message := ""
 	actionPerformed := "off"
 
-	// TODO: Delete the storage groups
-	// For now, just log what we would delete
+	// Delete the storage groups to fence the node
 	if len(storageGroupsToDelete) > 0 {
-		log.Info("GFS2 storage groups identified for deletion",
+		log.Info("Deleting GFS2 storage groups to fence node",
 			"targetNode", targetNode,
 			"storageGroupIds", storageGroupsToDelete,
 			"count", len(storageGroupsToDelete))
-		// TODO: Call the storage service to delete these storage groups
-		// This will fence the compute node by removing its access to GFS2 filesystems
-		success = true
-		message = fmt.Sprintf("Successfully identified %d GFS2 storage groups for fencing", len(storageGroupsToDelete))
+
+		// Get the storage service
+		ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
+
+		deletedCount := 0
+		var deleteErrors []string
+
+		// Delete each storage group
+		for _, storageGroupID := range storageGroupsToDelete {
+			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
+				log.Error(err, "Failed to delete storage group",
+					"storageGroupId", storageGroupID,
+					"targetNode", targetNode)
+				deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", storageGroupID, err))
+			} else {
+				log.Info("Successfully deleted storage group",
+					"storageGroupId", storageGroupID,
+					"targetNode", targetNode)
+				deletedCount++
+			}
+		}
+
+		// Set success based on whether we deleted all storage groups
+		if deletedCount == len(storageGroupsToDelete) {
+			success = true
+			actionPerformed = "off"
+			message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
+		} else if deletedCount > 0 {
+			success = false
+			message = fmt.Sprintf("Partially fenced node: deleted %d of %d storage groups. Errors: %s",
+				deletedCount, len(storageGroupsToDelete), strings.Join(deleteErrors, "; "))
+		} else {
+			success = false
+			message = fmt.Sprintf("Failed to fence node: could not delete any storage groups. Errors: %s",
+				strings.Join(deleteErrors, "; "))
+		}
 	} else {
 		log.Info("No GFS2 storage groups found for target node", "targetNode", targetNode)
-		message = fmt.Sprintf("No GFS2 storage groups found for target node %s", targetNode)
+		success = true
+		actionPerformed = "off"
+		message = fmt.Sprintf("No GFS2 storage groups found for target node %s (already fenced or no GFS2 access)", targetNode)
 	}
 
 	// Process each fence request
