@@ -21,8 +21,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,10 +38,12 @@ import (
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -50,6 +54,7 @@ import (
 	nvme "github.com/NearNodeFlash/nnf-ec/pkg/manager-nvme"
 	sf "github.com/NearNodeFlash/nnf-ec/pkg/rfsf/pkg/models"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
+	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
@@ -76,6 +81,7 @@ type NnfNodeReconciler struct {
 	Events          chan event.GenericEvent
 	started         bool
 	reconcilerAwake bool
+	fenceWatcher    *GFS2FenceWatcher
 }
 
 //+kubebuilder:rbac:groups=dataworkflowservices.github.io,resources=systemconfigurations,verbs=get;list;watch
@@ -175,6 +181,19 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 
 	// Subscribe to the NNF Event Manager
 	nnfevent.EventManager.Subscribe(r)
+
+	// Initialize the GFS2 fence watcher to monitor for fence response files
+	var err error
+	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name, fence.ResponseDir)
+	if err != nil {
+		return fmt.Errorf("failed to create fence watcher: %w", err)
+	}
+
+	go func() {
+		if err := r.fenceWatcher.Start(ctx); err != nil {
+			log.Error(err, "Fence watcher failed")
+		}
+	}()
 
 	r.Lock()
 	r.started = true
@@ -283,6 +302,12 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	if err := r.updateServers(node, log); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Check for fence response files for compute nodes on this Rabbit
+	if err := r.checkFencedStatus(node, log); err != nil {
+		log.Error(err, "Failed to check fenced status")
+		// Don't fail the reconcile, just log the error and continue
 	}
 
 	if err := updateDrives(node, log); err != nil {
@@ -411,6 +436,80 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 	return nil
 }
 
+// checkFencedStatus checks for fence response files for any of the compute nodes
+// attached to this Rabbit and updates the node's Fenced status accordingly
+func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
+	// Check if the fence response directory exists
+	if _, err := os.Stat(fence.ResponseDir); err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist, node is not fenced
+			node.Status.Fenced = false
+			return nil
+		}
+		// Some other error accessing directory
+		return fmt.Errorf("error checking fence response directory: %w", err)
+	}
+
+	// Read all files in the response directory
+	entries, err := os.ReadDir(fence.ResponseDir)
+	if err != nil {
+		return fmt.Errorf("error reading fence response directory: %w", err)
+	}
+
+	// Check if any compute node attached to this Rabbit has a fence response file
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		// Read and parse the fence response file
+		responsePath := filepath.Join(fence.ResponseDir, entry.Name())
+		data, err := os.ReadFile(responsePath)
+		if err != nil {
+			log.Error(err, "Failed to read fence response file", "file", responsePath)
+			continue
+		}
+
+		var response struct {
+			TargetNode string `json:"target_node"`
+			Success    bool   `json:"success"`
+		}
+
+		if err := json.Unmarshal(data, &response); err != nil {
+			log.Error(err, "Failed to parse fence response", "file", responsePath)
+			continue
+		}
+
+		// Check if the target node matches a compute node on this Rabbit
+		if response.Success {
+			for i := range node.Status.Servers {
+				server := &node.Status.Servers[i]
+				// Skip the Rabbit node itself (ID 0)
+				if server.ID == "0" {
+					continue
+				}
+
+				// Check if this compute node is fenced
+				if server.Hostname == response.TargetNode {
+					log.Info("Found fence response for compute node",
+						"compute", response.TargetNode,
+						"fenceFile", entry.Name())
+					node.Status.Fenced = true
+
+					// Mark the server as disabled in the status
+					// This is reflected in the server's health/status from nnf-ec,
+					// but we're explicitly marking it as fenced
+					return nil
+				}
+			}
+		}
+	}
+
+	// No fence responses found for any compute nodes
+	node.Status.Fenced = false
+	return nil
+}
+
 // Update the Drives status of the NNF Node if necessary
 func updateDrives(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	storageService := nvme.NewDefaultStorageService()
@@ -496,6 +595,38 @@ func systemConfigurationMapFunc(context.Context, client.Object) []reconcile.Requ
 	}
 }
 
+// nnfNodeGfs2FenceEventSource is a custom event source that forwards GFS2 fence events
+// from the fence watcher to trigger reconciliation when fence response files are created.
+type nnfNodeGfs2FenceEventSource struct {
+	Reconciler *NnfNodeReconciler
+}
+
+// Start implements source.Source
+func (s *nnfNodeGfs2FenceEventSource) Start(ctx context.Context, handler handler.EventHandler, queue workqueue.RateLimitingInterface, predicates ...predicate.Predicate) error {
+	// Wait for the fence watcher to be initialized in a goroutine
+	go func() {
+		for {
+			if s.Reconciler.fenceWatcher != nil {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		// Now forward events from the fence watcher to the queue
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case req := <-s.Reconciler.fenceWatcher.GetReconcileChannel():
+				// Forward the reconcile request to the queue
+				queue.Add(req)
+			}
+		}
+	}()
+
+	return nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Causes NnfNodeReconciler.Start() to be called.
@@ -510,5 +641,6 @@ func (r *NnfNodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Namespace{}). // The node will create a namespace for itself, so it can watch changes to the NNF Node custom resource
 		Watches(&dwsv1alpha7.SystemConfiguration{}, handler.EnqueueRequestsFromMapFunc(systemConfigurationMapFunc)).
 		WatchesRawSource(&source.Channel{Source: r.Events}, &handler.EnqueueRequestForObject{}).
+		WatchesRawSource(&nnfNodeGfs2FenceEventSource{Reconciler: r}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

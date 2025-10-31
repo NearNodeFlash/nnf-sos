@@ -135,9 +135,9 @@ func (r *NnfNodeBlockStorageReconciler) Start(ctx context.Context) error {
 
 	log.Info("Ready to start")
 
-	// Initialize and start the GFS2 fence watcher
+	// Initialize and start the GFS2 fence watcher to monitor fence requests
 	var err error
-	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name)
+	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name, fence.RequestDir)
 	if err != nil {
 		log.Error(err, "Failed to create GFS2 fence watcher")
 		// Don't fail startup if watcher fails - log and continue
