@@ -1201,6 +1201,8 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	}
 
 	// Check whether the clientmounts have finished mounting/unmounting
+	// Track how many ClientMounts we've validated (excluding offline/fenced nodes)
+	validatedMounts := 0
 	for _, clientMount := range clientMounts {
 		// Check if this compute node is offline/fenced first, before checking mount status
 		offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
@@ -1212,7 +1214,8 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		// from this node since it can't respond. The filesystem won't be remounted if the
 		// compute comes back since spec.desiredState is "unmounted"
 		if offline && access.Status.State == "unmounted" {
-			log.Info("ignoring status from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+			log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+			validatedMounts++ // Count as validated so we don't wait for it
 			continue
 		}
 
@@ -1225,11 +1228,12 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 				return false, nil
 			}
 		}
+		validatedMounts++
 	}
 
-	if len(clientMounts) != len(clientList) {
+	if validatedMounts != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+			log.Info("unexpected number of ClientMounts", "found", validatedMounts, "expected", len(clientList))
 		}
 		return false, nil
 	}
