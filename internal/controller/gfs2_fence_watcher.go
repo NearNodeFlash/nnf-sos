@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
-	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 )
 
 // FenceRequest represents the structure of a fence request file written by the fence agent
@@ -46,20 +45,22 @@ type FenceRequest struct {
 	FilePath     string `json:"-"` // Not from JSON, added when parsing
 }
 
-// GFS2FenceWatcher watches for new files in the GFS2 fencing request directory
-// and triggers reconciliation of the NnfNodeStorage controller
+// GFS2FenceWatcher watches for new files in a GFS2 fencing directory
+// and triggers reconciliation of controllers
 type GFS2FenceWatcher struct {
 	log             logr.Logger
 	watcher         *fsnotify.Watcher
 	reconcileChan   chan reconcile.Request
 	nodeNamespace   string
 	nodeName        string
+	watchDir        string                     // Directory to watch (request or response)
 	pendingRequests map[string][]*FenceRequest // key: targetNode, value: pending fence requests
 	requestsMutex   sync.Mutex
 }
 
-// NewGFS2FenceWatcher creates a new file system watcher for GFS2 fence requests
-func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName string) (*GFS2FenceWatcher, error) {
+// NewGFS2FenceWatcher creates a new file system watcher for GFS2 fence files
+// watchDir specifies the directory to monitor (e.g., fence.RequestDir or fence.ResponseDir)
+func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName, watchDir string) (*GFS2FenceWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -71,27 +72,28 @@ func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName string) (*GFS2
 		reconcileChan:   make(chan reconcile.Request, 100),
 		nodeNamespace:   nodeNamespace,
 		nodeName:        nodeName,
+		watchDir:        watchDir,
 		pendingRequests: make(map[string][]*FenceRequest),
 	}, nil
 }
 
-// Start begins watching the GFS2 fence request directory
+// Start begins watching the GFS2 fence directory
 func (w *GFS2FenceWatcher) Start(ctx context.Context) error {
-	log := w.log.WithValues("watchDir", fence.RequestDir)
+	log := w.log.WithValues("watchDir", w.watchDir)
 
 	// Create the directory if it doesn't exist
-	if err := os.MkdirAll(fence.RequestDir, 0755); err != nil {
-		log.Error(err, "Failed to create GFS2 fence request directory")
+	if err := os.MkdirAll(w.watchDir, 0755); err != nil {
+		log.Error(err, "Failed to create GFS2 fence directory")
 		return err
 	}
 
 	// Add the directory to the watcher
-	if err := w.watcher.Add(fence.RequestDir); err != nil {
+	if err := w.watcher.Add(w.watchDir); err != nil {
 		log.Error(err, "Failed to add directory to watcher")
 		return err
 	}
 
-	log.Info("Started watching for GFS2 fence requests")
+	log.Info("Started watching for GFS2 fence files")
 
 	// Start the event processing goroutine
 	go w.processEvents(ctx)
@@ -101,7 +103,7 @@ func (w *GFS2FenceWatcher) Start(ctx context.Context) error {
 
 // processEvents handles file system events
 func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
-	log := w.log.WithValues("watchDir", fence.RequestDir)
+	log := w.log.WithValues("watchDir", w.watchDir)
 
 	for {
 		select {
@@ -115,7 +117,7 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				return
 			}
 
-			// Only process Write events to avoid race conditions with Create events.
+			// Process Write events for new fence requests/responses
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				filename := filepath.Base(event.Name)
 				log.Info("Fence request file written (ready to process)", "file", event.Name, "filename", filename)
@@ -151,6 +153,20 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				w.reconcileChan <- reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      fenceRequest.TargetNode,
+						Namespace: w.nodeNamespace,
+					},
+				}
+			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
+				// Process Remove events for fence file deletion (unfencing)
+				// For NnfNode controller watching response directory, this triggers status update
+				filename := filepath.Base(event.Name)
+				log.Info("Fence response file removed (unfencing)", "file", event.Name, "filename", filename)
+
+				// Trigger reconciliation of the NnfNode to update status
+				// The node name and namespace should match the reconciler's node
+				w.reconcileChan <- reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      w.nodeName,
 						Namespace: w.nodeNamespace,
 					},
 				}

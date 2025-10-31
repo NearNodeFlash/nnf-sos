@@ -21,7 +21,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,7 +49,6 @@ import (
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
-	"github.com/NearNodeFlash/nnf-sos/pkg/fence"
 	"github.com/NearNodeFlash/nnf-sos/pkg/helpers"
 )
 
@@ -1210,6 +1208,8 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			return false, err
 		}
 
+		log.Info("checking ClientMount status", "node", clientMount.GetNamespace(), "offline", offline, "desiredState", access.Spec.DesiredState, "statusMounts", len(clientMount.Status.Mounts), "specMounts", len(clientMount.Spec.Mounts))
+
 		// If the compute node is offline/fenced and we're unmounting, ignore any mount status
 		// from this node since it can't respond. The filesystem won't be remounted if the
 		// compute comes back since spec.desiredState is "unmounted"
@@ -1317,16 +1317,6 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 
 	computeName := clientMount.GetNamespace()
 
-	// Check for fence response files indicating this compute node has been fenced
-	fenced, err := r.checkFencedCompute(computeName)
-	if err != nil {
-		r.Log.Error(err, "Error checking for fence response files", "compute", computeName)
-		// Don't fail the reconcile if we can't check fence status, just log and continue
-	} else if fenced {
-		r.Log.Info("Compute node is fenced (fence response file exists)", "compute", computeName)
-		return true, nil
-	}
-
 	// Find the name of the Rabbit attached to the compute node
 	rabbitName, err := r.getRabbitFromClientMount(ctx, clientMount)
 	if err != nil {
@@ -1334,6 +1324,8 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	// Get the Storage resource for the Rabbit
+	// The Storage controller syncs compute node status from NnfNode.Status.Servers to Storage.Status.Access.Computes
+	// This includes marking fenced compute nodes as offline
 	storage := &dwsv1alpha7.Storage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rabbitName,
@@ -1370,54 +1362,6 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 
 	if status, found := systemStatus.Data.Nodes[computeName]; found {
 		if status == dwsv1alpha7.SystemNodeStatusDisabled {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-// checkFencedCompute checks if a fence response file exists for the given compute node,
-// indicating it has been fenced due to a GFS2 cluster issue
-func (r *NnfAccessReconciler) checkFencedCompute(computeName string) (bool, error) {
-	// Check if fence response directory exists
-	if _, err := os.Stat(fence.ResponseDir); os.IsNotExist(err) {
-		r.Log.Info("Fence response directory does not exist", "dir", fence.ResponseDir)
-		return false, nil
-	}
-
-	// Read all files in the response directory
-	entries, err := os.ReadDir(fence.ResponseDir)
-	if err != nil {
-		r.Log.Error(err, "Failed to read fence response directory", "dir", fence.ResponseDir)
-		return false, err
-	}
-
-	// Check each response file to see if it's for this compute node
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-
-		responseFile := filepath.Join(fence.ResponseDir, entry.Name())
-		data, err := os.ReadFile(responseFile)
-		if err != nil {
-			r.Log.Error(err, "Failed to read fence response file", "file", responseFile)
-			continue
-		}
-
-		var response struct {
-			TargetNode string `json:"target_node"`
-			Success    bool   `json:"success"`
-		}
-
-		if err := json.Unmarshal(data, &response); err != nil {
-			r.Log.Error(err, "Failed to parse fence response file", "file", responseFile)
-			continue
-		}
-
-		// If this response is for our compute node and the fence was successful, consider it offline
-		if response.TargetNode == computeName && response.Success {
 			return true, nil
 		}
 	}
