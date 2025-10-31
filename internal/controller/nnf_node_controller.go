@@ -437,13 +437,12 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 }
 
 // checkFencedStatus checks for fence response files for any of the compute nodes
-// attached to this Rabbit and updates the node's Fenced status accordingly
+// attached to this Rabbit and marks those compute servers as offline
 func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	// Check if the fence response directory exists
 	if _, err := os.Stat(fence.ResponseDir); err != nil {
 		if os.IsNotExist(err) {
-			// Directory doesn't exist, node is not fenced
-			node.Status.Fenced = false
+			// Directory doesn't exist, no fenced computes
 			return nil
 		}
 		// Some other error accessing directory
@@ -491,22 +490,22 @@ func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log log
 
 				// Check if this compute node is fenced
 				if server.Hostname == response.TargetNode {
-					log.Info("Found fence response for compute node",
+					log.Info("Found fence response for compute node, marking as offline",
 						"compute", response.TargetNode,
 						"fenceFile", entry.Name())
-					node.Status.Fenced = true
 
-					// Mark the server as disabled in the status
-					// This is reflected in the server's health/status from nnf-ec,
-					// but we're explicitly marking it as fenced
-					return nil
+					// Mark the compute server as offline and critical in the status
+					// This overrides the health/status from nnf-ec and explicitly marks it as fenced
+					node.Status.Servers[i].Status = nnfv1alpha9.ResourceOffline
+					node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
+
+					// Continue checking other fence files - there might be multiple fenced computes
+					break
 				}
 			}
 		}
 	}
 
-	// No fence responses found for any compute nodes
-	node.Status.Fenced = false
 	return nil
 }
 
