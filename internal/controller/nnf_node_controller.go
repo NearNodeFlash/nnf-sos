@@ -305,7 +305,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	}
 
 	// Check for fence response files for compute nodes on this Rabbit
-	if err := r.checkFencedStatus(node, log); err != nil {
+	if err := r.checkFencedStatus(ctx, node, log); err != nil {
 		log.Error(err, "Failed to check fenced status")
 		// Don't fail the reconcile, just log the error and continue
 	}
@@ -438,7 +438,7 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 
 // checkFencedStatus checks for fence response files for any of the compute nodes
 // attached to this Rabbit and marks those compute servers as offline
-func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
+func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	// Check if the fence response directory exists
 	if _, err := os.Stat(fence.ResponseDir); err != nil {
 		if os.IsNotExist(err) {
@@ -454,6 +454,9 @@ func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log log
 	if err != nil {
 		return fmt.Errorf("error reading fence response directory: %w", err)
 	}
+
+	// Build a map of fenced compute nodes from fence response files
+	fencedComputes := make(map[string]bool)
 
 	// Check if any compute node attached to this Rabbit has a fence response file
 	for _, entry := range entries {
@@ -479,31 +482,76 @@ func (r *NnfNodeReconciler) checkFencedStatus(node *nnfv1alpha9.NnfNode, log log
 			continue
 		}
 
-		// Check if the target node matches a compute node on this Rabbit
+		// Track fenced computes
 		if response.Success {
-			for i := range node.Status.Servers {
-				server := &node.Status.Servers[i]
-				// Skip the Rabbit node itself (ID 0)
-				if server.ID == "0" {
-					continue
-				}
+			fencedComputes[response.TargetNode] = true
+		}
+	}
 
-				// Check if this compute node is fenced
-				if server.Hostname == response.TargetNode {
-					log.Info("Found fence response for compute node, marking as offline",
-						"compute", response.TargetNode,
-						"fenceFile", entry.Name())
+	// Update all server statuses based on fence state
+	annotationChanged := false
+	for i := range node.Status.Servers {
+		server := &node.Status.Servers[i]
+		// Skip the Rabbit node itself (ID 0)
+		if server.ID == "0" {
+			continue
+		}
 
-					// Mark the compute server as offline and critical in the status
-					// This overrides the health/status from nnf-ec and explicitly marks it as fenced
-					node.Status.Servers[i].Status = nnfv1alpha9.ResourceOffline
-					node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
-
-					// Continue checking other fence files - there might be multiple fenced computes
-					break
-				}
+		// Check if this compute has a fence response file
+		if fencedComputes[server.Hostname] {
+			// Mark as fenced only if not already marked
+			if server.Status != nnfv1alpha9.ResourceOffline {
+				log.Info("Marking compute node as fenced/offline", "compute", server.Hostname)
+				node.Status.Servers[i].Status = nnfv1alpha9.ResourceOffline
+				node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
+				annotationChanged = true
+			}
+		} else {
+			// No fence file exists - if it was previously marked as offline due to fencing,
+			// the status will be refreshed by updateServers() from nnf-ec on the next reconcile
+			// We just need to clear any fence annotations
+			if server.Status == nnfv1alpha9.ResourceOffline {
+				log.Info("Compute node is no longer fenced (fence response removed)", "compute", server.Hostname)
+				annotationChanged = true
 			}
 		}
+	}
+
+	// Update annotation to reflect current fence state and trigger Storage controller watch
+	annotations := node.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	if len(fencedComputes) > 0 {
+		// Build list of fenced compute names
+		fencedList := []string{}
+		for computeName := range fencedComputes {
+			fencedList = append(fencedList, computeName)
+		}
+
+		// Update annotations with current fence state
+		newFencedValue := strings.Join(fencedList, ",")
+		if annotations["nnf.cray.hpe.com/fenced-computes"] != newFencedValue || annotationChanged {
+			annotations["nnf.cray.hpe.com/fenced-computes"] = newFencedValue
+			annotations["nnf.cray.hpe.com/fence-timestamp"] = time.Now().Format(time.RFC3339)
+			node.SetAnnotations(annotations)
+
+			if err := r.Update(ctx, node); err != nil {
+				return fmt.Errorf("failed to update NnfNode annotations: %w", err)
+			}
+			log.Info("Updated NnfNode fence state", "fencedComputes", fencedList)
+		}
+	} else if _, exists := annotations["nnf.cray.hpe.com/fenced-computes"]; exists {
+		// No fenced computes but annotation exists - clear it
+		delete(annotations, "nnf.cray.hpe.com/fenced-computes")
+		delete(annotations, "nnf.cray.hpe.com/fence-timestamp")
+		node.SetAnnotations(annotations)
+
+		if err := r.Update(ctx, node); err != nil {
+			return fmt.Errorf("failed to clear NnfNode fence annotations: %w", err)
+		}
+		log.Info("Cleared fence annotations - no computes are fenced")
 	}
 
 	return nil
