@@ -1377,12 +1377,14 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 func (r *NnfAccessReconciler) checkFencedCompute(computeName string) (bool, error) {
 	// Check if fence response directory exists
 	if _, err := os.Stat(fence.ResponseDir); os.IsNotExist(err) {
+		r.Log.Info("Fence response directory does not exist", "dir", fence.ResponseDir)
 		return false, nil
 	}
 
 	// Read all files in the response directory
 	entries, err := os.ReadDir(fence.ResponseDir)
 	if err != nil {
+		r.Log.Error(err, "Failed to read fence response directory", "dir", fence.ResponseDir)
 		return false, err
 	}
 
