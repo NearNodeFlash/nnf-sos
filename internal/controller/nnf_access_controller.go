@@ -1202,25 +1202,26 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 	// Check whether the clientmounts have finished mounting/unmounting
 	for _, clientMount := range clientMounts {
+		// Check if this compute node is offline/fenced first, before checking mount status
+		offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+		if err != nil {
+			return false, err
+		}
+
+		// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+		// from this node since it can't respond. The filesystem won't be remounted if the
+		// compute comes back since spec.desiredState is "unmounted"
+		if offline && access.Status.State == "unmounted" {
+			log.Info("ignoring status from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+			continue
+		}
+
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
 		}
 
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State || !mount.Ready {
-				if string(mount.State) == "unmounted" {
-					offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
-					if err != nil {
-						return false, err
-					}
-					// If the compute node is down, then ignore an unmount failure. If the compute node
-					// comes back up, the file system won't be mounted again since spec.desiredState is "unmounted"
-					if offline {
-						log.Info("ignoring status from offline compute node", "node name", clientMount.GetNamespace())
-						continue
-					}
-				}
-
 				return false, nil
 			}
 		}
