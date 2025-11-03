@@ -182,9 +182,9 @@ func (r *NnfNodeReconciler) Start(ctx context.Context) error {
 	// Subscribe to the NNF Event Manager
 	nnfevent.EventManager.Subscribe(r)
 
-	// Initialize the GFS2 fence watcher to monitor for fence response files
+	// Initialize and start the GFS2 fence watcher to monitor fence responses
 	var err error
-	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name, fence.ResponseDir)
+	r.fenceWatcher, err = NewGFS2FenceWatcher(log, fence.ResponseDir)
 	if err != nil {
 		return fmt.Errorf("failed to create fence watcher: %w", err)
 	}
@@ -626,14 +626,21 @@ func (s *nnfNodeGfs2FenceEventSource) Start(ctx context.Context, handler handler
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		// Now forward events from the fence watcher to the queue
+		// Now forward fence events from the watcher to the queue
+		// All fence events (both fence and unfence) should trigger reconciliation of this NnfNode
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case req := <-s.Reconciler.fenceWatcher.GetReconcileChannel():
-				// Forward the reconcile request to the queue
-				queue.Add(req)
+			case <-s.Reconciler.fenceWatcher.GetEventChannel():
+				// Any fence event should trigger reconciliation of the NnfNode
+				// The NnfNode reconciler will scan all fence response files and update status
+				queue.Add(reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      s.Reconciler.Name,
+						Namespace: s.Reconciler.Namespace,
+					},
+				})
 			}
 		}
 	}()

@@ -137,7 +137,7 @@ func (r *NnfNodeBlockStorageReconciler) Start(ctx context.Context) error {
 
 	// Initialize and start the GFS2 fence watcher to monitor fence requests
 	var err error
-	r.fenceWatcher, err = NewGFS2FenceWatcher(log, r.Namespace, r.Name, fence.RequestDir)
+	r.fenceWatcher, err = NewGFS2FenceWatcher(log, fence.RequestDir)
 	if err != nil {
 		log.Error(err, "Failed to create GFS2 fence watcher")
 		// Don't fail startup if watcher fails - log and continue
@@ -951,14 +951,23 @@ func (s *gfs2FenceEventSource) Start(ctx context.Context, handler handler.EventH
 			time.Sleep(100 * time.Millisecond)
 		}
 
-		// Now forward events from the fence watcher to the queue
+		// Now forward fence events from the watcher to the queue
+		// Convert fence events to reconcile requests for the target NnfNodeBlockStorage
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case req := <-s.Reconciler.fenceWatcher.GetReconcileChannel():
-				// Forward the reconcile request to the queue
-				queue.Add(req)
+			case fenceEvent := <-s.Reconciler.fenceWatcher.GetEventChannel():
+				// Only process fence events (not unfence) for NnfNodeBlockStorage
+				// The target node is the name of the NnfNodeBlockStorage resource to reconcile
+				if !fenceEvent.IsUnfence {
+					queue.Add(reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name:      fenceEvent.TargetNode,
+							Namespace: s.Reconciler.Namespace,
+						},
+					})
+				}
 			}
 		}
 	}()
