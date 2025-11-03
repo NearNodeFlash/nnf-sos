@@ -348,8 +348,7 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 	// Check for fence response files for compute nodes on this Rabbit
 	// This must run after hostnames are populated above
-	annotationsChanged, err := r.checkFencedStatus(ctx, node, log)
-	if err != nil {
+	if err := r.checkFencedStatus(ctx, node, log); err != nil {
 		log.Error(err, "Failed to check fenced status")
 		// Don't fail the reconcile, just log the error and continue
 	}
@@ -368,14 +367,6 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	for _, nid := range strings.Split(string(output), "\n") {
 		if strings.Contains(nid, "@") {
 			node.Status.LNetNid = nid
-		}
-	}
-
-	// Update the node metadata (annotations) only if they changed during fence status check
-	// This is done before the status update (via deferred statusUpdater) to ensure both are saved
-	if annotationsChanged {
-		if err := r.Update(ctx, node); err != nil && !errors.IsConflict(err) {
-			return ctrl.Result{}, fmt.Errorf("failed to update NnfNode metadata: %w", err)
 		}
 	}
 
@@ -448,22 +439,21 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 
 // checkFencedStatus checks for fence response files for any of the compute nodes
 // attached to this Rabbit and marks those compute servers as offline.
-// Returns true if annotations were changed and need to be saved.
-func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1alpha9.NnfNode, log logr.Logger) (bool, error) {
+func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	// Check if the fence response directory exists
 	if _, err := os.Stat(fence.ResponseDir); err != nil {
 		if os.IsNotExist(err) {
 			// Directory doesn't exist, no fenced computes
-			return false, nil
+			return nil
 		}
 		// Some other error accessing directory
-		return false, fmt.Errorf("error checking fence response directory: %w", err)
+		return fmt.Errorf("error checking fence response directory: %w", err)
 	}
 
 	// Read all files in the response directory
 	entries, err := os.ReadDir(fence.ResponseDir)
 	if err != nil {
-		return false, fmt.Errorf("error reading fence response directory: %w", err)
+		return fmt.Errorf("error reading fence response directory: %w", err)
 	}
 
 	// Build a map of fenced compute nodes from fence response files
@@ -531,43 +521,7 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 		}
 	}
 
-	// Update annotation to reflect current fence state
-	// Note: We don't call r.Update() here - the annotations will be saved at the end
-	// of the reconcile if we return true. This prevents triggering an immediate
-	// reconcile that would run updateServers() before checkFencedStatus() completes.
-	annotations := node.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-
-	annotationsChanged := false
-
-	if len(fencedComputes) > 0 {
-		// Build list of fenced compute names
-		fencedList := []string{}
-		for computeName := range fencedComputes {
-			fencedList = append(fencedList, computeName)
-		}
-
-		// Update annotations with current fence state
-		newFencedValue := strings.Join(fencedList, ",")
-		if annotations["nnf.cray.hpe.com/fenced-computes"] != newFencedValue {
-			annotations["nnf.cray.hpe.com/fenced-computes"] = newFencedValue
-			annotations["nnf.cray.hpe.com/fence-timestamp"] = time.Now().Format(time.RFC3339)
-			node.SetAnnotations(annotations)
-			annotationsChanged = true
-			log.Info("Updated NnfNode fence state annotations", "fencedComputes", fencedList)
-		}
-	} else if _, exists := annotations["nnf.cray.hpe.com/fenced-computes"]; exists {
-		// No fenced computes but annotation exists - clear it
-		delete(annotations, "nnf.cray.hpe.com/fenced-computes")
-		delete(annotations, "nnf.cray.hpe.com/fence-timestamp")
-		node.SetAnnotations(annotations)
-		annotationsChanged = true
-		log.Info("Cleared fence annotations - no computes are fenced")
-	}
-
-	return annotationsChanged, nil
+	return nil
 }
 
 // Update the Drives status of the NNF Node if necessary
