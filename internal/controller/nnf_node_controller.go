@@ -304,12 +304,6 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	// Check for fence response files for compute nodes on this Rabbit
-	if err := r.checkFencedStatus(ctx, node, log); err != nil {
-		log.Error(err, "Failed to check fenced status")
-		// Don't fail the reconcile, just log the error and continue
-	}
-
 	if err := updateDrives(node, log); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -350,6 +344,13 @@ func (r *NnfNodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 				node.Status.Servers[i].Hostname = compute.Name
 			}
 		}
+	}
+
+	// Check for fence response files for compute nodes on this Rabbit
+	// This must run after hostnames are populated above
+	if err := r.checkFencedStatus(ctx, node, log); err != nil {
+		log.Error(err, "Failed to check fenced status")
+		// Don't fail the reconcile, just log the error and continue
 	}
 
 	_, found := os.LookupEnv("NNF_TEST_ENVIRONMENT")
@@ -482,11 +483,15 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 			continue
 		}
 
+		log.Info("Found fence response file", "file", entry.Name(), "targetNode", response.TargetNode, "success", response.Success)
+
 		// Track fenced computes
 		if response.Success {
 			fencedComputes[response.TargetNode] = true
 		}
 	}
+
+	log.Info("Fenced computes map", "fencedComputes", fencedComputes)
 
 	// Update all server statuses based on fence state
 	annotationChanged := false
@@ -496,6 +501,8 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 		if server.ID == "0" {
 			continue
 		}
+
+		log.Info("Checking server fence status", "serverID", server.ID, "hostname", server.Hostname, "isFenced", fencedComputes[server.Hostname])
 
 		// Check if this compute has a fence response file
 		if fencedComputes[server.Hostname] {
