@@ -117,7 +117,7 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				return
 			}
 
-			// Only process Write events to avoid race conditions with Create events.
+			// Process Write events for new fence requests/responses
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				filename := filepath.Base(event.Name)
 				log.Info("Fence request file written (ready to process)", "file", event.Name, "filename", filename)
@@ -153,6 +153,20 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				w.reconcileChan <- reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      fenceRequest.TargetNode,
+						Namespace: w.nodeNamespace,
+					},
+				}
+			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
+				// Process Remove events for fence file deletion (unfencing)
+				// For NnfNode controller watching response directory, this triggers status update
+				filename := filepath.Base(event.Name)
+				log.Info("Fence response file removed (unfencing)", "file", event.Name, "filename", filename)
+
+				// Trigger reconciliation of the NnfNode to update status
+				// The node name and namespace should match the reconciler's node
+				w.reconcileChan <- reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      w.nodeName,
 						Namespace: w.nodeNamespace,
 					},
 				}
