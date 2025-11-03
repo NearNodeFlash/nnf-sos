@@ -415,6 +415,16 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 		node.Status.Servers = make([]nnfv1alpha9.NnfServerStatus, len(serverEndpointCollection.Members))
 	}
 
+	// Get list of fenced computes from annotations to preserve their offline status
+	fencedComputes := make(map[string]bool)
+	if annotations := node.GetAnnotations(); annotations != nil {
+		if fencedList, exists := annotations["nnf.cray.hpe.com/fenced-computes"]; exists {
+			for _, computeName := range strings.Split(fencedList, ",") {
+				fencedComputes[computeName] = true
+			}
+		}
+	}
+
 	// Iterate over the server endpoints to ensure we've reflected
 	// the status of each server (Compute & Rabbit)
 	for idx, serverEndpoint := range serverEndpointCollection.Members {
@@ -426,11 +436,26 @@ func (r *NnfNodeReconciler) updateServers(node *nnfv1alpha9.NnfNode, log logr.Lo
 			return err
 		}
 
-		node.Status.Servers[idx].NnfResourceStatus = nnfv1alpha9.NnfResourceStatus{
-			ID:     serverEndpoint.Id,
-			Name:   serverEndpoint.Name,
-			Status: nnfv1alpha9.ResourceStatus(serverEndpoint.Status),
-			Health: nnfv1alpha9.ResourceHealth(serverEndpoint.Status),
+		// Preserve fence status if this server is fenced
+		// Check hostname from existing status (it will be populated later in the reconcile)
+		isFenced := false
+		if idx < len(node.Status.Servers) && fencedComputes[node.Status.Servers[idx].Hostname] {
+			isFenced = true
+		}
+
+		if isFenced {
+			// Keep the fenced status (Offline/Critical), but update ID and Name
+			node.Status.Servers[idx].ID = serverEndpoint.Id
+			node.Status.Servers[idx].Name = serverEndpoint.Name
+			// Don't overwrite Status/Health - keep them as Offline/Critical
+		} else {
+			// Normal update - use status from nnf-ec
+			node.Status.Servers[idx].NnfResourceStatus = nnfv1alpha9.NnfResourceStatus{
+				ID:     serverEndpoint.Id,
+				Name:   serverEndpoint.Name,
+				Status: nnfv1alpha9.ResourceStatus(serverEndpoint.Status),
+				Health: nnfv1alpha9.ResourceHealth(serverEndpoint.Status),
+			}
 		}
 	}
 
