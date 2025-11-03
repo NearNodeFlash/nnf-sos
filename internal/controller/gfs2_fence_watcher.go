@@ -29,8 +29,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
@@ -45,14 +43,19 @@ type FenceRequest struct {
 	FilePath     string `json:"-"` // Not from JSON, added when parsing
 }
 
+// FenceEvent represents a fence event detected by the watcher
+type FenceEvent struct {
+	TargetNode   string
+	IsUnfence    bool // true if this is an unfence event (file removal)
+	FenceRequest *FenceRequest
+}
+
 // GFS2FenceWatcher watches for new files in a GFS2 fencing directory
-// and triggers reconciliation of controllers
+// and emits events when fence requests/responses are detected
 type GFS2FenceWatcher struct {
 	log             logr.Logger
 	watcher         *fsnotify.Watcher
-	reconcileChan   chan reconcile.Request
-	nodeNamespace   string
-	nodeName        string
+	eventChan       chan FenceEvent
 	watchDir        string                     // Directory to watch (request or response)
 	pendingRequests map[string][]*FenceRequest // key: targetNode, value: pending fence requests
 	requestsMutex   sync.Mutex
@@ -60,7 +63,7 @@ type GFS2FenceWatcher struct {
 
 // NewGFS2FenceWatcher creates a new file system watcher for GFS2 fence files
 // watchDir specifies the directory to monitor (e.g., fence.RequestDir or fence.ResponseDir)
-func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName, watchDir string) (*GFS2FenceWatcher, error) {
+func NewGFS2FenceWatcher(log logr.Logger, watchDir string) (*GFS2FenceWatcher, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -69,9 +72,7 @@ func NewGFS2FenceWatcher(log logr.Logger, nodeNamespace, nodeName, watchDir stri
 	return &GFS2FenceWatcher{
 		log:             log,
 		watcher:         watcher,
-		reconcileChan:   make(chan reconcile.Request, 100),
-		nodeNamespace:   nodeNamespace,
-		nodeName:        nodeName,
+		eventChan:       make(chan FenceEvent, 100),
 		watchDir:        watchDir,
 		pendingRequests: make(map[string][]*FenceRequest),
 	}, nil
@@ -120,7 +121,7 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 			// Process Write events for new fence requests/responses
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				filename := filepath.Base(event.Name)
-				log.Info("Fence request file written (ready to process)", "file", event.Name, "filename", filename)
+				log.Info("Fence file written (ready to process)", "file", event.Name, "filename", filename)
 
 				// Brief delay to ensure file is fully flushed to disk
 				time.Sleep(50 * time.Millisecond)
@@ -131,12 +132,12 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				// Parse the fence request file to get the target node
 				fenceRequest, err := w.ParseFenceRequest(event.Name)
 				if err != nil {
-					log.Error(err, "Failed to parse fence request file", "file", event.Name)
-					// Skip this request if we can't determine the target node
+					log.Error(err, "Failed to parse fence file", "file", event.Name)
+					// Skip this request if we can't parse it
 					continue
 				}
 
-				log.Info("Triggering fence action for compute node", "targetNode", fenceRequest.TargetNode)
+				log.Info("Detected fence event for compute node", "targetNode", fenceRequest.TargetNode)
 
 				// Store the parsed fence request in the pending requests map
 				w.requestsMutex.Lock()
@@ -146,29 +147,23 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 				w.pendingRequests[fenceRequest.TargetNode] = append(w.pendingRequests[fenceRequest.TargetNode], fenceRequest)
 				w.requestsMutex.Unlock()
 
-				// Trigger reconciliation for the target node's NnfNodeStorage.
-				// The rabbit maintains NnfNodeStorage resources for storage it provides to compute nodes.
-				// The reconciler will find GFS2 filesystems shared with this compute node,
-				// locate the associated storage groups, and delete them to fence the node.
-				w.reconcileChan <- reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      fenceRequest.TargetNode,
-						Namespace: w.nodeNamespace,
-					},
+				// Emit fence event
+				w.eventChan <- FenceEvent{
+					TargetNode:   fenceRequest.TargetNode,
+					IsUnfence:    false,
+					FenceRequest: fenceRequest,
 				}
 			} else if event.Op&fsnotify.Remove == fsnotify.Remove {
 				// Process Remove events for fence file deletion (unfencing)
-				// For NnfNode controller watching response directory, this triggers status update
 				filename := filepath.Base(event.Name)
-				log.Info("Fence response file removed (unfencing)", "file", event.Name, "filename", filename)
+				log.Info("Fence file removed (unfencing)", "file", event.Name, "filename", filename)
 
-				// Trigger reconciliation of the NnfNode to update status
-				// The node name and namespace should match the reconciler's node
-				w.reconcileChan <- reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name:      w.nodeName,
-						Namespace: w.nodeNamespace,
-					},
+				// Try to parse the filename to extract target node
+				// The filename should be a UUID with .json extension
+				// We'll try to read any cached info, but emit event anyway
+				w.eventChan <- FenceEvent{
+					TargetNode: "", // Unknown target node for removal events
+					IsUnfence:  true,
 				}
 			}
 
@@ -181,9 +176,9 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 	}
 }
 
-// GetReconcileChannel returns the channel that receives reconcile requests
-func (w *GFS2FenceWatcher) GetReconcileChannel() <-chan reconcile.Request {
-	return w.reconcileChan
+// GetEventChannel returns the channel that receives fence events
+func (w *GFS2FenceWatcher) GetEventChannel() <-chan FenceEvent {
+	return w.eventChan
 }
 
 // GetPendingRequests retrieves and removes pending fence requests for a target node
