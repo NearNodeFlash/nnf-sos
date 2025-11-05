@@ -322,8 +322,10 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 		return false, err
 	}
 
-	if !controllerutil.ContainsFinalizer(nnfStorage, access.Name) {
-		controllerutil.AddFinalizer(nnfStorage, access.Name)
+	// Use domain-qualified finalizer to avoid conflicts with other controllers
+	finalizerName := "nnf.cray.hpe.com/" + access.Name
+	if !controllerutil.ContainsFinalizer(nnfStorage, finalizerName) {
+		controllerutil.AddFinalizer(nnfStorage, finalizerName)
 	}
 
 	// Clustered file systems don't need to add the annotation
@@ -397,8 +399,10 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 		nnfStorage.SetAnnotations(annotations)
 	}
 
-	if controllerutil.ContainsFinalizer(nnfStorage, access.Name) {
-		controllerutil.RemoveFinalizer(nnfStorage, access.Name)
+	// Use domain-qualified finalizer to match the one added in lockStorage
+	finalizerName := "nnf.cray.hpe.com/" + access.Name
+	if controllerutil.ContainsFinalizer(nnfStorage, finalizerName) {
+		controllerutil.RemoveFinalizer(nnfStorage, finalizerName)
 	}
 
 	err := r.Update(ctx, nnfStorage)
