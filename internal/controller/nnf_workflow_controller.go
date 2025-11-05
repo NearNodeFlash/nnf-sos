@@ -471,12 +471,30 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 			}
 		}
 
-		if storage, err := r.createNnfStorage(ctx, workflow, s, index, log); err != nil {
+		storage, err := r.createNnfStorage(ctx, workflow, s, index, log)
+		if err != nil {
 			if apierrors.IsConflict(err) {
 				return Requeue("conflict").withObject(storage), nil
 			}
 
 			return nil, dwsv1alpha7.NewResourceError("could not create NnfStorage").WithError(err).WithUserMessage("could not create allocation")
+		}
+
+		// Add readiness check to avoid race condition - ensure the resource is available for reading
+		// before proceeding to finishSetupState
+		readyStorage := &nnfv1alpha9.NnfStorage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      storage.Name,
+				Namespace: storage.Namespace,
+			},
+		}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(readyStorage), readyStorage); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Resource was created but not yet available for reading - requeue with delay
+				log.V(1).Info("NnfStorage created but not yet readable, requeuing", "name", storage.Name)
+				return Requeue("resource not yet readable").after(100 * time.Millisecond).withObject(storage), nil
+			}
+			return nil, dwsv1alpha7.NewResourceError("could not verify NnfStorage creation: %v", client.ObjectKeyFromObject(readyStorage)).WithError(err).WithUserMessage("could not verify storage allocation")
 		}
 	case "container":
 		for _, value := range workflow.Status.Requires {
