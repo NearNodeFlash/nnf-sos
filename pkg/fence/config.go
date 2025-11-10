@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2025 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -19,13 +19,13 @@
 
 package fence
 
-// GFS2 Fencing Configuration
+// Fence Recorder Configuration
 // These paths are shared between nnf-sos and fence-agents repositories.
 // If you change these values, ensure both repositories are updated.
 const (
 	// RequestDir is where fence agents write fence request files
-	RequestDir = "/localdisk/gfs2-fencing/requests"
+	RequestDir = "/localdisk/fence-recorder/requests"
 
 	// ResponseDir is where nnf-sos writes fence response files
-	ResponseDir = "/localdisk/gfs2-fencing/responses"
+	ResponseDir = "/localdisk/fence-recorder/responses"
 )

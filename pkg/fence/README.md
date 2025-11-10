@@ -1,6 +1,6 @@
-# GFS2 Fence Configuration
+# Fence Recorder Configuration
 
-This directory contains shared configuration for GFS2 fencing paths used by both the nnf-sos controller and the fence-agents.
+This directory contains shared configuration for fence recorder paths used by both the nnf-sos controller and the fence-recorder agent.
 
 ## Files
 
@@ -47,8 +47,8 @@ When you need to change the fence request/response directory paths:
 
 The fencing protocol uses two directories:
 
-- **Request Directory** (`/localdisk/gfs2-fencing/requests`): Where fence agents write JSON request files
-- **Response Directory** (`/localdisk/gfs2-fencing/responses`): Where nnf-sos writes JSON response files
+- **Request Directory** (`/localdisk/fence-recorder/requests`): Where fence agents write JSON request files
+- **Response Directory** (`/localdisk/fence-recorder/responses`): Where nnf-sos writes JSON response files
 
 ## Alternative Approaches
 
@@ -59,8 +59,8 @@ If you prefer a different approach to sharing configuration:
 Set environment variables on both systems:
 
 ```bash
-export GFS2_FENCE_REQUEST_DIR=/localdisk/gfs2-fencing/requests
-export GFS2_FENCE_RESPONSE_DIR=/localdisk/gfs2-fencing/responses
+export FENCE_RECORDER_REQUEST_DIR=/localdisk/fence-recorder/requests
+export FENCE_RECORDER_RESPONSE_DIR=/localdisk/fence-recorder/responses
 ```
 
 ### Option 2: System Configuration File
@@ -69,8 +69,8 @@ Create `/etc/nnf/fence-config.json`:
 
 ```json
 {
-  "request_dir": "/localdisk/gfs2-fencing/requests",
-  "response_dir": "/localdisk/gfs2-fencing/responses"
+  "request_dir": "/localdisk/fence-recorder/requests",
+  "response_dir": "/localdisk/fence-recorder/responses"
 }
 ```
 
@@ -87,4 +87,4 @@ The nnf-sos controller currently uses the constants from `config.go` in:
 - `internal/controller/gfs2_fence_watcher.go` - File system watcher
 - `internal/controller/nnf_node_storage_controller.go` - Response file writer
 
-The fence agents should import `config.py` to use the same paths.
+The fence agent should import `config.py` to use the same paths.

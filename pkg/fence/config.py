@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021-2025 Hewlett Packard Enterprise Development LP
+# Copyright 2025 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -17,14 +17,14 @@
 # limitations under the License.
 
 """
-GFS2 Fencing Configuration
+Fence Recorder Configuration
 
 These paths are shared between nnf-sos and fence-agents repositories.
 If you change these values, ensure both repositories are updated.
 """
 
 # Directory where fence agents write fence request files
-REQUEST_DIR = "/localdisk/gfs2-fencing/requests"
+REQUEST_DIR = "/localdisk/fence-recorder/requests"
 
 # Directory where nnf-sos writes fence response files
-RESPONSE_DIR = "/localdisk/gfs2-fencing/responses"
+RESPONSE_DIR = "/localdisk/fence-recorder/responses"
