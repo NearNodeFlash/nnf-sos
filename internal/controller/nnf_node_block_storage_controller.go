@@ -145,6 +145,7 @@ func (r *NnfNodeBlockStorageReconciler) Start(ctx context.Context) error {
 
 	if err := r.fenceWatcher.Start(ctx); err != nil {
 		log.Error(err, "Failed to start GFS2 fence watcher")
+		r.fenceWatcher.Stop() // Clean up the watcher if start fails
 		return fmt.Errorf("failed to start GFS2 fence watcher: %w", err)
 	}
 
@@ -800,9 +801,12 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 		// Write response file
 		if err := r.writeFenceResponse(request, success, message, actionPerformed, log); err != nil {
 			log.Error(err, "Failed to write fence response", "requestID", request.RequestID)
+			// Don't delete the request file if we couldn't write the response
+			// The fence agent needs the response to complete the fencing operation
+			continue
 		}
 
-		// Clean up the fence request file after processing
+		// Clean up the fence request file after successfully writing the response
 		if request.FilePath != "" {
 			if err := os.Remove(request.FilePath); err != nil {
 				log.Error(err, "Failed to remove fence request file", "file", request.FilePath)

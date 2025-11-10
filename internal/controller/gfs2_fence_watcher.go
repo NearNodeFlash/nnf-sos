@@ -35,12 +35,13 @@ import (
 
 // FenceRequest represents the structure of a fence request file written by the fence agent
 type FenceRequest struct {
-	RequestID    string `json:"request_id"`
-	Timestamp    string `json:"timestamp"`
-	Action       string `json:"action"`
-	TargetNode   string `json:"target_node"`
-	RecorderNode string `json:"recorder_node"`
-	FilePath     string `json:"-"` // Not from JSON, added when parsing
+	RequestID    string    `json:"request_id"`
+	Timestamp    string    `json:"timestamp"`
+	Action       string    `json:"action"`
+	TargetNode   string    `json:"target_node"`
+	RecorderNode string    `json:"recorder_node"`
+	FilePath     string    `json:"-"` // Not from JSON, added when parsing
+	ReceivedAt   time.Time `json:"-"` // When we received this request, for stale cleanup
 }
 
 // FenceEvent represents a fence event detected by the watcher
@@ -60,6 +61,11 @@ type GFS2FenceWatcher struct {
 	pendingRequests map[string][]*FenceRequest // key: targetNode, value: pending fence requests
 	requestsMutex   sync.Mutex
 }
+
+const (
+	// pendingRequestTimeout is how long we keep pending requests before cleaning them up
+	pendingRequestTimeout = 5 * time.Minute
+)
 
 // NewGFS2FenceWatcher creates a new file system watcher for GFS2 fence files
 // watchDir specifies the directory to monitor (e.g., fence.RequestDir or fence.ResponseDir)
@@ -98,6 +104,9 @@ func (w *GFS2FenceWatcher) Start(ctx context.Context) error {
 
 	// Start the event processing goroutine
 	go w.processEvents(ctx)
+
+	// Start the cleanup goroutine to remove stale pending requests
+	go w.cleanupStaleRequests(ctx)
 
 	return nil
 }
@@ -139,7 +148,8 @@ func (w *GFS2FenceWatcher) processEvents(ctx context.Context) {
 
 				log.Info("Detected fence event for compute node", "targetNode", fenceRequest.TargetNode)
 
-				// Store the parsed fence request in the pending requests map
+				// Store the parsed fence request in the pending requests map with current time
+				fenceRequest.ReceivedAt = time.Now()
 				w.requestsMutex.Lock()
 				if w.pendingRequests[fenceRequest.TargetNode] == nil {
 					w.pendingRequests[fenceRequest.TargetNode] = []*FenceRequest{}
@@ -217,6 +227,48 @@ func (w *GFS2FenceWatcher) ParseFenceRequest(filePath string) (*FenceRequest, er
 		"recorderNode", request.RecorderNode)
 
 	return &request, nil
+}
+
+// cleanupStaleRequests periodically removes old pending requests that were never processed
+func (w *GFS2FenceWatcher) cleanupStaleRequests(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.requestsMutex.Lock()
+			now := time.Now()
+			for targetNode, requests := range w.pendingRequests {
+				// Filter out stale requests
+				fresh := make([]*FenceRequest, 0, len(requests))
+				staleCount := 0
+				for _, req := range requests {
+					if now.Sub(req.ReceivedAt) < pendingRequestTimeout {
+						fresh = append(fresh, req)
+					} else {
+						staleCount++
+					}
+				}
+
+				if staleCount > 0 {
+					w.log.Info("Cleaned up stale fence requests",
+						"targetNode", targetNode,
+						"staleCount", staleCount,
+						"remainingCount", len(fresh))
+				}
+
+				if len(fresh) > 0 {
+					w.pendingRequests[targetNode] = fresh
+				} else {
+					delete(w.pendingRequests, targetNode)
+				}
+			}
+			w.requestsMutex.Unlock()
+		}
+	}
 }
 
 // Stop gracefully stops the watcher
