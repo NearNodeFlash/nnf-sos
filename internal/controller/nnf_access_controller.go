@@ -1199,41 +1199,46 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	}
 
 	// Check whether the clientmounts have finished mounting/unmounting
-	// Track how many ClientMounts we've validated (excluding offline/fenced nodes)
-	validatedMounts := 0
 	for _, clientMount := range clientMounts {
-		// Check if this compute node is offline/fenced first, before checking mount status
-		offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
-		if err != nil {
-			return false, err
-		}
-
-		log.Info("checking ClientMount status", "node", clientMount.GetNamespace(), "offline", offline, "desiredState", access.Spec.DesiredState, "statusMounts", len(clientMount.Status.Mounts), "specMounts", len(clientMount.Spec.Mounts))
-
-		// If the compute node is offline/fenced and we're unmounting, ignore any mount status
-		// from this node since it can't respond. The filesystem won't be remounted if the
-		// compute comes back since spec.desiredState is "unmounted"
-		if offline && access.Spec.DesiredState == "unmounted" {
-			log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
-			validatedMounts++ // Count as validated so we don't wait for it
-			continue
-		}
-
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
 		}
 
+		// Check if all mounts are ready and in the correct state
+		allMountsReady := true
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State || !mount.Ready {
-				return false, nil
+				allMountsReady = false
+				break
 			}
 		}
-		validatedMounts++
+
+		// If mounts aren't ready, check if this compute node is offline/fenced
+		// Only do the expensive offline check when we need it to handle failures gracefully
+		if !allMountsReady || access.Spec.DesiredState == "unmounted" {
+			offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+			if err != nil {
+				return false, err
+			}
+
+			// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+			// from this node since it can't respond. The filesystem won't be remounted if the
+			// compute comes back since spec.desiredState is "unmounted"
+			if offline && access.Spec.DesiredState == "unmounted" {
+				log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				continue
+			}
+		}
+
+		// If mounts aren't ready and node isn't offline (or we're not unmounting), return false
+		if !allMountsReady {
+			return false, nil
+		}
 	}
 
-	if validatedMounts != len(clientList) {
+	if len(clientMounts) != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
-			log.Info("unexpected number of ClientMounts", "found", validatedMounts, "expected", len(clientList))
+			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
 		}
 		return false, nil
 	}

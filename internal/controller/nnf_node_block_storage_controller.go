@@ -185,7 +185,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		fenceRequests := r.fenceWatcher.GetPendingRequests(req.NamespacedName.Name)
 		if len(fenceRequests) > 0 {
 			log.Info("Fence requests detected for this node",
-				"targetNode", req.NamespacedName.Name,
+				"computeNode", req.NamespacedName.Name,
 				"requestCount", len(fenceRequests))
 
 			// Process fence requests - find GFS2 filesystems shared with this node
@@ -696,8 +696,8 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageService
 	return ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
 }
 
-// processFenceRequests handles fence requests by finding and deleting storage groups for the target node
-func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context, targetNode string, fenceRequests []*FenceRequest, log logr.Logger) error {
+// processFenceRequests handles fence requests by finding and deleting storage groups for the compute node.
+func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context, computeNode string, fenceRequests []*FenceRequest, log logr.Logger) error {
 	// List all NnfNodeBlockStorage resources in this rabbit node's namespace
 	nnfNodeBlockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
 	listOptions := []client.ListOption{
@@ -720,18 +720,18 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 			continue
 		}
 
-		// Check each allocation for accesses by the target node
+		// Check each allocation for accesses by the compute node
 		for _, allocation := range blockStorage.Status.Allocations {
 			if allocation.Accesses == nil {
 				continue
 			}
 
-			// Check if the target node has access to this allocation
-			if access, found := allocation.Accesses[targetNode]; found {
+			// Check if the compute node has access to this allocation
+			if access, found := allocation.Accesses[computeNode]; found {
 				storageGroupID := access.StorageGroupId
 				if storageGroupID != "" {
 					log.Info("Found GFS2 storage group for fenced node",
-						"targetNode", targetNode,
+						"computeNode", computeNode,
 						"storageGroupId", storageGroupID,
 						"blockStorage", blockStorage.Name,
 						"namespace", blockStorage.Namespace,
@@ -750,7 +750,7 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	// Delete the storage groups to fence the node
 	if len(storageGroupsToDelete) > 0 {
 		log.Info("Deleting GFS2 storage groups to fence node",
-			"targetNode", targetNode,
+			"computeNode", computeNode,
 			"storageGroupIds", storageGroupsToDelete,
 			"count", len(storageGroupsToDelete))
 
@@ -765,12 +765,12 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
 				log.Error(err, "Failed to delete storage group",
 					"storageGroupId", storageGroupID,
-					"targetNode", targetNode)
+					"computeNode", computeNode)
 				deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", storageGroupID, err))
 			} else {
 				log.Info("Successfully deleted storage group",
 					"storageGroupId", storageGroupID,
-					"targetNode", targetNode)
+					"computeNode", computeNode)
 				deletedCount++
 			}
 		}
@@ -790,10 +790,10 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 				strings.Join(deleteErrors, "; "))
 		}
 	} else {
-		log.Info("No GFS2 storage groups found for target node", "targetNode", targetNode)
+		log.Info("No GFS2 storage groups found for compute node", "computeNode", computeNode)
 		success = true
 		actionPerformed = "off"
-		message = fmt.Sprintf("No GFS2 storage groups found for target node %s (already fenced or no GFS2 access)", targetNode)
+		message = fmt.Sprintf("No GFS2 storage groups found for compute node %s (already fenced or no GFS2 access)", computeNode)
 	}
 
 	// Process each fence request
