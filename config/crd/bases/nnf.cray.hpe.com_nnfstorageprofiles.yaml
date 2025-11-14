@@ -1508,115 +1508,308 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
+                  blockDeviceCommands:
+                    description: BlockDeviceCommands specifies commands that are run
+                      when configuring the block device
                     properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
                         properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          lvCreate:
+                            description: LvCreate specifies the lvcreate commandline,
+                              minus the "lvcreate".
                             type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
+                          lvRemove:
+                            description: LvRemove specifies the lvcreate commandline,
+                              minus the "lvremove".
+                            type: string
+                          lvmRebuild:
+                            description: LVMRebuild specifies command lines needed
+                              for rebuilding LVM RAID devices
+                            properties:
+                              lvRepair:
+                                description: LvRepair specifies the command for repairing
+                                  a LV after a drive failure
+                                type: string
+                              vgExtend:
+                                description: VgExtend specifies the command for adding
+                                  PVs to a VG
+                                type: string
+                              vgReduce:
+                                description: VgReduce specifies the command for removing
+                                  PVs from a VG
+                                type: string
+                            type: object
+                          pvCreate:
+                            description: PvCreate specifies the pvcreate commandline,
+                              minus the "pvcreate".
+                            type: string
+                          pvRemove:
+                            description: PvRemove specifies the pvremove commandline,
+                              minus the "pvremove".
+                            type: string
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                          vgCreate:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgcreate".
+                            type: string
+                          vgRemove:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgremove".
                             type: string
                         type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      lvmRebuild:
-                        description: LVMRebuild specifies command lines needed for
-                          rebuilding LVM RAID devices
-                        properties:
-                          lvRepair:
-                            description: LvRepair specifies the command for repairing
-                              a LV after a drive failure
-                            type: string
-                          vgExtend:
-                            description: VgExtend specifies the command for adding
-                              PVs to a VG
-                            type: string
-                          vgReduce:
-                            description: VgReduce specifies the command for removing
-                              PVs from a VG
-                            type: string
-                        type: object
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
                       sharedVg:
                         default: false
                         description: |-
                           SharedVg specifies that allocations from a workflow on the same Rabbit should share an
                           LVM VolumeGroup
                         type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
                     type: object
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  fileSystemCommands:
+                    description: FileSystemCommands specifies commands that are run
+                      when configuring the file system
+                    properties:
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
+                        properties:
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              mounted/unmounted in PreRun and PostRun
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          mkfs:
+                            description: Mkfs specifies the mkfs commandline, minus
+                              the "mkfs".
+                            type: string
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              as a client during DataIn, PreRun, PostRun, and DataOut
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          userServerCommands:
+                            description: |-
+                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
+                              and teardown
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the file system is activated
+                                items:
+                                  type: string
+                                type: array
+                              postSetup:
+                                description: |-
+                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PostActivate specifies a list of commands
+                                  to run before the file system is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preTeardown:
+                                description: |-
+                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                    type: object
+                  sharedAllocation:
+                    description: SharedAllocation is used to share an allocation across
+                      multiple clients
+                    type: boolean
                   storageLabels:
                     description: |-
                       Storagelabels defines a list of labels that are added to the DirectiveBreakdown
@@ -1649,6 +1842,30 @@ spec:
                     description: ClientCmdLines contains commands to mount a Lustre
                       client
                     properties:
+                      computePostMount:
+                        description: ComputePostMount specifies a list of commands
+                          to run on the Compute node after a Lustre client is mounted
+                        items:
+                          type: string
+                        type: array
+                      computePostUnmount:
+                        description: ComputePostUnmount specifies a list of commands
+                          to run on the Compute node after a Lustre client is unmounted
+                        items:
+                          type: string
+                        type: array
+                      computePreMount:
+                        description: ComputePreMount specifies a list of commands
+                          to run on the Compute node before a Lustre client is mounted
+                        items:
+                          type: string
+                        type: array
+                      computePreUnmount:
+                        description: ComputePreUnmount specifies a list of commands
+                          to run on the Compute node before a Lustre client is unmounted
+                        items:
+                          type: string
+                        type: array
                       mountCompute:
                         description: MountCompute specifies mount options for making
                           the Lustre client mount on the Compute.
@@ -1658,18 +1875,41 @@ spec:
                           the Lustre client mount on the Rabbit.
                         type: string
                       rabbitPostMount:
+                        description: RabbitPostMount specifies a list of commands
+                          to run on the Rabbit after a Lustre client is mounted
+                        items:
+                          type: string
+                        type: array
+                      rabbitPostSetup:
                         description: |-
-                          PostMount specifies a list of commands to run on the Rabbit (Lustre client) after the Lustre
-                          target is activated. This includes mounting the Lustre filesystem beforehand and unmounting
-                          it afterward.
+                          RabbitPostSetup specifies a list of commands to run on the Rabbit with a Lustre client mounted after the Lustre file system
+                          has been set up. This includes mounting the Lustre filesystem beforehand and unmounting it afterward.
+                        items:
+                          type: string
+                        type: array
+                      rabbitPostUnmount:
+                        description: RabbitPostUnmount specifies a list of commands
+                          to run on the Rabbit after a Lustre client is unmounted
+                        items:
+                          type: string
+                        type: array
+                      rabbitPreMount:
+                        description: RabbitPreMount specifies a list of commands to
+                          run on the Rabbit before a Lustre client is mounted
+                        items:
+                          type: string
+                        type: array
+                      rabbitPreTeardown:
+                        description: |-
+                          RabbitPreTeardown specifies a list of commands to run on the Rabbit with a Lustre client mounted before the
+                          Lustre file system is torn down. This includes mounting the Lustre filesystem beforehand and
+                          unmounting it afterward.
                         items:
                           type: string
                         type: array
                       rabbitPreUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit (Lustre client) before the
-                          Lustre target is deactivated. This includes mounting the Lustre filesystem beforehand and
-                          unmounting it afterward.
+                        description: RabbitPreUnmount specifies a list of commands
+                          to run on the Rabbit before a Lustre client is unmounted
                         items:
                           type: string
                         type: array
@@ -1986,115 +2226,308 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
+                  blockDeviceCommands:
+                    description: BlockDeviceCommands specifies commands that are run
+                      when configuring the block device
                     properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
                         properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          lvCreate:
+                            description: LvCreate specifies the lvcreate commandline,
+                              minus the "lvcreate".
                             type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
+                          lvRemove:
+                            description: LvRemove specifies the lvcreate commandline,
+                              minus the "lvremove".
+                            type: string
+                          lvmRebuild:
+                            description: LVMRebuild specifies command lines needed
+                              for rebuilding LVM RAID devices
+                            properties:
+                              lvRepair:
+                                description: LvRepair specifies the command for repairing
+                                  a LV after a drive failure
+                                type: string
+                              vgExtend:
+                                description: VgExtend specifies the command for adding
+                                  PVs to a VG
+                                type: string
+                              vgReduce:
+                                description: VgReduce specifies the command for removing
+                                  PVs from a VG
+                                type: string
+                            type: object
+                          pvCreate:
+                            description: PvCreate specifies the pvcreate commandline,
+                              minus the "pvcreate".
+                            type: string
+                          pvRemove:
+                            description: PvRemove specifies the pvremove commandline,
+                              minus the "pvremove".
+                            type: string
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                          vgCreate:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgcreate".
+                            type: string
+                          vgRemove:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgremove".
                             type: string
                         type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      lvmRebuild:
-                        description: LVMRebuild specifies command lines needed for
-                          rebuilding LVM RAID devices
-                        properties:
-                          lvRepair:
-                            description: LvRepair specifies the command for repairing
-                              a LV after a drive failure
-                            type: string
-                          vgExtend:
-                            description: VgExtend specifies the command for adding
-                              PVs to a VG
-                            type: string
-                          vgReduce:
-                            description: VgReduce specifies the command for removing
-                              PVs from a VG
-                            type: string
-                        type: object
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
                       sharedVg:
                         default: false
                         description: |-
                           SharedVg specifies that allocations from a workflow on the same Rabbit should share an
                           LVM VolumeGroup
                         type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
                     type: object
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  fileSystemCommands:
+                    description: FileSystemCommands specifies commands that are run
+                      when configuring the file system
+                    properties:
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
+                        properties:
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              mounted/unmounted in PreRun and PostRun
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          mkfs:
+                            description: Mkfs specifies the mkfs commandline, minus
+                              the "mkfs".
+                            type: string
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              as a client during DataIn, PreRun, PostRun, and DataOut
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          userServerCommands:
+                            description: |-
+                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
+                              and teardown
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the file system is activated
+                                items:
+                                  type: string
+                                type: array
+                              postSetup:
+                                description: |-
+                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PostActivate specifies a list of commands
+                                  to run before the file system is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preTeardown:
+                                description: |-
+                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                    type: object
+                  sharedAllocation:
+                    description: SharedAllocation is used to share an allocation across
+                      multiple clients
+                    type: boolean
                   storageLabels:
                     description: |-
                       Storagelabels defines a list of labels that are added to the DirectiveBreakdown
@@ -2106,115 +2539,308 @@ spec:
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
-                  capacityScalingFactor:
-                    default: "1.0"
-                    description: CapacityScalingFactor is a scaling factor for the
-                      capacity requested in the DirectiveBreakdown
-                    type: string
-                  commandlines:
-                    description: CmdLines contains commands to create volumes and
-                      filesystems.
+                  blockDeviceCommands:
+                    description: BlockDeviceCommands specifies commands that are run
+                      when configuring the block device
                     properties:
-                      lvChange:
-                        description: LvChange specifies the various lvchange commandlines,
-                          minus the "lvchange"
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
                         properties:
-                          activate:
-                            description: The lvchange commandline for activate, minus
-                              the "lvchange" command
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          lvChange:
+                            description: LvChange specifies the various lvchange commandlines,
+                              minus the "lvchange"
+                            properties:
+                              activate:
+                                description: The lvchange commandline for activate,
+                                  minus the "lvchange" command
+                                type: string
+                              deactivate:
+                                description: The lvchange commandline for deactivate,
+                                  minus the "lvchange" command
+                                type: string
+                            type: object
+                          lvCreate:
+                            description: LvCreate specifies the lvcreate commandline,
+                              minus the "lvcreate".
                             type: string
-                          deactivate:
-                            description: The lvchange commandline for deactivate,
-                              minus the "lvchange" command
+                          lvRemove:
+                            description: LvRemove specifies the lvcreate commandline,
+                              minus the "lvremove".
+                            type: string
+                          lvmRebuild:
+                            description: LVMRebuild specifies command lines needed
+                              for rebuilding LVM RAID devices
+                            properties:
+                              lvRepair:
+                                description: LvRepair specifies the command for repairing
+                                  a LV after a drive failure
+                                type: string
+                              vgExtend:
+                                description: VgExtend specifies the command for adding
+                                  PVs to a VG
+                                type: string
+                              vgReduce:
+                                description: VgReduce specifies the command for removing
+                                  PVs from a VG
+                                type: string
+                            type: object
+                          pvCreate:
+                            description: PvCreate specifies the pvcreate commandline,
+                              minus the "pvcreate".
+                            type: string
+                          pvRemove:
+                            description: PvRemove specifies the pvremove commandline,
+                              minus the "pvremove".
+                            type: string
+                          userCommands:
+                            description: |-
+                              UserCommands allows admins to specify commands that can be run at various
+                              points the Rabbit workflow
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              postDeactivate:
+                                description: PostDeactivate specifies a list of commands
+                                  to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preActivate:
+                                description: PreActivate specifies a list of commands
+                                  to run before the block device is activated
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PreDeactivate specifies a list of commands
+                                  to run before the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          vgChange:
+                            description: VgChange specifies the various vgchange commandlines,
+                              minus the "vgchange"
+                            properties:
+                              lockStart:
+                                description: The vgchange commandline for lockStart,
+                                  minus the "vgchange" command
+                                type: string
+                              lockStop:
+                                description: The vgchange commandline for lockStop,
+                                  minus the "vgchange" command
+                                type: string
+                            type: object
+                          vgCreate:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgcreate".
+                            type: string
+                          vgRemove:
+                            description: VgCreate specifies the vgcreate commandline,
+                              minus the "vgremove".
                             type: string
                         type: object
-                      lvCreate:
-                        description: LvCreate specifies the lvcreate commandline,
-                          minus the "lvcreate".
-                        type: string
-                      lvRemove:
-                        description: LvRemove specifies the lvcreate commandline,
-                          minus the "lvremove".
-                        type: string
-                      lvmRebuild:
-                        description: LVMRebuild specifies command lines needed for
-                          rebuilding LVM RAID devices
-                        properties:
-                          lvRepair:
-                            description: LvRepair specifies the command for repairing
-                              a LV after a drive failure
-                            type: string
-                          vgExtend:
-                            description: VgExtend specifies the command for adding
-                              PVs to a VG
-                            type: string
-                          vgReduce:
-                            description: VgReduce specifies the command for removing
-                              PVs from a VG
-                            type: string
-                        type: object
-                      mkfs:
-                        description: Mkfs specifies the mkfs commandline, minus the
-                          "mkfs".
-                        type: string
-                      mountCompute:
-                        description: MountCompute specifies mount options for mounting
-                          on the Compute.
-                        type: string
-                      mountRabbit:
-                        description: MountRabbit specifies mount options for mounting
-                          on the Rabbit.
-                        type: string
-                      postMount:
-                        description: |-
-                          PostMount specifies a list of commands to run on the Rabbit after the
-                          file system has been activated and mounted.
-                        items:
-                          type: string
-                        type: array
-                      preUnmount:
-                        description: |-
-                          PreUnmount specifies a list of commands to run on the Rabbit before the
-                          file system is deactivated and unmounted.
-                        items:
-                          type: string
-                        type: array
-                      pvCreate:
-                        description: PvCreate specifies the pvcreate commandline,
-                          minus the "pvcreate".
-                        type: string
-                      pvRemove:
-                        description: PvRemove specifies the pvremove commandline,
-                          minus the "pvremove".
-                        type: string
                       sharedVg:
                         default: false
                         description: |-
                           SharedVg specifies that allocations from a workflow on the same Rabbit should share an
                           LVM VolumeGroup
                         type: boolean
-                      vgChange:
-                        description: VgChange specifies the various vgchange commandlines,
-                          minus the "vgchange"
-                        properties:
-                          lockStart:
-                            description: The vgchange commandline for lockStart, minus
-                              the "vgchange" command
-                            type: string
-                          lockStop:
-                            description: The vgchange commandline for lockStop, minus
-                              the "vgchange" command
-                            type: string
-                        type: object
-                      vgCreate:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgcreate".
-                        type: string
-                      vgRemove:
-                        description: VgCreate specifies the vgcreate commandline,
-                          minus the "vgremove".
-                        type: string
                     type: object
+                  capacityScalingFactor:
+                    default: "1.0"
+                    description: CapacityScalingFactor is a scaling factor for the
+                      capacity requested in the DirectiveBreakdown
+                    type: string
+                  fileSystemCommands:
+                    description: FileSystemCommands specifies commands that are run
+                      when configuring the file system
+                    properties:
+                      computeCommands:
+                        description: ComputeCommands specifies the commands that are
+                          run on the Compute nodes
+                        properties:
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              mounted/unmounted in PreRun and PostRun
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                      rabbitCommands:
+                        description: RabbitCommands specifies the commands that are
+                          run on the Rabbit nodes
+                        properties:
+                          mkfs:
+                            description: Mkfs specifies the mkfs commandline, minus
+                              the "mkfs".
+                            type: string
+                          mount:
+                            description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          userClientCommands:
+                            description: |-
+                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              as a client during DataIn, PreRun, PostRun, and DataOut
+                            properties:
+                              postMount:
+                                description: PostMount specifies a list of commands
+                                  to run after the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              postUnmount:
+                                description: PostUnmount specifies a list of commands
+                                  to run after the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                              preMount:
+                                description: PreMount specifies a list of commands
+                                  to run before the file system is mounted
+                                items:
+                                  type: string
+                                type: array
+                              preUnmount:
+                                description: PreUnmount specifies a list of commands
+                                  to run before the file system is unmounted
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          userServerCommands:
+                            description: |-
+                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
+                              and teardown
+                            properties:
+                              postActivate:
+                                description: PostActivate specifies a list of commands
+                                  to run after the file system is activated
+                                items:
+                                  type: string
+                                type: array
+                              postSetup:
+                                description: |-
+                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                              preDeactivate:
+                                description: PostActivate specifies a list of commands
+                                  to run before the file system is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              preTeardown:
+                                description: |-
+                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                                  is mounted on the Rabbit when these commands are run
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                        type: object
+                    type: object
+                  sharedAllocation:
+                    description: SharedAllocation is used to share an allocation across
+                      multiple clients
+                    type: boolean
                   storageLabels:
                     description: |-
                       Storagelabels defines a list of labels that are added to the DirectiveBreakdown

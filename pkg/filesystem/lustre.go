@@ -38,10 +38,14 @@ type LustreFileSystemCommandArgs struct {
 	Mkfs          string
 	MountTarget   string
 	Mount         string
-	PostActivate  []string
-	PreDeactivate []string
+	PreMount      []string
 	PostMount     []string
 	PreUnmount    []string
+	PostUnmount   []string
+	PostSetup     []string
+	PreTeardown   []string
+	PostActivate  []string
+	PreDeactivate []string
 
 	Vars map[string]string
 }
@@ -277,7 +281,7 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	return false, nil
 }
 
-func (l *LustreFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
+func (l *LustreFileSystem) LustreRunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
 	if complete {
 		return false, nil
 	}
@@ -286,40 +290,48 @@ func (l *LustreFileSystem) PostActivate(ctx context.Context, complete bool) (boo
 	if l.CommandArgs.Vars == nil {
 		l.CommandArgs.Vars = make(map[string]string)
 	}
-	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
 
-	for _, rawCommand := range l.CommandArgs.PostActivate {
+	for k, v := range args {
+		l.CommandArgs.Vars[k] = v
+	}
+
+	for _, rawCommand := range commands {
 		formattedCommand := l.parseArgs(rawCommand)
-		l.Log.Info("PostActivate", "command", formattedCommand)
+		l.Log.Info(phase, "command", formattedCommand)
 
 		if _, err := command.Run(formattedCommand, l.Log); err != nil {
-			return false, fmt.Errorf("could not run post activate command: %s: %w", formattedCommand, err)
+			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
 		}
 	}
 
 	return false, nil
 }
 
-func (l *LustreFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
-	// Build the commands from the args provided
-	if l.CommandArgs.Vars == nil {
-		l.CommandArgs.Vars = make(map[string]string)
-	}
-	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TargetPath)
-
-	for _, rawCommand := range l.CommandArgs.PreDeactivate {
-		formattedCommand := l.parseArgs(rawCommand)
-		l.Log.Info("PreDeactivate", "command", formattedCommand)
-
-		if _, err := command.Run(formattedCommand, l.Log); err != nil {
-			return false, fmt.Errorf("could not run pre deactivate command: %s: %w", formattedCommand, err)
-		}
-	}
-
-	return true, nil
+func (l *LustreFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreMount, "PreMount", nil)
 }
 
-func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+func (l *LustreFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PostMount, "PostMount", map[string]string{"$MOUNT_PATH": filepath.Clean(path)})
+}
+
+func (l *LustreFileSystem) PreUnmount(ctx context.Context, path string, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreUnmount, "PreUnmount", map[string]string{"$MOUNT_PATH": filepath.Clean(path)})
+}
+
+func (l *LustreFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PostUnmount, "PostUnmount", nil)
+}
+
+func (l *LustreFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PostActivate, "PostActivate", map[string]string{"$MOUNT_PATH": filepath.Clean(l.TargetPath)})
+}
+
+func (l *LustreFileSystem) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreDeactivate, "PreDeactivate", map[string]string{"$MOUNT_PATH": filepath.Clean(l.TargetPath)})
+}
+
+func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, error) {
 	if len(l.CommandArgs.PostMount) == 0 {
 		return false, nil
 	}
@@ -361,8 +373,12 @@ func (l *LustreFileSystem) PostMount(ctx context.Context, complete bool) (bool, 
 	return true, nil
 }
 
-func (l *LustreFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+func (l *LustreFileSystem) PreTeardown(ctx context.Context, complete bool) (bool, error) {
 	if len(l.CommandArgs.PreUnmount) == 0 {
+		return false, nil
+	}
+
+	if complete {
 		return false, nil
 	}
 

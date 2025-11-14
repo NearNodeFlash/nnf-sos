@@ -83,3 +83,43 @@ func (m *MockBlockDevice) CheckReady(ctx context.Context) (bool, error) {
 func (m *MockBlockDevice) Repair(ctx context.Context) error {
 	return nil
 }
+
+func (m *MockBlockDevice) PreActivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreActivate")
+
+	return true, nil
+}
+
+func (m *MockBlockDevice) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostActivate")
+
+	return true, nil
+}
+
+func (m *MockBlockDevice) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreDeactivate")
+
+	return true, nil
+}
+
+func (m *MockBlockDevice) PostDeactivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostDeactivate")
+
+	return true, nil
+}
