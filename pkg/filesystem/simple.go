@@ -143,7 +143,7 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 		return false, nil
 	}
 
-	// Create the mount file or directorys9``
+	// Create the mount file or directory
 	switch f.MountTarget {
 	case "directory":
 		if err := os.MkdirAll(path, 0755); err != nil {

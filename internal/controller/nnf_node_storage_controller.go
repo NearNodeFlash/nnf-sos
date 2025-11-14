@@ -301,7 +301,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 			return nil, dwsv1alpha7.NewResourceError("could not activate block devices").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Activated block device", "allocation", index)
+			log.Info("Activated block device")
 		}
 
 		ran, err = fileSystem.Activate(ctx, false)
@@ -309,7 +309,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 			return nil, dwsv1alpha7.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Activated file system", "allocation", index)
+			log.Info("Activated file system")
 		}
 
 		lustreOST0 := nnfNodeStorage.Spec.FileSystemType == "lustre" && nnfNodeStorage.Spec.LustreStorage.TargetType == "ost" && nnfNodeStorage.Spec.LustreStorage.StartIndex == 0
@@ -319,16 +319,16 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 				return nil, dwsv1alpha7.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
 			}
 			if ran {
-				log.Info("Pre unmount file system", "allocation", index)
+				log.Info("Pre unmount file system")
 			}
 		}
 
-		ran, err = fileSystem.PreDeactivate(ctx, false)
+		ran, err = fileSystem.PreDeactivate(ctx, false /* don't skip running the user commands */)
 		if err != nil {
 			return nil, dwsv1alpha7.NewResourceError("could not run pre deactivate for file system").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Pre deactivate file system", "allocation", index)
+			log.Info("Pre deactivate file system")
 		}
 	}
 
@@ -337,7 +337,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		return nil, dwsv1alpha7.NewResourceError("could not deactivate file system").WithError(err).WithMajor()
 	}
 	if ran {
-		log.Info("Deactivated file system", "allocation", index)
+		log.Info("Deactivated file system")
 	}
 
 	ran, err = fileSystem.Destroy(ctx)
@@ -345,7 +345,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		return nil, dwsv1alpha7.NewResourceError("could not destroy file system").WithError(err).WithMajor()
 	}
 	if ran {
-		log.Info("Destroyed file system", "allocation", index)
+		log.Info("Destroyed file system")
 	}
 
 	ran, err = blockDevice.Deactivate(ctx, false)
@@ -353,7 +353,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		return nil, dwsv1alpha7.NewResourceError("could not deactivate block devices").WithError(err).WithMajor()
 	}
 	if ran {
-		log.Info("Deactivated block device", "allocation", index)
+		log.Info("Deactivated block device")
 	}
 
 	ran, err = blockDevice.Destroy(ctx)
@@ -361,7 +361,7 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		return nil, dwsv1alpha7.NewResourceError("could not destroy block devices").WithError(err).WithMajor()
 	}
 	if ran {
-		log.Info("Destroyed block device", "allocation", index)
+		log.Info("Destroyed block device")
 	}
 
 	return nil, nil
@@ -445,6 +445,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	}
 
 	for index, fileSystem := range fileSystems {
+		log := log.WithValues("index", index)
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
 		ran, err := fileSystem.Create(ctx, allocationStatus.Ready)
@@ -452,7 +453,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			return nil, dwsv1alpha7.NewResourceError("could not create file system").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Created file system", "allocation", index)
+			log.Info("Created file system")
 		}
 
 		ran, err = fileSystem.Activate(ctx, allocationStatus.Ready)
@@ -460,7 +461,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			return nil, dwsv1alpha7.NewResourceError("could not activate file system").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Activated file system", "allocation", index)
+			log.Info("Activated file system")
 		}
 
 		ran, err = fileSystem.PostActivate(ctx, allocationStatus.Ready)
@@ -468,7 +469,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 			return nil, dwsv1alpha7.NewResourceError("could not run post activate").WithError(err).WithMajor()
 		}
 		if ran {
-			log.Info("Ran file system PostActivate", "allocation", index)
+			log.Info("Ran file system PostActivate")
 		}
 
 		// For lustre, PostSetup should only happen on OST0 only. For other file systems, just run
@@ -480,7 +481,7 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 				return nil, dwsv1alpha7.NewResourceError("could not run post mount").WithError(err).WithMajor()
 			}
 			if ran {
-				log.Info("Ran file system PostSetup", "allocation", index)
+				log.Info("Ran file system PostSetup")
 			}
 		}
 
