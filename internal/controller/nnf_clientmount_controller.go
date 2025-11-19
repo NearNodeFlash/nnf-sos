@@ -237,8 +237,19 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
 func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, state dwsv1alpha7.ClientMountState) error {
+	log := r.Log.WithValues("ClientMount", client.ObjectKeyFromObject(clientMount))
 	var firstError error
 	for i := range clientMount.Spec.Mounts {
+<<<<<<< Updated upstream
+=======
+		// If the state is different than the desired state, set Ready to false
+		// This can happen on the delete path
+		if clientMount.Status.Mounts[i].State != state {
+			log.Info("State mismatch detected prior to changeMount", "index", i, "statusState", clientMount.Status.Mounts[i].State, "desiredState", state, "ready", clientMount.Status.Mounts[i].Ready)
+			clientMount.Status.Mounts[i].Ready = false
+		}
+
+>>>>>>> Stashed changes
 		var err error
 
 		switch state {
@@ -369,7 +380,17 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 
 	} else {
+<<<<<<< Updated upstream
 		ran, err := fileSystem.PreUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
+=======
+
+		// For unmount operations, pass Ready as the complete flag to make the path idempotent.
+		// When Ready=true, user commands skip execution since they've already run successfully.
+		// Core operations like Unmount() and Deactivate() are already idempotent by design.
+		complete := clientMount.Status.Mounts[index].Ready
+
+		ran, err := fileSystem.PreUnmount(ctx, clientMountInfo.MountPath, complete)
+>>>>>>> Stashed changes
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PreUnmount commands").WithError(err).WithMajor()
 		}
@@ -377,6 +398,14 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Ran PreUnmount commands", "Mount path", clientMountInfo.MountPath)
 		}
 
+<<<<<<< Updated upstream
+=======
+		if complete {
+			log.Info("Skipping unmount/deactivate since already complete", "Mount path", clientMountInfo.MountPath)
+			return nil
+		}
+
+>>>>>>> Stashed changes
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to unmount file system").WithError(err).WithMajor()
@@ -385,7 +414,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
 		}
 
-		ran, err = fileSystem.PostUnmount(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = fileSystem.PostUnmount(ctx, complete)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PostUnmount commands").WithError(err).WithMajor()
 		}
@@ -393,7 +422,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Ran PostUnmount commands", "Mount path", clientMountInfo.MountPath)
 		}
 
-		ran, err = blockDevice.PreDeactivate(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = blockDevice.PreDeactivate(ctx, complete)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run block device PreDeactivate commands").WithError(err).WithMajor()
 		}
@@ -430,7 +459,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
 		}
 
-		ran, err = blockDevice.PostDeactivate(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = blockDevice.PostDeactivate(ctx, complete)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run block device PostDeactivate commands").WithError(err).WithMajor()
 		}
