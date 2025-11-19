@@ -197,11 +197,7 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Initialize the status section if the desired state doesn't match the status state
 	if clientMount.Status.Mounts[0].State != clientMount.Spec.DesiredState {
-		for i := 0; i < len(clientMount.Status.Mounts); i++ {
-			clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
-			clientMount.Status.Mounts[i].Ready = false
-		}
-		clientMount.Status.AllReady = false
+		r.resetMountStatus(clientMount)
 
 		return ctrl.Result{}, nil
 	}
@@ -235,10 +231,28 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
+// resetMountStatus resets all mount statuses to the desired state and marks them as not ready
+func (r *NnfClientMountReconciler) resetMountStatus(clientMount *dwsv1alpha7.ClientMount) {
+	for i := 0; i < len(clientMount.Status.Mounts); i++ {
+		clientMount.Status.Mounts[i].State = clientMount.Spec.DesiredState
+		clientMount.Status.Mounts[i].Ready = false
+	}
+	clientMount.Status.AllReady = false
+}
+
 // changeMmountAll mounts or unmounts all the file systems listed in the spec.Mounts list
 func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, state dwsv1alpha7.ClientMountState) error {
+	// Reset status for all mounts if any are in a different state
+	for i := range clientMount.Spec.Mounts {
+		if clientMount.Status.Mounts[i].State != state {
+			r.resetMountStatus(clientMount)
+			break
+		}
+	}
+
 	var firstError error
 	for i := range clientMount.Spec.Mounts {
+
 		var err error
 
 		switch state {
@@ -369,12 +383,19 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 
 	} else {
+
 		ran, err := fileSystem.PreUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PreUnmount commands").WithError(err).WithMajor()
 		}
 		if ran {
 			log.Info("Ran PreUnmount commands", "Mount path", clientMountInfo.MountPath)
+		}
+
+		// Skip the unmount/deactivate if already complete to avoid hitting expected errors
+		if clientMount.Status.Mounts[index].Ready {
+			log.Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
+			return nil
 		}
 
 		unmounted, err := fileSystem.Unmount(ctx, clientMountInfo.MountPath)
