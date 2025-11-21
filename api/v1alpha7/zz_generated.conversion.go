@@ -3207,6 +3207,7 @@ func autoConvert_v1alpha9_NnfStorageProfileGFS2Data_To_v1alpha7_NnfStorageProfil
 	// WARNING: in.SharedAllocation requires manual conversion: does not exist in peer-type
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
 	out.CapacityScalingFactor = in.CapacityScalingFactor
+	// WARNING: in.AllocationPadding requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -3476,6 +3477,7 @@ func autoConvert_v1alpha9_NnfStorageProfileRawData_To_v1alpha7_NnfStorageProfile
 	// WARNING: in.SharedAllocation requires manual conversion: does not exist in peer-type
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
 	out.CapacityScalingFactor = in.CapacityScalingFactor
+	// WARNING: in.AllocationPadding requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -3492,6 +3494,7 @@ func autoConvert_v1alpha9_NnfStorageProfileXFSData_To_v1alpha7_NnfStorageProfile
 	// WARNING: in.SharedAllocation requires manual conversion: does not exist in peer-type
 	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
 	out.CapacityScalingFactor = in.CapacityScalingFactor
+	// WARNING: in.AllocationPadding requires manual conversion: does not exist in peer-type
 	return nil
 }
 

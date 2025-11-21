@@ -1508,6 +1508,11 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
+                  alllocationPadding:
+                    description: |-
+                      AllocationPadding is a way to increase the size of the physical allocation without increasing
+                      the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+                    type: string
                   blockDeviceCommands:
                     description: BlockDeviceCommands specifies commands that are run
                       when configuring the block device
@@ -2226,6 +2231,11 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
+                  alllocationPadding:
+                    description: |-
+                      AllocationPadding is a way to increase the size of the physical allocation without increasing
+                      the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+                    type: string
                   blockDeviceCommands:
                     description: BlockDeviceCommands specifies commands that are run
                       when configuring the block device
@@ -2539,6 +2549,11 @@ spec:
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
+                  alllocationPadding:
+                    description: |-
+                      AllocationPadding is a way to increase the size of the physical allocation without increasing
+                      the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+                    type: string
                   blockDeviceCommands:
                     description: BlockDeviceCommands specifies commands that are run
                       when configuring the block device

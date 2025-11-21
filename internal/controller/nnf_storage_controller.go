@@ -642,6 +642,21 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 		}
 	}
 
+	// Modify for the capacity value by removing the padding. The padding is for the NVMe namespace allocations
+	// and isn't needed for the block device and file system capacities.
+	userCapacity := allocationSet.Capacity
+	if len(nnfStorage.GetLabels()) > 0 {
+		nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfStorage)
+		if err != nil {
+			return nil, dwsv1alpha7.NewResourceError("could not find pinned storage profile").WithError(err).WithMajor()
+		}
+
+		userCapacity, err = removeAllocationPadding(nnfStorage.Spec.FileSystemType, allocationSet.Capacity, nnfStorageProfile)
+		if err != nil {
+			return nil, dwsv1alpha7.NewResourceError("could not determine user capacity").WithError(err)
+		}
+	}
+
 	startIndex := 0
 	for i, node := range allocationSet.Nodes {
 		// Per Rabbit namespace.
@@ -686,7 +701,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 					Namespace: node.Name,
 					Kind:      reflect.TypeOf(nnfv1alpha9.NnfNodeBlockStorage{}).Name(),
 				}
-				nnfNodeStorage.Spec.Capacity = allocationSet.Capacity
+				nnfNodeStorage.Spec.Capacity = userCapacity
 				nnfNodeStorage.Spec.UserID = nnfStorage.Spec.UserID
 				nnfNodeStorage.Spec.GroupID = nnfStorage.Spec.GroupID
 				nnfNodeStorage.Spec.Count = node.Count

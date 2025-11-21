@@ -367,6 +367,10 @@ type NnfStorageProfileGFS2Data struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
@@ -387,6 +391,10 @@ type NnfStorageProfileXFSData struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
@@ -407,6 +415,10 @@ type NnfStorageProfileRawData struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile
