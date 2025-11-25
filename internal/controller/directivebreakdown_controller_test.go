@@ -266,4 +266,54 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return directiveBreakdown.Status.Ready
 		}).Should(BeTrue())
 	})
+
+	It("Verifies capacity ajustment functions using a fixed padding factor", func() {
+		By("Setting CapacityScalingFactor and AllocationPadding in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.XFSStorage.CapacityScalingFactor = "1.1"
+			storageProfile.Data.XFSStorage.AllocationPadding = "10MB"
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Applying the scale and a fixed padding factor")
+		var startingCapacity int64 = 1024 * 1024 * 1024 * 10 // 10GiB
+
+		scaledAndPaddedCapacity, err := getScaledAndPaddedCapacity(startingCapacity, "1.1", "10MB")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledAndPaddedCapacity).To(Equal(startingCapacity + startingCapacity/10 /* 1.1 scale */ + 10000000 /* 10MB */))
+
+		scaledCapacity, err := getScaledCapacity(startingCapacity, "1.1")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledCapacity).To(Equal(startingCapacity + startingCapacity/10 /* 1.1 scale */))
+
+		removedPaddingCapacity, err := removeAllocationPadding("xfs", scaledAndPaddedCapacity, storageProfile)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(removedPaddingCapacity).To(Equal(scaledCapacity))
+	})
+
+	It("Verifies capacity ajustment functions using a percentage padding factor", func() {
+		By("Setting CapacityScalingFactor and AllocationPadding in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.XFSStorage.CapacityScalingFactor = "1.2"
+			storageProfile.Data.XFSStorage.AllocationPadding = "1%"
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Applying the scale and a percent based padding factor")
+		var startingCapacity int64 = 1000 * 1000 * 1000 * 100 // 100GB
+
+		scaledAndPaddedCapacity, err := getScaledAndPaddedCapacity(startingCapacity, "1.2", "1%")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledAndPaddedCapacity).To(Equal(startingCapacity + startingCapacity/5 /* 1.2 scale */ + (startingCapacity+startingCapacity/5)/100 /* 1% padding */))
+
+		scaledCapacity, err := getScaledCapacity(startingCapacity, "1.2")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledCapacity).To(Equal(startingCapacity + startingCapacity/5 /* 1.2 scale */))
+
+		removedPaddingCapacity, err := removeAllocationPadding("xfs", scaledAndPaddedCapacity, storageProfile)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(removedPaddingCapacity).To(Equal(scaledCapacity))
+	})
 })

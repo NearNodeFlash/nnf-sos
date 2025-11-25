@@ -369,7 +369,8 @@ type NnfStorageProfileGFS2Data struct {
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 
 	// AllocationPadding is a way to increase the size of the physical allocation without increasing
-	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
 	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
@@ -393,7 +394,8 @@ type NnfStorageProfileXFSData struct {
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 
 	// AllocationPadding is a way to increase the size of the physical allocation without increasing
-	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
 	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
@@ -417,7 +419,8 @@ type NnfStorageProfileRawData struct {
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
 
 	// AllocationPadding is a way to increase the size of the physical allocation without increasing
-	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
 	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
