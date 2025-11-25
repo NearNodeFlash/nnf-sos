@@ -929,13 +929,13 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 							continue
 						}
 
-						if compute.Status == dwsv1alpha7.OfflineStatus {
+						if compute.Status == dwsv1alpha7.OfflineStatus || compute.Status == dwsv1alpha7.FencedStatus {
 							computeOffline = true
 							break
 						}
 					}
 
-					// If the compute is offline, don't check its status
+					// If the compute is offline or fenced, don't check its status
 					if computeOffline {
 						continue
 					}
@@ -973,13 +973,13 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 							continue
 						}
 
-						if compute.Status == dwsv1alpha7.OfflineStatus {
+						if compute.Status == dwsv1alpha7.OfflineStatus || compute.Status == dwsv1alpha7.FencedStatus {
 							computeOffline = true
 							break
 						}
 					}
 
-					// If the compute is offline, don't check its status
+					// If the compute is offline or fenced, don't check its status
 					if computeOffline {
 						continue
 					}
@@ -1342,10 +1342,10 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 		return false, dwsv1alpha7.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
 	}
 
-	// Check the status of the compute node in the Storage resource to determine if it's offline
+	// Check the status of the compute node in the Storage resource to determine if it's offline or fenced
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
-			if compute.Status == dwsv1alpha7.OfflineStatus {
+			if compute.Status == dwsv1alpha7.OfflineStatus || compute.Status == dwsv1alpha7.FencedStatus {
 				return true, nil
 			}
 			break

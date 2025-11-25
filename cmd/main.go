@@ -244,6 +244,8 @@ func (c *nodeLocalController) SetupReconcilers(mgr manager.Manager, opts *nnf.Op
 		NamespacedName:   types.NamespacedName{Name: controllers.NnfNlcResourceName, Namespace: os.Getenv("NNF_NODE_NAME")},
 		Options:          opts,
 	}
+	nnfNodeReconciler.InitializeBlockStorageEvents()
+
 	if err := nnfNodeReconciler.SetupWithManager(mgr); err != nil {
 		return err
 	}

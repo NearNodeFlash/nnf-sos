@@ -109,7 +109,7 @@ func (r *NnfNodeBlockStorageReconciler) EventHandler(e nnfevent.Event) error {
 		return nil
 	}
 
-	log.Info("triggering watch")
+	log.V(1).Info("triggering watch")
 
 	r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -292,9 +292,13 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	nodeBlockStorage.Status.Ready = true
 
+	log.V(1).Info("Reconcile reached fence check point")
+
 	// Check for fence requests after all normal BlockStorage operations are complete
 	// This ensures the storage is properly configured before attempting fence operations
 	computeNodes := r.getComputeNodesWithAccess(nodeBlockStorage)
+	log.V(1).Info("Compute nodes with access", "nodes", computeNodes)
+
 	if len(computeNodes) > 0 {
 		fenceRequests, err := r.scanFenceRequests(computeNodes, log)
 		if err != nil {
@@ -1052,7 +1056,10 @@ func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error
 
 	// Watch fence events from NnfNode (only if channel was provided)
 	if r.FenceEvents != nil {
+		r.Log.Info("Watching FenceEvents channel")
 		builder = builder.WatchesRawSource(&source.Channel{Source: r.FenceEvents}, &handler.EnqueueRequestForObject{})
+	} else {
+		r.Log.Info("FenceEvents channel is nil, not watching")
 	}
 
 	return builder.Complete(r)

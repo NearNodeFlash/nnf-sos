@@ -34,9 +34,13 @@ type FenceRequest struct {
 
 // FenceResponse represents the response written by nnf-sos after processing a fence request
 type FenceResponse struct {
-	RequestID  string `json:"request_id"`
-	Status     string `json:"status"`    // "success" or "error"
-	Message    string `json:"message"`   // Human-readable status message
-	Timestamp  string `json:"timestamp"` // ISO 8601 timestamp
-	TargetNode string `json:"target_node"`
+	RequestID       string `json:"request_id"`
+	Status          string `json:"status,omitempty"` // "success" or "error"
+	Success         bool   `json:"success"`
+	Message         string `json:"message"`
+	Timestamp       string `json:"timestamp"` // ISO 8601 timestamp
+	TargetNode      string `json:"target_node"`
+	Action          string `json:"action,omitempty"`
+	RecorderNode    string `json:"recorder_node,omitempty"`
+	ActionPerformed string `json:"action_performed,omitempty"`
 }
