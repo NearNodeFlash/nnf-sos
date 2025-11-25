@@ -471,11 +471,10 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 	// Depending on the #DW's filesystem (#DW type=<>) , we have different work to do
 	switch filesystem {
 	case "raw":
-		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.RawStorage.CapacityScalingFactor, 64)
+		breakdownCapacity, err := getScaledAndPaddedCapacity(breakdownCapacity, nnfStorageProfile.Data.RawStorage.CapacityScalingFactor, nnfStorageProfile.Data.RawStorage.AllocationPadding)
 		if err != nil {
-			return dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for raw allocation").WithFatal()
+			return err
 		}
-		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
 
 		component := dwsv1alpha7.StorageAllocationSet{}
 		populateStorageAllocationSet(&component, dwsv1alpha7.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.RawStorage.StorageLabels, filesystem, nil)
@@ -484,11 +483,10 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		allocationSets = append(allocationSets, component)
 	case "xfs":
-		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.XFSStorage.CapacityScalingFactor, 64)
+		breakdownCapacity, err := getScaledAndPaddedCapacity(breakdownCapacity, nnfStorageProfile.Data.XFSStorage.CapacityScalingFactor, nnfStorageProfile.Data.XFSStorage.AllocationPadding)
 		if err != nil {
-			return dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for xfs allocation").WithFatal()
+			return err
 		}
-		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
 
 		component := dwsv1alpha7.StorageAllocationSet{}
 		populateStorageAllocationSet(&component, dwsv1alpha7.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.XFSStorage.StorageLabels, filesystem, nil)
@@ -497,11 +495,10 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		allocationSets = append(allocationSets, component)
 	case "gfs2":
-		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.GFS2Storage.CapacityScalingFactor, 64)
+		breakdownCapacity, err := getScaledAndPaddedCapacity(breakdownCapacity, nnfStorageProfile.Data.GFS2Storage.CapacityScalingFactor, nnfStorageProfile.Data.GFS2Storage.AllocationPadding)
 		if err != nil {
-			return dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for gfs2 allocation").WithFatal()
+			return err
 		}
-		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
 
 		component := dwsv1alpha7.StorageAllocationSet{}
 		populateStorageAllocationSet(&component, dwsv1alpha7.AllocatePerCompute, breakdownCapacity, 0, 0, nnfStorageProfile.Data.GFS2Storage.StorageLabels, filesystem, nil)
@@ -617,6 +614,90 @@ func populateStorageAllocationSet(a *dwsv1alpha7.StorageAllocationSet, strategy 
 	if constraint != nil {
 		a.Constraints.Colocation = []dwsv1alpha7.AllocationSetColocationConstraint{*constraint}
 	}
+}
+
+// Return the capacity with the scaling factor and padding applied
+func getScaledAndPaddedCapacity(capacity int64, scalingFactor string, padding string) (int64, error) {
+	capacity, err := getScaledCapacity(capacity, scalingFactor)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(padding) == 0 {
+		return capacity, nil
+	}
+
+	// Check for padding that's specified as a percent
+	if strings.HasSuffix(padding, "%") {
+		percentPadding, err := strconv.ParseFloat(strings.TrimSuffix(padding, "%"), 64)
+		if err != nil {
+			return 0, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid allocationPadding percentage").WithFatal()
+
+		}
+
+		return int64(percentPadding*0.01*float64(capacity)) + capacity, nil
+	}
+
+	// If the padding wasn't a percent, then it's a fixed value (e.g., 100MiB)
+	capacityPadding, err := getCapacityInBytes(padding)
+	if err != nil {
+		return 0, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid allocationPadding value").WithFatal()
+
+	}
+
+	return capacity + int64(capacityPadding), nil
+}
+
+// Return the capacity with the scaling factor applied
+func getScaledCapacity(capacity int64, scalingFactor string) (int64, error) {
+	if len(scalingFactor) == 0 {
+		return capacity, nil
+	}
+
+	scalingFactorValue, err := strconv.ParseFloat(scalingFactor, 64)
+	if err != nil {
+		return 0, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for gfs2 allocation").WithFatal()
+	}
+	return int64(scalingFactorValue * float64(capacity)), nil
+}
+
+// Remove the allocation padding from the capacity
+func removeAllocationPadding(allocationType string, capacity int64, nnfStorageProfile *nnfv1alpha9.NnfStorageProfile) (int64, error) {
+	padding := ""
+	switch allocationType {
+	case "gfs2":
+		padding = nnfStorageProfile.Data.GFS2Storage.AllocationPadding
+	case "xfs":
+		padding = nnfStorageProfile.Data.XFSStorage.AllocationPadding
+	case "raw":
+		padding = nnfStorageProfile.Data.RawStorage.AllocationPadding
+	case "lustre":
+		return capacity, nil
+	}
+
+	if len(padding) == 0 {
+		return capacity, nil
+	}
+
+	// Check for padding that's specified as a percent
+	if strings.HasSuffix(padding, "%") {
+		percentPadding, err := strconv.ParseFloat(strings.TrimSuffix(padding, "%"), 64)
+		if err != nil {
+			return 0, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid allocationPadding percentage").WithFatal()
+
+		}
+
+		return int64(float64(capacity) / (percentPadding*0.01 + 1)), nil
+	}
+
+	// If the padding wasn't a percent, then it's a fixed value (e.g., 100MiB)
+	capacityPadding, err := getCapacityInBytes(padding)
+	if err != nil {
+		return 0, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid allocationPadding value").WithFatal()
+
+	}
+
+	return capacity - int64(capacityPadding), nil
 }
 
 func (r *DirectiveBreakdownReconciler) getChildObjects() []dwsv1alpha7.ObjectList {

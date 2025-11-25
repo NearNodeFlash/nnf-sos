@@ -511,6 +511,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.LustreStorage.ClientCmdLines.ComputePostUnmount = restored.Data.LustreStorage.ClientCmdLines.ComputePostUnmount
 
 		dst.Data.GFS2Storage.SharedAllocation = restored.Data.GFS2Storage.SharedAllocation
+		dst.Data.GFS2Storage.AllocationPadding = restored.Data.GFS2Storage.AllocationPadding
 		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
 		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
 		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount
@@ -535,6 +536,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
 
 		dst.Data.XFSStorage.SharedAllocation = restored.Data.XFSStorage.SharedAllocation
+		dst.Data.XFSStorage.AllocationPadding = restored.Data.XFSStorage.AllocationPadding
 		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
 		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
 		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount
@@ -559,6 +561,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
 
 		dst.Data.RawStorage.SharedAllocation = restored.Data.RawStorage.SharedAllocation
+		dst.Data.RawStorage.AllocationPadding = restored.Data.RawStorage.AllocationPadding
 		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
 		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
 		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount

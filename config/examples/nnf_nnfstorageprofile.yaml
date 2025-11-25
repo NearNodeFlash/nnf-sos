@@ -19,7 +19,7 @@ data:
         lvChange:
           activate: --activate ys $VG_NAME/$LV_NAME
           deactivate: --activate n $VG_NAME/$LV_NAME
-        lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM
+        lvCreate: --zero n --activate n --size $LV_SIZE --stripes $DEVICE_NUM
           --stripesize=32KiB --name $LV_NAME $VG_NAME
         lvRemove: $VG_NAME/$LV_NAME
         lvmRebuild: {}
@@ -33,6 +33,7 @@ data:
         vgRemove: $VG_NAME
       sharedVg: true
     capacityScalingFactor: "1.0"
+    allocationPadding: 300MiB
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
@@ -128,7 +129,7 @@ data:
         lvChange:
           activate: --activate y $VG_NAME/$LV_NAME
           deactivate: --activate n $VG_NAME/$LV_NAME
-        lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM
+        lvCreate: --zero n --activate n --size $LV_SIZE --stripes $DEVICE_NUM
           --stripesize=32KiB --name $LV_NAME $VG_NAME
         lvRemove: $VG_NAME/$LV_NAME
         lvmRebuild: {}
@@ -142,6 +143,7 @@ data:
         vgRemove: $VG_NAME
       sharedVg: true
     capacityScalingFactor: "1.0"
+    allocationPadding: 300MiB
     fileSystemCommands:
       computeCommands:
         userClientCommands: {}
@@ -162,7 +164,7 @@ data:
         lvChange:
           activate: --activate y $VG_NAME/$LV_NAME
           deactivate: --activate n $VG_NAME/$LV_NAME
-        lvCreate: --zero n --activate n --extents $PERCENT_VG --stripes $DEVICE_NUM
+        lvCreate: --zero n --activate n --size $LV_SIZE --stripes $DEVICE_NUM
           --stripesize=32KiB --name $LV_NAME $VG_NAME
         lvRemove: $VG_NAME/$LV_NAME
         lvmRebuild: {}
@@ -176,6 +178,7 @@ data:
         vgRemove: $VG_NAME
       sharedVg: true
     capacityScalingFactor: "1.0"
+    allocationPadding: 300MiB
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH

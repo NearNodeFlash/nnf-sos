@@ -634,14 +634,13 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			}
 
 			sharedAllocation := false
-			if dwArgs["type"] == "gfs2" && nnfStorageProfile.Data.GFS2Storage.BlockDeviceCommands.SharedVg {
-				sharedAllocation = true
-			}
-			if dwArgs["type"] == "xfs" && nnfStorageProfile.Data.XFSStorage.BlockDeviceCommands.SharedVg {
-				sharedAllocation = true
-			}
-			if dwArgs["type"] == "raw" && nnfStorageProfile.Data.RawStorage.BlockDeviceCommands.SharedVg {
-				sharedAllocation = true
+			switch dwArgs["type"] {
+			case "gfs2":
+				sharedAllocation = nnfStorageProfile.Data.GFS2Storage.BlockDeviceCommands.SharedVg
+			case "xfs":
+				sharedAllocation = nnfStorageProfile.Data.XFSStorage.BlockDeviceCommands.SharedVg
+			case "raw":
+				sharedAllocation = nnfStorageProfile.Data.RawStorage.BlockDeviceCommands.SharedVg
 			}
 
 			// Need to remove all of the AllocationSets in the NnfStorage object before we begin
@@ -652,8 +651,8 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 				nnfAllocSet := nnfv1alpha9.NnfStorageAllocationSetSpec{}
 
 				nnfAllocSet.Name = s.Spec.AllocationSets[i].Label
-				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
 				nnfAllocSet.SharedAllocation = sharedAllocation
+				nnfAllocSet.Capacity = s.Spec.AllocationSets[i].AllocationSize
 				if dwArgs["type"] == "lustre" {
 					nnfAllocSet.NnfStorageLustreSpec.TargetType = s.Spec.AllocationSets[i].Label
 					nnfAllocSet.NnfStorageLustreSpec.BackFs = "zfs"

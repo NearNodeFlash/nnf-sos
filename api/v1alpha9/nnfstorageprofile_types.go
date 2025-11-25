@@ -367,6 +367,11 @@ type NnfStorageProfileGFS2Data struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
@@ -387,6 +392,11 @@ type NnfStorageProfileXFSData struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
@@ -407,6 +417,11 @@ type NnfStorageProfileRawData struct {
 	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
 	// +kubebuilder:default:="1.0"
 	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// AllocationPadding is a way to increase the size of the physical allocation without increasing
+	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
+	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
+	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile
