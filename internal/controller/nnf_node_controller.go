@@ -260,7 +260,7 @@ func (r *NnfNodeReconciler) EventHandler(e nnfevent.Event) error {
 		return nil
 	}
 
-	log.Info("triggering watch")
+	log.V(1).Info("triggering watch")
 
 	r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNode{
 		ObjectMeta: metav1.ObjectMeta{
@@ -515,7 +515,7 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 			continue
 		}
 
-		log.Info("Found fence response file", "file", entry.Name(), "targetNode", response.TargetNode, "success", response.Success, "status", response.Status)
+		log.V(1).Info("Found fence response file", "file", entry.Name(), "targetNode", response.TargetNode, "success", response.Success, "status", response.Status)
 
 		// Track fenced computes
 		if response.Success || response.Status == "success" {
@@ -523,7 +523,7 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 		}
 	}
 
-	log.Info("Fenced computes map", "fencedComputes", fencedComputes)
+	log.V(1).Info("Fenced computes map", "fencedComputes", fencedComputes)
 
 	// Update all server statuses based on fence state
 	for i := range node.Status.Servers {
@@ -533,13 +533,13 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 			continue
 		}
 
-		log.Info("Checking server fence status", "serverID", server.ID, "hostname", server.Hostname, "isFenced", fencedComputes[server.Hostname])
+		log.V(1).Info("Checking server fence status", "serverID", server.ID, "hostname", server.Hostname, "isFenced", fencedComputes[server.Hostname])
 
 		// Check if this compute has a fence response file
 		if fencedComputes[server.Hostname] {
 			// Mark as fenced only if not already marked
 			if server.Status != nnfv1alpha9.ResourceOffline {
-				log.Info("Marking compute node as fenced/offline", "compute", server.Hostname)
+				log.Info("Compute node fenced", "compute", server.Hostname)
 				node.Status.Servers[i].Status = nnfv1alpha9.ResourceOffline
 				node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
 			}
@@ -547,8 +547,8 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 			// No fence file exists - if it was previously marked as offline due to fencing,
 			// the status will be refreshed by updateServers() from nnf-ec on the next reconcile
 			// We just need to clear any fence annotations
-			if server.Status == nnfv1alpha9.ResourceOffline {
-				log.Info("Compute node is no longer fenced (fence response removed)", "compute", server.Hostname)
+			if server.Status == nnfv1alpha9.ResourceOffline && server.Hostname != "" {
+				log.V(1).Info("Compute node fence cleared", "compute", server.Hostname)
 			}
 		}
 	}

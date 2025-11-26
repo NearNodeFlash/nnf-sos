@@ -109,7 +109,7 @@ func (r *NnfNodeBlockStorageReconciler) EventHandler(e nnfevent.Event) error {
 		return nil
 	}
 
-	log.Info("triggering watch")
+	log.V(1).Info("triggering watch")
 
 	r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
@@ -292,12 +292,12 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	nodeBlockStorage.Status.Ready = true
 
-	log.Info("Reconcile reached fence check point")
+	log.V(1).Info("Reconcile reached fence check point")
 
 	// Check for fence requests after all normal BlockStorage operations are complete
 	// This ensures the storage is properly configured before attempting fence operations
 	computeNodes := r.getComputeNodesWithAccess(nodeBlockStorage)
-	log.Info("Compute nodes with access", "nodes", computeNodes)
+	log.V(1).Info("Compute nodes with access", "nodes", computeNodes)
 
 	if len(computeNodes) > 0 {
 		fenceRequests, err := r.scanFenceRequests(computeNodes, log)
@@ -315,11 +315,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 				log.Error(err, "Failed to process fence requests")
 				// Don't fail the reconcile, just log the error
 			}
-		} else {
-			log.Info("No fence requests found")
 		}
-	} else {
-		log.Info("No compute nodes with access found")
 	}
 
 	return ctrl.Result{}, nil
