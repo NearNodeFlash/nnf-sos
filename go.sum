@@ -1,7 +1,7 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/DataWorkflowServices/dws v0.0.1-0.20251021205822-9b2fb19eb9fb h1:F3845qSkfS36D2S4LKfCur8K/6O78cEw/FBNtT4UEyg=
-github.com/DataWorkflowServices/dws v0.0.1-0.20251021205822-9b2fb19eb9fb/go.mod h1:NbNOIG2ybY2XHVSJn0KF7edPlX3I1ji7je6MGzuPeaA=
+github.com/DataWorkflowServices/dws v0.0.1-0.20251201192617-99a03aa3170f h1:ezj0+9HY6VvPnJbDoIXr/IzwBFe1X2pLLEZpHodOulU=
+github.com/DataWorkflowServices/dws v0.0.1-0.20251201192617-99a03aa3170f/go.mod h1:NbNOIG2ybY2XHVSJn0KF7edPlX3I1ji7je6MGzuPeaA=
 github.com/HewlettPackard/structex v1.0.4 h1:RVTdN5FWhDWr1IkjllU8wxuLjISo4gr6u5ryZpzyHcA=
 github.com/HewlettPackard/structex v1.0.4/go.mod h1:3frC4RY/cPsP/4+N8rkxsNAGlQwHV+zDC7qvrN+N+rE=
 github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250827135601-4d150db05d08 h1:1IYv2gDH/+hxBo6TZenIRs30PSpzO49USDkj/aBo/g4=

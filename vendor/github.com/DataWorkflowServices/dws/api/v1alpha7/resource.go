@@ -34,7 +34,7 @@ const (
 )
 
 // ResourceStatus is the enumeration of the status of a DWS resource
-// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed;Degraded;Drained;Unknown
+// +kubebuilder:validation:Enum:=Starting;Ready;Disabled;NotPresent;Offline;Failed;Degraded;Drained;Fenced;Unknown
 type ResourceStatus string
 
 const (
@@ -68,6 +68,9 @@ const (
 
 	// Drained means the resource has had its pods drained from the node.
 	DrainedStatus ResourceStatus = "Drained"
+
+	// Fenced means the resource has been intentionally isolated for data protection.
+	FencedStatus ResourceStatus = "Fenced"
 
 	// Unknown means the resource status is unknown.
 	UnknownStatus ResourceStatus = "Unknown"

@@ -33,6 +33,7 @@ type AllocationStrategy string
 
 const (
 	AllocatePerCompute    AllocationStrategy = "AllocatePerCompute"
+	AllocatePerServer     AllocationStrategy = "AllocatePerServer"
 	AllocateAcrossServers AllocationStrategy = "AllocateAcrossServers"
 	AllocateSingleServer  AllocationStrategy = "AllocateSingleServer"
 )
@@ -81,7 +82,7 @@ type AllocationSetConstraints struct {
 // StorageAllocationSet defines the details of an allocation set
 type StorageAllocationSet struct {
 	// AllocationStrategy specifies the way to determine the number of allocations of the MinimumCapacity required for this AllocationSet.
-	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocateAcrossServers;AllocateSingleServer
+	// +kubebuilder:validation:Enum=AllocatePerCompute;AllocatePerServer;AllocateAcrossServers;AllocateSingleServer
 	AllocationStrategy AllocationStrategy `json:"allocationStrategy"`
 
 	// MinimumCapacity is the minumum number of bytes required to meet the needs of the filesystem that
