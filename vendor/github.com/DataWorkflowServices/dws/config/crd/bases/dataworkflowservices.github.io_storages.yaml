@@ -744,6 +744,7 @@ spec:
                           - Failed
                           - Degraded
                           - Drained
+                          - Fenced
                           - Unknown
                           type: string
                       type: object
@@ -774,6 +775,7 @@ spec:
                           - Failed
                           - Degraded
                           - Drained
+                          - Fenced
                           - Unknown
                           type: string
                       type: object
@@ -823,6 +825,7 @@ spec:
                       - Failed
                       - Degraded
                       - Drained
+                      - Fenced
                       - Unknown
                       type: string
                     wearLevel:
@@ -853,6 +856,7 @@ spec:
                 - Failed
                 - Degraded
                 - Drained
+                - Fenced
                 - Unknown
                 type: string
               type:

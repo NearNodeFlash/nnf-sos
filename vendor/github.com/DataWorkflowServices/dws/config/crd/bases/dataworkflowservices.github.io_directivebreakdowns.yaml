@@ -1216,6 +1216,7 @@ spec:
                             for this AllocationSet.
                           enum:
                           - AllocatePerCompute
+                          - AllocatePerServer
                           - AllocateAcrossServers
                           - AllocateSingleServer
                           type: string
