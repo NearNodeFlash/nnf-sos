@@ -78,12 +78,16 @@ const (
 	// ResourceInvalid means the NNF resource configuration is invalid due to an improper format or arrangement
 	// of listed resource parameters.
 	ResourceInvalid = "Invalid"
+
+	// ResourceFenced means the NNF resource has been intentionally isolated for data protection,
+	// typically during GFS2 fencing operations.
+	ResourceFenced = "Fenced"
 )
 
 // UpdateIfWorseThan updates the stored status of the resource if the new status is worse than what was stored
 func (rst NnfResourceStatusType) UpdateIfWorseThan(status *NnfResourceStatusType) {
 	switch rst {
-	case ResourceStarting, ResourceOffline, ResourceNotPresent, ResourceDisabled:
+	case ResourceStarting, ResourceOffline, ResourceNotPresent, ResourceDisabled, ResourceFenced:
 		if *status == ResourceReady {
 			*status = rst
 		}
@@ -109,6 +113,8 @@ func (rst NnfResourceStatusType) ConvertToDWSResourceStatus() dwsv1alpha7.Resour
 		return dwsv1alpha7.OfflineStatus
 	case ResourceFailed:
 		return dwsv1alpha7.FailedStatus
+	case ResourceFenced:
+		return dwsv1alpha7.FencedStatus
 	default:
 		return dwsv1alpha7.UnknownStatus
 	}
