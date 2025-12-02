@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package controller
+package fence
 
 import "time"
 

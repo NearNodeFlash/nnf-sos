@@ -544,10 +544,10 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 				node.Status.Servers[i].Health = nnfv1alpha9.ResourceCritical
 			}
 		} else {
-			// No fence file exists - if it was previously marked as fenced,
-			// the status will be refreshed by updateServers() from nnf-ec on the next reconcile
+			// No fence file - clear fenced status if previously set
 			if server.Status == nnfv1alpha9.ResourceFenced && server.Hostname != "" {
-				log.V(1).Info("Compute node fence cleared", "compute", server.Hostname)
+				log.Info("Compute node fence status cleared", "compute", server.Hostname)
+				node.Status.Servers[i].Status = nnfv1alpha9.ResourceReady
 			}
 		}
 	}
@@ -629,8 +629,7 @@ func updateDrives(node *nnfv1alpha9.NnfNode, log logr.Logger) error {
 	return nil
 }
 
-// watchFenceRequests monitors the fence request directory and triggers NnfNodeBlockStorage
-// reconciles for affected resources
+// watchFenceRequests monitors the fence request directory and triggers NnfNodeBlockStorage reconciles.
 func (r *NnfNodeReconciler) watchFenceRequests(ctx context.Context, log logr.Logger) {
 	log = log.WithValues("component", "fenceRequestWatcher")
 	log.Info("Started watching fence request directory", "dir", fence.RequestDir)
@@ -684,7 +683,7 @@ func (r *NnfNodeReconciler) processFenceRequest(ctx context.Context, filePath st
 		return
 	}
 
-	var request FenceRequest
+	var request fence.FenceRequest
 	if err := json.Unmarshal(data, &request); err != nil {
 		log.Error(err, "Failed to parse fence request file", "file", filePath)
 		return
@@ -701,7 +700,7 @@ func (r *NnfNodeReconciler) processFenceRequest(ctx context.Context, filePath st
 	// to indicate success (nothing to fence is effectively fenced).
 	if triggered == 0 {
 		log.Info("No block storage resources found to fence, writing success response", "targetNode", request.TargetNode)
-		response := FenceResponse{
+		response := fence.FenceResponse{
 			RequestID:       request.RequestID,
 			Status:          "success",
 			Success:         true,
@@ -735,9 +734,7 @@ func (r *NnfNodeReconciler) processFenceRequest(ctx context.Context, filePath st
 	}
 }
 
-// watchFenceResponses watches the fence response directory and triggers NnfNode reconciliation
-// when response files are written (fencing) or deleted (unfencing). This allows the NnfNode to
-// update compute node fenced status.
+// watchFenceResponses watches fence response files to update compute node fenced status.
 func (r *NnfNodeReconciler) watchFenceResponses(ctx context.Context, log logr.Logger) {
 	log = log.WithValues("component", "fenceResponseWatcher")
 	log.Info("Started watching fence response directory", "dir", fence.ResponseDir)
@@ -781,8 +778,9 @@ func (r *NnfNodeReconciler) watchFenceResponses(ctx context.Context, log logr.Lo
 	}
 }
 
-// triggerBlockStorageReconciles finds all GFS2 NnfNodeBlockStorage resources that grant access
-// to the given compute node and triggers their reconciliation
+// triggerBlockStorageReconciles triggers reconciliation of GFS2 NnfNodeBlockStorage resources
+// that grant access to the given compute node. The block storage reconciler owns storage group
+// deletion and fence response handling.
 func (r *NnfNodeReconciler) triggerBlockStorageReconciles(ctx context.Context, computeNode string, log logr.Logger) int {
 	// List all NnfNodeBlockStorage resources in this namespace
 	blockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
@@ -847,7 +845,9 @@ func (r *NnfNodeReconciler) GetBlockStorageEvents() chan event.GenericEvent {
 	return r.blockStorageEvents
 }
 
-// InitializeBlockStorageEvents initializes the channel for triggering BlockStorage reconciles
+// InitializeBlockStorageEvents initializes the channel for triggering BlockStorage reconciles.
+// The buffer prevents the fence request watcher from blocking when sending multiple events.
+// Size 100 is arbitrary but sufficient since concurrent GFS2 workflows per Rabbit is limited.
 func (r *NnfNodeReconciler) InitializeBlockStorageEvents() {
 	if r.blockStorageEvents == nil {
 		r.blockStorageEvents = make(chan event.GenericEvent, 100)
