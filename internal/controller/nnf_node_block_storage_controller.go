@@ -921,7 +921,8 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	return nil
 }
 
-// writeFenceResponse writes a response file for the fence agent
+// writeFenceResponse writes a response file for the fence agent using atomic rename.
+// Writes to a temp dot-file first, then renames to the final filename.
 func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(request *fence.FenceRequest, success bool, message string, actionPerformed string, log logr.Logger) error {
 	// Ensure response directory exists
 	if err := os.MkdirAll(fence.ResponseDir, 0755); err != nil {
@@ -931,6 +932,7 @@ func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(request *fence.FenceR
 	// Use the same filename as the request file for consistency
 	requestFilename := filepath.Base(request.FilePath)
 	responseFile := filepath.Join(fence.ResponseDir, requestFilename)
+	tempFile := filepath.Join(fence.ResponseDir, "."+requestFilename+".tmp")
 
 	// Include all fields from the request in the response
 	response := map[string]interface{}{
@@ -949,7 +951,14 @@ func (r *NnfNodeBlockStorageReconciler) writeFenceResponse(request *fence.FenceR
 		return err
 	}
 
-	if err := os.WriteFile(responseFile, data, 0644); err != nil {
+	// Write to temp file first
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		return err
+	}
+
+	// Atomic rename to final filename
+	if err := os.Rename(tempFile, responseFile); err != nil {
+		os.Remove(tempFile) // Clean up temp file on rename failure
 		return err
 	}
 

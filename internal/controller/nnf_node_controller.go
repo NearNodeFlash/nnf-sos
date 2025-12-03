@@ -515,15 +515,11 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 			continue
 		}
 
-		log.V(1).Info("Found fence response file", "file", entry.Name(), "targetNode", response.TargetNode, "success", response.Success, "status", response.Status)
-
 		// Track fenced computes
 		if response.Success || response.Status == "success" {
 			fencedComputes[response.TargetNode] = true
 		}
 	}
-
-	log.V(1).Info("Fenced computes map", "fencedComputes", fencedComputes)
 
 	// Update all server statuses based on fence state
 	for i := range node.Status.Servers {
@@ -532,8 +528,6 @@ func (r *NnfNodeReconciler) checkFencedStatus(ctx context.Context, node *nnfv1al
 		if server.ID == "0" {
 			continue
 		}
-
-		log.V(1).Info("Checking server fence status", "serverID", server.ID, "hostname", server.Hostname, "isFenced", fencedComputes[server.Hostname])
 
 		// Check if this compute has a fence response file
 		if fencedComputes[server.Hostname] {
@@ -634,13 +628,13 @@ func (r *NnfNodeReconciler) watchFenceRequests(ctx context.Context, log logr.Log
 	log = log.WithValues("component", "fenceRequestWatcher")
 	log.Info("Started watching fence request directory", "dir", fence.RequestDir)
 
-	// Scan for existing fence requests on startup
+	// Scan for existing fence requests on startup (ignore dot-files which are temp files)
 	files, err := os.ReadDir(fence.RequestDir)
 	if err != nil {
 		log.Error(err, "Failed to read fence request directory")
 	} else {
 		for _, file := range files {
-			if !file.IsDir() {
+			if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
 				log.Info("Processing existing fence request", "file", file.Name())
 				r.processFenceRequest(ctx, filepath.Join(fence.RequestDir, file.Name()), log)
 			}
@@ -659,10 +653,13 @@ func (r *NnfNodeReconciler) watchFenceRequests(ctx context.Context, log logr.Log
 				return
 			}
 
-			// Process Write events for new fence requests
-			if fsEvent.Op&fsnotify.Write == fsnotify.Write {
-				// Brief delay to ensure file is fully flushed
-				time.Sleep(50 * time.Millisecond)
+			// Process Create events for new fence requests. The fence agent writes to a
+			// temp dot-file then renames it atomically, so Create indicates a complete file.
+			if fsEvent.Op&fsnotify.Create == fsnotify.Create {
+				// Ignore dot-files (temp files being written)
+				if strings.HasPrefix(filepath.Base(fsEvent.Name), ".") {
+					continue
+				}
 				r.processFenceRequest(ctx, fsEvent.Name, log)
 			}
 
