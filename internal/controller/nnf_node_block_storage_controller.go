@@ -803,14 +803,6 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	storageGroupsToDelete := []string{}
 
 	for _, blockStorage := range nnfNodeBlockStorageList.Items {
-		// Skip block storage that isn't fully set up
-		if !blockStorage.Status.Ready {
-			log.V(1).Info("Skipping block storage that is not ready",
-				"blockStorage", blockStorage.Name,
-				"ready", blockStorage.Status.Ready)
-			continue
-		}
-
 		// Only GFS2 requires STONITH fencing
 		// TODO: Consider a "requires-fencing" label based on filesystem type and profile config
 		allocationSet, hasLabel := blockStorage.Labels["nnf.cray.hpe.com/allocationset"]
