@@ -103,6 +103,13 @@ var (
 			Help: "Number of total reconciles in nnf_systemstorage controller",
 		},
 	)
+
+	Gfs2FenceRequestsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gfs2_fence_requests_total",
+			Help: "Number of GFS2 fence requests detected by the file watcher",
+		},
+	)
 )
 
 func init() {
@@ -120,4 +127,5 @@ func init() {
 	metrics.Registry.MustRegister(NnfLustreMGTReconcilesTotal)
 	metrics.Registry.MustRegister(NnfSystemConfigurationReconcilesTotal)
 	metrics.Registry.MustRegister(NnfSystemStorageReconcilesTotal)
+	metrics.Registry.MustRegister(Gfs2FenceRequestsTotal)
 }
