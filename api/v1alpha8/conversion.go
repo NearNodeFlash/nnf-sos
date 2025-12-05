@@ -438,10 +438,12 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Data.LustreStorage.ClientCmdLines.RabbitPostSetup = src.Data.LustreStorage.ClientCmdLines.RabbitPostMount
 	dst.Data.LustreStorage.ClientCmdLines.RabbitPreTeardown = src.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount
 
+	dst.Data.GFS2Storage.StorageLabels = src.Data.GFS2Storage.StorageLabels
+	dst.Data.GFS2Storage.CapacityScalingFactor = src.Data.GFS2Storage.CapacityScalingFactor
 	dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Mkfs = src.Data.GFS2Storage.CmdLines.Mkfs
 	dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Mount = src.Data.GFS2Storage.CmdLines.MountRabbit
-	dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup = src.Data.GFS2Storage.CmdLines.PostMount
-	dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown = src.Data.GFS2Storage.CmdLines.PreUnmount
+	dst.Data.GFS2Storage.UserCommands.PostSetup = src.Data.GFS2Storage.CmdLines.PostMount
+	dst.Data.GFS2Storage.UserCommands.PreTeardown = src.Data.GFS2Storage.CmdLines.PreUnmount
 	dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Mount = src.Data.GFS2Storage.CmdLines.MountCompute
 	dst.Data.GFS2Storage.BlockDeviceCommands.SharedVg = src.Data.GFS2Storage.CmdLines.SharedVg
 	dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.PvCreate = src.Data.GFS2Storage.CmdLines.PvCreate
@@ -458,10 +460,12 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce = src.Data.GFS2Storage.CmdLines.LVMRebuild.VgReduce
 	dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair = src.Data.GFS2Storage.CmdLines.LVMRebuild.LvRepair
 
+	dst.Data.XFSStorage.StorageLabels = src.Data.XFSStorage.StorageLabels
+	dst.Data.XFSStorage.CapacityScalingFactor = src.Data.XFSStorage.CapacityScalingFactor
 	dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.Mkfs = src.Data.XFSStorage.CmdLines.Mkfs
 	dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.Mount = src.Data.XFSStorage.CmdLines.MountRabbit
-	dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup = src.Data.XFSStorage.CmdLines.PostMount
-	dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown = src.Data.XFSStorage.CmdLines.PreUnmount
+	dst.Data.XFSStorage.UserCommands.PostSetup = src.Data.XFSStorage.CmdLines.PostMount
+	dst.Data.XFSStorage.UserCommands.PreTeardown = src.Data.XFSStorage.CmdLines.PreUnmount
 	dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.Mount = src.Data.XFSStorage.CmdLines.MountCompute
 	dst.Data.XFSStorage.BlockDeviceCommands.SharedVg = src.Data.XFSStorage.CmdLines.SharedVg
 	dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.PvCreate = src.Data.XFSStorage.CmdLines.PvCreate
@@ -478,10 +482,12 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce = src.Data.XFSStorage.CmdLines.LVMRebuild.VgReduce
 	dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair = src.Data.XFSStorage.CmdLines.LVMRebuild.LvRepair
 
+	dst.Data.RawStorage.StorageLabels = src.Data.RawStorage.StorageLabels
+	dst.Data.RawStorage.CapacityScalingFactor = src.Data.RawStorage.CapacityScalingFactor
 	dst.Data.RawStorage.FileSystemCommands.RabbitCommands.Mkfs = src.Data.RawStorage.CmdLines.Mkfs
 	dst.Data.RawStorage.FileSystemCommands.RabbitCommands.Mount = src.Data.RawStorage.CmdLines.MountRabbit
-	dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup = src.Data.RawStorage.CmdLines.PostMount
-	dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown = src.Data.RawStorage.CmdLines.PreUnmount
+	dst.Data.RawStorage.UserCommands.PostSetup = src.Data.RawStorage.CmdLines.PostMount
+	dst.Data.RawStorage.UserCommands.PreTeardown = src.Data.RawStorage.CmdLines.PreUnmount
 	dst.Data.RawStorage.FileSystemCommands.ComputeCommands.Mount = src.Data.RawStorage.CmdLines.MountCompute
 	dst.Data.RawStorage.BlockDeviceCommands.SharedVg = src.Data.RawStorage.CmdLines.SharedVg
 	dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.PvCreate = src.Data.RawStorage.CmdLines.PvCreate
@@ -512,16 +518,16 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 		dst.Data.GFS2Storage.SharedAllocation = restored.Data.GFS2Storage.SharedAllocation
 		dst.Data.GFS2Storage.AllocationPadding = restored.Data.GFS2Storage.AllocationPadding
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
-		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
-		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount
-		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount
-		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
-		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
+		dst.Data.GFS2Storage.UserCommands.PostActivate = restored.Data.GFS2Storage.UserCommands.PostActivate
+		dst.Data.GFS2Storage.UserCommands.PreDeactivate = restored.Data.GFS2Storage.UserCommands.PreDeactivate
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PreMount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PreMount
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PostMount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PostMount
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PreMount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PreMount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PostMount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PostMount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
@@ -537,16 +543,16 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 		dst.Data.XFSStorage.SharedAllocation = restored.Data.XFSStorage.SharedAllocation
 		dst.Data.XFSStorage.AllocationPadding = restored.Data.XFSStorage.AllocationPadding
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
-		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
-		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount
-		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount
-		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
-		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
+		dst.Data.XFSStorage.UserCommands.PostActivate = restored.Data.XFSStorage.UserCommands.PostActivate
+		dst.Data.XFSStorage.UserCommands.PreDeactivate = restored.Data.XFSStorage.UserCommands.PreDeactivate
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PreMount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PreMount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PostMount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PostMount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PreMount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PreMount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PostMount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PostMount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
@@ -562,16 +568,16 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 		dst.Data.RawStorage.SharedAllocation = restored.Data.RawStorage.SharedAllocation
 		dst.Data.RawStorage.AllocationPadding = restored.Data.RawStorage.AllocationPadding
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostActivate
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreDeactivate
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreMount
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostMount
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PreUnmount
-		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserClientCommands.PostUnmount
-		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreMount
-		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostMount
-		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PreUnmount
-		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserClientCommands.PostUnmount
+		dst.Data.RawStorage.UserCommands.PostActivate = restored.Data.RawStorage.UserCommands.PostActivate
+		dst.Data.RawStorage.UserCommands.PreDeactivate = restored.Data.RawStorage.UserCommands.PreDeactivate
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PreMount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PreMount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PostMount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PostMount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PreMount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PreMount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PostMount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PostMount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.UserCommands.PostUnmount
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreActivate
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
@@ -617,10 +623,12 @@ func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Data.LustreStorage.ClientCmdLines.RabbitPostMount = src.Data.LustreStorage.ClientCmdLines.RabbitPostSetup
 	dst.Data.LustreStorage.ClientCmdLines.RabbitPreUnmount = src.Data.LustreStorage.ClientCmdLines.RabbitPreTeardown
 
+	dst.Data.GFS2Storage.StorageLabels = src.Data.GFS2Storage.StorageLabels
+	dst.Data.GFS2Storage.CapacityScalingFactor = src.Data.GFS2Storage.CapacityScalingFactor
 	dst.Data.GFS2Storage.CmdLines.Mkfs = src.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Mkfs
 	dst.Data.GFS2Storage.CmdLines.MountRabbit = src.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Mount
-	dst.Data.GFS2Storage.CmdLines.PostMount = src.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
-	dst.Data.GFS2Storage.CmdLines.PreUnmount = src.Data.GFS2Storage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
+	dst.Data.GFS2Storage.CmdLines.PostMount = src.Data.GFS2Storage.UserCommands.PostSetup
+	dst.Data.GFS2Storage.CmdLines.PreUnmount = src.Data.GFS2Storage.UserCommands.PreTeardown
 	dst.Data.GFS2Storage.CmdLines.MountCompute = src.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Mount
 	dst.Data.GFS2Storage.CmdLines.SharedVg = src.Data.GFS2Storage.BlockDeviceCommands.SharedVg
 	dst.Data.GFS2Storage.CmdLines.PvCreate = src.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.PvCreate
@@ -637,10 +645,12 @@ func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Data.GFS2Storage.CmdLines.LVMRebuild.VgReduce = src.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce
 	dst.Data.GFS2Storage.CmdLines.LVMRebuild.LvRepair = src.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair
 
+	dst.Data.XFSStorage.StorageLabels = src.Data.XFSStorage.StorageLabels
+	dst.Data.XFSStorage.CapacityScalingFactor = src.Data.XFSStorage.CapacityScalingFactor
 	dst.Data.XFSStorage.CmdLines.Mkfs = src.Data.XFSStorage.FileSystemCommands.RabbitCommands.Mkfs
 	dst.Data.XFSStorage.CmdLines.MountRabbit = src.Data.XFSStorage.FileSystemCommands.RabbitCommands.Mount
-	dst.Data.XFSStorage.CmdLines.PostMount = src.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
-	dst.Data.XFSStorage.CmdLines.PreUnmount = src.Data.XFSStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
+	dst.Data.XFSStorage.CmdLines.PostMount = src.Data.XFSStorage.UserCommands.PostSetup
+	dst.Data.XFSStorage.CmdLines.PreUnmount = src.Data.XFSStorage.UserCommands.PreTeardown
 	dst.Data.XFSStorage.CmdLines.MountCompute = src.Data.XFSStorage.FileSystemCommands.ComputeCommands.Mount
 	dst.Data.XFSStorage.CmdLines.SharedVg = src.Data.XFSStorage.BlockDeviceCommands.SharedVg
 	dst.Data.XFSStorage.CmdLines.PvCreate = src.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.PvCreate
@@ -657,10 +667,12 @@ func (dst *NnfStorageProfile) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Data.XFSStorage.CmdLines.LVMRebuild.VgReduce = src.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce
 	dst.Data.XFSStorage.CmdLines.LVMRebuild.LvRepair = src.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair
 
+	dst.Data.RawStorage.StorageLabels = src.Data.RawStorage.StorageLabels
+	dst.Data.RawStorage.CapacityScalingFactor = src.Data.RawStorage.CapacityScalingFactor
 	dst.Data.RawStorage.CmdLines.Mkfs = src.Data.RawStorage.FileSystemCommands.RabbitCommands.Mkfs
 	dst.Data.RawStorage.CmdLines.MountRabbit = src.Data.RawStorage.FileSystemCommands.RabbitCommands.Mount
-	dst.Data.RawStorage.CmdLines.PostMount = src.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PostSetup
-	dst.Data.RawStorage.CmdLines.PreUnmount = src.Data.RawStorage.FileSystemCommands.RabbitCommands.UserServerCommands.PreTeardown
+	dst.Data.RawStorage.CmdLines.PostMount = src.Data.RawStorage.UserCommands.PostSetup
+	dst.Data.RawStorage.CmdLines.PreUnmount = src.Data.RawStorage.UserCommands.PreTeardown
 	dst.Data.RawStorage.CmdLines.MountCompute = src.Data.RawStorage.FileSystemCommands.ComputeCommands.Mount
 	dst.Data.RawStorage.CmdLines.SharedVg = src.Data.RawStorage.BlockDeviceCommands.SharedVg
 	dst.Data.RawStorage.CmdLines.PvCreate = src.Data.RawStorage.BlockDeviceCommands.RabbitCommands.PvCreate
