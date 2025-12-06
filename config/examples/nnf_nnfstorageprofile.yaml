@@ -37,14 +37,14 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
-        userClientCommands: {}
+        userCommands: {}
       rabbitCommands:
         mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
         mount: $DEVICE $MOUNT_PATH
-        userClientCommands: {}
-        userServerCommands:
-          postSetup:
-          - chown $USERID:$GROUPID $MOUNT_PATH
+        userCommands: {}
+    userCommands:
+      postSetup:
+      - chown $USERID:$GROUPID $MOUNT_PATH
   lustreStorage:
     capacityMdt: 5GiB
     capacityMgt: 5GiB
@@ -122,9 +122,6 @@ data:
           activate: --activate y $VG_NAME/$LV_NAME
           deactivate: --activate n $VG_NAME/$LV_NAME
         userCommands: {}
-        vgChange:
-          lockStart: --lock-start $VG_NAME
-          lockStop: --lock-stop $VG_NAME
       rabbitCommands:
         lvChange:
           activate: --activate y $VG_NAME/$LV_NAME
@@ -136,20 +133,19 @@ data:
         pvCreate: $DEVICE
         pvRemove: $DEVICE
         userCommands: {}
-        vgChange:
-          lockStart: --lock-start $VG_NAME
-          lockStop: --lock-stop $VG_NAME
-        vgCreate: --shared --addtag $JOBID $VG_NAME $DEVICE_LIST
+        vgCreate: --addtag $JOBID $VG_NAME $DEVICE_LIST
         vgRemove: $VG_NAME
       sharedVg: true
     capacityScalingFactor: "1.0"
     allocationPadding: 300MiB
     fileSystemCommands:
       computeCommands:
-        userClientCommands: {}
+        mount: -o bind $DEVICE $MOUNT_PATH
+        userCommands: {}
       rabbitCommands:
-        userClientCommands: {}
-        userServerCommands: {}
+        mount: -o bind $DEVICE $MOUNT_PATH
+        userCommands: {}
+    userCommands: {}
   xfsStorage:
     blockDeviceCommands:
       computeCommands:
@@ -157,9 +153,6 @@ data:
           activate: --activate y $VG_NAME/$LV_NAME
           deactivate: --activate n $VG_NAME/$LV_NAME
         userCommands: {}
-        vgChange:
-          lockStart: --lock-start $VG_NAME
-          lockStop: --lock-stop $VG_NAME
       rabbitCommands:
         lvChange:
           activate: --activate y $VG_NAME/$LV_NAME
@@ -171,10 +164,7 @@ data:
         pvCreate: $DEVICE
         pvRemove: $DEVICE
         userCommands: {}
-        vgChange:
-          lockStart: --lock-start $VG_NAME
-          lockStop: --lock-stop $VG_NAME
-        vgCreate: --shared --addtag $JOBID $VG_NAME $DEVICE_LIST
+        vgCreate: --addtag $JOBID $VG_NAME $DEVICE_LIST
         vgRemove: $VG_NAME
       sharedVg: true
     capacityScalingFactor: "1.0"
@@ -182,11 +172,11 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
-        userClientCommands: {}
+        userCommands: {}
       rabbitCommands:
         mkfs: $DEVICE
         mount: $DEVICE $MOUNT_PATH
-        userClientCommands: {}
-        userServerCommands:
-          postSetup:
-          - chown $USERID:$GROUPID $MOUNT_PATH
+        userCommands: {}
+    userCommands:
+      postSetup:
+      - chown $USERID:$GROUPID $MOUNT_PATH

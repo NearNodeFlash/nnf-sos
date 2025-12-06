@@ -118,6 +118,10 @@ func (f *SimpleFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
+	if len(f.CommandArgs.Mount) == 0 {
+		return false, nil
+	}
+
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -228,9 +232,12 @@ func (f *SimpleFileSystem) SimpleRunCommands(ctx context.Context, complete bool,
 		formattedCommand := f.parseArgs(rawCommand)
 		f.Log.Info(phase, "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, f.Log); err != nil {
+		output, err := command.Run(formattedCommand, f.Log)
+		if err != nil {
 			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
 		}
+
+		f.Log.Info(phase, "output", output)
 	}
 
 	return true, nil
@@ -287,12 +294,15 @@ func (f *SimpleFileSystem) PostSetup(ctx context.Context, complete bool) (bool, 
 		formattedCommand := f.parseArgs(rawCommand)
 		f.Log.Info("PostSetup", "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, f.Log); err != nil {
+		output, err := command.Run(formattedCommand, f.Log)
+		if err != nil {
 			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
 				return false, fmt.Errorf("could not unmount after PostSetup command failed: %s: %w", formattedCommand, unmountErr)
 			}
 			return false, fmt.Errorf("could not run PostSetup command: %s: %w", formattedCommand, err)
 		}
+
+		f.Log.Info("PostSetup", "output", output)
 	}
 
 	if _, err := f.Unmount(ctx, f.TempDir); err != nil {
@@ -329,12 +339,15 @@ func (f *SimpleFileSystem) PreTeardown(ctx context.Context, complete bool) (bool
 		formattedCommand := f.parseArgs(rawCommand)
 		f.Log.Info("PreTeardown", "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, f.Log); err != nil {
+		output, err := command.Run(formattedCommand, f.Log)
+		if err != nil {
 			if _, unmountErr := f.Unmount(ctx, f.TempDir); unmountErr != nil {
 				return false, fmt.Errorf("could not unmount after PreTeardown command failed: %s: %w", formattedCommand, unmountErr)
 			}
 			return false, fmt.Errorf("could not run PreTeardown command: %s: %w", formattedCommand, err)
 		}
+
+		f.Log.Info("PreTeardown", "output", output)
 	}
 
 	if _, err := f.Unmount(ctx, f.TempDir); err != nil {

@@ -263,22 +263,18 @@ type NnfStorageProfileRabbitFileSystemCommands struct {
 	// Mount specifies mount options for mounting on the Rabbit.
 	Mount string `json:"mount,omitempty"`
 
-	// UserServerCommands specifies commands that can be run on the Rabbit during file system set up
-	// and teardown
-	UserServerCommands NnfStorageProfileFileSystemUserServerCommands `json:"userServerCommands,omitempty"`
-
-	// UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+	// UserCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
 	// as a client during DataIn, PreRun, PostRun, and DataOut
-	UserClientCommands NnfStorageProfileFileSystemUserClientCommands `json:"userClientCommands,omitempty"`
+	UserCommands NnfStorageProfileFileSystemUserCommands `json:"userCommands,omitempty"`
 }
 
 type NnfStorageProfileComputeFileSystemCommands struct {
 	// Mount specifies mount options for mounting on the Rabbit.
 	Mount string `json:"mount,omitempty"`
 
-	// UserClientCommands specifies commands that can be run on the Compute node when the file system is
+	// UserCommands specifies commands that can be run on the Compute node when the file system is
 	// mounted/unmounted in PreRun and PostRun
-	UserClientCommands NnfStorageProfileFileSystemUserClientCommands `json:"userClientCommands,omitempty"`
+	UserCommands NnfStorageProfileFileSystemUserCommands `json:"userCommands,omitempty"`
 }
 
 type NnfStorageProfileFileSystem struct {
@@ -289,7 +285,7 @@ type NnfStorageProfileFileSystem struct {
 	ComputeCommands NnfStorageProfileComputeFileSystemCommands `json:"computeCommands,omitempty"`
 }
 
-type NnfStorageProfileFileSystemUserClientCommands struct {
+type NnfStorageProfileFileSystemUserCommands struct {
 	// PreMount specifies a list of commands to run before the file system is mounted
 	PreMount []string `json:"preMount,omitempty"`
 
@@ -301,22 +297,6 @@ type NnfStorageProfileFileSystemUserClientCommands struct {
 
 	// PostUnmount specifies a list of commands to run after the file system is unmounted
 	PostUnmount []string `json:"postUnmount,omitempty"`
-}
-
-type NnfStorageProfileFileSystemUserServerCommands struct {
-	// PostActivate specifies a list of commands to run after the file system is activated
-	PostActivate []string `json:"postActivate,omitempty"`
-
-	// PostActivate specifies a list of commands to run before the file system is deactivated
-	PreDeactivate []string `json:"preDeactivate,omitempty"`
-
-	// PostSetup specifies a list of commands to run after the file system is setup. The file system
-	// is mounted on the Rabbit when these commands are run
-	PostSetup []string `json:"postSetup,omitempty"`
-
-	// PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
-	// is mounted on the Rabbit when these commands are run
-	PreTeardown []string `json:"preTeardown,omitempty"`
 }
 
 // NnfStorageProfileLVMVgChangeCmdLines
@@ -349,13 +329,33 @@ type NnfStorageProfileLVMLvChangeCmdLines struct {
 	Deactivate string `json:"deactivate,omitempty"`
 }
 
-// NnfStorageProfileGFS2Data defines the GFS2-specific configuration
-type NnfStorageProfileGFS2Data struct {
+type NnfStorageProfileUserCommands struct {
+	// PostActivate specifies a list of commands to run after the file system is activated
+	PostActivate []string `json:"postActivate,omitempty"`
+
+	// PostActivate specifies a list of commands to run before the file system is deactivated
+	PreDeactivate []string `json:"preDeactivate,omitempty"`
+
+	// PostSetup specifies a list of commands to run after the file system is setup. The file system
+	// is mounted on the Rabbit when these commands are run
+	PostSetup []string `json:"postSetup,omitempty"`
+
+	// PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+	// is mounted on the Rabbit when these commands are run
+	PreTeardown []string `json:"preTeardown,omitempty"`
+}
+
+// NnfStorageProfileSharedData defines the shared parameters for simple file systems (xfs, gfs2, and raw)
+type NnfStorageProfileSharedData struct {
 	// FileSystemCommands specifies commands that are run when configuring the file system
 	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
 
 	// BlockDeviceCommands specifies commands that are run when configuring the block device
 	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
+
+	// UserCommands specifies commands that can be run on the Rabbit during allocation setup
+	// and teardown
+	UserCommands NnfStorageProfileUserCommands `json:"userCommands,omitempty"`
 
 	// SharedAllocation is used to share an allocation across multiple clients
 	SharedAllocation bool `json:"sharedAllocation,omitempty"`
@@ -374,59 +374,23 @@ type NnfStorageProfileGFS2Data struct {
 	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
-// NnfStorageProfileXFSData defines the XFS-specific configuration
+// NnfStorageProfileRawData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
-	// FileSystemCommands specifies commands that are run when configuring the file system
-	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
+	NnfStorageProfileSharedData `json:",inline"`
+}
 
-	// BlockDeviceCommands specifies commands that are run when configuring the block device
-	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
-
-	// SharedAllocation is used to share an allocation across multiple clients
-	SharedAllocation bool `json:"sharedAllocation,omitempty"`
-
-	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-	// labels constraint. This restricts allocations to Storage resources with these labels
-	StorageLabels []string `json:"storageLabels,omitempty"`
-
-	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
-	// +kubebuilder:default:="1.0"
-	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
-
-	// AllocationPadding is a way to increase the size of the physical allocation without increasing
-	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
-	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
-	AllocationPadding string `json:"alllocationPadding,omitempty"`
+// NnfStorageProfileRawData defines the GFS2-specific configuration
+type NnfStorageProfileGFS2Data struct {
+	NnfStorageProfileSharedData `json:",inline"`
 }
 
 // NnfStorageProfileRawData defines the Raw-specific configuration
 type NnfStorageProfileRawData struct {
-	// FileSystemCommands specifies commands that are run when configuring the file system
-	FileSystemCommands NnfStorageProfileFileSystem `json:"fileSystemCommands,omitempty"`
-
-	// BlockDeviceCommands specifies commands that are run when configuring the block device
-	BlockDeviceCommands NnfStorageProfileBlockDevice `json:"blockDeviceCommands,omitempty"`
-
-	// SharedAllocation is used to share an allocation across multiple clients
-	SharedAllocation bool `json:"sharedAllocation,omitempty"`
-
-	// Storagelabels defines a list of labels that are added to the DirectiveBreakdown
-	// labels constraint. This restricts allocations to Storage resources with these labels
-	StorageLabels []string `json:"storageLabels,omitempty"`
-
-	// CapacityScalingFactor is a scaling factor for the capacity requested in the DirectiveBreakdown
-	// +kubebuilder:default:="1.0"
-	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
-
-	// AllocationPadding is a way to increase the size of the physical allocation without increasing
-	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
-	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
-	AllocationPadding string `json:"alllocationPadding,omitempty"`
+	NnfStorageProfileSharedData `json:",inline"`
 }
 
 // NnfStorageProfileData defines the desired state of NnfStorageProfile
 type NnfStorageProfileData struct {
-
 	// Default is true if this instance is the default resource to use
 	// +kubebuilder:default:=false
 	Default bool `json:"default,omitempty"`

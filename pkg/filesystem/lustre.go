@@ -299,9 +299,12 @@ func (l *LustreFileSystem) LustreRunCommands(ctx context.Context, complete bool,
 		formattedCommand := l.parseArgs(rawCommand)
 		l.Log.Info(phase, "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+		output, err := command.Run(formattedCommand, l.Log)
+		if err != nil {
 			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
 		}
+
+		l.Log.Info(phase, "output", output)
 	}
 
 	return false, nil
@@ -345,7 +348,7 @@ func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, 
 	}
 
 	if _, err := l.Mount(ctx, l.TempDir, false); err != nil {
-		return false, fmt.Errorf("could not mount temp dir '%s' for post mount: %w", l.TempDir, err)
+		return false, fmt.Errorf("could not mount temp dir '%s' for PostSetup: %w", l.TempDir, err)
 	}
 
 	// Build the commands from the args provided
@@ -356,18 +359,21 @@ func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, 
 
 	for _, rawCommand := range l.CommandArgs.PostMount {
 		formattedCommand := l.parseArgs(rawCommand)
-		l.Log.Info("PostMount", "command", formattedCommand)
+		l.Log.Info("PostSetup", "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+		output, err := command.Run(formattedCommand, l.Log)
+		if err != nil {
 			if _, unmountErr := l.Unmount(ctx, l.TempDir); unmountErr != nil {
-				return false, fmt.Errorf("could not unmount after post mount command failed: %s: %w", formattedCommand, unmountErr)
+				return false, fmt.Errorf("could not unmount after PostSetup command failed: %s: %w", formattedCommand, unmountErr)
 			}
-			return false, fmt.Errorf("could not run post mount command: %s: %w", formattedCommand, err)
+			return false, fmt.Errorf("could not run PostSetup command: %s: %w", formattedCommand, err)
 		}
+
+		l.Log.Info("PostSetup", "output", output)
 	}
 
 	if _, err := l.Unmount(ctx, l.TempDir); err != nil {
-		return false, fmt.Errorf("could not unmount after post mount '%s': %w", l.TempDir, err)
+		return false, fmt.Errorf("could not unmount after PostSetup '%s': %w", l.TempDir, err)
 	}
 
 	return true, nil
@@ -387,7 +393,7 @@ func (l *LustreFileSystem) PreTeardown(ctx context.Context, complete bool) (bool
 	}
 
 	if _, err := l.Mount(ctx, l.TempDir, false); err != nil {
-		return false, fmt.Errorf("could not mount temp dir '%s' for pre unmount: %w", l.TempDir, err)
+		return false, fmt.Errorf("could not mount temp dir '%s' for PreTeardown: %w", l.TempDir, err)
 	}
 	// Build the commands from the args provided
 	if l.CommandArgs.Vars == nil {
@@ -397,18 +403,21 @@ func (l *LustreFileSystem) PreTeardown(ctx context.Context, complete bool) (bool
 
 	for _, rawCommand := range l.CommandArgs.PreUnmount {
 		formattedCommand := l.parseArgs(rawCommand)
-		l.Log.Info("PreUnmount", "command", formattedCommand)
+		l.Log.Info("PreTeardown", "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+		output, err := command.Run(formattedCommand, l.Log)
+		if err != nil {
 			if _, unmountErr := l.Unmount(ctx, l.TempDir); unmountErr != nil {
-				return false, fmt.Errorf("could not unmount after pre unmount command failed: %s: %w", formattedCommand, unmountErr)
+				return false, fmt.Errorf("could not unmount after PreTeardown command failed: %s: %w", formattedCommand, unmountErr)
 			}
-			return false, fmt.Errorf("could not run pre unmount command: %s: %w", formattedCommand, err)
+			return false, fmt.Errorf("could not run PreTeardown command: %s: %w", formattedCommand, err)
 		}
+
+		l.Log.Info("PreTeardown", "output", output)
 	}
 
 	if _, err := l.Unmount(ctx, l.TempDir); err != nil {
-		return false, fmt.Errorf("could not unmount after pre unmount '%s': %w", l.TempDir, err)
+		return false, fmt.Errorf("could not unmount after PreTeardown '%s': %w", l.TempDir, err)
 	}
 
 	return true, nil

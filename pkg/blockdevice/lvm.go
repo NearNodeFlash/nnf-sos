@@ -408,9 +408,12 @@ func (l *Lvm) RunCommands(ctx context.Context, complete bool, commands []string,
 		}
 		l.Log.Info(phase, "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, l.Log); err != nil {
+		output, err := command.Run(formattedCommand, l.Log)
+		if err != nil {
 			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
 		}
+
+		l.Log.Info(phase, "output", output)
 	}
 
 	return true, nil

@@ -302,9 +302,12 @@ func (z *Zpool) RunCommands(ctx context.Context, complete bool, commands []strin
 		formattedCommand := z.parseArgs(rawCommand, nil)
 		z.Log.Info(phase, "command", formattedCommand)
 
-		if _, err := command.Run(formattedCommand, z.Log); err != nil {
+		output, err := command.Run(formattedCommand, z.Log)
+		if err != nil {
 			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
 		}
+
+		z.Log.Info(phase, "output", output)
 	}
 
 	return true, nil
