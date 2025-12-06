@@ -257,9 +257,9 @@ func (r *NnfClientMountReconciler) changeMountAll(ctx context.Context, clientMou
 
 		switch state {
 		case dwsv1alpha7.ClientMountStateMounted:
-			err = r.changeMount(ctx, clientMount, i, true)
+			err = r.changeMount(ctx, clientMount, i, true /* shouldMount */)
 		case dwsv1alpha7.ClientMountStateUnmounted:
-			err = r.changeMount(ctx, clientMount, i, false)
+			err = r.changeMount(ctx, clientMount, i, false /* should(NOT)Mount */)
 		default:
 			return dwsv1alpha7.NewResourceError("invalid desired state %s", state).WithFatal()
 		}
@@ -430,6 +430,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
+			log.Error(err, "unable to deactivate block device")
+
 			// Log some debug information to figure out why the deactivate failed
 			devices, err := nvme.NvmeGetNamespaceDevices()
 			if err != nil {

@@ -370,14 +370,16 @@ var _ = BeforeSuite(func() {
 	// Coordinate the startup of the NLC controllers that use EC.
 
 	semNnfNodeDone := make(chan struct{})
-	err = (&NnfNodeReconciler{
+	nnfNodeReconciler := &NnfNodeReconciler{
 		Client:           k8sManager.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           testEnv.Scheme,
 		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 		Options:          &nnf.Options{},
-	}).SetupWithManager(k8sManager)
+	}
+	nnfNodeReconciler.InitializeBlockStorageEvents()
+	err = nnfNodeReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	semNnfNodeECDone := make(chan struct{})
@@ -397,6 +399,7 @@ var _ = BeforeSuite(func() {
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            testEnv.Scheme,
 		Events:            make(chan event.GenericEvent),
+		FenceEvents:       nnfNodeReconciler.GetBlockStorageEvents(),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
 		Options:           &nnf.Options{},
