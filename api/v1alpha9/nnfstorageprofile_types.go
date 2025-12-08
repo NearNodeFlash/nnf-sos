@@ -374,12 +374,12 @@ type NnfStorageProfileSharedData struct {
 	AllocationPadding string `json:"alllocationPadding,omitempty"`
 }
 
-// NnfStorageProfileRawData defines the XFS-specific configuration
+// NnfStorageProfileXFSData defines the XFS-specific configuration
 type NnfStorageProfileXFSData struct {
 	NnfStorageProfileSharedData `json:",inline"`
 }
 
-// NnfStorageProfileRawData defines the GFS2-specific configuration
+// NnfStorageProfileGFS2Data defines the GFS2-specific configuration
 type NnfStorageProfileGFS2Data struct {
 	NnfStorageProfileSharedData `json:",inline"`
 }
