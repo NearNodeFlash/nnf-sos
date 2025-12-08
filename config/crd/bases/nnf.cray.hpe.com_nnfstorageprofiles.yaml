@@ -1705,9 +1705,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              UserCommands specifies commands that can be run on the Compute node when the file system is
                               mounted/unmounted in PreRun and PostRun
                             properties:
                               postMount:
@@ -1748,9 +1748,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              UserCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
                               as a client during DataIn, PreRun, PostRun, and DataOut
                             properties:
                               postMount:
@@ -1778,38 +1778,6 @@ spec:
                                   type: string
                                 type: array
                             type: object
-                          userServerCommands:
-                            description: |-
-                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
-                              and teardown
-                            properties:
-                              postActivate:
-                                description: PostActivate specifies a list of commands
-                                  to run after the file system is activated
-                                items:
-                                  type: string
-                                type: array
-                              postSetup:
-                                description: |-
-                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                              preDeactivate:
-                                description: PostActivate specifies a list of commands
-                                  to run before the file system is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              preTeardown:
-                                description: |-
-                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                            type: object
                         type: object
                     type: object
                   sharedAllocation:
@@ -1823,6 +1791,38 @@ spec:
                     items:
                       type: string
                     type: array
+                  userCommands:
+                    description: |-
+                      UserCommands specifies commands that can be run on the Rabbit during allocation setup
+                      and teardown
+                    properties:
+                      postActivate:
+                        description: PostActivate specifies a list of commands to
+                          run after the file system is activated
+                        items:
+                          type: string
+                        type: array
+                      postSetup:
+                        description: |-
+                          PostSetup specifies a list of commands to run after the file system is setup. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: PostActivate specifies a list of commands to
+                          run before the file system is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preTeardown:
+                        description: |-
+                          PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               lustreStorage:
                 description: LustreStorage defines the Lustre-specific configuration
@@ -2429,9 +2429,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              UserCommands specifies commands that can be run on the Compute node when the file system is
                               mounted/unmounted in PreRun and PostRun
                             properties:
                               postMount:
@@ -2472,9 +2472,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              UserCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
                               as a client during DataIn, PreRun, PostRun, and DataOut
                             properties:
                               postMount:
@@ -2502,38 +2502,6 @@ spec:
                                   type: string
                                 type: array
                             type: object
-                          userServerCommands:
-                            description: |-
-                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
-                              and teardown
-                            properties:
-                              postActivate:
-                                description: PostActivate specifies a list of commands
-                                  to run after the file system is activated
-                                items:
-                                  type: string
-                                type: array
-                              postSetup:
-                                description: |-
-                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                              preDeactivate:
-                                description: PostActivate specifies a list of commands
-                                  to run before the file system is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              preTeardown:
-                                description: |-
-                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                            type: object
                         type: object
                     type: object
                   sharedAllocation:
@@ -2547,6 +2515,38 @@ spec:
                     items:
                       type: string
                     type: array
+                  userCommands:
+                    description: |-
+                      UserCommands specifies commands that can be run on the Rabbit during allocation setup
+                      and teardown
+                    properties:
+                      postActivate:
+                        description: PostActivate specifies a list of commands to
+                          run after the file system is activated
+                        items:
+                          type: string
+                        type: array
+                      postSetup:
+                        description: |-
+                          PostSetup specifies a list of commands to run after the file system is setup. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: PostActivate specifies a list of commands to
+                          run before the file system is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preTeardown:
+                        description: |-
+                          PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
@@ -2748,9 +2748,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Compute node when the file system is
+                              UserCommands specifies commands that can be run on the Compute node when the file system is
                               mounted/unmounted in PreRun and PostRun
                             properties:
                               postMount:
@@ -2791,9 +2791,9 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
-                          userClientCommands:
+                          userCommands:
                             description: |-
-                              UserClientCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
+                              UserCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
                               as a client during DataIn, PreRun, PostRun, and DataOut
                             properties:
                               postMount:
@@ -2821,38 +2821,6 @@ spec:
                                   type: string
                                 type: array
                             type: object
-                          userServerCommands:
-                            description: |-
-                              UserServerCommands specifies commands that can be run on the Rabbit during file system set up
-                              and teardown
-                            properties:
-                              postActivate:
-                                description: PostActivate specifies a list of commands
-                                  to run after the file system is activated
-                                items:
-                                  type: string
-                                type: array
-                              postSetup:
-                                description: |-
-                                  PostSetup specifies a list of commands to run after the file system is setup. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                              preDeactivate:
-                                description: PostActivate specifies a list of commands
-                                  to run before the file system is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              preTeardown:
-                                description: |-
-                                  PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
-                                  is mounted on the Rabbit when these commands are run
-                                items:
-                                  type: string
-                                type: array
-                            type: object
                         type: object
                     type: object
                   sharedAllocation:
@@ -2866,6 +2834,38 @@ spec:
                     items:
                       type: string
                     type: array
+                  userCommands:
+                    description: |-
+                      UserCommands specifies commands that can be run on the Rabbit during allocation setup
+                      and teardown
+                    properties:
+                      postActivate:
+                        description: PostActivate specifies a list of commands to
+                          run after the file system is activated
+                        items:
+                          type: string
+                        type: array
+                      postSetup:
+                        description: |-
+                          PostSetup specifies a list of commands to run after the file system is setup. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                      preDeactivate:
+                        description: PostActivate specifies a list of commands to
+                          run before the file system is deactivated
+                        items:
+                          type: string
+                        type: array
+                      preTeardown:
+                        description: |-
+                          PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
+                          is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                    type: object
                 type: object
             type: object
           kind:
