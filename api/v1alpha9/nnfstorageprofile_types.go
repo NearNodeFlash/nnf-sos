@@ -371,7 +371,7 @@ type NnfStorageProfileSharedData struct {
 	// AllocationPadding is a way to increase the size of the physical allocation without increasing
 	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
 	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
-	AllocationPadding string `json:"alllocationPadding,omitempty"`
+	AllocationPadding string `json:"allocationPadding,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
