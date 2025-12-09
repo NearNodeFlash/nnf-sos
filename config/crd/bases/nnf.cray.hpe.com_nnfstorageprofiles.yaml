@@ -1508,7 +1508,7 @@ spec:
               gfs2Storage:
                 description: GFS2Storage defines the GFS2-specific configuration
                 properties:
-                  alllocationPadding:
+                  allocationPadding:
                     description: |-
                       AllocationPadding is a way to increase the size of the physical allocation without increasing
                       the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
@@ -2232,7 +2232,7 @@ spec:
               rawStorage:
                 description: RawStorage defines the Raw-specific configuration
                 properties:
-                  alllocationPadding:
+                  allocationPadding:
                     description: |-
                       AllocationPadding is a way to increase the size of the physical allocation without increasing
                       the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
@@ -2551,7 +2551,7 @@ spec:
               xfsStorage:
                 description: XFSStorage defines the XFS-specific configuration
                 properties:
-                  alllocationPadding:
+                  allocationPadding:
                     description: |-
                       AllocationPadding is a way to increase the size of the physical allocation without increasing
                       the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
