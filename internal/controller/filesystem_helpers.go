@@ -34,46 +34,46 @@ import (
 	"github.com/NearNodeFlash/nnf-sos/pkg/filesystem"
 	"github.com/go-logr/logr"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfnodestorages/finalizers,verbs=update
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfstorageprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
 
-func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystemForMock(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 
 	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	if err != nil {
-		return nil, nil, dwsv1alpha6.NewResourceError("could not create mock block device").WithError(err).WithMajor()
+		return nil, nil, dwsv1alpha7.NewResourceError("could not create mock block device").WithError(err).WithMajor()
 	}
 
 	fileSystem, err := newMockFileSystem(nnfNodeStorage, index, log)
 	if err != nil {
-		return nil, nil, dwsv1alpha6.NewResourceError("could not create mock file system").WithError(err).WithMajor()
+		return nil, nil, dwsv1alpha7.NewResourceError("could not create mock file system").WithError(err).WithMajor()
 	}
 
 	return blockDevice, fileSystem, nil
 }
 
-func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystemForKind(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 
 	blockDevice, err := newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	if err != nil {
-		return nil, nil, dwsv1alpha6.NewResourceError("could not create mock block device").WithError(err).WithMajor()
+		return nil, nil, dwsv1alpha7.NewResourceError("could not create mock block device").WithError(err).WithMajor()
 	}
 
 	fileSystem, err := newKindFileSystem(nnfNodeStorage, index, log)
 	if err != nil {
-		return nil, nil, dwsv1alpha6.NewResourceError("could not create mock file system").WithError(err).WithMajor()
+		return nil, nil, dwsv1alpha7.NewResourceError("could not create mock file system").WithError(err).WithMajor()
 	}
 
 	return blockDevice, fileSystem, nil
 }
 
 // getBlockDeviceAndFileSystem returns blockdevice and filesystem interfaces based on the allocation type and NnfStorageProfile.
-func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
+func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, filesystem.FileSystem, error) {
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		return getBlockDeviceAndFileSystemForMock(ctx, c, nnfNodeStorage, index, log)
 
@@ -84,48 +84,48 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, c, nnfNodeStorage)
 	if err != nil {
-		return nil, nil, dwsv1alpha6.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
+		return nil, nil, dwsv1alpha7.NewResourceError("could not find pinned storage profile").WithError(err).WithFatal()
 	}
 
 	switch nnfNodeStorage.Spec.FileSystemType {
 	case "raw":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.NnfStorageProfileSharedData, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newBindFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.RawStorage.NnfStorageProfileSharedData, blockDevice, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
 	case "xfs":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.NnfStorageProfileSharedData, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newXfsFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newXfsFileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.XFSStorage.NnfStorageProfileSharedData, blockDevice, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create XFS file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
 	case "gfs2":
-		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.CmdLines, index, log)
+		blockDevice, err := newLvmBlockDevice(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.NnfStorageProfileSharedData, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create LVM block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newGfs2FileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.CmdLines, blockDevice, index, log)
+		fileSystem, err := newGfs2FileSystem(ctx, c, nnfNodeStorage, nnfStorageProfile.Data.GFS2Storage.NnfStorageProfileSharedData, blockDevice, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create GFS2 file system").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create GFS2 file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
 	case "lustre":
-		var commandLines nnfv1alpha8.NnfStorageProfileLustreCmdLines
+		var commandLines nnfv1alpha9.NnfStorageProfileLustreCmdLines
 
 		switch nnfNodeStorage.Spec.LustreStorage.TargetType {
 		case "mgt":
@@ -137,17 +137,17 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 		case "ost":
 			commandLines = nnfStorageProfile.Data.LustreStorage.OstCmdLines
 		default:
-			return nil, nil, dwsv1alpha6.NewResourceError("invalid Lustre target type %s", nnfNodeStorage.Spec.LustreStorage.TargetType).WithFatal()
+			return nil, nil, dwsv1alpha7.NewResourceError("invalid Lustre target type %s", nnfNodeStorage.Spec.LustreStorage.TargetType).WithFatal()
 		}
 
 		blockDevice, err := newZpoolBlockDevice(ctx, c, nnfNodeStorage, commandLines, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create zpool block device").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create zpool block device").WithError(err).WithMajor()
 		}
 
 		fileSystem, err := newLustreFileSystem(ctx, c, nnfNodeStorage, commandLines, nnfStorageProfile.Data.LustreStorage.ClientCmdLines, blockDevice, index, log)
 		if err != nil {
-			return nil, nil, dwsv1alpha6.NewResourceError("could not create lustre file system").WithError(err).WithMajor()
+			return nil, nil, dwsv1alpha7.NewResourceError("could not create lustre file system").WithError(err).WithMajor()
 		}
 
 		return blockDevice, fileSystem, nil
@@ -155,10 +155,10 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 		break
 	}
 
-	return nil, nil, dwsv1alpha6.NewResourceError("unsupported file system type %s", nnfNodeStorage.Spec.FileSystemType).WithMajor()
+	return nil, nil, dwsv1alpha7.NewResourceError("unsupported file system type %s", nnfNodeStorage.Spec.FileSystemType).WithMajor()
 }
 
-func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha8.NnfNodeBlockStorage) (bool, error) {
+func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBlockStorage *nnfv1alpha9.NnfNodeBlockStorage) (bool, error) {
 	if _, found := os.LookupEnv("NNF_TEST_ENVIRONMENT"); found {
 		return true, nil
 	}
@@ -171,7 +171,7 @@ func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBloc
 	}
 
 	if err := c.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
-		return false, dwsv1alpha6.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
+		return false, dwsv1alpha7.NewResourceError("could not get pod: %v", client.ObjectKeyFromObject(pod)).WithError(err)
 	}
 
 	// The controllers for the NnfNodeStorage and NnfNodeBlockStorage both run in the same pod. Make sure that the NnfNodeBlockStorage
@@ -195,15 +195,15 @@ func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBloc
 	return false, nil
 }
 
-func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, cmdLines nnfv1alpha8.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, cmdLines nnfv1alpha9.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
 	// This is for the fake NnfNodeStorage case. We don't need to create the zpool BlockDevice
-	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha8.NnfNodeBlockStorage{}).Name() {
+	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfNodeBlockStorage{}).Name() {
 		return newMockBlockDevice(ctx, c, nnfNodeStorage, index, log)
 	}
 
-	nnfNodeBlockStorage := &nnfv1alpha8.NnfNodeBlockStorage{
+	nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfNodeStorage.GetName(),
 			Namespace: nnfNodeStorage.GetNamespace(),
@@ -211,11 +211,11 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	}
 
 	if err := c.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 	}
 
 	if !nnfNodeBlockStorage.Status.Ready {
-		return nil, dwsv1alpha6.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+		return nil, dwsv1alpha7.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 	}
 
 	// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
@@ -226,12 +226,12 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	}
 
 	if !current {
-		return nil, dwsv1alpha6.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
+		return nil, dwsv1alpha7.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
 	}
 
 	zpoolName, err := zpoolName(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not create zpool name").WithError(err).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("could not create zpool name").WithError(err).WithMajor()
 	}
 
 	zpool.Log = log
@@ -246,17 +246,19 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	return &zpool, nil
 }
 
-func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, cmdLines nnfv1alpha8.NnfStorageProfileCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, profileCommands nnfv1alpha9.NnfStorageProfileSharedData, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	lvmDesc := blockdevice.Lvm{}
 	devices := []string{}
+
+	blockDeviceCommands := profileCommands.BlockDeviceCommands
 
 	blockIndex := index
 	if nnfNodeStorage.Spec.SharedAllocation {
 		blockIndex = 0
 	}
 
-	if nnfNodeStorage.Spec.BlockReference.Kind == reflect.TypeOf(nnfv1alpha8.NnfNodeBlockStorage{}).Name() {
-		nnfNodeBlockStorage := &nnfv1alpha8.NnfNodeBlockStorage{
+	if nnfNodeStorage.Spec.BlockReference.Kind == reflect.TypeOf(nnfv1alpha9.NnfNodeBlockStorage{}).Name() {
+		nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.GetName(),
 				Namespace: nnfNodeStorage.GetNamespace(),
@@ -265,11 +267,11 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 		err := c.Get(ctx, client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
+			return nil, dwsv1alpha7.NewResourceError("could not get NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err).WithUserMessage("could not find storage allocation").WithMajor()
 		}
 
 		if !nnfNodeBlockStorage.Status.Ready {
-			return nil, dwsv1alpha6.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+			return nil, dwsv1alpha7.NewResourceError("NnfNodeBlockStorage: %v not ready", client.ObjectKeyFromObject(nnfNodeBlockStorage))
 		}
 
 		// If the NnfNodeBlockStorage hasn't been updated by this pod yet, then wait for that to happen. The /dev paths may change if the node was
@@ -280,7 +282,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		}
 
 		if !current {
-			return nil, dwsv1alpha6.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
+			return nil, dwsv1alpha7.NewResourceError("NnfNodeBlockStorage: %v has stale status", client.ObjectKeyFromObject(nnfNodeBlockStorage)).WithError(err)
 		}
 
 		if len(nnfNodeBlockStorage.Status.Allocations) > 0 && len(nnfNodeBlockStorage.Status.Allocations[blockIndex].Accesses) > 0 {
@@ -308,12 +310,12 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	vgName, err := volumeGroupName(ctx, c, nnfNodeStorage, blockIndex)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get volume group name").WithError(err).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("could not get volume group name").WithError(err).WithMajor()
 	}
 
 	lvName, err := logicalVolumeName(ctx, c, nnfNodeStorage, index)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get logical volume name").WithError(err).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("could not get logical volume name").WithError(err).WithMajor()
 	}
 
 	percentVG := 100
@@ -328,26 +330,43 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
 	lvmDesc.LogicalVolume.Vars = unpackCommandVariables(nnfNodeStorage, index)
 
-	lvmDesc.CommandArgs.PvArgs.Create = cmdLines.PvCreate
-	lvmDesc.CommandArgs.PvArgs.Remove = cmdLines.PvRemove
+	if _, found := os.LookupEnv("RABBIT_NODE"); found {
+		lvmDesc.CommandArgs.PvArgs.Create = blockDeviceCommands.RabbitCommands.PvCreate
+		lvmDesc.CommandArgs.PvArgs.Remove = blockDeviceCommands.RabbitCommands.PvRemove
 
-	lvmDesc.CommandArgs.VgArgs.Create = cmdLines.VgCreate
-	lvmDesc.CommandArgs.VgArgs.LockStart = cmdLines.VgChange.LockStart
-	lvmDesc.CommandArgs.VgArgs.LockStop = cmdLines.VgChange.LockStop
-	lvmDesc.CommandArgs.VgArgs.Remove = cmdLines.VgRemove
-	lvmDesc.CommandArgs.VgArgs.Extend = cmdLines.LVMRebuild.VgExtend
-	lvmDesc.CommandArgs.VgArgs.Reduce = cmdLines.LVMRebuild.VgReduce
+		lvmDesc.CommandArgs.VgArgs.Create = blockDeviceCommands.RabbitCommands.VgCreate
+		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.RabbitCommands.VgChange.LockStart
+		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.RabbitCommands.VgChange.LockStop
+		lvmDesc.CommandArgs.VgArgs.Remove = blockDeviceCommands.RabbitCommands.VgRemove
+		lvmDesc.CommandArgs.VgArgs.Extend = blockDeviceCommands.RabbitCommands.LVMRebuild.VgExtend
+		lvmDesc.CommandArgs.VgArgs.Reduce = blockDeviceCommands.RabbitCommands.LVMRebuild.VgReduce
 
-	lvmDesc.CommandArgs.LvArgs.Create = cmdLines.LvCreate
-	lvmDesc.CommandArgs.LvArgs.Activate = cmdLines.LvChange.Activate
-	lvmDesc.CommandArgs.LvArgs.Deactivate = cmdLines.LvChange.Deactivate
-	lvmDesc.CommandArgs.LvArgs.Remove = cmdLines.LvRemove
-	lvmDesc.CommandArgs.LvArgs.Repair = cmdLines.LVMRebuild.LvRepair
+		lvmDesc.CommandArgs.LvArgs.Create = blockDeviceCommands.RabbitCommands.LvCreate
+		lvmDesc.CommandArgs.LvArgs.Activate = blockDeviceCommands.RabbitCommands.LvChange.Activate
+		lvmDesc.CommandArgs.LvArgs.Deactivate = blockDeviceCommands.RabbitCommands.LvChange.Deactivate
+		lvmDesc.CommandArgs.LvArgs.Remove = blockDeviceCommands.RabbitCommands.LvRemove
+		lvmDesc.CommandArgs.LvArgs.Repair = blockDeviceCommands.RabbitCommands.LVMRebuild.LvRepair
+
+		lvmDesc.CommandArgs.UserArgs.PreActivate = blockDeviceCommands.RabbitCommands.UserCommands.PreActivate
+		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.RabbitCommands.UserCommands.PostActivate
+		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
+		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
+	} else {
+		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.ComputeCommands.VgChange.LockStart
+		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.ComputeCommands.VgChange.LockStop
+		lvmDesc.CommandArgs.LvArgs.Activate = blockDeviceCommands.ComputeCommands.LvChange.Activate
+		lvmDesc.CommandArgs.LvArgs.Deactivate = blockDeviceCommands.ComputeCommands.LvChange.Deactivate
+
+		lvmDesc.CommandArgs.UserArgs.PreActivate = blockDeviceCommands.ComputeCommands.UserCommands.PreActivate
+		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.ComputeCommands.UserCommands.PostActivate
+		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
+		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
+	}
 
 	return &lvmDesc, nil
 }
 
-func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	blockDevice := blockdevice.MockBlockDevice{
 		Log: log,
 	}
@@ -355,8 +374,10 @@ func newMockBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nn
 	return &blockDevice, nil
 }
 
-func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, cmdLines nnfv1alpha8.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, profileCommands nnfv1alpha9.NnfStorageProfileSharedData, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
+
+	fileSystemCommands := profileCommands.FileSystemCommands
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
@@ -365,8 +386,24 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
+	if _, found := os.LookupEnv("RABBIT_NODE"); found {
+		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = profileCommands.UserCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = profileCommands.UserCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = profileCommands.UserCommands.PostSetup
+		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
+	} else {
+		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserCommands.PostUnmount
+	}
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
@@ -375,8 +412,10 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return &fs, nil
 }
 
-func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, cmdLines nnfv1alpha8.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, profileCommands nnfv1alpha9.NnfStorageProfileSharedData, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
+
+	fileSystemCommands := profileCommands.FileSystemCommands
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
@@ -385,13 +424,24 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		fs.CommandArgs.Mount = cmdLines.MountRabbit
+		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", fileSystemCommands.RabbitCommands.Mkfs)
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = profileCommands.UserCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = profileCommands.UserCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = profileCommands.UserCommands.PostSetup
+		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
 	} else {
-		fs.CommandArgs.Mount = cmdLines.MountCompute
+		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserCommands.PostUnmount
 	}
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", cmdLines.Mkfs)
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$CLUSTER_NAME"] = nnfNodeStorage.Namespace
@@ -403,8 +453,10 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return &fs, nil
 }
 
-func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, cmdLines nnfv1alpha8.NnfStorageProfileCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, profileCommands nnfv1alpha9.NnfStorageProfileSharedData, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.SimpleFileSystem{}
+
+	fileSystemCommands := profileCommands.FileSystemCommands
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
@@ -413,13 +465,24 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		fs.CommandArgs.Mount = cmdLines.MountRabbit
+		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Mkfs = fileSystemCommands.RabbitCommands.Mkfs
+		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.RabbitCommands.UserCommands.PostUnmount
+
+		fs.CommandArgs.PostActivate = profileCommands.UserCommands.PostActivate
+		fs.CommandArgs.PreDeactivate = profileCommands.UserCommands.PreDeactivate
+		fs.CommandArgs.PostSetup = profileCommands.UserCommands.PostSetup
+		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
 	} else {
-		fs.CommandArgs.Mount = cmdLines.MountCompute
+		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
+		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
+		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
+		fs.CommandArgs.PostUnmount = fileSystemCommands.ComputeCommands.UserCommands.PostUnmount
 	}
-	fs.CommandArgs.PostMount = cmdLines.PostMount
-	fs.CommandArgs.PreUnmount = cmdLines.PreUnmount
-	fs.CommandArgs.Mkfs = cmdLines.Mkfs
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
@@ -428,19 +491,32 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	return &fs, nil
 }
 
-func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, targetCmdLines nnfv1alpha8.NnfStorageProfileLustreCmdLines, clientCmdLines nnfv1alpha8.NnfStorageProfileLustreClientCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, targetCmdLines nnfv1alpha9.NnfStorageProfileLustreCmdLines, clientCmdLines nnfv1alpha9.NnfStorageProfileLustreClientCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
 	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("could not get lustre target mount path").WithError(err).WithMajor()
 	}
 
-	mountCommand := ""
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		mountCommand = clientCmdLines.MountRabbit
+		fs.CommandArgs.Mount = clientCmdLines.MountRabbit
+
+		fs.CommandArgs.PreMount = clientCmdLines.RabbitPreMount
+		fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
+		fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
+		fs.CommandArgs.PostUnmount = clientCmdLines.RabbitPostUnmount
+
+		fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
+		fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
+		fs.CommandArgs.PostSetup = clientCmdLines.RabbitPostSetup
+		fs.CommandArgs.PreTeardown = clientCmdLines.RabbitPreTeardown
 	} else {
-		mountCommand = clientCmdLines.MountCompute
+		fs.CommandArgs.Mount = clientCmdLines.MountCompute
+		fs.CommandArgs.PreMount = clientCmdLines.ComputePreMount
+		fs.CommandArgs.PostMount = clientCmdLines.ComputePostMount
+		fs.CommandArgs.PreUnmount = clientCmdLines.ComputePreUnmount
+		fs.CommandArgs.PostUnmount = clientCmdLines.ComputePostUnmount
 	}
 
 	fs.Log = log
@@ -453,11 +529,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
 	fs.CommandArgs.Mkfs = targetCmdLines.Mkfs
 	fs.CommandArgs.MountTarget = targetCmdLines.MountTarget
-	fs.CommandArgs.Mount = mountCommand
-	fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
-	fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
-	fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
-	fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
+
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents
@@ -474,7 +546,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	return &fs, nil
 }
 
-func newMockFileSystem(nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newMockFileSystem(nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
 	if len(path) == 0 {
 		path = "/mnt/filesystems"
@@ -487,7 +559,7 @@ func newMockFileSystem(nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, lo
 	return &fs, nil
 }
 
-func newKindFileSystem(nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newKindFileSystem(nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	path := os.Getenv("MOCK_FILE_SYSTEM_PATH")
 	if len(path) == 0 {
 		path = "/mnt/nnf"
@@ -501,12 +573,12 @@ func newKindFileSystem(nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int, lo
 
 }
 
-func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, targetType string, index int) (string, error) {
+func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, targetType string, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
 	// This is important for persistent instances
-	nnfStorageUid, ok := labels[dwsv1alpha6.OwnerUidLabel]
+	nnfStorageUid, ok := labels[dwsv1alpha7.OwnerUidLabel]
 	if !ok {
 		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
 	}
@@ -514,12 +586,12 @@ func lustreTargetPath(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	return fmt.Sprintf("/mnt/nnf/%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
-func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, targetType string, index int) (string, error) {
+func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, targetType string, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
 	// This is important for persistent instances
-	nnfStorageUid, ok := labels[dwsv1alpha6.OwnerUidLabel]
+	nnfStorageUid, ok := labels[dwsv1alpha7.OwnerUidLabel]
 	if !ok {
 		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
 	}
@@ -527,16 +599,16 @@ func zpoolName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8
 	return fmt.Sprintf("pool-%s-%s-%d", nnfStorageUid, targetType, index), nil
 }
 
-func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int) (string, error) {
+func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int) (string, error) {
 	labels := nnfNodeStorage.GetLabels()
 
 	// Use the NnfStorage UID since the NnfStorage exists for as long as the storage allocation exists.
 	// This is important for persistent instances
-	nnfStorageUid, ok := labels[dwsv1alpha6.OwnerUidLabel]
+	nnfStorageUid, ok := labels[dwsv1alpha7.OwnerUidLabel]
 	if !ok {
 		return "", fmt.Errorf("missing Owner UID label on NnfNodeStorage")
 	}
-	directiveIndex, ok := labels[nnfv1alpha8.DirectiveIndexLabel]
+	directiveIndex, ok := labels[nnfv1alpha9.DirectiveIndexLabel]
 	if !ok {
 		return "", fmt.Errorf("missing directive index label on NnfNodeStorage")
 	}
@@ -548,7 +620,7 @@ func volumeGroupName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1
 	return fmt.Sprintf("%s_%s_%d", nnfStorageUid, directiveIndex, index), nil
 }
 
-func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int) (string, error) {
+func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int) (string, error) {
 	if nnfNodeStorage.Spec.SharedAllocation {
 		// For a shared VG, the LV name must be unique in the VG
 		return fmt.Sprintf("lv-%d", index), nil
@@ -557,7 +629,7 @@ func logicalVolumeName(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	return "lv", nil
 }
 
-func unpackCommandVariables(nnfNodeStorage *nnfv1alpha8.NnfNodeStorage, index int) map[string]string {
+func unpackCommandVariables(nnfNodeStorage *nnfv1alpha9.NnfNodeStorage, index int) map[string]string {
 	variables := map[string]string{}
 
 	for _, commandVariable := range nnfNodeStorage.Spec.CommandVariables {

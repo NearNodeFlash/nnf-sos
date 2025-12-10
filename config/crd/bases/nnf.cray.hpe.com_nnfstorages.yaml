@@ -24,7 +24,7 @@ spec:
     - jsonPath: .status.error.severity
       name: ERROR
       type: string
-    name: v1alpha6
+    name: v1alpha7
     schema:
       openAPIV3Schema:
         description: NnfStorage is the Schema for the storages API
@@ -377,7 +377,7 @@ spec:
     - jsonPath: .status.error.severity
       name: ERROR
       type: string
-    name: v1alpha7
+    name: v1alpha8
     schema:
       openAPIV3Schema:
         description: NnfStorage is the Schema for the storages API
@@ -587,6 +587,13 @@ spec:
                         AllocationCount is the total number of allocations that currently
                         exist
                       type: integer
+                    health:
+                      description: Health is the health of the AllocationSet
+                      enum:
+                      - Healthy
+                      - Degraded
+                      - Faulted
+                      type: string
                     ready:
                       type: boolean
                   required:
@@ -628,6 +635,13 @@ spec:
                 description: FileSystemName is the fsname parameter for the Lustre
                   filesystem.
                 maxLength: 8
+                type: string
+              health:
+                description: Health is the overall health of the storage
+                enum:
+                - Healthy
+                - Degraded
+                - Faulted
                 type: string
               lustreComponents:
                 description: |-
@@ -730,7 +744,7 @@ spec:
     - jsonPath: .status.error.severity
       name: ERROR
       type: string
-    name: v1alpha8
+    name: v1alpha9
     schema:
       openAPIV3Schema:
         description: NnfStorage is the Schema for the storages API

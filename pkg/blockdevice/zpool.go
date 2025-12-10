@@ -31,8 +31,12 @@ import (
 )
 
 type ZpoolCommandArgs struct {
-	Create  string
-	Replace string
+	Create         string
+	Replace        string
+	PreActivate    []string
+	PostActivate   []string
+	PreDeactivate  []string
+	PostDeactivate []string
 
 	Vars map[string]string
 }
@@ -274,4 +278,53 @@ func ZpoolImportAll(log logr.Logger) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (z *Zpool) RunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
+	if len(commands) == 0 {
+		return false, nil
+	}
+
+	if complete {
+		return false, nil
+	}
+
+	// Build the commands from the args provided
+	if z.CommandArgs.Vars == nil {
+		z.CommandArgs.Vars = make(map[string]string)
+	}
+
+	for k, v := range args {
+		z.CommandArgs.Vars[k] = v
+	}
+
+	for _, rawCommand := range commands {
+		formattedCommand := z.parseArgs(rawCommand, nil)
+		z.Log.Info(phase, "command", formattedCommand)
+
+		output, err := command.Run(formattedCommand, z.Log)
+		if err != nil {
+			return false, fmt.Errorf("could not run %s command: %s: %w", phase, formattedCommand, err)
+		}
+
+		z.Log.Info(phase, "output", output)
+	}
+
+	return true, nil
+}
+
+func (z *Zpool) PreActivate(ctx context.Context, complete bool) (bool, error) {
+	return z.RunCommands(ctx, complete, z.CommandArgs.PreActivate, "PreActivate", nil)
+}
+
+func (z *Zpool) PostActivate(ctx context.Context, complete bool) (bool, error) {
+	return z.RunCommands(ctx, complete, z.CommandArgs.PostActivate, "PostActivate", nil)
+}
+
+func (z *Zpool) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	return z.RunCommands(ctx, complete, z.CommandArgs.PreDeactivate, "PreDeactivate", nil)
+}
+
+func (z *Zpool) PostDeactivate(ctx context.Context, complete bool) (bool, error) {
+	return z.RunCommands(ctx, complete, z.CommandArgs.PostDeactivate, "PostDeactivate", nil)
 }

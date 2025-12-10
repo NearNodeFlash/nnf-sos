@@ -10,14 +10,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-nnf-cray-hpe-com-v1alpha8-nnfcontainerprofile
+      path: /validate-nnf-cray-hpe-com-v1alpha9-nnfcontainerprofile
   failurePolicy: Fail
   name: vnnfcontainerprofile.kb.io
   rules:
   - apiGroups:
     - nnf.cray.hpe.com
     apiVersions:
-    - v1alpha8
+    - v1alpha9
     operations:
     - CREATE
     - UPDATE
@@ -30,14 +30,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-nnf-cray-hpe-com-v1alpha8-nnfdatamovementprofile
+      path: /validate-nnf-cray-hpe-com-v1alpha9-nnfdatamovementprofile
   failurePolicy: Fail
   name: vnnfdatamovementprofile.kb.io
   rules:
   - apiGroups:
     - nnf.cray.hpe.com
     apiVersions:
-    - v1alpha8
+    - v1alpha9
     operations:
     - CREATE
     - UPDATE
@@ -50,14 +50,14 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-nnf-cray-hpe-com-v1alpha8-nnfstorageprofile
+      path: /validate-nnf-cray-hpe-com-v1alpha9-nnfstorageprofile
   failurePolicy: Fail
   name: vnnfstorageprofile.kb.io
   rules:
   - apiGroups:
     - nnf.cray.hpe.com
     apiVersions:
-    - v1alpha8
+    - v1alpha9
     operations:
     - CREATE
     - UPDATE

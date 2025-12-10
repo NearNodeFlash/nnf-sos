@@ -105,18 +105,32 @@ func (m *KindFileSystem) PostActivate(ctx context.Context, complete bool) (bool,
 		return false, nil
 	}
 
-	m.Log.Info("Ran PostActivate in kind")
+	m.Log.Info("Ran PostActivate")
 
 	return true, nil
 }
 
-func (m *KindFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
-	m.Log.Info("Ran PreDeactivate in kind")
+func (m *KindFileSystem) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreDeactivate")
 
 	return true, nil
 }
 
-func (m *KindFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+func (m *KindFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreMount")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete {
 		return false, nil
 	}
@@ -126,7 +140,41 @@ func (m *KindFileSystem) PostMount(ctx context.Context, complete bool) (bool, er
 	return true, nil
 }
 
-func (m *KindFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+func (m *KindFileSystem) PreUnmount(ctx context.Context, path string, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreUnmount")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostUnmount")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PostSetup(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}
+
+func (m *KindFileSystem) PreTeardown(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
 	m.Log.Info("Ran PreUnmount")
 
 	return true, nil

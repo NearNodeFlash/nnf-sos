@@ -51,4 +51,16 @@ type BlockDevice interface {
 
 	// Get device /dev path
 	GetDevice() string
+
+	// PreActivate runs any command against the OS before the block device is activated
+	PreActivate(ctx context.Context, complete bool) (bool, error)
+
+	// PostActivate runs any command against the OS after the block device is activated
+	PostActivate(ctx context.Context, complete bool) (bool, error)
+
+	// PreDeactivate runs any command against the OS before the block device is deactivated
+	PreDeactivate(ctx context.Context, complete bool) (bool, error)
+
+	// PostDeactivate runs any command against the OS after the block device is deactivated
+	PostDeactivate(ctx context.Context, complete bool) (bool, error)
 }
