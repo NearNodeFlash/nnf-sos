@@ -30,12 +30,12 @@ import (
 	"k8s.io/kubernetes/pkg/util/taints"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
 var _ = Describe("NnfSystemconfigurationController", func() {
-	var sysCfg *dwsv1alpha6.SystemConfiguration
+	var sysCfg *dwsv1alpha7.SystemConfiguration
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), sysCfg)).To(Succeed())
@@ -45,17 +45,17 @@ var _ = Describe("NnfSystemconfigurationController", func() {
 	})
 
 	When("creating a SystemConfiguration", func() {
-		sysCfg = &dwsv1alpha6.SystemConfiguration{
+		sysCfg = &dwsv1alpha7.SystemConfiguration{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha6.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha7.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha7.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: "rabbit1",
-						ComputesAccess: []dwsv1alpha6.SystemConfigurationComputeNodeReference{
+						ComputesAccess: []dwsv1alpha7.SystemConfigurationComputeNodeReference{
 							{
 								Name:  "test-compute-0",
 								Index: 0,
@@ -77,15 +77,15 @@ var _ = Describe("NnfSystemconfigurationController", func() {
 })
 
 var _ = Describe("Adding taints and labels to nodes", func() {
-	var sysCfg *dwsv1alpha6.SystemConfiguration
+	var sysCfg *dwsv1alpha7.SystemConfiguration
 
 	taintNoSchedule := &corev1.Taint{
-		Key:    nnfv1alpha8.RabbitNodeTaintKey,
+		Key:    nnfv1alpha9.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoSchedule,
 	}
 	taintNoExecute := &corev1.Taint{
-		Key:    nnfv1alpha8.RabbitNodeTaintKey,
+		Key:    nnfv1alpha9.RabbitNodeTaintKey,
 		Value:  "true",
 		Effect: corev1.TaintEffectNoExecute,
 	}
@@ -108,13 +108,13 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 	}
 
 	BeforeEach(func() {
-		sysCfg = &dwsv1alpha6.SystemConfiguration{
+		sysCfg = &dwsv1alpha7.SystemConfiguration{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      "default",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.SystemConfigurationSpec{
-				StorageNodes: []dwsv1alpha6.SystemConfigurationStorageNode{
+			Spec: dwsv1alpha7.SystemConfigurationSpec{
+				StorageNodes: []dwsv1alpha7.SystemConfigurationStorageNode{
 					{
 						Type: "Rabbit",
 						Name: "rabbit1",
@@ -147,8 +147,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node), tnode))
 			labels := tnode.GetLabels()
-			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha8.RabbitNodeSelectorLabel, "true"))
-			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha8.TaintsAndLabelsCompletedLabel, "true"))
+			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha9.RabbitNodeSelectorLabel, "true"))
+			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha9.TaintsAndLabelsCompletedLabel, "true"))
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeTrue())
 			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 		}).Should(Succeed(), "verify failed for node %s", node.Name)
@@ -167,7 +167,7 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 			// Remove the "cleared" label from node1.
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
 			labels := node1.GetLabels()
-			delete(labels, nnfv1alpha8.TaintsAndLabelsCompletedLabel)
+			delete(labels, nnfv1alpha9.TaintsAndLabelsCompletedLabel)
 			node1.SetLabels(labels)
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
 			By("verifying node1 is repaired")
@@ -227,8 +227,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 				tnode := &corev1.Node{}
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node4), tnode))
 				labels := tnode.GetLabels()
-				g.Expect(labels).ToNot(HaveKey(nnfv1alpha8.RabbitNodeSelectorLabel))
-				g.Expect(labels).ToNot(HaveKey(nnfv1alpha8.TaintsAndLabelsCompletedLabel))
+				g.Expect(labels).ToNot(HaveKey(nnfv1alpha9.RabbitNodeSelectorLabel))
+				g.Expect(labels).ToNot(HaveKey(nnfv1alpha9.TaintsAndLabelsCompletedLabel))
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeFalse())
 				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 			}).Should(Succeed(), "verify failed for node %s", node4.Name)

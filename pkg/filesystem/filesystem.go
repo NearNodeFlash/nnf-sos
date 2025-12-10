@@ -40,15 +40,29 @@ type FileSystem interface {
 	// Unmount the file system
 	Unmount(ctx context.Context, path string) (bool, error)
 
+	// Run any commands on the OS before the file system is mounted
+	PreMount(ctx context.Context, complete bool) (bool, error)
+
+	// Run any commands against the file system after it has been mounted
+	PostMount(ctx context.Context, path string, complete bool) (bool, error)
+
+	// Run any commands against the file system before it is unmounted
+	PreUnmount(ctx context.Context, path string, complete bool) (bool, error)
+
+	// Run any commands on the OS after the file system is unmounted
+	PostUnmount(ctx context.Context, complete bool) (bool, error)
+
 	// Run any commands against the file system after it has been activated
 	PostActivate(ctx context.Context, complete bool) (bool, error)
 
 	// Run any commands against the activated file system before it is deactivated
-	PreDeactivate(ctx context.Context) (bool, error)
+	PreDeactivate(ctx context.Context, complete bool) (bool, error)
 
-	// Run any commands against the file system after it has been mounted
-	PostMount(ctx context.Context, complete bool) (bool, error)
+	// Run any commands against the mounted file system after it has been fully created. PostSetup
+	// is only run on the Rabbit during the Setup phase
+	PostSetup(ctx context.Context, complete bool) (bool, error)
 
-	// Run any commands against the file system before it is unmounted
-	PreUnmount(ctx context.Context) (bool, error)
+	// Run any commands against the mounted file system before it is torn down. PreTeardown
+	// is only run on the Rabbit during the Teardown phase
+	PreTeardown(ctx context.Context, complete bool) (bool, error)
 }

@@ -39,3 +39,6 @@ rpms/
 
 # .vscode log files
 .vscode/*.log
+
+# Copilot configuration file
+copilot-instructions.md

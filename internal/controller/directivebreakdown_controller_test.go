@@ -29,13 +29,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 )
 
 var _ = Describe("DirectiveBreakdown test", func() {
 	var (
-		storageProfile *nnfv1alpha8.NnfStorageProfile
+		storageProfile *nnfv1alpha9.NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha8.NnfStorageProfile{}
+		profExpected := &nnfv1alpha9.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
@@ -53,12 +53,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Creates a DirectiveBreakdown with a jobdw", func() {
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs capacity=1GiB",
 			},
 		}
@@ -71,7 +71,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(BeTrue())
 		Expect(directiveBreakdown.Status.Requires).Should(BeEmpty())
 
-		servers := &dwsv1alpha6.Servers{
+		servers := &dwsv1alpha7.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      directiveBreakdown.GetName(),
 				Namespace: directiveBreakdown.GetNamespace(),
@@ -81,7 +81,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
 		}).Should(Succeed(), "Create the DWS Servers Resource")
 
-		pinnedStorageProfile := &nnfv1alpha8.NnfStorageProfile{
+		pinnedStorageProfile := &nnfv1alpha9.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      directiveBreakdown.GetName(),
 				Namespace: directiveBreakdown.GetNamespace(),
@@ -104,12 +104,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Creates a DirectiveBreakdown with a jobdw having required daemons", func() {
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs requires=copy-offload capacity=1GiB",
 			},
 		}
@@ -131,12 +131,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 
 	It("Verifies DirectiveBreakdowns with persistent storage", func() {
 		By("Creating a DirectiveBreakdown with create_persistent")
-		directiveBreakdownOne := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdownOne := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "create-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW create_persistent name=persistent-storage type=xfs capacity=1GiB",
 			},
 		}
@@ -148,7 +148,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			return directiveBreakdownOne.Status.Ready
 		}).Should(BeTrue())
 
-		persistentStorage := &dwsv1alpha6.PersistentStorageInstance{
+		persistentStorage := &dwsv1alpha7.PersistentStorageInstance{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "persistent-storage",
 				Namespace: directiveBreakdownOne.GetNamespace(),
@@ -159,12 +159,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed(), "Create the PersistentStorageInstance resource")
 
 		By("Creating a DirectiveBreakdown with persistentdw")
-		directiveBreakdownTwo := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdownTwo := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "use-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW persistentdw name=persistent-storage",
 			},
 		}
@@ -195,12 +195,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-lustre-jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-lustre type=lustre capacity=1GiB",
 			},
 		}
@@ -222,12 +222,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-xfs-jobdw-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW jobdw name=jobdw-xfs type=xfs capacity=1GiB",
 			},
 		}
@@ -249,12 +249,12 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		}).Should(Succeed())
 
 		By("Creating a DirectiveBreakdown")
-		directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+		directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "standalone-lustre-persistent-test",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: dwsv1alpha6.DirectiveBreakdownSpec{
+			Spec: dwsv1alpha7.DirectiveBreakdownSpec{
 				Directive: "#DW create_persistent name=persistent-lustre type=lustre",
 			},
 		}
@@ -265,5 +265,55 @@ var _ = Describe("DirectiveBreakdown test", func() {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)).To(Succeed())
 			return directiveBreakdown.Status.Ready
 		}).Should(BeTrue())
+	})
+
+	It("Verifies capacity ajustment functions using a fixed padding factor", func() {
+		By("Setting CapacityScalingFactor and AllocationPadding in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.XFSStorage.CapacityScalingFactor = "1.1"
+			storageProfile.Data.XFSStorage.AllocationPadding = "10MB"
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Applying the scale and a fixed padding factor")
+		var startingCapacity int64 = 1024 * 1024 * 1024 * 10 // 10GiB
+
+		scaledAndPaddedCapacity, err := getScaledAndPaddedCapacity(startingCapacity, "1.1", "10MB")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledAndPaddedCapacity).To(Equal(startingCapacity + startingCapacity/10 /* 1.1 scale */ + 10000000 /* 10MB */))
+
+		scaledCapacity, err := getScaledCapacity(startingCapacity, "1.1")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledCapacity).To(Equal(startingCapacity + startingCapacity/10 /* 1.1 scale */))
+
+		removedPaddingCapacity, err := removeAllocationPadding("xfs", scaledAndPaddedCapacity, storageProfile)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(removedPaddingCapacity).To(Equal(scaledCapacity))
+	})
+
+	It("Verifies capacity ajustment functions using a percentage padding factor", func() {
+		By("Setting CapacityScalingFactor and AllocationPadding in the storage profile")
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
+			storageProfile.Data.XFSStorage.CapacityScalingFactor = "1.2"
+			storageProfile.Data.XFSStorage.AllocationPadding = "1%"
+			return k8sClient.Update(context.TODO(), storageProfile)
+		}).Should(Succeed())
+
+		By("Applying the scale and a percent based padding factor")
+		var startingCapacity int64 = 1000 * 1000 * 1000 * 100 // 100GB
+
+		scaledAndPaddedCapacity, err := getScaledAndPaddedCapacity(startingCapacity, "1.2", "1%")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledAndPaddedCapacity).To(Equal(startingCapacity + startingCapacity/5 /* 1.2 scale */ + (startingCapacity+startingCapacity/5)/100 /* 1% padding */))
+
+		scaledCapacity, err := getScaledCapacity(startingCapacity, "1.2")
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(scaledCapacity).To(Equal(startingCapacity + startingCapacity/5 /* 1.2 scale */))
+
+		removedPaddingCapacity, err := removeAllocationPadding("xfs", scaledAndPaddedCapacity, storageProfile)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(removedPaddingCapacity).To(Equal(scaledCapacity))
 	})
 })

@@ -19,5 +19,5 @@
 
 // The following tag tells conversion-gen to generate conversion routines, and
 // it tells conversion-gen the name of the hub version.
-// +k8s:conversion-gen=github.com/DataWorkflowServices/dws/api/v1alpha6
+// +k8s:conversion-gen=github.com/DataWorkflowServices/dws/api/v1alpha7
 package v1alpha4

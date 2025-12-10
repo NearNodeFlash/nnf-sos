@@ -91,13 +91,27 @@ func (m *MockFileSystem) PostActivate(ctx context.Context, complete bool) (bool,
 	return true, nil
 }
 
-func (m *MockFileSystem) PreDeactivate(ctx context.Context) (bool, error) {
+func (m *MockFileSystem) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
 	m.Log.Info("Ran PreDeactivate")
 
 	return true, nil
 }
 
-func (m *MockFileSystem) PostMount(ctx context.Context, complete bool) (bool, error) {
+func (m *MockFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreMount")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete {
 		return false, nil
 	}
@@ -107,7 +121,41 @@ func (m *MockFileSystem) PostMount(ctx context.Context, complete bool) (bool, er
 	return true, nil
 }
 
-func (m *MockFileSystem) PreUnmount(ctx context.Context) (bool, error) {
+func (m *MockFileSystem) PreUnmount(ctx context.Context, path string, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PreUnmount")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostUnmount")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PostSetup(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostMount")
+
+	return true, nil
+}
+
+func (m *MockFileSystem) PreTeardown(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
 	m.Log.Info("Ran PreUnmount")
 
 	return true, nil

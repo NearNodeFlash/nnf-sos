@@ -14,7 +14,7 @@ spec:
     singular: nnflustremgt
   scope: Namespaced
   versions:
-  - name: v1alpha6
+  - name: v1alpha7
     schema:
       openAPIV3Schema:
         description: NnfLustreMGT is the Schema for the nnfstorageprofiles API
@@ -395,7 +395,7 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1alpha7
+  - name: v1alpha8
     schema:
       openAPIV3Schema:
         description: NnfLustreMGT is the Schema for the nnfstorageprofiles API
@@ -776,7 +776,7 @@ spec:
     storage: false
     subresources:
       status: {}
-  - name: v1alpha8
+  - name: v1alpha9
     schema:
       openAPIV3Schema:
         description: NnfLustreMGT is the Schema for the nnfstorageprofiles API

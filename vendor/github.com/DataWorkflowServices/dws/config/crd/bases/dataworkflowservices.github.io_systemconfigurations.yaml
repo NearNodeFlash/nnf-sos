@@ -22,162 +22,6 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: AGE
       type: date
-    name: v1alpha3
-    schema:
-      openAPIV3Schema:
-        description: SystemConfiguration is the Schema for the systemconfigurations
-          API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: |-
-              SystemConfigurationSpec describes the node layout of the system. This is filled in by
-              an administrator at software installation time.
-            properties:
-              externalComputeNodes:
-                description: |-
-                  ExternalComputeNodes is the list of compute nodes that are not
-                  directly matched with any of the StorageNodes.
-                items:
-                  description: |-
-                    SystemConfigurationExternalComputeNode describes a compute node that is
-                    not directly matched with any of the nodes in the StorageNodes list.
-                  properties:
-                    name:
-                      description: Name of the compute node
-                      type: string
-                  required:
-                  - name
-                  type: object
-                type: array
-              ports:
-                description: |-
-                  Ports is the list of ports available for communication between nodes in the system.
-                  Valid values are single integers, or a range of values of the form "START-END" where
-                  START is an integer value that represents the start of a port range and END is an
-                  integer value that represents the end of the port range (inclusive).
-                items:
-                  anyOf:
-                  - type: integer
-                  - type: string
-                  x-kubernetes-int-or-string: true
-                type: array
-              portsCooldownInSeconds:
-                default: 60
-                description: |-
-                  PortsCooldownInSeconds is the number of seconds to wait before a port can be reused. Defaults
-                  to 60 seconds (to match the typical value for the kernel's TIME_WAIT). A value of 0 means the
-                  ports can be reused immediately.
-                type: integer
-              storageNodes:
-                description: StorageNodes is the list of storage nodes on the system
-                items:
-                  description: SystemConfigurationStorageNode describes a storage
-                    node in the system
-                  properties:
-                    computesAccess:
-                      description: ComputesAccess is the list of compute nodes that
-                        can use the server
-                      items:
-                        description: |-
-                          SystemConfigurationComputeNodeReference describes a compute node that
-                          has access to a server.
-                        properties:
-                          index:
-                            description: Index of the compute node from the server
-                            type: integer
-                          name:
-                            description: Name of the compute node
-                            type: string
-                        required:
-                        - index
-                        - name
-                        type: object
-                      type: array
-                    name:
-                      description: Name of the server node
-                      type: string
-                    type:
-                      description: Type is the type of server
-                      type: string
-                  required:
-                  - name
-                  - type
-                  type: object
-                type: array
-            required:
-            - portsCooldownInSeconds
-            type: object
-          status:
-            description: SystemConfigurationStatus defines the status of SystemConfiguration
-            properties:
-              error:
-                description: Error information
-                properties:
-                  debugMessage:
-                    description: Internal debug message for the error
-                    type: string
-                  severity:
-                    description: |-
-                      Indication of how severe the error is. Minor will likely succeed, Major may
-                      succeed, and Fatal will never succeed.
-                    enum:
-                    - Minor
-                    - Major
-                    - Fatal
-                    type: string
-                  type:
-                    description: Internal or user error
-                    enum:
-                    - Internal
-                    - User
-                    - WLM
-                    type: string
-                  userMessage:
-                    description: Optional user facing message if the error is relevant
-                      to an end user
-                    type: string
-                required:
-                - debugMessage
-                - severity
-                - type
-                type: object
-              ready:
-                description: Ready indicates when the SystemConfiguration has been
-                  reconciled
-                type: boolean
-            required:
-            - ready
-            type: object
-        type: object
-    served: false
-    storage: false
-    subresources:
-      status: {}
-  - additionalPrinterColumns:
-    - description: True if SystemConfiguration is reconciled
-      jsonPath: .status.ready
-      name: READY
-      type: boolean
-    - jsonPath: .metadata.creationTimestamp
-      name: AGE
-      type: date
     name: v1alpha4
     schema:
       openAPIV3Schema:
@@ -478,7 +322,7 @@ spec:
             - ready
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -491,6 +335,162 @@ spec:
       name: AGE
       type: date
     name: v1alpha6
+    schema:
+      openAPIV3Schema:
+        description: SystemConfiguration is the Schema for the systemconfigurations
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              SystemConfigurationSpec describes the node layout of the system. This is filled in by
+              an administrator at software installation time.
+            properties:
+              externalComputeNodes:
+                description: |-
+                  ExternalComputeNodes is the list of compute nodes that are not
+                  directly matched with any of the StorageNodes.
+                items:
+                  description: |-
+                    SystemConfigurationExternalComputeNode describes a compute node that is
+                    not directly matched with any of the nodes in the StorageNodes list.
+                  properties:
+                    name:
+                      description: Name of the compute node
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+              ports:
+                description: |-
+                  Ports is the list of ports available for communication between nodes in the system.
+                  Valid values are single integers, or a range of values of the form "START-END" where
+                  START is an integer value that represents the start of a port range and END is an
+                  integer value that represents the end of the port range (inclusive).
+                items:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  x-kubernetes-int-or-string: true
+                type: array
+              portsCooldownInSeconds:
+                default: 60
+                description: |-
+                  PortsCooldownInSeconds is the number of seconds to wait before a port can be reused. Defaults
+                  to 60 seconds (to match the typical value for the kernel's TIME_WAIT). A value of 0 means the
+                  ports can be reused immediately.
+                type: integer
+              storageNodes:
+                description: StorageNodes is the list of storage nodes on the system
+                items:
+                  description: SystemConfigurationStorageNode describes a storage
+                    node in the system
+                  properties:
+                    computesAccess:
+                      description: ComputesAccess is the list of compute nodes that
+                        can use the server
+                      items:
+                        description: |-
+                          SystemConfigurationComputeNodeReference describes a compute node that
+                          has access to a server.
+                        properties:
+                          index:
+                            description: Index of the compute node from the server
+                            type: integer
+                          name:
+                            description: Name of the compute node
+                            type: string
+                        required:
+                        - index
+                        - name
+                        type: object
+                      type: array
+                    name:
+                      description: Name of the server node
+                      type: string
+                    type:
+                      description: Type is the type of server
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+            required:
+            - portsCooldownInSeconds
+            type: object
+          status:
+            description: SystemConfigurationStatus defines the status of SystemConfiguration
+            properties:
+              error:
+                description: Error information
+                properties:
+                  debugMessage:
+                    description: Internal debug message for the error
+                    type: string
+                  severity:
+                    description: |-
+                      Indication of how severe the error is. Minor will likely succeed, Major may
+                      succeed, and Fatal will never succeed.
+                    enum:
+                    - Minor
+                    - Major
+                    - Fatal
+                    type: string
+                  type:
+                    description: Internal or user error
+                    enum:
+                    - Internal
+                    - User
+                    - WLM
+                    type: string
+                  userMessage:
+                    description: Optional user facing message if the error is relevant
+                      to an end user
+                    type: string
+                required:
+                - debugMessage
+                - severity
+                - type
+                type: object
+              ready:
+                description: Ready indicates when the SystemConfiguration has been
+                  reconciled
+                type: boolean
+            required:
+            - ready
+            type: object
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: True if SystemConfiguration is reconciled
+      jsonPath: .status.ready
+      name: READY
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+    name: v1alpha7
     schema:
       openAPIV3Schema:
         description: SystemConfiguration is the Schema for the systemconfigurations

@@ -45,13 +45,13 @@ import (
 
 	"github.com/ghodss/yaml"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnf "github.com/NearNodeFlash/nnf-ec/pkg"
 
-	nnfv1alpha6 "github.com/NearNodeFlash/nnf-sos/api/v1alpha6"
 	nnfv1alpha7 "github.com/NearNodeFlash/nnf-sos/api/v1alpha7"
 	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 
 	_ "github.com/DataWorkflowServices/dws/config/crd/bases"
 	_ "github.com/DataWorkflowServices/dws/config/webhook"
@@ -94,8 +94,8 @@ var envVars = []envSetting{
 	{"NNF_TEST_ENVIRONMENT", "true"},
 }
 
-func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha6.DWDirectiveRule, error) {
-	ruleset := dwsv1alpha6.DWDirectiveRule{}
+func loadNNFDWDirectiveRuleset(filename string) (dwsv1alpha7.DWDirectiveRule, error) {
+	ruleset := dwsv1alpha7.DWDirectiveRule{}
 
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
@@ -135,19 +135,19 @@ var _ = BeforeSuite(func() {
 	// before calling envtest.Start().
 	// Then add the scheme to envtest.CRDInstallOptions.
 
-	err = dwsv1alpha6.AddToScheme(scheme.Scheme)
+	err = dwsv1alpha7.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = lusv1beta1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = nnfv1alpha6.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nnfv1alpha7.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = nnfv1alpha8.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = nnfv1alpha9.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -208,52 +208,52 @@ var _ = BeforeSuite(func() {
 		Start webhooks
 	*/
 
-	err = (&dwsv1alpha6.Workflow{}).SetupWebhookWithManager(k8sManager)
+	err = (&dwsv1alpha7.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&lusv1beta1.LustreFileSystem{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfStorageProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfContainerProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfDataMovementProfile{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfAccess{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfAccess{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfDataMovement{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfDataMovement{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfDataMovementManager{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfDataMovementManager{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfLustreMGT{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfLustreMGT{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfNode{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfNode{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfNodeBlockStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfNodeBlockStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfNodeECData{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfNodeECData{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfNodeStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfNodeStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfPortManager{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfPortManager{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&nnfv1alpha8.NnfSystemStorage{}).SetupWebhookWithManager(k8sManager)
+	err = (&nnfv1alpha9.NnfSystemStorage{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	// +crdbumper:scaffold:builder
@@ -370,14 +370,16 @@ var _ = BeforeSuite(func() {
 	// Coordinate the startup of the NLC controllers that use EC.
 
 	semNnfNodeDone := make(chan struct{})
-	err = (&NnfNodeReconciler{
+	nnfNodeReconciler := &NnfNodeReconciler{
 		Client:           k8sManager.GetClient(),
 		Log:              ctrl.Log.WithName("controllers").WithName("NnfNode"),
 		Scheme:           testEnv.Scheme,
 		Events:           make(chan event.GenericEvent),
 		SemaphoreForDone: semNnfNodeDone,
 		Options:          &nnf.Options{},
-	}).SetupWithManager(k8sManager)
+	}
+	nnfNodeReconciler.InitializeBlockStorageEvents()
+	err = nnfNodeReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	semNnfNodeECDone := make(chan struct{})
@@ -397,6 +399,7 @@ var _ = BeforeSuite(func() {
 		Log:               ctrl.Log.WithName("controllers").WithName("NnfNodeBlockStorage"),
 		Scheme:            testEnv.Scheme,
 		Events:            make(chan event.GenericEvent),
+		FenceEvents:       nnfNodeReconciler.GetBlockStorageEvents(),
 		SemaphoreForStart: semNnfNodeECDone,
 		SemaphoreForDone:  semNnfNodeBlockStorageDone,
 		Options:           &nnf.Options{},

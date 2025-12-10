@@ -43,11 +43,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	dwsv1alpha6 "github.com/DataWorkflowServices/dws/api/v1alpha6"
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha8 "github.com/NearNodeFlash/nnf-sos/api/v1alpha8"
+	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -99,7 +99,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	metrics.NnfWorkflowReconcilesTotal.Inc()
 
 	// Fetch the Workflow instance
-	workflow := &dwsv1alpha6.Workflow{}
+	workflow := &dwsv1alpha7.Workflow{}
 
 	if err := r.Get(ctx, req.NamespacedName, workflow); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
@@ -108,7 +108,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha6.WorkflowStatus](workflow)
+	statusUpdater := updater.NewStatusUpdater[*dwsv1alpha7.WorkflowStatus](workflow)
 	defer func() { err = statusUpdater.CloseWithUpdate(ctx, r, err) }()
 
 	driverID := os.Getenv("DWS_DRIVER_ID")
@@ -141,7 +141,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 
-		deleteStatus, err := dwsv1alpha6.DeleteChildren(ctx, r.Client, r.getChildObjects(), workflow)
+		deleteStatus, err := dwsv1alpha7.DeleteChildren(ctx, r.Client, r.getChildObjects(), workflow)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -188,7 +188,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	// Create a list of the driverStatus array elements that correspond to the current state
 	// of the workflow and are targeted for the Rabbit driver
-	driverList := []*dwsv1alpha6.WorkflowDriverStatus{}
+	driverList := []*dwsv1alpha7.WorkflowDriverStatus{}
 
 	for i := range workflow.Status.Drivers {
 		driverStatus := &workflow.Status.Drivers[i]
@@ -206,14 +206,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		driverList = append(driverList, driverStatus)
 	}
 
-	startFunctions := map[dwsv1alpha6.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha6.Workflow, int) (*result, error){
-		dwsv1alpha6.StateProposal: (*NnfWorkflowReconciler).startProposalState,
-		dwsv1alpha6.StateSetup:    (*NnfWorkflowReconciler).startSetupState,
-		dwsv1alpha6.StateDataIn:   (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha6.StatePreRun:   (*NnfWorkflowReconciler).startPreRunState,
-		dwsv1alpha6.StatePostRun:  (*NnfWorkflowReconciler).startPostRunState,
-		dwsv1alpha6.StateDataOut:  (*NnfWorkflowReconciler).startDataInOutState,
-		dwsv1alpha6.StateTeardown: (*NnfWorkflowReconciler).startTeardownState,
+	startFunctions := map[dwsv1alpha7.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha7.Workflow, int) (*result, error){
+		dwsv1alpha7.StateProposal: (*NnfWorkflowReconciler).startProposalState,
+		dwsv1alpha7.StateSetup:    (*NnfWorkflowReconciler).startSetupState,
+		dwsv1alpha7.StateDataIn:   (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha7.StatePreRun:   (*NnfWorkflowReconciler).startPreRunState,
+		dwsv1alpha7.StatePostRun:  (*NnfWorkflowReconciler).startPostRunState,
+		dwsv1alpha7.StateDataOut:  (*NnfWorkflowReconciler).startDataInOutState,
+		dwsv1alpha7.StateTeardown: (*NnfWorkflowReconciler).startTeardownState,
 	}
 
 	// Call the correct "start" function based on workflow state for each directive that has registered for
@@ -222,7 +222,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log := log.WithValues("state", workflow.Status.State, "index", driverStatus.DWDIndex)
 		log.Info("Start", "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 
-		driverStatus.Status = dwsv1alpha6.StatusRunning
+		driverStatus.Status = dwsv1alpha7.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -243,14 +243,14 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Start done")
 	}
 
-	finishFunctions := map[dwsv1alpha6.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha6.Workflow, int) (*result, error){
-		dwsv1alpha6.StateProposal: (*NnfWorkflowReconciler).finishProposalState,
-		dwsv1alpha6.StateSetup:    (*NnfWorkflowReconciler).finishSetupState,
-		dwsv1alpha6.StateDataIn:   (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha6.StatePreRun:   (*NnfWorkflowReconciler).finishPreRunState,
-		dwsv1alpha6.StatePostRun:  (*NnfWorkflowReconciler).finishPostRunState,
-		dwsv1alpha6.StateDataOut:  (*NnfWorkflowReconciler).finishDataInOutState,
-		dwsv1alpha6.StateTeardown: (*NnfWorkflowReconciler).finishTeardownState,
+	finishFunctions := map[dwsv1alpha7.WorkflowState]func(*NnfWorkflowReconciler, context.Context, *dwsv1alpha7.Workflow, int) (*result, error){
+		dwsv1alpha7.StateProposal: (*NnfWorkflowReconciler).finishProposalState,
+		dwsv1alpha7.StateSetup:    (*NnfWorkflowReconciler).finishSetupState,
+		dwsv1alpha7.StateDataIn:   (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha7.StatePreRun:   (*NnfWorkflowReconciler).finishPreRunState,
+		dwsv1alpha7.StatePostRun:  (*NnfWorkflowReconciler).finishPostRunState,
+		dwsv1alpha7.StateDataOut:  (*NnfWorkflowReconciler).finishDataInOutState,
+		dwsv1alpha7.StateTeardown: (*NnfWorkflowReconciler).finishTeardownState,
 	}
 
 	// Call the correct "finish" function based on workflow state for each directive that has registered for
@@ -260,7 +260,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log := log.WithValues("state", workflow.Status.State, "index", driverStatus.DWDIndex)
 		log.Info("Finish", "directive", workflow.Spec.DWDirectives[driverStatus.DWDIndex])
 
-		driverStatus.Status = dwsv1alpha6.StatusRunning
+		driverStatus.Status = dwsv1alpha7.StatusRunning
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 
@@ -284,7 +284,7 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		log.Info("Finish done")
 
 		ts := metav1.NowMicro()
-		driverStatus.Status = dwsv1alpha6.StatusCompleted
+		driverStatus.Status = dwsv1alpha7.StatusCompleted
 		driverStatus.Message = ""
 		driverStatus.Error = ""
 		driverStatus.CompleteTime = &ts
@@ -294,12 +294,12 @@ func (r *NnfWorkflowReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	if err := r.validateWorkflow(ctx, workflow); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("unable to validate DW directives")
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("unable to validate DW directives")
 	}
 
 	// only jobdw, persistentdw, and create_persistent need a directive breakdown
@@ -329,7 +329,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 
 	directiveBreakdown, err := r.generateDirectiveBreakdown(ctx, index, workflow, log)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not generate DirectiveBreakdown").WithError(err).WithUserMessage("unable to start parsing DW directive")
+		return nil, dwsv1alpha7.NewResourceError("could not generate DirectiveBreakdown").WithError(err).WithUserMessage("unable to start parsing DW directive")
 	}
 
 	if directiveBreakdown == nil {
@@ -337,7 +337,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 	}
 
 	directiveBreakdownReference := v1.ObjectReference{
-		Kind:      reflect.TypeOf(dwsv1alpha6.DirectiveBreakdown{}).Name(),
+		Kind:      reflect.TypeOf(dwsv1alpha7.DirectiveBreakdown{}).Name(),
 		Name:      directiveBreakdown.Name,
 		Namespace: directiveBreakdown.Namespace,
 	}
@@ -360,7 +360,7 @@ func (r *NnfWorkflowReconciler) startProposalState(ctx context.Context, workflow
 // and determines whether it's a keyword that needs some internal action in a
 // later workflow state. If so, then add a keyword to the workflow's status that
 // has meaning for that internal action.
-func (r *NnfWorkflowReconciler) intepretRequiresKeyword(ctx context.Context, workflow *dwsv1alpha6.Workflow, requiresList string) error {
+func (r *NnfWorkflowReconciler) intepretRequiresKeyword(ctx context.Context, workflow *dwsv1alpha7.Workflow, requiresList string) error {
 
 	addWord := func(word string) {
 		found := false
@@ -395,7 +395,7 @@ func (r *NnfWorkflowReconciler) intepretRequiresKeyword(ctx context.Context, wor
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	// only jobdw, persistentdw, and create_persistent have a directive breakdown
@@ -406,7 +406,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 		return nil, nil
 	}
 
-	directiveBreakdown := &dwsv1alpha6.DirectiveBreakdown{
+	directiveBreakdown := &dwsv1alpha7.DirectiveBreakdown{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index),
 			Namespace: workflow.GetNamespace(),
@@ -415,7 +415,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 
 	err := r.Get(ctx, client.ObjectKeyFromObject(directiveBreakdown), directiveBreakdown)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get DirectiveBreakdown: %v", client.ObjectKeyFromObject(directiveBreakdown)).WithError(err).WithUserMessage("unable to finish parsing DW directive")
+		return nil, dwsv1alpha7.NewResourceError("could not get DirectiveBreakdown: %v", client.ObjectKeyFromObject(directiveBreakdown)).WithError(err).WithUserMessage("unable to finish parsing DW directive")
 	}
 
 	if directiveBreakdown.Status.Error != nil {
@@ -432,7 +432,7 @@ func (r *NnfWorkflowReconciler) finishProposalState(ctx context.Context, workflo
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -443,7 +443,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		return nil, r.addPersistentStorageReference(ctx, workflow, index)
 	case "jobdw", "create_persistent":
 		// Chain through the DirectiveBreakdown to the Servers object
-		dbd := &dwsv1alpha6.DirectiveBreakdown{
+		dbd := &dwsv1alpha7.DirectiveBreakdown{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      indexedResourceName(workflow, index),
 				Namespace: workflow.Namespace,
@@ -451,10 +451,10 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		}
 		err := r.Get(ctx, client.ObjectKeyFromObject(dbd), dbd)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("unable to get DirectiveBreakdown: %v", client.ObjectKeyFromObject(dbd)).WithError(err).WithUserMessage("could not read allocation request")
+			return nil, dwsv1alpha7.NewResourceError("unable to get DirectiveBreakdown: %v", client.ObjectKeyFromObject(dbd)).WithError(err).WithUserMessage("could not read allocation request")
 		}
 
-		s := &dwsv1alpha6.Servers{
+		s := &dwsv1alpha7.Servers{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dbd.Status.Storage.Reference.Name,
 				Namespace: dbd.Status.Storage.Reference.Namespace,
@@ -462,12 +462,12 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 		}
 		err = r.Get(ctx, client.ObjectKeyFromObject(s), s)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("unable to get Servers: %v", client.ObjectKeyFromObject(s)).WithError(err).WithUserMessage("could not read allocation request")
+			return nil, dwsv1alpha7.NewResourceError("unable to get Servers: %v", client.ObjectKeyFromObject(s)).WithError(err).WithUserMessage("could not read allocation request")
 		}
 
 		if _, present := os.LookupEnv("RABBIT_TEST_ENV_BYPASS_SERVER_STORAGE_CHECK"); !present {
 			if err := r.validateServerAllocations(ctx, dbd, s); err != nil {
-				return nil, dwsv1alpha6.NewResourceError("invalid Rabbit allocations for servers: %v", client.ObjectKeyFromObject(s)).WithError(err).WithUserMessage("invalid Rabbit allocations")
+				return nil, dwsv1alpha7.NewResourceError("invalid Rabbit allocations for servers: %v", client.ObjectKeyFromObject(s)).WithError(err).WithUserMessage("invalid Rabbit allocations")
 			}
 		}
 
@@ -476,7 +476,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 				return Requeue("conflict").withObject(storage), nil
 			}
 
-			return nil, dwsv1alpha6.NewResourceError("could not create NnfStorage").WithError(err).WithUserMessage("could not create allocation")
+			return nil, dwsv1alpha7.NewResourceError("could not create NnfStorage").WithError(err).WithUserMessage("could not create allocation")
 		}
 	case "container":
 		for _, value := range workflow.Status.Requires {
@@ -494,7 +494,7 @@ func (r *NnfWorkflowReconciler) startSetupState(ctx context.Context, workflow *d
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	switch dwArgs["command"] {
@@ -504,14 +504,14 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 		// Check whether the NnfStorage has finished creating the storage.
-		nnfStorage := &nnfv1alpha8.NnfStorage{
+		nnfStorage := &nnfv1alpha9.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
 			},
 		}
 		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfStorage), nnfStorage); err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err).WithUserMessage("could not allocate storage")
+			return nil, dwsv1alpha7.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(err).WithUserMessage("could not allocate storage")
 		}
 
 		// If the Status section has not been filled in yet, exit and wait.
@@ -521,7 +521,7 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 		}
 
 		if nnfStorage.Status.Error != nil {
-			handleWorkflowErrorByIndex(dwsv1alpha6.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error).WithUserMessage("could not allocate storage"), workflow, index)
+			handleWorkflowErrorByIndex(dwsv1alpha7.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error).WithUserMessage("could not allocate storage"), workflow, index)
 			return Requeue("error").withObject(nnfStorage), nil
 		}
 
@@ -534,12 +534,12 @@ func (r *NnfWorkflowReconciler) finishSetupState(ctx context.Context, workflow *
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 
 	dwArgs, err := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithUserMessage("Invalid DW directive: %v", workflow.Spec.DWDirectives[index]).WithFatal().WithUser()
+		return nil, dwsv1alpha7.NewResourceError("").WithUserMessage("Invalid DW directive: %v", workflow.Spec.DWDirectives[index]).WithFatal().WithUser()
 	}
 
 	// NOTE: We don't need to check for the occurrence of a source or destination parameters since these are required fields and validated through the webhook
@@ -554,7 +554,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	// Prepare the provided staging parameter for data-movement. Param is the source/destination value from the #DW copy_in/copy_out directive; based
 	// on the param prefix we determine the storage instance and access requirements for data movement.
-	prepareStagingArgumentFn := func(param string) (*corev1.ObjectReference, *nnfv1alpha8.NnfAccess, *result, error) {
+	prepareStagingArgumentFn := func(param string) (*corev1.ObjectReference, *nnfv1alpha9.NnfAccess, *result, error) {
 		var storageReference *corev1.ObjectReference
 
 		name, _ := splitStagingArgumentIntoNameAndPath(param)
@@ -573,7 +573,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			if parentDwIndex < 0 {
-				return nil, nil, nil, dwsv1alpha6.NewResourceError("").WithUserMessage("no directive matching '%v' found in workflow", name).WithFatal().WithUser()
+				return nil, nil, nil, dwsv1alpha7.NewResourceError("").WithUserMessage("no directive matching '%v' found in workflow", name).WithFatal().WithUser()
 			}
 
 			// If directive specifies a persistent storage instance, `name` will be the nnfStorageName
@@ -585,7 +585,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				nnfStorageName = indexedResourceName(workflow, parentDwIndex)
 			}
 
-			storage := &nnfv1alpha8.NnfStorage{
+			storage := &nnfv1alpha9.NnfStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfStorageName,
 					Namespace: workflow.Namespace,
@@ -593,11 +593,11 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-				return nil, nil, nil, dwsv1alpha6.NewResourceError("could not get NnfStorage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithUserMessage("could not find storage allocation")
+				return nil, nil, nil, dwsv1alpha7.NewResourceError("could not get NnfStorage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithUserMessage("could not find storage allocation")
 			}
 
 			storageReference = &corev1.ObjectReference{
-				Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorage{}).Name(),
+				Kind:      reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name(),
 				Name:      storage.Name,
 				Namespace: storage.Namespace,
 			}
@@ -606,25 +606,25 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 			// Find the desired workflow teardown state for the NNF Access. This instructs the workflow
 			// when to teardown an NNF Access for the servers
-			var teardownState dwsv1alpha6.WorkflowState
+			var teardownState dwsv1alpha7.WorkflowState
 			if dwArgs["command"] == "copy_in" {
-				teardownState = dwsv1alpha6.StatePreRun
+				teardownState = dwsv1alpha7.StatePreRun
 
 				if fsType == "gfs2" || fsType == "lustre" {
-					teardownState = dwsv1alpha6.StatePostRun
+					teardownState = dwsv1alpha7.StatePostRun
 
 					if findCopyOutDirectiveIndexByName(workflow, name) >= 0 {
-						teardownState = dwsv1alpha6.StateTeardown
+						teardownState = dwsv1alpha7.StateTeardown
 					}
 				}
 			} else if dwArgs["command"] == "copy_out" {
-				teardownState = dwsv1alpha6.StateTeardown
+				teardownState = dwsv1alpha7.StateTeardown
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
 			access, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, parentDwIndex, teardownState, log)
 			if err != nil {
-				return storageReference, access, nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not create data movement mount points")
+				return storageReference, access, nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not create data movement mount points")
 			}
 
 			// Wait for accesses to go ready
@@ -644,28 +644,28 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			return storageReference, nil, nil, nil
 		}
 
-		return nil, nil, nil, dwsv1alpha6.NewResourceError("").WithUserMessage("Staging parameter '%s' is invalid", param).WithFatal().WithUser()
+		return nil, nil, nil, dwsv1alpha7.NewResourceError("").WithUserMessage("Staging parameter '%s' is invalid", param).WithFatal().WithUser()
 	}
 
 	sourceStorage, sourceAccess, result, err := prepareStagingArgumentFn(dwArgs["source"])
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not prepare data movement resources")
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not prepare data movement resources")
 	} else if result != nil {
 		return result, nil
 	}
 
 	destStorage, destAccess, result, err := prepareStagingArgumentFn(dwArgs["destination"])
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("Could not prepare data movement resources")
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("Could not prepare data movement resources")
 	} else if result != nil {
 		return result, nil
 	}
 
 	// Wait for accesses to go ready
-	for _, access := range []*nnfv1alpha8.NnfAccess{sourceAccess, destAccess} {
+	for _, access := range []*nnfv1alpha9.NnfAccess{sourceAccess, destAccess} {
 		if access != nil {
 			if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-				return nil, dwsv1alpha6.NewResourceError("could not get NnfAccess %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not create data movement mount points")
+				return nil, dwsv1alpha7.NewResourceError("could not get NnfAccess %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not create data movement mount points")
 			}
 
 			if access.Status.State != "mounted" || !access.Status.Ready {
@@ -688,15 +688,12 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	}
 
 	// Verify data movement is ready
-	dmm := &nnfv1alpha8.NnfDataMovementManager{ObjectMeta: metav1.ObjectMeta{
-		Name:      nnfv1alpha8.DataMovementManagerName,
-		Namespace: nnfv1alpha8.DataMovementNamespace,
+	dmm := &nnfv1alpha9.NnfDataMovementManager{ObjectMeta: metav1.ObjectMeta{
+		Name:      nnfv1alpha9.DataMovementManagerName,
+		Namespace: nnfv1alpha9.DataMovementNamespace,
 	}}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(dmm), dmm); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get NnfDataMovementManager %v", client.ObjectKeyFromObject(dmm)).WithError(err).WithUserMessage("could not determine data movement readiness")
-	}
-	if !dmm.Status.Ready {
-		return Requeue("pending data movement readiness").withObject(dmm).after(2 * time.Second), nil
+		return nil, dwsv1alpha7.NewResourceError("could not get NnfDataMovementManager %v", client.ObjectKeyFromObject(dmm)).WithError(err).WithUserMessage("could not determine data movement readiness")
 	}
 
 	// Retrieve the target storage that is to perform the data movement.
@@ -704,20 +701,20 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	// For copy_out, the source is the Rabbit and therefore the target
 
 	var targetStorageRef *corev1.ObjectReference
-	if workflow.Spec.DesiredState == dwsv1alpha6.StateDataIn {
+	if workflow.Spec.DesiredState == dwsv1alpha7.StateDataIn {
 		targetStorageRef = destStorage
 	} else {
 		targetStorageRef = sourceStorage
 	}
 
-	targetStorage := &nnfv1alpha8.NnfStorage{
+	targetStorage := &nnfv1alpha9.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      targetStorageRef.Name,
 			Namespace: targetStorageRef.Namespace,
 		},
 	}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(targetStorage), targetStorage); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(targetStorage)).WithError(err).WithUserMessage("could not find storage allocations")
+		return nil, dwsv1alpha7.NewResourceError("could not get NnfStorage: %v", client.ObjectKeyFromObject(targetStorage)).WithError(err).WithUserMessage("could not find storage allocations")
 	}
 
 	_, source := splitStagingArgumentIntoNameAndPath(dwArgs["source"])
@@ -728,10 +725,10 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 	// Get the pinned nnf-dm profile
 	dmProfile, err := findPinnedDMProfile(ctx, r.Client, workflow.GetNamespace(), indexedResourceName(workflow, index))
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not get NnfDataMovementProfile %s", indexedResourceName(workflow, index)).WithError(err).WithUserMessage("could not find data movement profile")
+		return nil, dwsv1alpha7.NewResourceError("could not get NnfDataMovementProfile %s", indexedResourceName(workflow, index)).WithError(err).WithUserMessage("could not find data movement profile")
 	}
 	dmProfileRef := corev1.ObjectReference{
-		Kind:      reflect.TypeOf(nnfv1alpha8.NnfDataMovementProfile{}).Name(),
+		Kind:      reflect.TypeOf(nnfv1alpha9.NnfDataMovementProfile{}).Name(),
 		Name:      dmProfile.Name,
 		Namespace: dmProfile.Namespace,
 	}
@@ -742,7 +739,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		// XFS & GFS2 require the individual rabbit nodes are performing the data movement.
 
 		if len(targetStorage.Spec.AllocationSets) != 1 {
-			return nil, dwsv1alpha6.NewResourceError("file system %s has unexpected allocation sets %d", fsType, len(targetStorage.Spec.AllocationSets)).WithUserMessage("unexpected allocation count").WithFatal()
+			return nil, dwsv1alpha7.NewResourceError("file system %s has unexpected allocation sets %d", fsType, len(targetStorage.Spec.AllocationSets)).WithUserMessage("unexpected allocation count").WithFatal()
 		}
 
 		nodes := targetStorage.Spec.AllocationSets[0].Nodes
@@ -750,17 +747,17 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		for _, node := range nodes {
 
 			for i := 0; i < node.Count; i++ {
-				dm := &nnfv1alpha8.NnfDataMovement{
+				dm := &nnfv1alpha9.NnfDataMovement{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      fmt.Sprintf("%s-%d", indexedResourceName(workflow, index), i),
 						Namespace: node.Name,
 					},
-					Spec: nnfv1alpha8.NnfDataMovementSpec{
-						Source: &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
+					Spec: nnfv1alpha9.NnfDataMovementSpec{
+						Source: &nnfv1alpha9.NnfDataMovementSpecSourceDestination{
 							Path:             getRabbitRelativePath(fsType, sourceStorage, sourceAccess, source, node.Name, i),
 							StorageReference: *sourceStorage,
 						},
-						Destination: &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
+						Destination: &nnfv1alpha9.NnfDataMovementSpecSourceDestination{
 							Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, node.Name, i),
 							StorageReference: *destStorage,
 						},
@@ -770,16 +767,16 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 					},
 				}
 
-				dwsv1alpha6.AddWorkflowLabels(dm, workflow)
-				dwsv1alpha6.AddOwnerLabels(dm, workflow)
-				nnfv1alpha8.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
-				nnfv1alpha8.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
+				dwsv1alpha7.AddWorkflowLabels(dm, workflow)
+				dwsv1alpha7.AddOwnerLabels(dm, workflow)
+				nnfv1alpha9.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+				nnfv1alpha9.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 				addDirectiveIndexLabel(dm, index)
 
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
 					if !errors.IsAlreadyExists(err) {
-						return nil, dwsv1alpha6.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
+						return nil, dwsv1alpha7.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 					}
 				}
 			}
@@ -788,17 +785,17 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 
 	case "lustre":
 
-		dm := &nnfv1alpha8.NnfDataMovement{
+		dm := &nnfv1alpha9.NnfDataMovement{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      indexedResourceName(workflow, index),
-				Namespace: nnfv1alpha8.DataMovementNamespace,
+				Namespace: nnfv1alpha9.DataMovementNamespace,
 			},
-			Spec: nnfv1alpha8.NnfDataMovementSpec{
-				Source: &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
+			Spec: nnfv1alpha9.NnfDataMovementSpec{
+				Source: &nnfv1alpha9.NnfDataMovementSpecSourceDestination{
 					Path:             getRabbitRelativePath(fsType, sourceStorage, sourceAccess, source, "", 0),
 					StorageReference: *sourceStorage,
 				},
-				Destination: &nnfv1alpha8.NnfDataMovementSpecSourceDestination{
+				Destination: &nnfv1alpha9.NnfDataMovementSpecSourceDestination{
 					Path:             getRabbitRelativePath(fsType, destStorage, destAccess, dest, "", 0),
 					StorageReference: *destStorage,
 				},
@@ -808,16 +805,16 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			},
 		}
 
-		dwsv1alpha6.AddWorkflowLabels(dm, workflow)
-		dwsv1alpha6.AddOwnerLabels(dm, workflow)
-		nnfv1alpha8.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
-		nnfv1alpha8.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
+		dwsv1alpha7.AddWorkflowLabels(dm, workflow)
+		dwsv1alpha7.AddOwnerLabels(dm, workflow)
+		nnfv1alpha9.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
+		nnfv1alpha9.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 		addDirectiveIndexLabel(dm, index)
 
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
 			if !errors.IsAlreadyExists(err) {
-				return nil, dwsv1alpha6.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
+				return nil, dwsv1alpha7.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 			}
 		}
 	}
@@ -826,17 +823,17 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 }
 
 // Monitor a data movement resource for completion
-func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 
 	// Wait for data movement resources to complete
 
-	matchingLabels := dwsv1alpha6.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha8.DirectiveIndexLabel] = strconv.Itoa(index)
-	matchingLabels[nnfv1alpha8.DataMovementTeardownStateLabel] = string(workflow.Status.State)
+	matchingLabels := dwsv1alpha7.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha9.DirectiveIndexLabel] = strconv.Itoa(index)
+	matchingLabels[nnfv1alpha9.DataMovementTeardownStateLabel] = string(workflow.Status.State)
 
-	dataMovementList := &nnfv1alpha8.NnfDataMovementList{}
+	dataMovementList := &nnfv1alpha9.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha7.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	// Since the Finish state is only called when copy_in / copy_out directives are present - the lack of any items
@@ -846,15 +843,15 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	}
 
 	for _, dm := range dataMovementList.Items {
-		if dm.Status.State != nnfv1alpha8.DataMovementConditionTypeFinished {
+		if dm.Status.State != nnfv1alpha9.DataMovementConditionTypeFinished {
 			return Requeue("pending data movement").withObject(&dm), nil
 		}
 	}
 
 	// Check results of data movement operations
 	for _, dm := range dataMovementList.Items {
-		if dm.Status.Status != nnfv1alpha8.DataMovementConditionReasonSuccess {
-			handleWorkflowErrorByIndex(dwsv1alpha6.NewResourceError("").WithUserMessage(
+		if dm.Status.Status != nnfv1alpha9.DataMovementConditionReasonSuccess {
+			handleWorkflowErrorByIndex(dwsv1alpha7.NewResourceError("").WithUserMessage(
 				fmt.Sprintf("data movement operation failed during '%s', message: %s", workflow.Status.State, dm.Status.Message)).
 				WithFatal(), workflow, index)
 			return Requeue("error").withObject(&dm), nil
@@ -864,7 +861,7 @@ func (r *NnfWorkflowReconciler) finishDataInOutState(ctx context.Context, workfl
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -873,7 +870,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// time.
 	unmountResult, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers")
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not unmount NnfAccess index: %v", index).WithError(err).WithUserMessage("could not unmount on Rabbit nodes")
+		return nil, dwsv1alpha7.NewResourceError("could not unmount NnfAccess index: %v", index).WithError(err).WithUserMessage("could not unmount on Rabbit nodes")
 	}
 
 	if unmountResult != nil {
@@ -885,7 +882,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		result, err := r.userContainerHandler(ctx, workflow, dwArgs, index, log)
 
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("unable to create/update Container Jobs: " + err.Error())
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("unable to create/update Container Jobs: " + err.Error())
 		}
 		if result != nil { // a requeue can be returned, so make sure that happens
 			return result, nil
@@ -897,10 +894,10 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
+		return nil, dwsv1alpha7.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
 	}
 
-	access := &nnfv1alpha8.NnfAccess{
+	access := &nnfv1alpha9.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index) + "-computes",
 			Namespace: workflow.Namespace,
@@ -910,12 +907,12 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// Create an NNFAccess for the compute clients
 	result, err := ctrl.CreateOrUpdate(ctx, r.Client, access,
 		func() error {
-			dwsv1alpha6.AddWorkflowLabels(access, workflow)
-			dwsv1alpha6.AddOwnerLabels(access, workflow)
+			dwsv1alpha7.AddWorkflowLabels(access, workflow)
+			dwsv1alpha7.AddOwnerLabels(access, workflow)
 			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
 
-			access.Spec.TeardownState = dwsv1alpha6.StatePostRun
+			access.Spec.TeardownState = dwsv1alpha7.StatePostRun
 			access.Spec.DesiredState = "mounted"
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
@@ -936,13 +933,13 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 				// which shares the same name with the NNFStorage.
 				Name:      name,
 				Namespace: namespace,
-				Kind:      reflect.TypeOf(nnfv1alpha8.NnfStorage{}).Name(),
+				Kind:      reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name(),
 			}
 
 			return ctrl.SetControllerReference(workflow, access, r.Scheme)
 		})
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("Could not CreateOrUpdate compute node NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not mount file system on compute nodes")
+		return nil, dwsv1alpha7.NewResourceError("Could not CreateOrUpdate compute node NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not mount file system on compute nodes")
 	}
 
 	if result == controllerutil.OperationResultCreated {
@@ -960,13 +957,13 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
 	}
 
 	if fsType == "gfs2" || fsType == "lustre" {
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
-		storage := &nnfv1alpha8.NnfStorage{
+		storage := &nnfv1alpha9.NnfStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -976,21 +973,21 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		// Set the teardown state to post run. If there is a copy_out or container directive that
 		// uses this storage instance, set the teardown state so NNF Access is preserved up until
 		// Teardown
-		teardownState := dwsv1alpha6.StatePostRun
+		teardownState := dwsv1alpha7.StatePostRun
 		if findCopyOutDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 || findContainerDirectiveIndexByName(workflow, dwArgs["name"]) >= 0 {
-			teardownState = dwsv1alpha6.StateTeardown
+			teardownState = dwsv1alpha7.StateTeardown
 		}
 
 		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not setup NNF Access in state %s", workflow.Status.State).WithError(err).WithUserMessage("could not mount file system on Rabbit nodes")
+			return nil, dwsv1alpha7.NewResourceError("could not setup NNF Access in state %s", workflow.Status.State).WithError(err).WithUserMessage("could not mount file system on Rabbit nodes")
 		}
 	}
 
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	// Add an environment variable to the workflow status section for the location of the
@@ -1015,7 +1012,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	case "container":
 		return r.waitForContainersToStart(ctx, workflow, index)
 	default:
-		return nil, dwsv1alpha6.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
+		return nil, dwsv1alpha7.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
 	}
 
 	path := buildComputeMountPath(workflow, index)
@@ -1050,7 +1047,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	// Containers do not have NNFAccesses, so only do this after r.waitForContainersToStart() would have returned
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not mount rabbit NnfAccess for index %v", index).WithError(err).WithUserMessage("could not mount file system on compute nodes")
+		return nil, dwsv1alpha7.NewResourceError("could not mount rabbit NnfAccess for index %v", index).WithError(err).WithUserMessage("could not mount file system on compute nodes")
 	} else if result != nil {
 		return result, nil
 	}
@@ -1058,7 +1055,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
@@ -1070,23 +1067,23 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	// in a different job even if there is data movement happening on the Rabbits.
 	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "computes"); result != nil || err != nil {
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not unmount file system from compute nodes")
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not unmount file system from compute nodes")
 		}
 
 		return result, nil
 	}
 
 	// Wait for data movement resources to complete
-	matchingLabels := dwsv1alpha6.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha8.DataMovementTeardownStateLabel] = string(dwsv1alpha6.StatePostRun)
+	matchingLabels := dwsv1alpha7.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha9.DataMovementTeardownStateLabel] = string(dwsv1alpha7.StatePostRun)
 
-	dataMovementList := &nnfv1alpha8.NnfDataMovementList{}
+	dataMovementList := &nnfv1alpha9.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha7.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	for _, dm := range dataMovementList.Items {
-		if dm.Status.State != nnfv1alpha8.DataMovementConditionTypeFinished {
+		if dm.Status.State != nnfv1alpha9.DataMovementConditionTypeFinished {
 			return Requeue("pending data movement").withObject(&dm), nil
 		}
 	}
@@ -1094,7 +1091,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	// Unmount the NnfAccess for the servers resource if necessary.
 	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
 	}
 
 	if fsType == "gfs2" || fsType == "lustre" {
@@ -1106,7 +1103,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	if dwArgs["command"] == "container" {
@@ -1115,27 +1112,27 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 
 	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "unmounted")
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not unmount compute NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on compute nodes")
+		return nil, dwsv1alpha7.NewResourceError("could not unmount compute NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on compute nodes")
 	} else if result != nil {
 		return result, nil
 	}
 
 	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
-	matchingLabels := dwsv1alpha6.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha8.DataMovementTeardownStateLabel] = string(dwsv1alpha6.StatePostRun)
+	matchingLabels := dwsv1alpha7.MatchingOwner(workflow)
+	matchingLabels[nnfv1alpha9.DataMovementTeardownStateLabel] = string(dwsv1alpha7.StatePostRun)
 
-	dataMovementList := &nnfv1alpha8.NnfDataMovementList{}
+	dataMovementList := &nnfv1alpha9.NnfDataMovementList{}
 	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
+		return nil, dwsv1alpha7.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
 	}
 
 	for _, dm := range dataMovementList.Items {
-		if dm.Status.State != nnfv1alpha8.DataMovementConditionTypeFinished {
+		if dm.Status.State != nnfv1alpha9.DataMovementConditionTypeFinished {
 			return Requeue("pending data movement").withObject(&dm), nil
 		}
 
-		if dm.Status.Status == nnfv1alpha8.DataMovementConditionReasonFailed {
-			handleWorkflowErrorByIndex(dwsv1alpha6.NewResourceError("data movement %v failed", client.ObjectKeyFromObject(&dm)).WithUserMessage("data movement failed").WithFatal(), workflow, index)
+		if dm.Status.Status == nnfv1alpha9.DataMovementConditionReasonFailed {
+			handleWorkflowErrorByIndex(dwsv1alpha7.NewResourceError("data movement %v failed", client.ObjectKeyFromObject(&dm)).WithUserMessage("data movement failed").WithFatal(), workflow, index)
 			return Requeue("error").withObject(&dm), nil
 		}
 	}
@@ -1143,7 +1140,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	switch dwArgs["command"] {
@@ -1156,14 +1153,14 @@ func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow
 		// Delete the NnfDataMovement and NnfAccess for this directive before removing the NnfStorage.
 		// copy_in/out directives can reference NnfStorage from a different directive, so all the NnfAccesses
 		// need to be removed first.
-		childObjects := []dwsv1alpha6.ObjectList{
-			&nnfv1alpha8.NnfDataMovementList{},
-			&nnfv1alpha8.NnfAccessList{},
+		childObjects := []dwsv1alpha7.ObjectList{
+			&nnfv1alpha9.NnfDataMovementList{},
+			&nnfv1alpha9.NnfAccessList{},
 		}
 
-		deleteStatus, err := dwsv1alpha6.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha8.DirectiveIndexLabel: strconv.Itoa(index)})
+		deleteStatus, err := dwsv1alpha7.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha9.DirectiveIndexLabel: strconv.Itoa(index)})
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not delete NnfDataMovement and NnfAccess children").WithError(err).WithUserMessage("could not stop data movement and unmount file systems")
+			return nil, dwsv1alpha7.NewResourceError("could not delete NnfDataMovement and NnfAccess children").WithError(err).WithUserMessage("could not stop data movement and unmount file systems")
 		}
 
 		if !deleteStatus.Complete() {
@@ -1174,14 +1171,14 @@ func (r *NnfWorkflowReconciler) startTeardownState(ctx context.Context, workflow
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflow *dwsv1alpha6.Workflow, index int) (*result, error) {
+func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 	log := r.Log.WithValues("Workflow", client.ObjectKeyFromObject(workflow), "Index", index)
 	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
 
 	switch dwArgs["command"] {
 	case "create_persistent":
 		for _, driverStatus := range workflow.Status.Drivers {
-			if driverStatus.WatchState == dwsv1alpha6.StateTeardown {
+			if driverStatus.WatchState == dwsv1alpha7.StateTeardown {
 				continue
 			}
 
@@ -1192,29 +1189,29 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 
 		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
 		}
 
 		persistentStorage.SetOwnerReferences([]metav1.OwnerReference{})
-		dwsv1alpha6.RemoveOwnerLabels(persistentStorage)
+		dwsv1alpha7.RemoveOwnerLabels(persistentStorage)
 		labels := persistentStorage.GetLabels()
-		delete(labels, nnfv1alpha8.DirectiveIndexLabel)
+		delete(labels, nnfv1alpha9.DirectiveIndexLabel)
 		persistentStorage.SetLabels(labels)
 
 		err = r.Update(ctx, persistentStorage)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not update PersistentStorage: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not finalize peristent storage")
+			return nil, dwsv1alpha7.NewResourceError("could not update PersistentStorage: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not finalize peristent storage")
 		}
 		log.Info("Removed owner reference from persistent storage", "psi", persistentStorage)
 
 		persistentStorage, err = r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
 		}
 
 		labels = persistentStorage.GetLabels()
 		if labels != nil {
-			if ownerUid, exists := labels[dwsv1alpha6.OwnerUidLabel]; exists {
+			if ownerUid, exists := labels[dwsv1alpha7.OwnerUidLabel]; exists {
 				if types.UID(ownerUid) == workflow.GetUID() {
 					return Requeue("persistent storage owner release").after(2 * time.Second).withObject(persistentStorage), nil
 				}
@@ -1224,40 +1221,40 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 		persistentStorage, err := r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
+				return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("could not find peristent storage %v", dwArgs["name"])
 			}
 
 			return nil, nil
 		}
 
 		if persistentStorage.Spec.UserID != workflow.Spec.UserID {
-			return nil, dwsv1alpha6.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
+			return nil, dwsv1alpha7.NewResourceError("Existing persistent storage user ID %v does not match user ID %v", persistentStorage.Spec.UserID, workflow.Spec.UserID).WithError(err).WithUserMessage("user ID does not match existing persistent storage").WithFatal().WithUser()
 		}
 
 		if len(persistentStorage.Spec.ConsumerReferences) != 0 {
 			err = fmt.Errorf("PersistentStorage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences))
 			log.Info(err.Error())
-			return nil, dwsv1alpha6.NewResourceError("persistent storage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences)).WithError(err).WithUserMessage("persistent storage cannot be deleted while in use").WithFatal().WithUser()
+			return nil, dwsv1alpha7.NewResourceError("persistent storage cannot be deleted with %v consumers", len(persistentStorage.Spec.ConsumerReferences)).WithError(err).WithUserMessage("persistent storage cannot be deleted while in use").WithFatal().WithUser()
 		}
 
-		persistentStorage.Spec.State = dwsv1alpha6.PSIStateDestroying
+		persistentStorage.Spec.State = dwsv1alpha7.PSIStateDestroying
 
-		dwsv1alpha6.AddOwnerLabels(persistentStorage, workflow)
+		dwsv1alpha7.AddOwnerLabels(persistentStorage, workflow)
 		addDirectiveIndexLabel(persistentStorage, index)
 
 		if err := controllerutil.SetControllerReference(workflow, persistentStorage, r.Scheme); err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not assign workflow as owner of PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+			return nil, dwsv1alpha7.NewResourceError("could not assign workflow as owner of PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
 		}
 
 		err = r.Update(ctx, persistentStorage)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
+			return nil, dwsv1alpha7.NewResourceError("could not update PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])
 		}
 		log.Info("Add owner reference for persistent storage for deletion", "psi", persistentStorage)
 
 		persistentStorage, err = r.findPersistentInstance(ctx, workflow, dwArgs["name"])
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not find persistent storage %v", dwArgs["name"])
 		}
 
 		labels := persistentStorage.GetLabels()
@@ -1265,14 +1262,14 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 			return Requeue("persistent storage owner add").after(2 * time.Second).withObject(persistentStorage), nil
 		}
 
-		ownerUid, exists := labels[dwsv1alpha6.OwnerUidLabel]
+		ownerUid, exists := labels[dwsv1alpha7.OwnerUidLabel]
 		if !exists || types.UID(ownerUid) != workflow.GetUID() {
 			return Requeue("persistent storage owner add").after(2 * time.Second).withObject(persistentStorage), nil
 		}
 	case "persistentdw":
 		err := r.removePersistentStorageReference(ctx, workflow, index)
 		if err != nil {
-			return nil, dwsv1alpha6.NewResourceError("").WithError(err).WithUserMessage("Could not remove persistent storage reference")
+			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("Could not remove persistent storage reference")
 		}
 	case "container":
 		// Release container ports
@@ -1283,14 +1280,14 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	default:
 	}
 
-	childObjects := []dwsv1alpha6.ObjectList{
-		&nnfv1alpha8.NnfStorageList{},
-		&dwsv1alpha6.PersistentStorageInstanceList{},
+	childObjects := []dwsv1alpha7.ObjectList{
+		&nnfv1alpha9.NnfStorageList{},
+		&dwsv1alpha7.PersistentStorageInstanceList{},
 	}
 
-	deleteStatus, err := dwsv1alpha6.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha8.DirectiveIndexLabel: strconv.Itoa(index)})
+	deleteStatus, err := dwsv1alpha7.DeleteChildrenWithLabels(ctx, r.Client, childObjects, workflow, client.MatchingLabels{nnfv1alpha9.DirectiveIndexLabel: strconv.Itoa(index)})
 	if err != nil {
-		return nil, dwsv1alpha6.NewResourceError("could not delete NnfStorage and PersistentStorageInstance children").WithError(err).WithUserMessage("could not delete storage allocations")
+		return nil, dwsv1alpha7.NewResourceError("could not delete NnfStorage and PersistentStorageInstance children").WithError(err).WithUserMessage("could not delete storage allocations")
 	}
 
 	if !deleteStatus.Complete() {
@@ -1300,13 +1297,13 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 	return nil, nil
 }
 
-func (r *NnfWorkflowReconciler) getChildObjects() []dwsv1alpha6.ObjectList {
-	return []dwsv1alpha6.ObjectList{
-		&nnfv1alpha8.NnfDataMovementList{},
-		&nnfv1alpha8.NnfAccessList{},
-		&nnfv1alpha8.NnfStorageList{},
-		&dwsv1alpha6.PersistentStorageInstanceList{},
-		&dwsv1alpha6.DirectiveBreakdownList{},
+func (r *NnfWorkflowReconciler) getChildObjects() []dwsv1alpha7.ObjectList {
+	return []dwsv1alpha7.ObjectList{
+		&nnfv1alpha9.NnfDataMovementList{},
+		&nnfv1alpha9.NnfAccessList{},
+		&nnfv1alpha9.NnfStorageList{},
+		&dwsv1alpha7.PersistentStorageInstanceList{},
+		&dwsv1alpha7.DirectiveBreakdownList{},
 	}
 }
 
@@ -1315,11 +1312,11 @@ func (r *NnfWorkflowReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&dwsv1alpha6.Workflow{}).
-		Owns(&nnfv1alpha8.NnfAccess{}).
-		Owns(&dwsv1alpha6.DirectiveBreakdown{}).
-		Owns(&dwsv1alpha6.PersistentStorageInstance{}).
-		Watches(&nnfv1alpha8.NnfDataMovement{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha6.OwnerLabelMapFunc)).
-		Watches(&nnfv1alpha8.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha6.OwnerLabelMapFunc)).
+		For(&dwsv1alpha7.Workflow{}).
+		Owns(&nnfv1alpha9.NnfAccess{}).
+		Owns(&dwsv1alpha7.DirectiveBreakdown{}).
+		Owns(&dwsv1alpha7.PersistentStorageInstance{}).
+		Watches(&nnfv1alpha9.NnfDataMovement{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha9.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
 		Complete(r)
 }

@@ -93,7 +93,6 @@ type PersistentStorageInstanceStatus struct {
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:storageversion
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
 //+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
@@ -109,6 +108,22 @@ type PersistentStorageInstance struct {
 
 func (psi *PersistentStorageInstance) GetStatus() updater.Status[*PersistentStorageInstanceStatus] {
 	return &psi.Status
+}
+
+// IsUsable looks at the status of the PersistentStorageInstance and determines whether the
+// storage can be used.
+func (psi *PersistentStorageInstance) IsUsable() bool {
+	if psi.Status.State == PSIStateActive {
+		return true
+	}
+
+	// Degraded means that a drive has failed in a RAID array. The storage is still usable in this
+	// state
+	if psi.Status.State == PSIStateDegraded {
+		return true
+	}
+
+	return false
 }
 
 //+kubebuilder:object:root=true
