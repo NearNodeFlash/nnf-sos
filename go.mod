@@ -4,8 +4,9 @@ go 1.23.9
 
 require (
 	github.com/DataWorkflowServices/dws v0.0.1-0.20251201192617-99a03aa3170f
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20250827135601-4d150db05d08
-	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20250902204910-828ccfe450c3
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20251210162744-b3f481b47161
+	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20251021182141-d22098d70c26
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -42,7 +43,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
