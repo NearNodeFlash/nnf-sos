@@ -68,11 +68,13 @@ func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
 }
 
 // WaitForAppearance checks the existence of the VG and
-// waits a brief time for the VG to be created if it is not present
+// waits a brief time for the VG to be created if it is not present.
+// This intentionally fails quickly to trigger an NVMe namespace rescan,
+// relying on the controller's exponential backoff for retries.
 func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 
-	// Default to 10 second timeout
-	retryPeriod := 10 * time.Second
+	// Default to 1 second timeout - fail quickly to trigger ns-rescan
+	retryPeriod := 1 * time.Second
 
 	// Look for environment variable to override
 	timeoutString, found := os.LookupEnv("NNF_MAPPER_WAIT_TIMEOUT")
@@ -86,7 +88,7 @@ func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 	// Give the VG time to appear
 	var exists bool
 	var err error
-	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
+	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(100 * time.Millisecond) {
 		exists, err = vg.Exists(ctx)
 		if err != nil {
 			return false, err
