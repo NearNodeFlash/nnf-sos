@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -66,7 +67,29 @@ const (
 
 	// filepath to append to clientmount directory to store lustre information in (servers resource)
 	lustreServersFilepath = ".nnf-servers.json"
+
+	// quickRetryDelay is the delay used when a quick retry is requested after ns-rescan discovers devices
+	quickRetryDelay = 1 * time.Second
 )
+
+// quickRetryError is a sentinel error that indicates a quick retry should be performed
+// rather than using exponential backoff. This is used when ns-rescan discovers new devices
+// and we want to retry activation quickly.
+type quickRetryError struct {
+	err error
+}
+
+func (e *quickRetryError) Error() string {
+	return e.err.Error()
+}
+
+func (e *quickRetryError) Unwrap() error {
+	return e.err
+}
+
+func newQuickRetryError(err error) *quickRetryError {
+	return &quickRetryError{err: err}
+}
 
 // NnfClientMountReconciler contains the pieces used by the reconciler
 type NnfClientMountReconciler struct {
@@ -223,6 +246,13 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		resourceError := dwsv1alpha7.NewResourceError("mount/unmount failed").WithError(err)
 		log.Info(resourceError.Error())
 
+		// Check if this is a quick retry error (e.g., after ns-rescan discovered new devices)
+		var qrErr *quickRetryError
+		if errors.As(err, &qrErr) {
+			log.Info("Quick retry requested after NVMe rescan", "delay", quickRetryDelay)
+			return ctrl.Result{RequeueAfter: quickRetryDelay}, nil
+		}
+
 		return ctrl.Result{}, resourceError
 	}
 
@@ -314,6 +344,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				return dwsv1alpha7.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
 			}
 
+			// Check if all expected devices are now present after the rescan
+			allDevicesFound := true
 			for _, expectedDevice := range clientMountInfo.Device.LVM.NVMeInfo {
 				found := false
 				for _, existingDevice := range existingDevices {
@@ -324,10 +356,16 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				}
 				if !found {
 					log.Info("Could not find expected NVMe device", "NQN", expectedDevice.DeviceSerial, "NSID", expectedDevice.NamespaceID)
+					allDevicesFound = false
 				}
 			}
 
-			return dwsv1alpha7.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+			activateErr := dwsv1alpha7.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+			// If all devices are now present after rescan, request a quick retry
+			if allDevicesFound {
+				return newQuickRetryError(activateErr)
+			}
+			return activateErr
 		}
 		if activated {
 			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
