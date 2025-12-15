@@ -1120,10 +1120,11 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 			namespacedName := client.ObjectKeyFromObject(clientMount).String()
 			if err != nil {
-				if !apierrors.IsConflict(err) {
-					log.Error(err, "failed to create or update ClientMount", "name", namespacedName)
+				// Absorb conflict and already-exists errors - they're recoverable through reconciler retry
+				if apierrors.IsConflict(err) || apierrors.IsAlreadyExists(err) {
+					return nil
 				}
-
+				log.Error(err, "failed to create or update ClientMount", "name", namespacedName)
 				return err
 			}
 			if result == controllerutil.OperationResultCreated {
