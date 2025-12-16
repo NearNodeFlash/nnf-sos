@@ -243,8 +243,8 @@ func (f *SimpleFileSystem) SimpleRunCommands(ctx context.Context, complete bool,
 	return true, nil
 }
 
-func (f *SimpleFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
-	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreMount, "PreMount", nil)
+func (f *SimpleFileSystem) PreMount(ctx context.Context, path string, complete bool) (bool, error) {
+	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreMount, "PreMount", map[string]string{"$MOUNT_PATH": path})
 }
 
 func (f *SimpleFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {

@@ -101,7 +101,7 @@ func (m *MockFileSystem) PreDeactivate(ctx context.Context, complete bool) (bool
 	return true, nil
 }
 
-func (m *MockFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
+func (m *MockFileSystem) PreMount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete {
 		return false, nil
 	}

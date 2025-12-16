@@ -310,8 +310,8 @@ func (l *LustreFileSystem) LustreRunCommands(ctx context.Context, complete bool,
 	return false, nil
 }
 
-func (l *LustreFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
-	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreMount, "PreMount", nil)
+func (l *LustreFileSystem) PreMount(ctx context.Context, path string, complete bool) (bool, error) {
+	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreMount, "PreMount", map[string]string{"$MOUNT_PATH": filepath.Clean(path)})
 }
 
 func (l *LustreFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {

@@ -379,7 +379,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Ran PostActivate commands")
 		}
 
-		ran, err = fileSystem.PreMount(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = fileSystem.PreMount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PreMount commands").WithError(err).WithMajor()
 		}
