@@ -168,7 +168,11 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 				err := r.Update(ctx, nnfNodeBlockStorage)
 				if err != nil {
-					return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+					if !apierrors.IsConflict(err) {
+						return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+					}
+
+					return ctrl.Result{Requeue: true}, nil
 				}
 				log.Info("finalizer removed from blockstorage")
 
@@ -235,7 +239,9 @@ func (r *NnfNodeStorageReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			err := r.Update(ctx, nnfNodeBlockStorage)
 			if err != nil {
-				return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+				if !apierrors.IsConflict(err) {
+					return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not update finalizer list for NnfNodeBlockStorage: %v", client.ObjectKeyFromObject(nnfNodeBlockStorage))
+				}
 			}
 
 			return ctrl.Result{Requeue: true}, nil
