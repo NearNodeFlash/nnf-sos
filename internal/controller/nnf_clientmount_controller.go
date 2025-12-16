@@ -444,7 +444,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
 		}
 
-		ran, err = fileSystem.PostUnmount(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = fileSystem.PostUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PostUnmount commands").WithError(err).WithMajor()
 		}

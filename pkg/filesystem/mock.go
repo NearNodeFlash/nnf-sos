@@ -131,7 +131,7 @@ func (m *MockFileSystem) PreUnmount(ctx context.Context, path string, complete b
 	return true, nil
 }
 
-func (m *MockFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
+func (m *MockFileSystem) PostUnmount(ctx context.Context, path string, complete bool) (bool, error) {
 	if complete {
 		return false, nil
 	}

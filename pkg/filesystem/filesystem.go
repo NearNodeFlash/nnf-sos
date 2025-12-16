@@ -50,7 +50,7 @@ type FileSystem interface {
 	PreUnmount(ctx context.Context, path string, complete bool) (bool, error)
 
 	// Run any commands on the OS after the file system is unmounted
-	PostUnmount(ctx context.Context, complete bool) (bool, error)
+	PostUnmount(ctx context.Context, path string, complete bool) (bool, error)
 
 	// Run any commands against the file system after it has been activated
 	PostActivate(ctx context.Context, complete bool) (bool, error)

@@ -322,7 +322,7 @@ func (l *LustreFileSystem) PreUnmount(ctx context.Context, path string, complete
 	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PreUnmount, "PreUnmount", map[string]string{"$MOUNT_PATH": filepath.Clean(path)})
 }
 
-func (l *LustreFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
+func (l *LustreFileSystem) PostUnmount(ctx context.Context, path string, complete bool) (bool, error) {
 	return l.LustreRunCommands(ctx, complete, l.CommandArgs.PostUnmount, "PostUnmount", nil)
 }
 

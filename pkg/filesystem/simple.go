@@ -255,8 +255,8 @@ func (f *SimpleFileSystem) PreUnmount(ctx context.Context, path string, complete
 	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreUnmount, "PreUnmount", map[string]string{"$MOUNT_PATH": path})
 }
 
-func (f *SimpleFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
-	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PostUnmount, "PostUnmount", nil)
+func (f *SimpleFileSystem) PostUnmount(ctx context.Context, path string, complete bool) (bool, error) {
+	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PostUnmount, "PostUnmount", map[string]string{"$MOUNT_PATH": path})
 }
 
 func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {
