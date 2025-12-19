@@ -1177,6 +1177,19 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	// Check the clientmounts for any errors first
 	for _, clientMount := range clientMounts {
 		if clientMount.Status.Error != nil {
+			// If IgnoreOfflineComputes is enabled, skip errors from offline/fenced computes
+			if access.Spec.IgnoreOfflineComputes {
+				offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+				if err != nil {
+					return false, err
+				}
+
+				if offline {
+					log.Info("ignoring error from offline/fenced compute node", "node name", clientMount.GetNamespace(), "error", clientMount.Status.Error.DebugMessage)
+					continue
+				}
+			}
+
 			return false, dwsv1alpha7.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 		}
 	}
@@ -1195,6 +1208,18 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 				continue
 			}
 
+			// If IgnoreOfflineComputes is enabled, skip offline/fenced computes in timeout check
+			if access.Spec.IgnoreOfflineComputes {
+				offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+				if err != nil {
+					return false, err
+				}
+
+				if offline {
+					continue
+				}
+			}
+
 			if clientMount.GetCreationTimestamp().Add(time.Duration(time.Duration(childTimeout) * time.Second)).Before(time.Now()) {
 				return false, dwsv1alpha7.NewResourceError("Node: %s: ClientMount has not been reconciled after %d seconds", clientMount.GetNamespace(), childTimeout).WithMajor()
 			}
@@ -1205,6 +1230,20 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 	// Check whether the clientmounts have finished mounting/unmounting
 	for _, clientMount := range clientMounts {
+		// If IgnoreOfflineComputes is enabled, check if this compute is offline/fenced before
+		// checking mount status. Offline computes cannot respond, so we should skip them entirely.
+		if access.Spec.IgnoreOfflineComputes {
+			offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+			if err != nil {
+				return false, err
+			}
+
+			if offline {
+				log.Info("ignoring ClientMount from offline/fenced compute node", "node name", clientMount.GetNamespace())
+				continue
+			}
+		}
+
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
 			return false, nil
 		}
@@ -1244,6 +1283,14 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	if len(clientMounts) != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+
+			// Check for fenced computes to provide a more informative log message
+			fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
+			if err != nil {
+				log.Error(err, "failed to check for fenced computes")
+			} else if len(fencedComputes) > 0 {
+				log.Info("waiting for fenced compute nodes to recover", "fencedComputes", fencedComputes)
+			}
 		}
 		return false, nil
 	}
@@ -1377,6 +1424,68 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	return false, nil
+}
+
+// getFencedComputes returns a list of compute nodes that are fenced (i.e., don't have ClientMounts created).
+// It compares the expected client list with the actual ClientMounts and checks if missing clients are fenced.
+func (r *NnfAccessReconciler) getFencedComputes(ctx context.Context, access *nnfv1alpha9.NnfAccess, clientList []string, clientMounts []dwsv1alpha7.ClientMount) ([]string, error) {
+	// Only check for computes NnfAccess (not servers)
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil, nil
+	}
+
+	// Build a set of clients that have ClientMounts
+	clientsWithMounts := make(map[string]struct{})
+	for _, cm := range clientMounts {
+		clientsWithMounts[cm.GetNamespace()] = struct{}{}
+	}
+
+	// Find clients that don't have ClientMounts
+	missingClients := []string{}
+	for _, client := range clientList {
+		if _, exists := clientsWithMounts[client]; !exists {
+			missingClients = append(missingClients, client)
+		}
+	}
+
+	if len(missingClients) == 0 {
+		return nil, nil
+	}
+
+	// For each missing client, check if it's fenced by looking at the Storage resource
+	fencedComputes := []string{}
+	for _, computeName := range missingClients {
+		// Find the Rabbit for this compute
+		rabbitName, err := helpers.GetRabbitFromCompute(ctx, r.Client, computeName)
+		if err != nil {
+			// If we can't find the Rabbit, skip this compute
+			continue
+		}
+
+		// Get the Storage resource for the Rabbit
+		storage := &dwsv1alpha7.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rabbitName,
+				Namespace: "default",
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			continue
+		}
+
+		// Check the status of the compute node in the Storage resource
+		for _, compute := range storage.Status.Access.Computes {
+			if compute.Name == computeName {
+				if compute.Status == dwsv1alpha7.FencedStatus {
+					fencedComputes = append(fencedComputes, computeName)
+				}
+				break
+			}
+		}
+	}
+
+	return fencedComputes, nil
 }
 
 // getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
