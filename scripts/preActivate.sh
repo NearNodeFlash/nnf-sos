@@ -36,13 +36,13 @@ while true; do
     echo "Current node status (elapsed: $elapsed):"
     echo "$nodes_out"
 
-    if echo "$nodes_out" | grep -qE "^[[:space:]]*Online:.*[[:space:]]$(hostname -s)([[:space:]]|$)"; then
+    if echo "$nodes_out" | grep -qE "^[[:space:]]*Online:.*[[:space:]]e?$(hostname -s)([[:space:]]|$)"; then
         echo "Node is Online."
         break
     fi
 
     # If node is in standby, try to unstandby it
-    if echo "$nodes_out" | grep -qE "^[[:space:]]*Standby:.*[[:space:]]$(hostname -s)([[:space:]]|$)"; then
+    if echo "$nodes_out" | grep -qE "^[[:space:]]*Standby:.*[[:space:]]e?$(hostname -s)([[:space:]]|$)"; then
         echo "Node is in Standby, attempting to unstandby..."
         sudo pcs node unstandby 2>/dev/null || true
     fi
