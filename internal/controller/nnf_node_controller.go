@@ -686,7 +686,7 @@ func (r *NnfNodeReconciler) processFenceRequest(ctx context.Context, filePath st
 		return
 	}
 
-	log.Info("Detected fence request", "targetNode", request.TargetNode, "requestID", request.RequestID)
+	log.Info("Detected fence request", "targetNode", request.TargetNode, "requestID", request.RequestID, "action", request.Action)
 
 	// Find all NnfNodeBlockStorage resources with GFS2 allocations that have access
 	// from this compute node, and trigger their reconciliation
