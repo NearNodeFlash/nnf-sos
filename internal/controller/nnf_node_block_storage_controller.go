@@ -436,10 +436,11 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		// If the endpoint doesn't need a storage group, remove one if it exists
 		if nodeName == "" {
 			if _, err := r.getStorageGroup(ss, storageGroupId); err == nil {
-				if _, err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
+				if actuallyDeleted, err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
 					return nil, dwsv1alpha7.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+				} else if actuallyDeleted {
+					log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 				}
-				log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 			}
 
 			for oldNodeName, accessStatus := range allocationStatus.Accesses {
