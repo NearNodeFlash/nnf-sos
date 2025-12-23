@@ -30,12 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 )
 
 var _ = Describe("PersistentStorage test", func() {
 	var (
-		storageProfile *nnfv1alpha9.NnfStorageProfile
+		storageProfile *nnfv1alpha10.NnfStorageProfile
 	)
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("PersistentStorage test", func() {
 
 	AfterEach(func() {
 		Expect(k8sClient.Delete(context.TODO(), storageProfile)).To(Succeed())
-		profExpected := &nnfv1alpha9.NnfStorageProfile{}
+		profExpected := &nnfv1alpha10.NnfStorageProfile{}
 		Eventually(func() error { // Delete can still return the cached object. Wait until the object is no longer present
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), profExpected)
 		}).ShouldNot(Succeed())
@@ -83,7 +83,7 @@ var _ = Describe("PersistentStorage test", func() {
 			return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
 		}).Should(Succeed(), "Create the DWS Servers Resource")
 
-		pinnedStorageProfile := &nnfv1alpha9.NnfStorageProfile{
+		pinnedStorageProfile := &nnfv1alpha10.NnfStorageProfile{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      persistentStorage.GetName(),
 				Namespace: persistentStorage.GetNamespace(),

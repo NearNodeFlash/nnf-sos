@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 )
 
 var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
@@ -47,7 +47,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 
 	Describe("NNF Port Manager Controller Test", func() {
 		var cfg *dwsv1alpha7.SystemConfiguration
-		var mgr *nnfv1alpha9.NnfPortManager
+		var mgr *nnfv1alpha10.NnfPortManager
 		portCooldown := 1
 
 		JustBeforeEach(func() {
@@ -73,18 +73,18 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 				}
 			})
 
-			mgr = &nnfv1alpha9.NnfPortManager{
+			mgr = &nnfv1alpha10.NnfPortManager{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-port-manager",
 					Namespace: corev1.NamespaceDefault,
 				},
-				Spec: nnfv1alpha9.NnfPortManagerSpec{
+				Spec: nnfv1alpha10.NnfPortManagerSpec{
 					SystemConfiguration: corev1.ObjectReference{
 						Name:      cfg.Name,
 						Namespace: cfg.Namespace,
 						Kind:      reflect.TypeOf(*cfg).Name(),
 					},
-					Allocations: make([]nnfv1alpha9.NnfPortManagerAllocationSpec, 0),
+					Allocations: make([]nnfv1alpha10.NnfPortManagerAllocationSpec, 0),
 				},
 			}
 			Expect(k8sClient.Create(ctx, mgr)).To(Succeed())
@@ -103,10 +103,10 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 
 		// Submit an allocation and verify it has been accounted for - this doesn't mean the ports
 		// were successfully allocated, however.
-		allocatePorts := func(mgr *nnfv1alpha9.NnfPortManager, name string, count int) []uint16 {
+		allocatePorts := func(mgr *nnfv1alpha10.NnfPortManager, name string, count int) []uint16 {
 			By(fmt.Sprintf("Reserving %d ports for '%s'", count, name))
 
-			allocation := nnfv1alpha9.NnfPortManagerAllocationSpec{
+			allocation := nnfv1alpha10.NnfPortManagerAllocationSpec{
 				Requester: corev1.ObjectReference{Name: name},
 				Count:     count,
 			}
@@ -129,10 +129,10 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 		}
 
 		// Submit an allocation and expect it to be successfully allocated (i.e. ports InUse)
-		reservePorts := func(mgr *nnfv1alpha9.NnfPortManager, name string, count int) []uint16 {
+		reservePorts := func(mgr *nnfv1alpha10.NnfPortManager, name string, count int) []uint16 {
 			ports := allocatePorts(mgr, name, count)
 
-			allocation := nnfv1alpha9.NnfPortManagerAllocationSpec{
+			allocation := nnfv1alpha10.NnfPortManagerAllocationSpec{
 				Requester: corev1.ObjectReference{Name: name},
 				Count:     count,
 			}
@@ -140,16 +140,16 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			status := r.findAllocationStatus(mgr, allocation)
 			Expect(status).ToNot(BeNil())
 			Expect(status.Ports).To(HaveLen(allocation.Count))
-			Expect(status.Status).To(Equal(nnfv1alpha9.NnfPortManagerAllocationStatusInUse))
+			Expect(status.Status).To(Equal(nnfv1alpha10.NnfPortManagerAllocationStatusInUse))
 
 			return ports
 		}
 
-		reservePortsAllowFail := func(mgr *nnfv1alpha9.NnfPortManager, name string, count int) []uint16 {
+		reservePortsAllowFail := func(mgr *nnfv1alpha10.NnfPortManager, name string, count int) []uint16 {
 			return allocatePorts(mgr, name, count)
 		}
 
-		releasePorts := func(mgr *nnfv1alpha9.NnfPortManager, name string) {
+		releasePorts := func(mgr *nnfv1alpha10.NnfPortManager, name string) {
 			By(fmt.Sprintf("Releasing ports for '%s'", name))
 
 			requester := corev1.ObjectReference{Name: name}
@@ -170,7 +170,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 		// Simple way to fire the reconciler to test the cooldown handling
 		// without having to reserve new ports. This is just to limit the scope
 		// of the test.
-		kickPortManager := func(mgr *nnfv1alpha9.NnfPortManager) {
+		kickPortManager := func(mgr *nnfv1alpha10.NnfPortManager) {
 			By("Kicking port manager to force reconcile")
 
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(mgr), mgr)).To(Succeed())
@@ -183,7 +183,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 		}
 
 		// Verify the number of allocations in the status allocation list that are InUse
-		verifyNumAllocations := func(mgr *nnfv1alpha9.NnfPortManager, status nnfv1alpha9.NnfPortManagerAllocationStatusStatus, count int) {
+		verifyNumAllocations := func(mgr *nnfv1alpha10.NnfPortManager, status nnfv1alpha10.NnfPortManagerAllocationStatusStatus, count int) {
 			By(fmt.Sprintf("Verifying there are %d allocations with Status %s in the status allocation list", count, status))
 
 			Eventually(func() int {
@@ -198,16 +198,16 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 			}).Should(Equal(count))
 		}
 
-		verifyNumAllocationsInUse := func(mgr *nnfv1alpha9.NnfPortManager, count int) {
-			verifyNumAllocations(mgr, nnfv1alpha9.NnfPortManagerAllocationStatusInUse, count)
+		verifyNumAllocationsInUse := func(mgr *nnfv1alpha10.NnfPortManager, count int) {
+			verifyNumAllocations(mgr, nnfv1alpha10.NnfPortManagerAllocationStatusInUse, count)
 		}
 
-		verifyNumAllocationsCooldown := func(mgr *nnfv1alpha9.NnfPortManager, count int) {
-			verifyNumAllocations(mgr, nnfv1alpha9.NnfPortManagerAllocationStatusCooldown, count)
+		verifyNumAllocationsCooldown := func(mgr *nnfv1alpha10.NnfPortManager, count int) {
+			verifyNumAllocations(mgr, nnfv1alpha10.NnfPortManagerAllocationStatusCooldown, count)
 		}
 
-		verifyNumAllocationsInsuffientResources := func(mgr *nnfv1alpha9.NnfPortManager, count int) {
-			verifyNumAllocations(mgr, nnfv1alpha9.NnfPortManagerAllocationStatusInsufficientResources, count)
+		verifyNumAllocationsInsuffientResources := func(mgr *nnfv1alpha10.NnfPortManager, count int) {
+			verifyNumAllocations(mgr, nnfv1alpha10.NnfPortManagerAllocationStatusInsufficientResources, count)
 		}
 
 		waitForCooldown := func(extra int) {
@@ -226,10 +226,10 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 
 				kickPortManager(mgr)
 
-				Eventually(func() nnfv1alpha9.NnfPortManagerStatusStatus {
+				Eventually(func() nnfv1alpha10.NnfPortManagerStatusStatus {
 					k8sClient.Get(ctx, client.ObjectKeyFromObject(mgr), mgr)
 					return mgr.Status.Status
-				}).Should(Equal(nnfv1alpha9.NnfPortManagerStatusSystemConfigurationNotFound))
+				}).Should(Equal(nnfv1alpha10.NnfPortManagerStatusSystemConfigurationNotFound))
 			})
 		})
 
@@ -334,7 +334,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 					const name = "all"
 					reservePorts(mgr, name, portEnd-portStart+1)
 
-					allocation := nnfv1alpha9.NnfPortManagerAllocationSpec{
+					allocation := nnfv1alpha10.NnfPortManagerAllocationSpec{
 						Requester: corev1.ObjectReference{Name: "insufficient-resources"},
 						Count:     1,
 					}
@@ -353,7 +353,7 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 					status := r.findAllocationStatus(mgr, allocation)
 					Expect(status).ToNot(BeNil())
 					Expect(status.Ports).To(BeEmpty())
-					Expect(status.Status).To(Equal(nnfv1alpha9.NnfPortManagerAllocationStatusInsufficientResources))
+					Expect(status.Status).To(Equal(nnfv1alpha10.NnfPortManagerAllocationStatusInsufficientResources))
 				})
 			})
 
@@ -388,12 +388,12 @@ var _ = Context("NNF Port Manager Controller Setup", Ordered, func() {
 
 					By("Attempting to reserve an additional port and failing")
 					ports := reservePortsAllowFail(mgr, "waiting", 1)
-					allocation := nnfv1alpha9.NnfPortManagerAllocationSpec{Requester: corev1.ObjectReference{Name: "waiting"}, Count: 1}
+					allocation := nnfv1alpha10.NnfPortManagerAllocationSpec{Requester: corev1.ObjectReference{Name: "waiting"}, Count: 1}
 					status := r.findAllocationStatus(mgr, allocation)
 
 					Expect(ports).To(HaveLen(0))
 					Expect(status).ToNot(BeNil())
-					Expect(status.Status).To(Equal(nnfv1alpha9.NnfPortManagerAllocationStatusInsufficientResources))
+					Expect(status.Status).To(Equal(nnfv1alpha10.NnfPortManagerAllocationStatusInsufficientResources))
 					verifyNumAllocationsInUse(mgr, portTotal)
 					verifyNumAllocationsInsuffientResources(mgr, 1)
 

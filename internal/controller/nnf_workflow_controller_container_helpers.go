@@ -35,7 +35,7 @@ import (
 	"time"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	nnftoken "github.com/NearNodeFlash/nnf-sos/pkg/token"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -52,7 +52,7 @@ import (
 
 type nnfUserContainer struct {
 	workflow    *dwsv1alpha7.Workflow
-	profile     *nnfv1alpha9.NnfContainerProfile
+	profile     *nnfv1alpha10.NnfContainerProfile
 	nnfNodes    []string
 	volumes     []nnfContainerVolume
 	secrets     []nnfContainerSecret
@@ -137,7 +137,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	launcherSpec := &launcher.Template.Spec
 	workerSpec := &worker.Template.Spec
 
-	c.username = nnfv1alpha9.ContainerMPIUser
+	c.username = nnfv1alpha10.ContainerMPIUser
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
@@ -239,7 +239,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 
 	// Copy offload containers need to use the copy offload service account
 	if c.profile.Data.NnfMPISpec.CopyOffload {
-		launcherSpec.ServiceAccountName = nnfv1alpha9.CopyOffloadServiceAccountName
+		launcherSpec.ServiceAccountName = nnfv1alpha10.CopyOffloadServiceAccountName
 	}
 
 	err = c.client.Create(c.ctx, mpiJob)
@@ -342,10 +342,10 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 	}
 
 	labels := obj.GetLabels()
-	labels[nnfv1alpha9.ContainerLabel] = c.workflow.Name
-	labels[nnfv1alpha9.PinnedContainerProfileLabelName] = c.profile.GetName()
-	labels[nnfv1alpha9.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
-	labels[nnfv1alpha9.DirectiveIndexLabel] = strconv.Itoa(c.index)
+	labels[nnfv1alpha10.ContainerLabel] = c.workflow.Name
+	labels[nnfv1alpha10.PinnedContainerProfileLabelName] = c.profile.GetName()
+	labels[nnfv1alpha10.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
+	labels[nnfv1alpha10.DirectiveIndexLabel] = strconv.Itoa(c.index)
 	obj.SetLabels(labels)
 
 	if applyOwner {
@@ -360,7 +360,7 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
 		Effect:   corev1.TaintEffectNoSchedule,
-		Key:      nnfv1alpha9.RabbitNodeTaintKey,
+		Key:      nnfv1alpha10.RabbitNodeTaintKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    "true",
 	})
@@ -539,7 +539,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Get the ports from the port manager for this workflow
 	for _, alloc := range pm.Status.Allocations {
-		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha9.NnfPortManagerAllocationStatusInUse {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha10.NnfPortManagerAllocationStatusInUse {
 			ports = append(ports, alloc.Ports...)
 		}
 	}
@@ -662,7 +662,7 @@ func addPortsEnvVars(workflow dwsv1alpha7.Workflow, spec *corev1.PodSpec, ports 
 
 // Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
 // containers
-func countContainersInProfile(profile *nnfv1alpha9.NnfContainerProfile) int {
+func countContainersInProfile(profile *nnfv1alpha10.NnfContainerProfile) int {
 	if profile.Data.NnfMPISpec != nil {
 		return len(profile.Data.NnfMPISpec.Launcher.Containers)
 	} else if profile.Data.NnfSpec != nil {
@@ -951,7 +951,7 @@ func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workfl
 // POST request to the `/shutdown` endpoint of the user container. This might fail if the user
 // container does not implement the `/shutdown` endpoint, but we still want to try to send the
 // request.
-func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha7.Workflow, profile *nnfv1alpha9.NnfContainerProfile) error {
+func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha7.Workflow, profile *nnfv1alpha10.NnfContainerProfile) error {
 	isMPIJob := profile.Data.NnfMPISpec != nil
 	isCopyOffload := isMPIJob && profile.Data.NnfMPISpec.CopyOffload
 

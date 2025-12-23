@@ -90,7 +90,6 @@ type NnfAccessStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-// +kubebuilder:storageversion
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="The desired state"
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="The current state"
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="Whether the state has been achieved"

@@ -36,4 +36,7 @@ var (
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
+
+	// Used by zz_generated.conversion.go.
+	localSchemeBuilder = SchemeBuilder.SchemeBuilder
 )

@@ -43,7 +43,7 @@ import (
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/dwdparse"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -662,7 +662,7 @@ func getScaledCapacity(capacity int64, scalingFactor string) (int64, error) {
 }
 
 // Remove the allocation padding from the capacity
-func removeAllocationPadding(allocationType string, capacity int64, nnfStorageProfile *nnfv1alpha9.NnfStorageProfile) (int64, error) {
+func removeAllocationPadding(allocationType string, capacity int64, nnfStorageProfile *nnfv1alpha10.NnfStorageProfile) (int64, error) {
 	padding := ""
 	switch allocationType {
 	case "gfs2":
@@ -703,7 +703,7 @@ func removeAllocationPadding(allocationType string, capacity int64, nnfStoragePr
 func (r *DirectiveBreakdownReconciler) getChildObjects() []dwsv1alpha7.ObjectList {
 	return []dwsv1alpha7.ObjectList{
 		&dwsv1alpha7.ServersList{},
-		&nnfv1alpha9.NnfStorageProfileList{},
+		&nnfv1alpha10.NnfStorageProfileList{},
 		&dwsv1alpha7.PersistentStorageInstanceList{},
 	}
 }
@@ -716,6 +716,6 @@ func (r *DirectiveBreakdownReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&dwsv1alpha7.DirectiveBreakdown{}).
 		Owns(&dwsv1alpha7.Servers{}).
 		Owns(&dwsv1alpha7.PersistentStorageInstance{}).
-		Owns(&nnfv1alpha9.NnfStorageProfile{}).
+		Owns(&nnfv1alpha10.NnfStorageProfile{}).
 		Complete(r)
 }

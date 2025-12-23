@@ -30,18 +30,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 )
 
 var _ = Describe("NnfLustreMGT Controller Test", func() {
 	It("Verifies a single fsname consumer", func() {
-		nnfLustreMgt := &nnfv1alpha9.NnfLustreMGT{
+		nnfLustreMgt := &nnfv1alpha10.NnfLustreMGT{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-mgt",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: nnfv1alpha9.NnfLustreMGTSpec{
+			Spec: nnfv1alpha10.NnfLustreMGTSpec{
 				Addresses:   []string{"1.1.1.1@tcp"},
 				FsNameStart: "bbbbbbbb",
 			},
@@ -87,13 +87,13 @@ var _ = Describe("NnfLustreMGT Controller Test", func() {
 	})
 
 	It("Verifies two fsname consumers with fsname wrap", func() {
-		nnfLustreMgt := &nnfv1alpha9.NnfLustreMGT{
+		nnfLustreMgt := &nnfv1alpha10.NnfLustreMGT{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-mgt",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: nnfv1alpha9.NnfLustreMGTSpec{
+			Spec: nnfv1alpha10.NnfLustreMGTSpec{
 				Addresses:   []string{"1.1.1.1@tcp"},
 				FsNameStart: "zzzzzzzz",
 			},
@@ -164,13 +164,13 @@ var _ = Describe("NnfLustreMGT Controller Test", func() {
 		}
 		Expect(k8sClient.Create(context.TODO(), configMap)).To(Succeed())
 
-		nnfLustreMgt := &nnfv1alpha9.NnfLustreMGT{
+		nnfLustreMgt := &nnfv1alpha10.NnfLustreMGT{
 			TypeMeta: metav1.TypeMeta{},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-mgt",
 				Namespace: corev1.NamespaceDefault,
 			},
-			Spec: nnfv1alpha9.NnfLustreMGTSpec{
+			Spec: nnfv1alpha10.NnfLustreMGTSpec{
 				Addresses:   []string{"1.1.1.1@tcp"},
 				FsNameStart: "bbbbbbbb",
 				FsNameStartReference: corev1.ObjectReference{

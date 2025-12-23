@@ -39,7 +39,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
 )
@@ -85,7 +85,7 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	metrics.NnfLustreMGTReconcilesTotal.Inc()
 
-	nnfLustreMgt := &nnfv1alpha9.NnfLustreMGT{}
+	nnfLustreMgt := &nnfv1alpha10.NnfLustreMGT{}
 	if err := r.Get(ctx, req.NamespacedName, nnfLustreMgt); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -93,7 +93,7 @@ func (r *NnfLustreMGTReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha9.NnfLustreMGTStatus](nnfLustreMgt)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha10.NnfLustreMGTStatus](nnfLustreMgt)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nnfLustreMgt.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -237,7 +237,7 @@ func incrementFsName(fsname string) string {
 	return string(incrementRuneList(runeList, 'a', 'z'))
 }
 
-func isFsNameBlackListed(nnfLustreMgt *nnfv1alpha9.NnfLustreMGT, fsname string) bool {
+func isFsNameBlackListed(nnfLustreMgt *nnfv1alpha10.NnfLustreMGT, fsname string) bool {
 	// Check the blacklist
 	for _, blackListedFsName := range nnfLustreMgt.Spec.FsNameBlackList {
 		if fsname == blackListedFsName {
@@ -250,7 +250,7 @@ func isFsNameBlackListed(nnfLustreMgt *nnfv1alpha9.NnfLustreMGT, fsname string) 
 
 // SetFsNameNext sets the Status.FsNameNext field to the next available fsname. It also
 // updates the configmap the FsNameStartReference field if needed.
-func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt *nnfv1alpha9.NnfLustreMGT, fsname string) (*ctrl.Result, error) {
+func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt *nnfv1alpha10.NnfLustreMGT, fsname string) (*ctrl.Result, error) {
 	// Find the next available fsname that isn't blacklisted
 	for {
 		fsname = incrementFsName(fsname)
@@ -299,7 +299,7 @@ func (r *NnfLustreMGTReconciler) SetFsNameNext(ctx context.Context, nnfLustreMgt
 
 // HandleNewClaims looks for any new claims in Spec.ClaimList and assigns them
 // an fsname
-func (r *NnfLustreMGTReconciler) HandleNewClaims(ctx context.Context, nnfLustreMgt *nnfv1alpha9.NnfLustreMGT) (*ctrl.Result, error) {
+func (r *NnfLustreMGTReconciler) HandleNewClaims(ctx context.Context, nnfLustreMgt *nnfv1alpha10.NnfLustreMGT) (*ctrl.Result, error) {
 	claimMap := map[corev1.ObjectReference]string{}
 	for _, claim := range nnfLustreMgt.Status.ClaimList {
 		claimMap[claim.Reference] = claim.FsName
@@ -317,7 +317,7 @@ func (r *NnfLustreMGTReconciler) HandleNewClaims(ctx context.Context, nnfLustreM
 				return result, nil
 			}
 
-			newClaim := nnfv1alpha9.NnfLustreMGTStatusClaim{
+			newClaim := nnfv1alpha10.NnfLustreMGTStatusClaim{
 				Reference: reference,
 				FsName:    fsnameNext,
 			}
@@ -333,7 +333,7 @@ func (r *NnfLustreMGTReconciler) HandleNewClaims(ctx context.Context, nnfLustreM
 
 // RemoveOldClaims removes any old entries from the Status.ClaimList and erases the fsname from
 // the MGT if necessary.
-func (r *NnfLustreMGTReconciler) RemoveOldClaims(ctx context.Context, nnfLustreMgt *nnfv1alpha9.NnfLustreMGT) error {
+func (r *NnfLustreMGTReconciler) RemoveOldClaims(ctx context.Context, nnfLustreMgt *nnfv1alpha10.NnfLustreMGT) error {
 	claimMap := map[corev1.ObjectReference]bool{}
 	for _, reference := range nnfLustreMgt.Spec.ClaimList {
 		claimMap[reference] = true
@@ -354,7 +354,7 @@ func (r *NnfLustreMGTReconciler) RemoveOldClaims(ctx context.Context, nnfLustreM
 	return nil
 }
 
-func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha9.NnfLustreMGT, fsname string) error {
+func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha10.NnfLustreMGT, fsname string) error {
 	log := r.Log.WithValues("NnfLustreMGT", client.ObjectKeyFromObject(nnfLustreMgt))
 
 	if os.Getenv("ENVIRONMENT") == "kind" {
@@ -378,8 +378,8 @@ func (r *NnfLustreMGTReconciler) EraseOldFsName(nnfLustreMgt *nnfv1alpha9.NnfLus
 }
 
 // HandleNewCommands looks for new commands in the Spec section and runs them
-func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha9.NnfLustreMGT) (*ctrl.Result, error) {
-	commandMap := map[corev1.ObjectReference]*nnfv1alpha9.NnfLustreMGTStatusCommand{}
+func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha10.NnfLustreMGT) (*ctrl.Result, error) {
+	commandMap := map[corev1.ObjectReference]*nnfv1alpha10.NnfLustreMGTStatusCommand{}
 	for _, command := range nnfLustreMgt.Status.CommandList {
 		commandMap[command.Reference] = &command
 	}
@@ -389,7 +389,7 @@ func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustr
 			err := r.RunCommands(nnfLustreMgt, command.Commands)
 
 			if !exists {
-				commandStatus = &nnfv1alpha9.NnfLustreMGTStatusCommand{
+				commandStatus = &nnfv1alpha10.NnfLustreMGTStatusCommand{
 					Reference: command.Reference,
 				}
 			}
@@ -414,7 +414,7 @@ func (r *NnfLustreMGTReconciler) HandleNewCommands(ctx context.Context, nnfLustr
 }
 
 // RemoveOldCommands removes any old entries from the Status.CommandList
-func (r *NnfLustreMGTReconciler) RemoveOldCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha9.NnfLustreMGT) error {
+func (r *NnfLustreMGTReconciler) RemoveOldCommands(ctx context.Context, nnfLustreMgt *nnfv1alpha10.NnfLustreMGT) error {
 	commandMap := map[corev1.ObjectReference]bool{}
 	for _, command := range nnfLustreMgt.Spec.CommandList {
 		commandMap[command.Reference] = true
@@ -431,7 +431,7 @@ func (r *NnfLustreMGTReconciler) RemoveOldCommands(ctx context.Context, nnfLustr
 	return nil
 }
 
-func (r *NnfLustreMGTReconciler) RunCommands(nnfLustreMgt *nnfv1alpha9.NnfLustreMGT, commandLines []string) error {
+func (r *NnfLustreMGTReconciler) RunCommands(nnfLustreMgt *nnfv1alpha10.NnfLustreMGT, commandLines []string) error {
 	log := r.Log.WithValues("NnfLustreMGT", client.ObjectKeyFromObject(nnfLustreMgt))
 	if r.ControllerType != ControllerRabbit {
 		return nil
@@ -472,7 +472,7 @@ func filterByNnfSystemNamespace() predicate.Predicate {
 func (r *NnfLustreMGTReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		For(&nnfv1alpha9.NnfLustreMGT{})
+		For(&nnfv1alpha10.NnfLustreMGT{})
 
 	switch r.ControllerType {
 	case ControllerRabbit:
