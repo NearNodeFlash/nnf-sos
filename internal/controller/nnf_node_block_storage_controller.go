@@ -436,10 +436,11 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		// If the endpoint doesn't need a storage group, remove one if it exists
 		if nodeName == "" {
 			if _, err := r.getStorageGroup(ss, storageGroupId); err == nil {
-				if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
+				if actuallyDeleted, err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
 					return nil, dwsv1alpha7.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+				} else if actuallyDeleted {
+					log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 				}
-				log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 			}
 
 			for oldNodeName, accessStatus := range allocationStatus.Accesses {
@@ -682,16 +683,19 @@ func (r *NnfNodeBlockStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi
 	return sg, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) error {
+// deleteStorageGroup deletes a storage group, treating 404 as success for idempotency.
+// Returns (actuallyDeleted, error) where actuallyDeleted is false if the group was already gone (404).
+func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) (bool, error) {
 	err := ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
 	if err != nil {
 		ecErr, ok := err.(*ec.ControllerError)
 		// If the error is from a 404 error, treat as success (idempotent deletion)
 		if ok && ecErr.StatusCode() == http.StatusNotFound {
-			return nil
+			return false, nil // Already deleted
 		}
+		return false, err
 	}
-	return err
+	return true, nil // Actually deleted
 }
 
 // getComputeNodesWithAccess returns a deduplicated list of compute node names
@@ -859,32 +863,44 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 		ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 		deletedCount := 0
+		alreadyDeletedCount := 0
 		var deleteErrors []string
 
 		// Delete each storage group
 		for _, storageGroupID := range storageGroupsToDelete {
-			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
+			actuallyDeleted, err := r.deleteStorageGroup(ss, storageGroupID)
+			if err != nil {
 				log.Error(err, "Failed to delete storage group",
 					"storageGroupId", storageGroupID,
 					"computeNodes", computeNodes)
 				deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", storageGroupID, err))
-			} else {
+			} else if actuallyDeleted {
 				log.Info("Successfully deleted storage group",
 					"storageGroupId", storageGroupID,
 					"computeNodes", computeNodes)
 				deletedCount++
+			} else {
+				log.Info("Storage group already deleted",
+					"storageGroupId", storageGroupID,
+					"computeNodes", computeNodes)
+				alreadyDeletedCount++
 			}
 		}
 
-		// Set success based on whether we deleted all storage groups
-		if deletedCount == len(storageGroupsToDelete) {
+		// Set success based on whether we deleted or verified deletion of all storage groups
+		totalHandled := deletedCount + alreadyDeletedCount
+		if totalHandled == len(storageGroupsToDelete) {
 			success = true
 			actionPerformed = "off"
-			message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
-		} else if deletedCount > 0 {
+			if alreadyDeletedCount > 0 {
+				message = fmt.Sprintf("Successfully fenced node (%d deleted, %d already deleted)", deletedCount, alreadyDeletedCount)
+			} else {
+				message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
+			}
+		} else if totalHandled > 0 {
 			success = false
-			message = fmt.Sprintf("Partially fenced node: deleted %d of %d storage groups. Errors: %s",
-				deletedCount, len(storageGroupsToDelete), strings.Join(deleteErrors, "; "))
+			message = fmt.Sprintf("Partially fenced node: handled %d of %d storage groups (%d deleted, %d already deleted). Errors: %s",
+				totalHandled, len(storageGroupsToDelete), deletedCount, alreadyDeletedCount, strings.Join(deleteErrors, "; "))
 		} else {
 			success = false
 			message = fmt.Sprintf("Failed to fence node: could not delete any storage groups. Errors: %s",
