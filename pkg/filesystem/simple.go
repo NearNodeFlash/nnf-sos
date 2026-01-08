@@ -100,9 +100,7 @@ func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, err
 	}
 
 	if _, err := command.Run(fmt.Sprintf("mkfs -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mkfs)), f.Log); err != nil {
-		if err != nil {
-			return false, fmt.Errorf("could not create file system: %w", err)
-		}
+		return false, fmt.Errorf("could not create file system: %w", err)
 	}
 
 	return true, nil
