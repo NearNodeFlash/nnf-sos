@@ -76,9 +76,7 @@ func (pv *PhysicalVolume) Create(ctx context.Context, rawArgs string) (bool, err
 
 	// No existing LVM PV found. Create one
 	if _, err := command.Run(fmt.Sprintf("pvcreate %s", args), pv.Log); err != nil {
-		if err != nil {
-			return false, fmt.Errorf("could not create LVM physical volume: %w", err)
-		}
+		return false, fmt.Errorf("could not create LVM physical volume: %w", err)
 	}
 
 	return true, nil
@@ -99,9 +97,7 @@ func (pv *PhysicalVolume) Remove(ctx context.Context, rawArgs string) (bool, err
 		if existingPV.Name == pv.Device {
 			// LVM PV found. Delete it
 			if _, err := command.Run(fmt.Sprintf("pvremove --yes %s", args), pv.Log); err != nil {
-				if err != nil {
-					return false, fmt.Errorf("could not destroy LVM physical volume: %w", err)
-				}
+				return false, fmt.Errorf("could not destroy LVM physical volume: %w", err)
 			}
 
 			return true, nil
