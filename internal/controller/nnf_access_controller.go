@@ -1429,9 +1429,9 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 // getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
 // compute node
 func (r *NnfAccessReconciler) getRabbitFromClientMount(ctx context.Context, clientMount *dwsv1alpha7.ClientMount) (string, error) {
-	// If the ClientMount has a block device reference that points to an NnNodeStorage, use the namespace of the NnfNodeStorage
+	// If the ClientMount has a block device reference that points to an NnfNodeStorage, use the namespace of the NnfNodeStorage
 	// as the Rabbit name
-	if clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Kind == reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
+	if len(clientMount.Spec.Mounts) > 0 && clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Kind == reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
 		return clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Namespace, nil
 	}
 
