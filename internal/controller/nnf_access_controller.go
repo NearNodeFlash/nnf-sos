@@ -119,6 +119,14 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			return ctrl.Result{}, nil
 		}
 
+		// Ensure all ClientMounts are set to unmounted state before deleting them.
+		// This handles the case where nodes were fenced when the mount operation happened
+		// (and thus not included in storageMapping) but are now back online and need
+		// to unmount before their ClientMount resources can be deleted.
+		if err := r.setAllClientMountsToUnmount(ctx, access); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		deleteStatus, err := dwsv1alpha7.DeleteChildren(ctx, r.Client, r.getChildObjects(), access)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -1140,6 +1148,50 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 	// Wait for the goroutines to finish and return the first error
 	return g.Wait()
+}
+
+// setAllClientMountsToUnmount updates ALL existing ClientMounts owned by this NnfAccess to unmounted state.
+// This is used during deletion to ensure that ClientMounts on nodes that were previously fenced/unavailable
+// (and therefore not in storageMapping) get their desired state set to unmounted so the clientmount daemon
+// can process them now that the nodes are back online.
+func (r *NnfAccessReconciler) setAllClientMountsToUnmount(ctx context.Context, access *nnfv1alpha10.NnfAccess) error {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
+
+	if !access.Spec.MakeClientMounts {
+		return nil
+	}
+
+	// Find all ClientMounts owned by this NnfAccess
+	clientMountList := &dwsv1alpha7.ClientMountList{}
+	matchLabels := dwsv1alpha7.MatchingOwner(access)
+
+	listOptions := []client.ListOption{
+		matchLabels,
+	}
+
+	if err := r.List(ctx, clientMountList, listOptions...); err != nil {
+		return dwsv1alpha7.NewResourceError("could not list ClientMounts").WithError(err)
+	}
+
+	// Update each ClientMount to unmounted state if it's not already
+	for i := range clientMountList.Items {
+		clientMount := &clientMountList.Items[i]
+
+		if clientMount.Spec.DesiredState == dwsv1alpha7.ClientMountStateUnmounted {
+			continue
+		}
+
+		log.Info("setting ClientMount to unmounted state", "name", client.ObjectKeyFromObject(clientMount).String())
+		clientMount.Spec.DesiredState = dwsv1alpha7.ClientMountStateUnmounted
+		if err := r.Update(ctx, clientMount); err != nil {
+			if !apierrors.IsConflict(err) {
+				return dwsv1alpha7.NewResourceError("could not update ClientMount to unmounted state: %v", client.ObjectKeyFromObject(clientMount)).WithError(err)
+			}
+			// Conflict errors are recoverable through reconciler retry
+		}
+	}
+
+	return nil
 }
 
 // getClientMountStatus aggregates the status from all the ClientMount resources
