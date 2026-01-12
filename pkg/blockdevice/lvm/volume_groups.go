@@ -195,13 +195,27 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 	}
 
 	lvs, err := lvsListVolumes(ctx, vg.Log)
+	if err != nil {
+		return false, err
+	}
 	for _, lv := range lvs {
 		if lv.VGName == vg.Name && lv.Attrs[4] == 'a' {
 			return false, nil
 		}
 	}
 
-	return vg.Change(ctx, rawArgs)
+	changed, err := vg.Change(ctx, rawArgs)
+	if err != nil {
+		// If lvmlockd is not running, the lockspace is effectively already stopped.
+		// This handles the race condition where postDeactivate.sh stops the cluster
+		// (and lvmlockd) before a subsequent reconcile tries to stop the lockspace again.
+		if strings.Contains(err.Error(), "lvmlockd process is not running") {
+			vg.Log.Info("lvmlockd not running, lockspace already stopped", "vg", vg.Name)
+			return false, nil
+		}
+		return false, err
+	}
+	return changed, nil
 }
 
 func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error) {
