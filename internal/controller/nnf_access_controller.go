@@ -271,14 +271,26 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha10.Nn
 }
 
 func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (*ctrl.Result, error) {
-	// Update client mounts to trigger unmount operation
-	err := r.manageClientMounts(ctx, access, storageMapping)
+	// Use setAllClientMountsToUnmount instead of manageClientMounts for unmounting.
+	// manageClientMounts would re-run the allocation assignment logic, which can result in
+	// different assignments if some computes are fenced/unavailable compared to when the original
+	// mount happened. setAllClientMountsToUnmount only updates the DesiredState to unmounted
+	// without changing the Mounts list, preserving the original allocation assignments.
+	err := r.setAllClientMountsToUnmount(ctx, access)
 	if err != nil {
 		return nil, dwsv1alpha7.NewResourceError("unable to update ClientMount resources").WithError(err)
 	}
 
-	// Aggregate the status from all the ClientMount resources
-	ready, err := r.getClientMountStatus(ctx, access, clientList)
+	// Build list of healthy clients from storageMapping keys. The storageMapping is already
+	// filtered to exclude fenced/offline nodes. We only check status for healthy clients
+	// since fenced nodes cannot respond to unmount requests.
+	healthyClients := make([]string, 0, len(storageMapping))
+	for client := range storageMapping {
+		healthyClients = append(healthyClients, client)
+	}
+
+	// Aggregate the status from all the ClientMount resources (healthy clients only)
+	ready, err := r.getClientMountStatus(ctx, access, healthyClients)
 	if err != nil {
 		return nil, dwsv1alpha7.NewResourceError("unable to get ClientMount status").WithError(err)
 	}

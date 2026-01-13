@@ -410,6 +410,23 @@ func (r *NnfNodeStorageReconciler) createAllocations(ctx context.Context, nnfNod
 	for index, blockDevice := range blockDevices {
 		allocationStatus := &nnfNodeStorage.Status.Allocations[index]
 
+		blockIndex := index
+		if nnfNodeStorage.Spec.SharedAllocation {
+			blockIndex = 0
+		}
+
+		if vgName, err := volumeGroupName(ctx, r.Client, nnfNodeStorage, blockIndex); err == nil {
+			allocationStatus.VolumeGroup = vgName
+		} else {
+			log.Info("Could not get Volume Group name", "error", err)
+		}
+
+		if lvName, err := logicalVolumeName(ctx, r.Client, nnfNodeStorage, index); err == nil {
+			allocationStatus.LogicalVolume = lvName
+		} else {
+			log.Info("Could not get Logical Volume name", "error", err)
+		}
+
 		// If the allocation is ready, skip it
 		if allocationStatus.Ready {
 			continue
