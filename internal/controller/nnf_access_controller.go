@@ -447,58 +447,46 @@ func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Conte
 		return nil, err
 	}
 
-	// Build a map of compute health status from the NnfNode resources. This requires getting
-	// the NnfStorage to find which rabbits have storage, then getting each rabbit's NnfNode
-	// resource to find the compute health status from NnfNode.Status.Servers.
-	computeStatus := make(map[string]nnfv1alpha10.NnfResourceStatusType)
-	if access.Spec.StorageReference.Kind == reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
-		nnfStorage := &nnfv1alpha10.NnfStorage{}
-		storageNamespacedName := types.NamespacedName{
-			Name:      access.Spec.StorageReference.Name,
-			Namespace: access.Spec.StorageReference.Namespace,
-		}
-		if err := r.Get(ctx, storageNamespacedName, nnfStorage); err != nil {
-			return nil, err
-		}
-
-		// Get the list of unique rabbit node names
-		rabbitNames := make(map[string]bool)
-		for _, allocationSet := range nnfStorage.Spec.AllocationSets {
-			for _, node := range allocationSet.Nodes {
-				rabbitNames[node.Name] = true
-			}
-		}
-
-		// For each rabbit, get the NnfNode resource and build the compute status map
-		for rabbitName := range rabbitNames {
-			nnfNode := &nnfv1alpha10.NnfNode{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nnf-nlc",
-					Namespace: rabbitName,
-				},
-			}
-			if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
-				// If we can't get the NnfNode resource, skip filtering for this rabbit
-				continue
-			}
-			for _, server := range nnfNode.Status.Servers {
-				computeStatus[server.Hostname] = server.Status
-			}
-		}
-	}
-
 	clients := []string{}
 	for _, c := range computes.Data {
-		// Filter out computes that are offline, fenced, or disabled
-		if status, exists := computeStatus[c.Name]; exists {
-			if status == nnfv1alpha10.ResourceOffline || status == nnfv1alpha10.ResourceFenced || status == nnfv1alpha10.ResourceDisabled {
-				continue
-			}
-		}
 		clients = append(clients, c.Name)
 	}
 
 	return clients, nil
+}
+
+// getComputeHealthStatus builds a map of compute hostnames to their health status by fetching
+// NnfNode resources from each rabbit that has storage allocations. This is only called when
+// actually creating mounts, not on every reconciliation.
+func (r *NnfAccessReconciler) getComputeHealthStatus(ctx context.Context, nnfStorage *nnfv1alpha10.NnfStorage) (map[string]nnfv1alpha10.NnfResourceStatusType, error) {
+	computeStatus := make(map[string]nnfv1alpha10.NnfResourceStatusType)
+
+	// Get the list of unique rabbit node names
+	rabbitNames := make(map[string]bool)
+	for _, allocationSet := range nnfStorage.Spec.AllocationSets {
+		for _, node := range allocationSet.Nodes {
+			rabbitNames[node.Name] = true
+		}
+	}
+
+	// For each rabbit, get the NnfNode resource and build the compute status map
+	for rabbitName := range rabbitNames {
+		nnfNode := &nnfv1alpha10.NnfNode{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "nnf-nlc",
+				Namespace: rabbitName,
+			},
+		}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(nnfNode), nnfNode); err != nil {
+			// If we can't get the NnfNode resource, skip filtering for this rabbit
+			continue
+		}
+		for _, server := range nnfNode.Status.Servers {
+			computeStatus[server.Hostname] = server.Status
+		}
+	}
+
+	return computeStatus, nil
 }
 
 // getClientListFromStorageReference returns a list of client node names from the NnfStorage resource. This is the list of Rabbit
@@ -551,6 +539,23 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return nil, err
 	}
+
+	// Filter out offline, fenced, or disabled computes from the client list
+	computeStatus, err := r.getComputeHealthStatus(ctx, nnfStorage)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredClients := []string{}
+	for _, client := range clients {
+		if status, exists := computeStatus[client]; exists {
+			if status == nnfv1alpha10.ResourceOffline || status == nnfv1alpha10.ResourceFenced || status == nnfv1alpha10.ResourceDisabled {
+				continue
+			}
+		}
+		filteredClients = append(filteredClients, client)
+	}
+	clients = filteredClients
 
 	// Call a helper function depending on the storage type
 	for i := range nnfStorage.Spec.AllocationSets {
