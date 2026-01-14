@@ -147,13 +147,13 @@ func (r *PersistentStorageReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// If this PersistentStorageInstance is for a standalone MGT, add a label so it can be easily found
-	if argsMap["type"] == "lustre" && len(pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
+	if argsMap["type"] == "lustre" && len(pinnedProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 {
 		if _, exists := argsMap["capacity"]; exists {
 			return ctrl.Result{}, dwsv1alpha7.NewResourceError("").WithUserMessage("creating persistent MGT does not accept 'capacity' argument").WithFatal().WithUser()
 		}
 		labels := persistentStorage.GetLabels()
 		if _, ok := labels[nnfv1alpha10.StandaloneMGTLabel]; !ok {
-			labels[nnfv1alpha10.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.StandaloneMGTPoolName
+			labels[nnfv1alpha10.StandaloneMGTLabel] = pinnedProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName
 			persistentStorage.SetLabels(labels)
 			if err := r.Update(ctx, persistentStorage); err != nil {
 				if !apierrors.IsConflict(err) {

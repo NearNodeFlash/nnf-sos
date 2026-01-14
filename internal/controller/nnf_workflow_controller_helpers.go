@@ -599,9 +599,9 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			mgsNid := ""
 			persistentMgsReference := corev1.ObjectReference{}
 
-			if dwArgs["type"] == "lustre" && len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
+			if dwArgs["type"] == "lustre" && len(nnfStorageProfile.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 				// If the prefix on the ExternalMGS field is "pool:", then this is pool name instead of a NID.
-				if strings.HasPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:") {
+				if strings.HasPrefix(nnfStorageProfile.Data.LustreStorage.MgtOptions.ExternalMGS, "pool:") {
 					// Copy the existing PersistentStorageInstance data if present to prevent picking a different
 					// MGS
 					for _, allocationSet := range nnfStorage.Spec.AllocationSets {
@@ -612,7 +612,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 
 					// If no MGS was picked yet, pick one randomly from the pool of PersistentStorageInstances with the right label
 					if mgsNid == "" {
-						persistentMgsReference, mgsNid, err = r.getLustreMgsFromPool(ctx, strings.TrimPrefix(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "pool:"))
+						persistentMgsReference, mgsNid, err = r.getLustreMgsFromPool(ctx, strings.TrimPrefix(nnfStorageProfile.Data.LustreStorage.MgtOptions.ExternalMGS, "pool:"))
 						if err != nil {
 							return err
 						}
@@ -629,7 +629,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 					// 10.1.1.113@tcp0 -> 10.1.1.113@tcp
 					// 25@kfi0,25@kfi1:26@kfi0,26@kfi1 -> 25@kfi,25@kfi1:26@kfi,26@kfi1
 					re := regexp.MustCompile("(@[A-Za-z0-9]+[A-Za-z])0")
-					mgsNid = re.ReplaceAllString(nnfStorageProfile.Data.LustreStorage.ExternalMGS, "$1")
+					mgsNid = re.ReplaceAllString(nnfStorageProfile.Data.LustreStorage.MgtOptions.ExternalMGS, "$1")
 				}
 			}
 

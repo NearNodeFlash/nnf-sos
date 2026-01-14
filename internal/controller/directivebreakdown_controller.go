@@ -313,7 +313,7 @@ func (r *DirectiveBreakdownReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 				// If the "ColocateComputes" option is specified, force the computes to have a
 				// physical connection to the storage to limit their placement
-				targetOptions := pinnedProfile.GetLustreMiscOptions(allocationSet.Label)
+				targetOptions := pinnedProfile.GetLustreTargetOptions(allocationSet.Label)
 				if targetOptions.ColocateComputes {
 					constraint.Access = append(constraint.Access, dwsv1alpha7.ComputeLocationAccess{
 						Type:     dwsv1alpha7.ComputeLocationPhysical,
@@ -507,13 +507,13 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		allocationSets = append(allocationSets, component)
 	case "lustre":
-		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.LustreStorage.CapacityScalingFactor, 64)
+		scalingFactor, err := strconv.ParseFloat(nnfStorageProfile.Data.LustreStorage.OstOptions.CapacityScalingFactor, 64)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("invalid capacityScalingFactor for lustre allocation").WithFatal()
 		}
 		breakdownCapacity = int64(scalingFactor * float64(breakdownCapacity))
-		mdtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMDT)
-		mgtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.CapacityMGT)
+		mdtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.MdtOptions.Capacity)
+		mgtCapacity, _ := getCapacityInBytes(nnfStorageProfile.Data.LustreStorage.MgtOptions.Capacity)
 
 		// We need 3 distinct components for Lustre, ost, mdt, and mgt
 		var lustreComponents []lustreComponentType
@@ -522,7 +522,7 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 
 		mgtKey := &dwsv1alpha7.AllocationSetColocationConstraint{Type: "exclusive", Key: "lustre-mgt"}
 		var mdtKey *dwsv1alpha7.AllocationSetColocationConstraint
-		if nnfStorageProfile.Data.LustreStorage.ExclusiveMDT {
+		if nnfStorageProfile.Data.LustreStorage.MdtOptions.Exclusive {
 			mdtKey = &dwsv1alpha7.AllocationSetColocationConstraint{Type: "exclusive"}
 		}
 
@@ -533,9 +533,9 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 				useKey = mdtKey
 			}
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha7.AllocateAcrossServers, mdtCapacity, "mgtmdt", useKey})
-		} else if len(nnfStorageProfile.Data.LustreStorage.ExternalMGS) > 0 {
+		} else if len(nnfStorageProfile.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 			lustreComponents = append(lustreComponents, lustreComponentType{dwsv1alpha7.AllocateAcrossServers, mdtCapacity, "mdt", mdtKey})
-		} else if len(nnfStorageProfile.Data.LustreStorage.StandaloneMGTPoolName) > 0 {
+		} else if len(nnfStorageProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 {
 			if argsMap["command"] != "create_persistent" {
 				return dwsv1alpha7.NewResourceError("").WithUserMessage("standaloneMgtPoolName option can only be used with 'create_persistent' directive").WithFatal().WithUser()
 			}
@@ -547,9 +547,9 @@ func (r *DirectiveBreakdownReconciler) populateStorageBreakdown(ctx context.Cont
 		}
 
 		for _, i := range lustreComponents {
-			targetMiscOptions := nnfStorageProfile.GetLustreMiscOptions(i.labelsStr)
+			targetOptions := nnfStorageProfile.GetLustreTargetOptions(i.labelsStr)
 			component := dwsv1alpha7.StorageAllocationSet{}
-			populateStorageAllocationSet(&component, i.strategy, i.cap, targetMiscOptions.Scale, targetMiscOptions.Count, targetMiscOptions.StorageLabels, i.labelsStr, i.colocationKey)
+			populateStorageAllocationSet(&component, i.strategy, i.cap, targetOptions.Scale, targetOptions.Count, targetOptions.StorageLabels, i.labelsStr, i.colocationKey)
 
 			allocationSets = append(allocationSets, component)
 		}
