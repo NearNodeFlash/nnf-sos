@@ -1,7 +1,7 @@
 apiVersion: nnf.cray.hpe.com/v1alpha10
 kind: NnfStorageProfile
 metadata:
-  name: template
+  name: mattr
   namespace: nnf-system
 data:
   default: false
@@ -181,3 +181,5 @@ data:
     userCommands:
       postSetup:
       - chown $USERID:$GROUPID $MOUNT_PATH
+    variableOverride:
+      $LV_NAME: mattr

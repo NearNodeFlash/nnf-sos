@@ -1082,7 +1082,7 @@ func (r *NnfStorageReconciler) runSharedMGTCommands(ctx context.Context, nnfStor
 	// Initialize the VarHandler substitution variables
 	varHandler := var_handler.NewVarHandler(m)
 
-	for _, rawCommand := range nnfStorageProfile.Data.LustreStorage.PreMountMGTCmds {
+	for _, rawCommand := range nnfStorageProfile.Data.LustreStorage.MgtOptions.PreMountCommands {
 		mgtCommand.Commands = append(mgtCommand.Commands, varHandler.ReplaceAll(rawCommand))
 	}
 

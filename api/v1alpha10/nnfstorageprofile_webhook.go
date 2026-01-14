@@ -105,21 +105,21 @@ func (r *NnfStorageProfile) validateContent() error {
 }
 
 func (r *NnfStorageProfile) validateContentLustre() error {
-	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
 	}
 
-	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+	if len(r.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 && len(r.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 		return fmt.Errorf("cannot set both standaloneMgtPoolName and externalMgs")
 	}
 
-	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && r.Data.LustreStorage.CombinedMGTMDT {
+	if len(r.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 && r.Data.LustreStorage.CombinedMGTMDT {
 		return fmt.Errorf("cannot set standaloneMgtPoolName and combinedMgtMdt")
 	}
 
 	for _, target := range []string{"mgt", "mdt", "mgtmdt", "ost"} {
-		targetMiscOptions := r.GetLustreMiscOptions(target)
-		err := r.validateLustreTargetMiscOptions(targetMiscOptions)
+		targetOptions := r.GetLustreTargetOptions(target)
+		err := r.validateLustreTargetOptions(targetOptions)
 		if err != nil {
 			return err
 		}
@@ -128,8 +128,8 @@ func (r *NnfStorageProfile) validateContentLustre() error {
 	return nil
 }
 
-func (r *NnfStorageProfile) validateLustreTargetMiscOptions(targetMiscOptions NnfStorageProfileLustreMiscOptions) error {
-	if targetMiscOptions.Count > 0 && targetMiscOptions.Scale > 0 {
+func (r *NnfStorageProfile) validateLustreTargetOptions(targetOptions NnfStorageProfileLustreTargetOptions) error {
+	if targetOptions.Count > 0 && targetOptions.Scale > 0 {
 		return fmt.Errorf("count and scale cannot both be specified in Lustre target options")
 	}
 
