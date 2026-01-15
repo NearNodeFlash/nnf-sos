@@ -913,6 +913,14 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 		message = fmt.Sprintf("No GFS2 storage groups found for compute nodes %v (already fenced or no GFS2 access)", computeNodes)
 	}
 
+	// Acknowledge the fence in DLM for each compute node to unblock any pending lock operations.
+	// This is necessary because DLM independently tracks node membership via corosync and will
+	// block lock operations (vgchange --lock-start, lvchange -ay, GFS2 I/O) until the fence is
+	// acknowledged. We do this regardless of success since the node has been removed from storage.
+	for computeNode := range computeNodeMap {
+		fence.AcknowledgeDLMFence(computeNode, log)
+	}
+
 	// Write response files. On failure, Pacemaker retries based on pcmk_off_retries.
 	for _, request := range fenceRequests {
 		// Write response file
