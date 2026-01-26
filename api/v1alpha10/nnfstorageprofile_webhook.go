@@ -101,36 +101,118 @@ func (r *NnfStorageProfile) validateContent() error {
 	if err := r.validateContentLustre(); err != nil {
 		return err
 	}
+	if err := r.validateContentShared(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *NnfStorageProfile) validateContentShared() error {
+	// Validate XFS storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.XFSStorage.VariableOverride); err != nil {
+		return fmt.Errorf("xfsStorage: %w", err)
+	}
+
+	// Validate GFS2 storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.GFS2Storage.VariableOverride); err != nil {
+		return fmt.Errorf("gfs2Storage: %w", err)
+	}
+
+	// Validate Raw storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.RawStorage.VariableOverride); err != nil {
+		return fmt.Errorf("rawStorage: %w", err)
+	}
+
 	return nil
 }
 
 func (r *NnfStorageProfile) validateContentLustre() error {
-	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+	if r.Data.LustreStorage.CombinedMGTMDT && len(r.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 		return fmt.Errorf("cannot set both combinedMgtMdt and externalMgs")
 	}
 
-	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && len(r.Data.LustreStorage.ExternalMGS) > 0 {
+	if len(r.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 && len(r.Data.LustreStorage.MgtOptions.ExternalMGS) > 0 {
 		return fmt.Errorf("cannot set both standaloneMgtPoolName and externalMgs")
 	}
 
-	if len(r.Data.LustreStorage.StandaloneMGTPoolName) > 0 && r.Data.LustreStorage.CombinedMGTMDT {
+	if len(r.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName) > 0 && r.Data.LustreStorage.CombinedMGTMDT {
 		return fmt.Errorf("cannot set standaloneMgtPoolName and combinedMgtMdt")
 	}
 
 	for _, target := range []string{"mgt", "mdt", "mgtmdt", "ost"} {
-		targetMiscOptions := r.GetLustreMiscOptions(target)
-		err := r.validateLustreTargetMiscOptions(targetMiscOptions)
+		targetOptions := r.GetLustreTargetOptions(target)
+		err := r.validateLustreTargetOptions(targetOptions)
 		if err != nil {
 			return err
 		}
 	}
 
+	// Validate client options variable overrides
+	if err := validateVariableOverrideKeys(r.Data.LustreStorage.ClientOptions.VariableOverride); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (r *NnfStorageProfile) validateLustreTargetMiscOptions(targetMiscOptions NnfStorageProfileLustreMiscOptions) error {
-	if targetMiscOptions.Count > 0 && targetMiscOptions.Scale > 0 {
+func (r *NnfStorageProfile) validateLustreTargetOptions(targetOptions NnfStorageProfileLustreTargetOptions) error {
+	if targetOptions.Count > 0 && targetOptions.Scale > 0 {
 		return fmt.Errorf("count and scale cannot both be specified in Lustre target options")
+	}
+
+	if err := validateVariableOverrideKeys(targetOptions.VariableOverride); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateVariableOverrideKeys checks that variable override keys are valid.
+// Keys must start with '$' and be known variable names.
+func validateVariableOverrideKeys(overrides map[string]string) error {
+	validKeys := map[string]struct{}{
+		"$FS_NAME":        {},
+		"$MGS_NID":        {},
+		"$INDEX":          {},
+		"$BACKFS":         {},
+		"$POOL_NAME":      {},
+		"$ZPOOL_NAME":     {},
+		"$ZPOOL_DATA_SET": {},
+		"$ZVOL_NAME":      {},
+		"$DEVICE":         {},
+		"$DEVICE_LIST":    {},
+		"$DEVICE_NUM":     {},
+		"$MOUNT_PATH":     {},
+		"$TARGET_TYPE":    {},
+		"$TARGET_PATH":    {},
+		"$VG_NAME":        {},
+		"$LV_NAME":        {},
+		"$LV_SIZE":        {},
+		"$LV_INDEX":       {},
+		"$PERCENT_VG":     {},
+		"$FSTYPE":         {},
+		"$MOUNT_TARGET":   {},
+		"$TEMP_DIR":       {},
+		"$JOBID":          {},
+		"$USERID":         {},
+		"$GROUPID":        {},
+		"$CLUSTER_NAME":   {},
+		"$LOCK_SPACE":     {},
+		"$PROTOCOL":       {},
+		"$NUM_OSTS":       {},
+		"$NUM_NNFNODES":   {},
+	}
+
+	for key := range overrides {
+		if len(key) == 0 {
+			return fmt.Errorf("variableOverride key cannot be empty")
+		}
+		if key[0] != '$' {
+			return fmt.Errorf("variableOverride key '%s' must start with '$'", key)
+		}
+		if _, ok := validKeys[key]; !ok {
+			return fmt.Errorf("variableOverride key '%s' is not a recognized variable name", key)
+		}
 	}
 
 	return nil

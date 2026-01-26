@@ -66,6 +66,14 @@ type NnfStorageProfileLustreClientCmdLines struct {
 	ComputePostUnmount []string `json:"computePostUnmount,omitempty"`
 }
 
+type NnfStorageProfileLustreClientOptions struct {
+	// CmdLines contains commands to mount Lustre clients.
+	CmdLines NnfStorageProfileLustreClientCmdLines `json:"commandlines,omitempty"`
+
+	// VariableOverride allows specifying values for variables that can be used in commandlines
+	VariableOverride map[string]string `json:"variableOverride,omitempty"`
+}
+
 // NnfStorageProfileLustreCmdLines defines commandlines to use for mkfs, zpool, and other utilities
 // for Lustre allocations.
 type NnfStorageProfileLustreCmdLines struct {
@@ -95,8 +103,75 @@ type NnfStorageProfileLustreCmdLines struct {
 	PreDeactivate []string `json:"preDeactivate,omitempty"`
 }
 
-// NnfStorageProfileLustreMiscOptions defines options to use for the mount library, and other utilities.
-type NnfStorageProfileLustreMiscOptions struct {
+// NnfStorageProfileLustreMgtOptions defines the configuration for the Lustre MGT target
+type NnfStorageProfileLustreMgtOptions struct {
+	// ExternalMGS specifies the use of an existing MGS rather than creating one. This can
+	// be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
+	// Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
+	// is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
+	// be picked from the pool.
+	ExternalMGS string `json:"externalMgs,omitempty"`
+
+	// StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
+	// a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
+	// Multiple pools can be created.
+	StandaloneMGTPoolName string `json:"standaloneMgtPoolName,omitempty"`
+
+	// Capacity specifies the size of the MGT device.
+	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+	// +kubebuilder:default:="5GiB"
+	Capacity string `json:"capacity,omitempty"`
+
+	// Common command lines to all Lustre Targets
+	NnfStorageProfileLustreTargetOptions `json:",inline"`
+
+	// PreMountCommands contains commands to be run on the MGT after all Lustre targets are created and activated
+	PreMountCommands []string `json:"preMountCommands,omitempty"`
+}
+
+// NnfStorageProfileLustreMdtOptions defines the configuration for the Lustre MDT target
+type NnfStorageProfileLustreMdtOptions struct {
+	// Capacity specifies the size of the MDT device.
+	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+	// +kubebuilder:default:="5GiB"
+	Capacity string `json:"capacity,omitempty"`
+
+	// Exclusive indicates that the MDT should not be colocated with any other target on the chosen server.
+	// +kubebuilder:default:=false
+	Exclusive bool `json:"exclusive,omitempty"`
+
+	// Common command lines to all Lustre Targets
+	NnfStorageProfileLustreTargetOptions `json:",inline"`
+}
+
+// NnfStorageProfileLustreMgtMdtOptions defines the configuration for a combined Lustre MGT/MDT target
+type NnfStorageProfileLustreMgtMdtOptions struct {
+	// Capacity specifies the size of the combined MGT/MDT device.
+	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
+	// +kubebuilder:default:="5GiB"
+	Capacity string `json:"capacity,omitempty"`
+
+	// Common command lines to all Lustre Targets
+	NnfStorageProfileLustreTargetOptions `json:",inline"`
+}
+
+// NnfStorageProfileLustreOstOptions defines the configuration for the Lustre OST target
+type NnfStorageProfileLustreOstOptions struct {
+	// CapacityScalingFactor is a scaling factor for the OST capacity requested in the DirectiveBreakdown
+	// +kubebuilder:default:="1.0"
+	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
+
+	// Common command lines to all Lustre Targets
+	NnfStorageProfileLustreTargetOptions `json:",inline"`
+}
+
+type NnfStorageProfileLustreTargetOptions struct {
+	// CmdLines contains commands to create an OST target.
+	CmdLines NnfStorageProfileLustreCmdLines `json:"commandlines,omitempty"`
+
+	// VariableOverride allows specifying values for variables that can be used in commandlines
+	VariableOverride map[string]string `json:"variableOverride,omitempty"`
+
 	// ColocateComputes indicates that the Lustre target should be placed on a Rabbit node that has a physical connection
 	// to the compute nodes in a workflow
 	// +kubebuilder:default:=false
@@ -122,66 +197,20 @@ type NnfStorageProfileLustreData struct {
 	// +kubebuilder:default:=false
 	CombinedMGTMDT bool `json:"combinedMgtMdt,omitempty"`
 
-	// ExternalMGS specifies the use of an existing MGS rather than creating one. This can
-	// be either the NID(s) of a pre-existing MGS that should be used, or it can be an NNF Persistent
-	// Instance that was created with the "StandaloneMGTPoolName" option. In the latter case, the format
-	// is "pool:poolName" where "poolName" is the argument from "StandaloneMGTPoolName". A single MGS will
-	// be picked from the pool.
-	ExternalMGS string `json:"externalMgs,omitempty"`
+	// MgtOptions contains configuration for the MGT target.
+	MgtOptions NnfStorageProfileLustreMgtOptions `json:"mgtOptions,omitempty"`
 
-	// CapacityMGT specifies the size of the MGT device.
-	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
-	// +kubebuilder:default:="5GiB"
-	CapacityMGT string `json:"capacityMgt,omitempty"`
+	// MdtOptions contains configuration for the MDT target.
+	MdtOptions NnfStorageProfileLustreMdtOptions `json:"mdtOptions,omitempty"`
 
-	// CapacityMDT specifies the size of the MDT device.  This is also
-	// used for a combined MGT+MDT device.
-	// +kubebuilder:validation:Pattern:="^\\d+(KiB|KB|MiB|MB|GiB|GB|TiB|TB)$"
-	// +kubebuilder:default:="5GiB"
-	CapacityMDT string `json:"capacityMdt,omitempty"`
+	// MgtMdtOptions contains configuration for a combined MGT/MDT target.
+	MgtMdtOptions NnfStorageProfileLustreMgtMdtOptions `json:"mgtMdtOptions,omitempty"`
 
-	// ExclusiveMDT indicates that the MDT should not be colocated with any other target on the chosen server.
-	// +kubebuilder:default:=false
-	ExclusiveMDT bool `json:"exclusiveMdt,omitempty"`
+	// OstOptions contains configuration for the OST target.
+	OstOptions NnfStorageProfileLustreOstOptions `json:"ostOptions,omitempty"`
 
-	// CapacityScalingFactor is a scaling factor for the OST capacity requested in the DirectiveBreakdown
-	// +kubebuilder:default:="1.0"
-	CapacityScalingFactor string `json:"capacityScalingFactor,omitempty"`
-
-	// StandaloneMGTPoolName creates a Lustre MGT without a MDT or OST. This option can only be used when creating
-	// a persistent Lustre instance. The MGS is placed into a named pool that can be used by the "ExternalMGS" option.
-	// Multiple pools can be created.
-	StandaloneMGTPoolName string `json:"standaloneMgtPoolName,omitempty"`
-
-	// MgtCmdLines contains commands to create an MGT target.
-	MgtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtCommandlines,omitempty"`
-
-	// MdtCmdLines contains commands to create an MDT target.
-	MdtCmdLines NnfStorageProfileLustreCmdLines `json:"mdtCommandlines,omitempty"`
-
-	// MgtMdtCmdLines contains commands to create a combined MGT/MDT target.
-	MgtMdtCmdLines NnfStorageProfileLustreCmdLines `json:"mgtMdtCommandlines,omitempty"`
-
-	// OstCmdLines contains commands to create an OST target.
-	OstCmdLines NnfStorageProfileLustreCmdLines `json:"ostCommandlines,omitempty"`
-
-	// MgtOptions contains options to use for libraries used for an MGT target.
-	MgtOptions NnfStorageProfileLustreMiscOptions `json:"mgtOptions,omitempty"`
-
-	// MdtOptions contains options to use for libraries used for an MDT target.
-	MdtOptions NnfStorageProfileLustreMiscOptions `json:"mdtOptions,omitempty"`
-
-	// MgtMdtOptions contains options to use for libraries used for a combined MGT/MDT target.
-	MgtMdtOptions NnfStorageProfileLustreMiscOptions `json:"mgtMdtOptions,omitempty"`
-
-	// OstOptions contains options to use for libraries used for an OST target.
-	OstOptions NnfStorageProfileLustreMiscOptions `json:"ostOptions,omitempty"`
-
-	// ClientCmdLines contains commands to mount a Lustre client
-	ClientCmdLines NnfStorageProfileLustreClientCmdLines `json:"clientCommandLines,omitempty"`
-
-	// PreMountMGTCmds contains commands to be run on the MGT after all Lustre targets are created and activated
-	PreMountMGTCmds []string `json:"preMountMGTCommands,omitempty"`
+	// ClientOptions contains configuration for the Lustre client
+	ClientOptions NnfStorageProfileLustreClientOptions `json:"clientOptions,omitempty"`
 }
 
 type NnfStorageProfileRabbitBlockDeviceCommands struct {
@@ -372,6 +401,9 @@ type NnfStorageProfileSharedData struct {
 	// the capacity of the allocation visible to a user. This allows extra capacity for block device overhead.
 	// Format can be as a percentage (e.g., 3.5%) or a fixed value (e.g., 100MiB).
 	AllocationPadding string `json:"allocationPadding,omitempty"`
+
+	// VariableOverride allows specifying values for variables that can be used in commandlines
+	VariableOverride map[string]string `json:"variableOverride,omitempty"`
 }
 
 // NnfStorageProfileXFSData defines the XFS-specific configuration
@@ -435,16 +467,16 @@ type NnfStorageProfileList struct {
 	Items           []NnfStorageProfile `json:"items"`
 }
 
-func (n *NnfStorageProfile) GetLustreMiscOptions(target string) NnfStorageProfileLustreMiscOptions {
+func (n *NnfStorageProfile) GetLustreTargetOptions(target string) NnfStorageProfileLustreTargetOptions {
 	switch target {
 	case "mgt":
-		return n.Data.LustreStorage.MgtOptions
+		return n.Data.LustreStorage.MgtOptions.NnfStorageProfileLustreTargetOptions
 	case "mdt":
-		return n.Data.LustreStorage.MdtOptions
+		return n.Data.LustreStorage.MdtOptions.NnfStorageProfileLustreTargetOptions
 	case "mgtmdt":
-		return n.Data.LustreStorage.MgtMdtOptions
+		return n.Data.LustreStorage.MgtMdtOptions.NnfStorageProfileLustreTargetOptions
 	case "ost":
-		return n.Data.LustreStorage.OstOptions
+		return n.Data.LustreStorage.OstOptions.NnfStorageProfileLustreTargetOptions
 	default:
 		panic("Invalid target type")
 	}

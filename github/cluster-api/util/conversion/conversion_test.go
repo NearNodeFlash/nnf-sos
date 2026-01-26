@@ -696,7 +696,9 @@ func TestMarshalData(t *testing.T) {
 			},
 			Data: nnfv1alpha10.NnfStorageProfileData{
 				LustreStorage: nnfv1alpha10.NnfStorageProfileLustreData{
-					ExternalMGS: "kfi@1:this@that",
+					MgtOptions: nnfv1alpha10.NnfStorageProfileLustreMgtOptions{
+						ExternalMGS: "kfi@1:this@that",
+					},
 				},
 			},
 		}

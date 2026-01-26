@@ -190,7 +190,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
+			storageProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 
@@ -217,7 +217,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
+			storageProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 
@@ -244,7 +244,7 @@ var _ = Describe("DirectiveBreakdown test", func() {
 		By("Setting standaloneMgtPoolName in the storage profile")
 		Eventually(func(g Gomega) error {
 			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storageProfile), storageProfile)).To(Succeed())
-			storageProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
+			storageProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
 			return k8sClient.Update(context.TODO(), storageProfile)
 		}).Should(Succeed())
 

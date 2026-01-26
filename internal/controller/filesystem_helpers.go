@@ -125,27 +125,27 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 
 		return blockDevice, fileSystem, nil
 	case "lustre":
-		var commandLines nnfv1alpha10.NnfStorageProfileLustreCmdLines
+		var targetOptions nnfv1alpha10.NnfStorageProfileLustreTargetOptions
 
 		switch nnfNodeStorage.Spec.LustreStorage.TargetType {
 		case "mgt":
-			commandLines = nnfStorageProfile.Data.LustreStorage.MgtCmdLines
+			targetOptions = nnfStorageProfile.Data.LustreStorage.MgtOptions.NnfStorageProfileLustreTargetOptions
 		case "mgtmdt":
-			commandLines = nnfStorageProfile.Data.LustreStorage.MgtMdtCmdLines
+			targetOptions = nnfStorageProfile.Data.LustreStorage.MgtMdtOptions.NnfStorageProfileLustreTargetOptions
 		case "mdt":
-			commandLines = nnfStorageProfile.Data.LustreStorage.MdtCmdLines
+			targetOptions = nnfStorageProfile.Data.LustreStorage.MdtOptions.NnfStorageProfileLustreTargetOptions
 		case "ost":
-			commandLines = nnfStorageProfile.Data.LustreStorage.OstCmdLines
+			targetOptions = nnfStorageProfile.Data.LustreStorage.OstOptions.NnfStorageProfileLustreTargetOptions
 		default:
 			return nil, nil, dwsv1alpha7.NewResourceError("invalid Lustre target type %s", nnfNodeStorage.Spec.LustreStorage.TargetType).WithFatal()
 		}
 
-		blockDevice, err := newZpoolBlockDevice(ctx, c, nnfNodeStorage, commandLines, index, log)
+		blockDevice, err := newZpoolBlockDevice(ctx, c, nnfNodeStorage, targetOptions, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create zpool block device").WithError(err).WithMajor()
 		}
 
-		fileSystem, err := newLustreFileSystem(ctx, c, nnfNodeStorage, commandLines, nnfStorageProfile.Data.LustreStorage.ClientCmdLines, blockDevice, index, log)
+		fileSystem, err := newLustreFileSystem(ctx, c, nnfNodeStorage, targetOptions, nnfStorageProfile.Data.LustreStorage.ClientOptions, blockDevice, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create lustre file system").WithError(err).WithMajor()
 		}
@@ -195,7 +195,7 @@ func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBloc
 	return false, nil
 }
 
-func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha10.NnfNodeStorage, cmdLines nnfv1alpha10.NnfStorageProfileLustreCmdLines, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha10.NnfNodeStorage, targetOptions nnfv1alpha10.NnfStorageProfileLustreTargetOptions, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
 	// This is for the fake NnfNodeStorage case. We don't need to create the zpool BlockDevice
@@ -236,12 +236,13 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 
 	zpool.Log = log
 	zpool.Devices = append([]string{}, nnfNodeBlockStorage.Status.Allocations[index].Accesses[os.Getenv("NNF_NODE_NAME")].DevicePaths...)
-	zpool.Name = zpoolName
-	zpool.DataSet = nnfNodeStorage.Spec.LustreStorage.TargetType
+	zpool.Name = useOverrideIfPresent(targetOptions.VariableOverride, "$ZPOOL_NAME", zpoolName)
+	zpool.DataSet = useOverrideIfPresent(targetOptions.VariableOverride, "$ZPOOL_DATA_SET", nnfNodeStorage.Spec.LustreStorage.TargetType)
 
-	zpool.CommandArgs.Create = cmdLines.ZpoolCreate
-	zpool.CommandArgs.Replace = cmdLines.ZpoolReplace
+	zpool.CommandArgs.Create = targetOptions.CmdLines.ZpoolCreate
+	zpool.CommandArgs.Replace = targetOptions.CmdLines.ZpoolReplace
 	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	zpool.CommandArgs.Vars = mergeVariables(zpool.CommandArgs.Vars, targetOptions.VariableOverride)
 
 	return &zpool, nil
 }
@@ -304,6 +305,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	for _, device := range devices {
 		pv := lvm.NewPhysicalVolume(ctx, device, log)
 		pv.Vars = unpackCommandVariables(nnfNodeStorage, index)
+		pv.Vars = mergeVariables(pv.Vars, profileCommands.VariableOverride)
 
 		lvmDesc.PhysicalVolumes = append(lvmDesc.PhysicalVolumes, pv)
 	}
@@ -323,12 +325,22 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		percentVG = 100 / nnfNodeStorage.Spec.Count
 	}
 
+	vgName = useOverrideIfPresent(profileCommands.VariableOverride, "$VG_NAME", vgName)
+	lvName = useOverrideIfPresent(profileCommands.VariableOverride, "$LV_NAME", lvName)
+	percentVGString := useOverrideIfPresent(profileCommands.VariableOverride, "$PERCENT_VG", "")
+	if len(percentVGString) > 0 {
+		fmt.Sscanf(percentVGString, "%d", &percentVG)
+	}
+
 	lvmDesc.Log = log
 	lvmDesc.VolumeGroup = lvm.NewVolumeGroup(ctx, vgName, lvmDesc.PhysicalVolumes, log)
 	lvmDesc.VolumeGroup.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	lvmDesc.VolumeGroup.Vars = mergeVariables(lvmDesc.VolumeGroup.Vars, profileCommands.VariableOverride)
 
 	lvmDesc.LogicalVolume = lvm.NewLogicalVolume(ctx, lvName, lvmDesc.VolumeGroup, nnfNodeStorage.Spec.Capacity, percentVG, log)
 	lvmDesc.LogicalVolume.Vars = unpackCommandVariables(nnfNodeStorage, index)
+	lvmDesc.LogicalVolume.Vars["$LV_INDEX"] = fmt.Sprintf("%d", index)
+	lvmDesc.LogicalVolume.Vars = mergeVariables(lvmDesc.LogicalVolume.Vars, profileCommands.VariableOverride)
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		lvmDesc.CommandArgs.PvArgs.Create = blockDeviceCommands.RabbitCommands.PvCreate
@@ -381,11 +393,10 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
-	fs.Type = "none"
-	fs.MountTarget = "file"
-	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
+	fs.Type = useOverrideIfPresent(profileCommands.VariableOverride, "$FSTYPE", "none")
+	fs.MountTarget = useOverrideIfPresent(profileCommands.VariableOverride, "$MOUNT_TARGET", "file")
+	fs.TempDir = useOverrideIfPresent(profileCommands.VariableOverride, "$TEMP_DIR", fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index))
 
-	fs.CommandArgs.Mount = "-o bind $DEVICE $MOUNT_PATH"
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
 		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
@@ -409,6 +420,8 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
 	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 
+	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
+
 	return &fs, nil
 }
 
@@ -419,9 +432,9 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
-	fs.Type = "gfs2"
-	fs.MountTarget = "directory"
-	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
+	fs.Type = useOverrideIfPresent(profileCommands.VariableOverride, "$FSTYPE", "gfs2")
+	fs.MountTarget = useOverrideIfPresent(profileCommands.VariableOverride, "$MOUNT_TARGET", "directory")
+	fs.TempDir = useOverrideIfPresent(profileCommands.VariableOverride, "$TEMP_DIR", fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index))
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
@@ -449,6 +462,7 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.Vars["$PROTOCOL"] = "lock_dlm"
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
 	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
+	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
 
 	return &fs, nil
 }
@@ -460,9 +474,9 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
-	fs.Type = "xfs"
-	fs.MountTarget = "directory"
-	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
+	fs.Type = useOverrideIfPresent(profileCommands.VariableOverride, "$FSTYPE", "xfs")
+	fs.MountTarget = useOverrideIfPresent(profileCommands.VariableOverride, "$MOUNT_TARGET", "directory")
+	fs.TempDir = useOverrideIfPresent(profileCommands.VariableOverride, "$TEMP_DIR", fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index))
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
@@ -487,11 +501,12 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
 	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
+	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
 
 	return &fs, nil
 }
 
-func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha10.NnfNodeStorage, targetCmdLines nnfv1alpha10.NnfStorageProfileLustreCmdLines, clientCmdLines nnfv1alpha10.NnfStorageProfileLustreClientCmdLines, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
+func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha10.NnfNodeStorage, targetOptions nnfv1alpha10.NnfStorageProfileLustreTargetOptions, clientOptions nnfv1alpha10.NnfStorageProfileLustreClientOptions, blockDevice blockdevice.BlockDevice, index int, log logr.Logger) (filesystem.FileSystem, error) {
 	fs := filesystem.LustreFileSystem{}
 
 	targetPath, err := lustreTargetPath(ctx, c, nnfNodeStorage, nnfNodeStorage.Spec.LustreStorage.TargetType, nnfNodeStorage.Spec.LustreStorage.StartIndex+index)
@@ -500,35 +515,36 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	}
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
-		fs.CommandArgs.Mount = clientCmdLines.MountRabbit
+		fs.CommandArgs.Mount = clientOptions.CmdLines.MountRabbit
 
-		fs.CommandArgs.PreMount = clientCmdLines.RabbitPreMount
-		fs.CommandArgs.PostMount = clientCmdLines.RabbitPostMount
-		fs.CommandArgs.PreUnmount = clientCmdLines.RabbitPreUnmount
-		fs.CommandArgs.PostUnmount = clientCmdLines.RabbitPostUnmount
+		fs.CommandArgs.PreMount = clientOptions.CmdLines.RabbitPreMount
+		fs.CommandArgs.PostMount = clientOptions.CmdLines.RabbitPostMount
+		fs.CommandArgs.PreUnmount = clientOptions.CmdLines.RabbitPreUnmount
+		fs.CommandArgs.PostUnmount = clientOptions.CmdLines.RabbitPostUnmount
 
-		fs.CommandArgs.PostActivate = targetCmdLines.PostActivate
-		fs.CommandArgs.PreDeactivate = targetCmdLines.PreDeactivate
-		fs.CommandArgs.PostSetup = clientCmdLines.RabbitPostSetup
-		fs.CommandArgs.PreTeardown = clientCmdLines.RabbitPreTeardown
+		fs.CommandArgs.PostActivate = targetOptions.CmdLines.PostActivate
+		fs.CommandArgs.PreDeactivate = targetOptions.CmdLines.PreDeactivate
+		fs.CommandArgs.PostSetup = clientOptions.CmdLines.RabbitPostSetup
+		fs.CommandArgs.PreTeardown = clientOptions.CmdLines.RabbitPreTeardown
 	} else {
-		fs.CommandArgs.Mount = clientCmdLines.MountCompute
-		fs.CommandArgs.PreMount = clientCmdLines.ComputePreMount
-		fs.CommandArgs.PostMount = clientCmdLines.ComputePostMount
-		fs.CommandArgs.PreUnmount = clientCmdLines.ComputePreUnmount
-		fs.CommandArgs.PostUnmount = clientCmdLines.ComputePostUnmount
+		fs.CommandArgs.Mount = clientOptions.CmdLines.MountCompute
+		fs.CommandArgs.PreMount = clientOptions.CmdLines.ComputePreMount
+		fs.CommandArgs.PostMount = clientOptions.CmdLines.ComputePostMount
+		fs.CommandArgs.PreUnmount = clientOptions.CmdLines.ComputePreUnmount
+		fs.CommandArgs.PostUnmount = clientOptions.CmdLines.ComputePostUnmount
 	}
 
 	fs.Log = log
 	fs.BlockDevice = blockDevice
-	fs.Name = nnfNodeStorage.Spec.LustreStorage.FileSystemName
-	fs.TargetType = nnfNodeStorage.Spec.LustreStorage.TargetType
-	fs.TargetPath = targetPath
-	fs.MgsAddress = nnfNodeStorage.Spec.LustreStorage.MgsAddress
+
+	fs.Name = useOverrideIfPresent(targetOptions.VariableOverride, "$FSNAME", nnfNodeStorage.Spec.LustreStorage.FileSystemName)
+	fs.TargetType = useOverrideIfPresent(targetOptions.VariableOverride, "$TARGET_TYPE", nnfNodeStorage.Spec.LustreStorage.TargetType)
+	fs.TargetPath = useOverrideIfPresent(targetOptions.VariableOverride, "$TARGET_PATH", targetPath)
+	fs.MgsAddress = useOverrideIfPresent(targetOptions.VariableOverride, "$MGS_NID", nnfNodeStorage.Spec.LustreStorage.MgsAddress)
+	fs.BackFs = useOverrideIfPresent(targetOptions.VariableOverride, "$BACKFS", nnfNodeStorage.Spec.LustreStorage.BackFs)
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
-	fs.BackFs = nnfNodeStorage.Spec.LustreStorage.BackFs
-	fs.CommandArgs.Mkfs = targetCmdLines.Mkfs
-	fs.CommandArgs.MountTarget = targetCmdLines.MountTarget
+	fs.CommandArgs.Mkfs = targetOptions.CmdLines.Mkfs
+	fs.CommandArgs.MountTarget = targetOptions.CmdLines.MountTarget
 
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
@@ -542,6 +558,12 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.CommandArgs.Vars["$NUM_MGTMDTS"] = fmt.Sprintf("%d", len(components.MGTMDTs))
 	fs.CommandArgs.Vars["$NUM_OSTS"] = fmt.Sprintf("%d", len(components.OSTs))
 	fs.CommandArgs.Vars["$NUM_NNFNODES"] = fmt.Sprintf("%d", len(components.NNFNodes))
+
+	if nnfNodeStorage.Spec.BlockReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfNodeBlockStorage{}).Name() {
+		fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, clientOptions.VariableOverride)
+	} else {
+		fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, targetOptions.VariableOverride)
+	}
 
 	return &fs, nil
 }
@@ -641,4 +663,22 @@ func unpackCommandVariables(nnfNodeStorage *nnfv1alpha10.NnfNodeStorage, index i
 	}
 
 	return variables
+}
+
+// mergeVariables merges overrideVars into baseVars, with overrideVars taking precedence in case of key conflicts.
+func mergeVariables(baseVars map[string]string, overrideVars map[string]string) map[string]string {
+	if baseVars == nil {
+		baseVars = make(map[string]string)
+	}
+	for key, value := range overrideVars {
+		baseVars[key] = value
+	}
+	return baseVars
+}
+
+func useOverrideIfPresent(overrideVars map[string]string, key string, defaultValue string) string {
+	if val, exists := overrideVars[key]; exists {
+		return val
+	}
+	return defaultValue
 }
