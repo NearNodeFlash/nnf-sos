@@ -101,6 +101,28 @@ func (r *NnfStorageProfile) validateContent() error {
 	if err := r.validateContentLustre(); err != nil {
 		return err
 	}
+	if err := r.validateContentShared(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *NnfStorageProfile) validateContentShared() error {
+	// Validate XFS storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.XFSStorage.VariableOverride); err != nil {
+		return fmt.Errorf("xfsStorage: %w", err)
+	}
+
+	// Validate GFS2 storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.GFS2Storage.VariableOverride); err != nil {
+		return fmt.Errorf("gfs2Storage: %w", err)
+	}
+
+	// Validate Raw storage variable overrides
+	if err := validateVariableOverrideKeys(r.Data.RawStorage.VariableOverride); err != nil {
+		return fmt.Errorf("rawStorage: %w", err)
+	}
+
 	return nil
 }
 
@@ -148,37 +170,37 @@ func (r *NnfStorageProfile) validateLustreTargetOptions(targetOptions NnfStorage
 // validateVariableOverrideKeys checks that variable override keys are valid.
 // Keys must start with '$' and be known variable names.
 func validateVariableOverrideKeys(overrides map[string]string) error {
-	validKeys := map[string]bool{
-		"$FS_NAME":        true,
-		"$MGS_NID":        true,
-		"$INDEX":          true,
-		"$BACKFS":         true,
-		"$POOL_NAME":      true,
-		"$ZPOOL_NAME":     true,
-		"$ZPOOL_DATA_SET": true,
-		"$ZVOL_NAME":      true,
-		"$DEVICE":         true,
-		"$DEVICE_LIST":    true,
-		"$DEVICE_NUM":     true,
-		"$MOUNT_PATH":     true,
-		"$TARGET_TYPE":    true,
-		"$TARGET_PATH":    true,
-		"$VG_NAME":        true,
-		"$LV_NAME":        true,
-		"$LV_SIZE":        true,
-		"$LV_INDEX":       true,
-		"$PERCENT_VG":     true,
-		"$FSTYPE":         true,
-		"$MOUNT_TARGET":   true,
-		"$TEMP_DIR":       true,
-		"$JOBID":          true,
-		"$USERID":         true,
-		"$GROUPID":        true,
-		"$CLUSTER_NAME":   true,
-		"$LOCK_SPACE":     true,
-		"$PROTOCOL":       true,
-		"$NUM_OSTS":       true,
-		"$NUM_NNFNODES":   true,
+	validKeys := map[string]struct{}{
+		"$FS_NAME":        {},
+		"$MGS_NID":        {},
+		"$INDEX":          {},
+		"$BACKFS":         {},
+		"$POOL_NAME":      {},
+		"$ZPOOL_NAME":     {},
+		"$ZPOOL_DATA_SET": {},
+		"$ZVOL_NAME":      {},
+		"$DEVICE":         {},
+		"$DEVICE_LIST":    {},
+		"$DEVICE_NUM":     {},
+		"$MOUNT_PATH":     {},
+		"$TARGET_TYPE":    {},
+		"$TARGET_PATH":    {},
+		"$VG_NAME":        {},
+		"$LV_NAME":        {},
+		"$LV_SIZE":        {},
+		"$LV_INDEX":       {},
+		"$PERCENT_VG":     {},
+		"$FSTYPE":         {},
+		"$MOUNT_TARGET":   {},
+		"$TEMP_DIR":       {},
+		"$JOBID":          {},
+		"$USERID":         {},
+		"$GROUPID":        {},
+		"$CLUSTER_NAME":   {},
+		"$LOCK_SPACE":     {},
+		"$PROTOCOL":       {},
+		"$NUM_OSTS":       {},
+		"$NUM_NNFNODES":   {},
 	}
 
 	for key := range overrides {
@@ -188,7 +210,7 @@ func validateVariableOverrideKeys(overrides map[string]string) error {
 		if key[0] != '$' {
 			return fmt.Errorf("variableOverride key '%s' must start with '$'", key)
 		}
-		if !validKeys[key] {
+		if _, ok := validKeys[key]; !ok {
 			return fmt.Errorf("variableOverride key '%s' is not a recognized variable name", key)
 		}
 	}
