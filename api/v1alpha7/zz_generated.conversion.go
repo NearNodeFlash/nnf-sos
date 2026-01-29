@@ -803,26 +803,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreData)(nil), (*v1alpha10.NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData(a.(*NnfStorageProfileLustreData), b.(*v1alpha10.NnfStorageProfileLustreData), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha10.NnfStorageProfileLustreData)(nil), (*NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(a.(*v1alpha10.NnfStorageProfileLustreData), b.(*NnfStorageProfileLustreData), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha10.NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha10.NnfStorageProfileLustreMiscOptions), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha10.NnfStorageProfileLustreMiscOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(a.(*v1alpha10.NnfStorageProfileLustreMiscOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*NnfStorageSpec)(nil), (*v1alpha10.NnfStorageSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha7_NnfStorageSpec_To_v1alpha10_NnfStorageSpec(a.(*NnfStorageSpec), b.(*v1alpha10.NnfStorageSpec), scope)
 	}); err != nil {
@@ -913,6 +893,31 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileLustreData)(nil), (*NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(a.(*v1alpha10.NnfStorageProfileLustreData), b.(*NnfStorageProfileLustreData), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileLustreMdtOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha10_NnfStorageProfileLustreMdtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(a.(*v1alpha10.NnfStorageProfileLustreMdtOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileLustreMgtMdtOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha10_NnfStorageProfileLustreMgtMdtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(a.(*v1alpha10.NnfStorageProfileLustreMgtMdtOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileLustreMgtOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha10_NnfStorageProfileLustreMgtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(a.(*v1alpha10.NnfStorageProfileLustreMgtOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileLustreOstOptions)(nil), (*NnfStorageProfileLustreMiscOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha10_NnfStorageProfileLustreOstOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(a.(*v1alpha10.NnfStorageProfileLustreOstOptions), b.(*NnfStorageProfileLustreMiscOptions), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*v1alpha10.NnfStorageProfileRawData)(nil), (*NnfStorageProfileRawData)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha10_NnfStorageProfileRawData_To_v1alpha7_NnfStorageProfileRawData(a.(*v1alpha10.NnfStorageProfileRawData), b.(*NnfStorageProfileRawData), scope)
 	}); err != nil {
@@ -940,6 +945,31 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*NnfStorageProfileGFS2Data)(nil), (*v1alpha10.NnfStorageProfileGFS2Data)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha7_NnfStorageProfileGFS2Data_To_v1alpha10_NnfStorageProfileGFS2Data(a.(*NnfStorageProfileGFS2Data), b.(*v1alpha10.NnfStorageProfileGFS2Data), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreData)(nil), (*v1alpha10.NnfStorageProfileLustreData)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData(a.(*NnfStorageProfileLustreData), b.(*v1alpha10.NnfStorageProfileLustreData), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha10.NnfStorageProfileLustreMdtOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMdtOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha10.NnfStorageProfileLustreMdtOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha10.NnfStorageProfileLustreMgtMdtOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMgtMdtOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha10.NnfStorageProfileLustreMgtMdtOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha10.NnfStorageProfileLustreMgtOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMgtOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha10.NnfStorageProfileLustreMgtOptions), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*NnfStorageProfileLustreMiscOptions)(nil), (*v1alpha10.NnfStorageProfileLustreOstOptions)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreOstOptions(a.(*NnfStorageProfileLustreMiscOptions), b.(*v1alpha10.NnfStorageProfileLustreOstOptions), scope)
 	}); err != nil {
 		return err
 	}
@@ -3402,116 +3432,49 @@ func autoConvert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorag
 
 func autoConvert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *v1alpha10.NnfStorageProfileLustreData, s conversion.Scope) error {
 	out.CombinedMGTMDT = in.CombinedMGTMDT
-	out.ExternalMGS = in.ExternalMGS
-	out.CapacityMGT = in.CapacityMGT
-	out.CapacityMDT = in.CapacityMDT
-	out.ExclusiveMDT = in.ExclusiveMDT
-	out.CapacityScalingFactor = in.CapacityScalingFactor
-	out.StandaloneMGTPoolName = in.StandaloneMGTPoolName
-	if err := Convert_v1alpha7_NnfStorageProfileLustreCmdLines_To_v1alpha10_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
+	// WARNING: in.ExternalMGS requires manual conversion: does not exist in peer-type
+	// WARNING: in.CapacityMGT requires manual conversion: does not exist in peer-type
+	// WARNING: in.CapacityMDT requires manual conversion: does not exist in peer-type
+	// WARNING: in.ExclusiveMDT requires manual conversion: does not exist in peer-type
+	// WARNING: in.CapacityScalingFactor requires manual conversion: does not exist in peer-type
+	// WARNING: in.StandaloneMGTPoolName requires manual conversion: does not exist in peer-type
+	// WARNING: in.MgtCmdLines requires manual conversion: does not exist in peer-type
+	// WARNING: in.MdtCmdLines requires manual conversion: does not exist in peer-type
+	// WARNING: in.MgtMdtCmdLines requires manual conversion: does not exist in peer-type
+	// WARNING: in.OstCmdLines requires manual conversion: does not exist in peer-type
+	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMgtOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreCmdLines_To_v1alpha10_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMdtOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreCmdLines_To_v1alpha10_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMgtMdtOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreCmdLines_To_v1alpha10_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
+	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreOstOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha7_NnfStorageProfileLustreClientCmdLines_To_v1alpha10_NnfStorageProfileLustreClientCmdLines(&in.ClientCmdLines, &out.ClientCmdLines, s); err != nil {
-		return err
-	}
-	out.PreMountMGTCmds = *(*[]string)(unsafe.Pointer(&in.PreMountMGTCmds))
+	// WARNING: in.ClientCmdLines requires manual conversion: does not exist in peer-type
+	// WARNING: in.PreMountMGTCmds requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData is an autogenerated conversion function.
-func Convert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData(in *NnfStorageProfileLustreData, out *v1alpha10.NnfStorageProfileLustreData, s conversion.Scope) error {
-	return autoConvert_v1alpha7_NnfStorageProfileLustreData_To_v1alpha10_NnfStorageProfileLustreData(in, out, s)
 }
 
 func autoConvert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(in *v1alpha10.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s conversion.Scope) error {
 	out.CombinedMGTMDT = in.CombinedMGTMDT
-	out.ExternalMGS = in.ExternalMGS
-	out.CapacityMGT = in.CapacityMGT
-	out.CapacityMDT = in.CapacityMDT
-	out.ExclusiveMDT = in.ExclusiveMDT
-	out.CapacityScalingFactor = in.CapacityScalingFactor
-	out.StandaloneMGTPoolName = in.StandaloneMGTPoolName
-	if err := Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(&in.MgtCmdLines, &out.MgtCmdLines, s); err != nil {
+	if err := Convert_v1alpha10_NnfStorageProfileLustreMgtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(&in.MdtCmdLines, &out.MdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha10_NnfStorageProfileLustreMdtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(&in.MgtMdtCmdLines, &out.MgtMdtCmdLines, s); err != nil {
+	if err := Convert_v1alpha10_NnfStorageProfileLustreMgtMdtOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(&in.OstCmdLines, &out.OstCmdLines, s); err != nil {
+	if err := Convert_v1alpha10_NnfStorageProfileLustreOstOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
 		return err
 	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MgtOptions, &out.MgtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MdtOptions, &out.MdtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.MgtMdtOptions, &out.MgtMdtOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(&in.OstOptions, &out.OstOptions, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha10_NnfStorageProfileLustreClientCmdLines_To_v1alpha7_NnfStorageProfileLustreClientCmdLines(&in.ClientCmdLines, &out.ClientCmdLines, s); err != nil {
-		return err
-	}
-	out.PreMountMGTCmds = *(*[]string)(unsafe.Pointer(&in.PreMountMGTCmds))
+	// WARNING: in.ClientOptions requires manual conversion: does not exist in peer-type
 	return nil
-}
-
-// Convert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData is an autogenerated conversion function.
-func Convert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(in *v1alpha10.NnfStorageProfileLustreData, out *NnfStorageProfileLustreData, s conversion.Scope) error {
-	return autoConvert_v1alpha10_NnfStorageProfileLustreData_To_v1alpha7_NnfStorageProfileLustreData(in, out, s)
-}
-
-func autoConvert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha10.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	out.ColocateComputes = in.ColocateComputes
-	out.Count = in.Count
-	out.Scale = in.Scale
-	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
-	return nil
-}
-
-// Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
-func Convert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(in *NnfStorageProfileLustreMiscOptions, out *v1alpha10.NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	return autoConvert_v1alpha7_NnfStorageProfileLustreMiscOptions_To_v1alpha10_NnfStorageProfileLustreMiscOptions(in, out, s)
-}
-
-func autoConvert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(in *v1alpha10.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	out.ColocateComputes = in.ColocateComputes
-	out.Count = in.Count
-	out.Scale = in.Scale
-	out.StorageLabels = *(*[]string)(unsafe.Pointer(&in.StorageLabels))
-	return nil
-}
-
-// Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions is an autogenerated conversion function.
-func Convert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(in *v1alpha10.NnfStorageProfileLustreMiscOptions, out *NnfStorageProfileLustreMiscOptions, s conversion.Scope) error {
-	return autoConvert_v1alpha10_NnfStorageProfileLustreMiscOptions_To_v1alpha7_NnfStorageProfileLustreMiscOptions(in, out, s)
 }
 
 func autoConvert_v1alpha7_NnfStorageProfileRawData_To_v1alpha10_NnfStorageProfileRawData(in *NnfStorageProfileRawData, out *v1alpha10.NnfStorageProfileRawData, s conversion.Scope) error {

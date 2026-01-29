@@ -66,7 +66,10 @@ var _ FileSystem = &SimpleFileSystem{}
 
 func (f *SimpleFileSystem) parseArgs(args string) string {
 	m := map[string]string{
-		"$DEVICE": f.BlockDevice.GetDevice(),
+		"$DEVICE":       f.BlockDevice.GetDevice(),
+		"$FSTYPE":       f.Type,
+		"$MOUNT_TARGET": f.MountTarget,
+		"$TEMP_DIR":     f.TempDir,
 	}
 
 	for k, v := range f.CommandArgs.Vars {

@@ -108,14 +108,14 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 	})
 
 	It("should accept externalMgs", func() {
-		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
+		nnfProfile.Data.LustreStorage.MgtOptions.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
 	})
 
 	It("should accept standaloneMgtPoolName", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
+		nnfProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
@@ -129,7 +129,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 	})
 
 	It("should accept exclusiveMdt", func() {
-		nnfProfile.Data.LustreStorage.ExclusiveMDT = true
+		nnfProfile.Data.LustreStorage.MdtOptions.Exclusive = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
@@ -137,7 +137,7 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 	It("should accept combinedMgtMdt with exclusiveMdt", func() {
 		nnfProfile.Data.LustreStorage.CombinedMGTMDT = true
-		nnfProfile.Data.LustreStorage.ExclusiveMDT = true
+		nnfProfile.Data.LustreStorage.MdtOptions.Exclusive = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 		Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfProfile), newProfile)).To(Succeed())
 		Expect(newProfile.Data.Default).ToNot(BeTrue())
@@ -145,20 +145,20 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 	It("should not accept combinedMgtMdt with externalMgs", func() {
 		nnfProfile.Data.LustreStorage.CombinedMGTMDT = true
-		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
+		nnfProfile.Data.LustreStorage.MgtOptions.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
 	It("should not accept standaloneMgtPoolName with externalMgs", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
-		nnfProfile.Data.LustreStorage.ExternalMGS = "10.0.0.1@tcp"
+		nnfProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
+		nnfProfile.Data.LustreStorage.MgtOptions.ExternalMGS = "10.0.0.1@tcp"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
 	It("should not accept standaloneMgtPoolName with combinedMgtMdt", func() {
-		nnfProfile.Data.LustreStorage.StandaloneMGTPoolName = "FakePool"
+		nnfProfile.Data.LustreStorage.MgtOptions.StandaloneMGTPoolName = "FakePool"
 		nnfProfile.Data.LustreStorage.CombinedMGTMDT = true
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
@@ -221,34 +221,34 @@ var _ = Describe("NnfStorageProfile Webhook", func() {
 
 		// The defaults are found in the kubebuilder validation
 		// statements in nnfstorageprofile_types.go.
-		Expect(newProfile.Data.LustreStorage.CapacityMGT).To(Equal("5GiB"))
-		Expect(newProfile.Data.LustreStorage.CapacityMDT).To(Equal("5GiB"))
+		Expect(newProfile.Data.LustreStorage.MgtOptions.Capacity).To(Equal("5GiB"))
+		Expect(newProfile.Data.LustreStorage.MdtOptions.Capacity).To(Equal("5GiB"))
 	})
 
 	It("should allow 100GB for MGT size", func() {
-		nnfProfile.Data.LustreStorage.CapacityMGT = "100GB"
+		nnfProfile.Data.LustreStorage.MgtOptions.Capacity = "100GB"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("should allow 100TiB for MDT size", func() {
-		nnfProfile.Data.LustreStorage.CapacityMDT = "100TiB"
+		nnfProfile.Data.LustreStorage.MdtOptions.Capacity = "100TiB"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("should allow 2TB for MDT and MGT size", func() {
-		nnfProfile.Data.LustreStorage.CapacityMGT = "2TB"
-		nnfProfile.Data.LustreStorage.CapacityMDT = "2TB"
+		nnfProfile.Data.LustreStorage.MgtOptions.Capacity = "2TB"
+		nnfProfile.Data.LustreStorage.MdtOptions.Capacity = "2TB"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).To(Succeed())
 	})
 
 	It("should not allow MDT size without a unit", func() {
-		nnfProfile.Data.LustreStorage.CapacityMDT = "1073741824"
+		nnfProfile.Data.LustreStorage.MdtOptions.Capacity = "1073741824"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
 
 	It("should not allow MGT size without a unit", func() {
-		nnfProfile.Data.LustreStorage.CapacityMGT = "1073741824"
+		nnfProfile.Data.LustreStorage.MgtOptions.Capacity = "1073741824"
 		Expect(k8sClient.Create(context.TODO(), nnfProfile)).ToNot(Succeed())
 		nnfProfile = nil
 	})
