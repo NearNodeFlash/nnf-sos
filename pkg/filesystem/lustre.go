@@ -37,7 +37,9 @@ import (
 type LustreFileSystemCommandArgs struct {
 	Mkfs          string
 	MountTarget   string
+	UnmountTarget string
 	Mount         string
+	Unmount       string
 	PreMount      []string
 	PostMount     []string
 	PreUnmount    []string
@@ -89,6 +91,11 @@ func (l *LustreFileSystem) parseArgs(args string) string {
 }
 
 func (l *LustreFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
+	if len(l.CommandArgs.Mkfs) == 0 {
+		l.Log.Info("Skipping Create - no mkfs command specified")
+		return false, nil
+	}
+
 	if complete {
 		return false, nil
 	}
@@ -115,6 +122,11 @@ func (l *LustreFileSystem) Destroy(ctx context.Context) (bool, error) {
 }
 
 func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, error) {
+	if len(l.CommandArgs.MountTarget) == 0 {
+		l.Log.Info("Skipping Activate - no mount target command specified")
+		return false, nil
+	}
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -165,6 +177,11 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 }
 
 func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
+	if len(l.CommandArgs.UnmountTarget) == 0 {
+		l.Log.Info("Skipping Deactivate - no unmount target command specified")
+		return false, nil
+	}
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -182,7 +199,13 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path), l.Log); err != nil {
+		// Build the unmount command from the args provided
+		if l.CommandArgs.Vars == nil {
+			l.CommandArgs.Vars = make(map[string]string)
+		}
+		l.CommandArgs.Vars["$MOUNT_PATH"] = path
+
+		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.UnmountTarget)), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 
@@ -206,6 +229,11 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 }
 
 func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
+	if len(l.CommandArgs.Mount) == 0 {
+		l.Log.Info("Skipping Mount - no mount command specified")
+		return false, nil
+	}
+
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -249,6 +277,11 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 }
 
 func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+	if len(l.CommandArgs.Unmount) == 0 {
+		l.Log.Info("Skipping Unmount - no unmount command specified")
+		return false, nil
+	}
+
 	path = filepath.Clean(path)
 	mounter := mount.New("")
 	mounts, err := mounter.List()
@@ -267,7 +300,13 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path), l.Log); err != nil {
+		// Build the unmount command from the args provided
+		if l.CommandArgs.Vars == nil {
+			l.CommandArgs.Vars = make(map[string]string)
+		}
+		l.CommandArgs.Vars["$MOUNT_PATH"] = path
+
+		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.Unmount)), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 
@@ -282,6 +321,10 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 }
 
 func (l *LustreFileSystem) LustreRunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
+	if len(commands) == 0 {
+		return false, nil
+	}
+
 	if complete {
 		return false, nil
 	}
@@ -335,7 +378,7 @@ func (l *LustreFileSystem) PreDeactivate(ctx context.Context, complete bool) (bo
 }
 
 func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, error) {
-	if len(l.CommandArgs.PostMount) == 0 {
+	if len(l.CommandArgs.PostSetup) == 0 {
 		return false, nil
 	}
 
@@ -357,7 +400,7 @@ func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, 
 	}
 	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TempDir)
 
-	for _, rawCommand := range l.CommandArgs.PostMount {
+	for _, rawCommand := range l.CommandArgs.PostSetup {
 		formattedCommand := l.parseArgs(rawCommand)
 		l.Log.Info("PostSetup", "command", formattedCommand)
 
@@ -380,7 +423,7 @@ func (l *LustreFileSystem) PostSetup(ctx context.Context, complete bool) (bool, 
 }
 
 func (l *LustreFileSystem) PreTeardown(ctx context.Context, complete bool) (bool, error) {
-	if len(l.CommandArgs.PreUnmount) == 0 {
+	if len(l.CommandArgs.PreTeardown) == 0 {
 		return false, nil
 	}
 
@@ -401,7 +444,7 @@ func (l *LustreFileSystem) PreTeardown(ctx context.Context, complete bool) (bool
 	}
 	l.CommandArgs.Vars["$MOUNT_PATH"] = filepath.Clean(l.TempDir)
 
-	for _, rawCommand := range l.CommandArgs.PreUnmount {
+	for _, rawCommand := range l.CommandArgs.PreTeardown {
 		formattedCommand := l.parseArgs(rawCommand)
 		l.Log.Info("PreTeardown", "command", formattedCommand)
 

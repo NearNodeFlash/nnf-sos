@@ -665,6 +665,27 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
 		dst.Data.RawStorage.VariableOverride = restored.Data.RawStorage.VariableOverride
+
+		// Restore unmount fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute
+
+		// Restore ZpoolDestroy fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy
+
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount
 	}
 
 	return nil

@@ -58,6 +58,10 @@ func (pv *PhysicalVolume) parseArgs(args string, device string) (string, error) 
 }
 
 func (pv *PhysicalVolume) Create(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := pv.parseArgs(rawArgs, pv.Device)
 	if err != nil {
 		return false, err
@@ -85,6 +89,10 @@ func (pv *PhysicalVolume) Create(ctx context.Context, rawArgs string) (bool, err
 }
 
 func (pv *PhysicalVolume) Remove(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := pv.parseArgs(rawArgs, pv.Device)
 	if err != nil {
 		return false, err

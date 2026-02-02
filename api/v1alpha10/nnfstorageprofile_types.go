@@ -41,6 +41,12 @@ type NnfStorageProfileLustreClientCmdLines struct {
 	// MountCompute specifies mount options for making the Lustre client mount on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
 
+	// UnmountRabbit specifies unmount options for the Lustre client unmount on the Rabbit.
+	UnmountRabbit string `json:"unmountRabbit,omitempty"`
+
+	// UnmountCompute specifies unmount options for the Lustre client unmount on the Compute.
+	UnmountCompute string `json:"unmountCompute,omitempty"`
+
 	// RabbitPreMount specifies a list of commands to run on the Rabbit before a Lustre client is mounted
 	RabbitPreMount []string `json:"rabbitPreMount,omitempty"`
 
@@ -82,6 +88,9 @@ type NnfStorageProfileLustreCmdLines struct {
 	// "mirror", or "draid".  See zpoolconcepts(7).
 	ZpoolCreate string `json:"zpoolCreate,omitempty"`
 
+	// ZpoolDestroy specifies the zpool destroy commandline, minus the "zpool destroy".
+	ZpoolDestroy string `json:"zpoolDestroy,omitempty"`
+
 	ZpoolReplace string `json:"zpoolReplace,omitempty"`
 
 	// Mkfs specifies the mkfs.lustre commandline, minus the "mkfs.lustre".
@@ -93,6 +102,9 @@ type NnfStorageProfileLustreCmdLines struct {
 	// For persistent mount options for lustre targets, do not use this array; use the --mountfsoptions
 	// argument to mkfs.lustre instead.
 	MountTarget string `json:"mountTarget,omitempty"`
+
+	// UnmountTarget specifies the unmount command line for the lustre target.
+	UnmountTarget string `json:"unmountTarget,omitempty"`
 
 	// PostActivate specifies a list of commands to run on the Rabbit after the
 	// Lustre target has been activated
@@ -292,6 +304,9 @@ type NnfStorageProfileRabbitFileSystemCommands struct {
 	// Mount specifies mount options for mounting on the Rabbit.
 	Mount string `json:"mount,omitempty"`
 
+	// Unmount specifies unmount options for unmounting on the Rabbit.
+	Unmount string `json:"unmount,omitempty"`
+
 	// UserCommands specifies commands that can be run on the Rabbit when the file system is mounted/unmounted
 	// as a client during DataIn, PreRun, PostRun, and DataOut
 	UserCommands NnfStorageProfileFileSystemUserCommands `json:"userCommands,omitempty"`
@@ -300,6 +315,9 @@ type NnfStorageProfileRabbitFileSystemCommands struct {
 type NnfStorageProfileComputeFileSystemCommands struct {
 	// Mount specifies mount options for mounting on the Rabbit.
 	Mount string `json:"mount,omitempty"`
+
+	// Unmount specifies unmount options for unmounting on the Compute node.
+	Unmount string `json:"unmount,omitempty"`
 
 	// UserCommands specifies commands that can be run on the Compute node when the file system is
 	// mounted/unmounted in PreRun and PostRun

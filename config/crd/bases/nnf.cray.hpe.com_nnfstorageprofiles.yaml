@@ -242,6 +242,10 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
+                              on the Compute node.
+                            type: string
                           userCommands:
                             description: |-
                               UserCommands specifies commands that can be run on the Compute node when the file system is
@@ -283,6 +287,10 @@ spec:
                             type: string
                           mount:
                             description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
                               on the Rabbit.
                             type: string
                           userCommands:
@@ -452,6 +460,14 @@ spec:
                             items:
                               type: string
                             type: array
+                          unmountCompute:
+                            description: UnmountCompute specifies unmount options
+                              for the Lustre client unmount on the Compute.
+                            type: string
+                          unmountRabbit:
+                            description: UnmountRabbit specifies unmount options for
+                              the Lustre client unmount on the Rabbit.
+                            type: string
                         type: object
                       variableOverride:
                         additionalProperties:
@@ -508,11 +524,19 @@ spec:
                             items:
                               type: string
                             type: array
+                          unmountTarget:
+                            description: UnmountTarget specifies the unmount command
+                              line for the lustre target.
+                            type: string
                           zpoolCreate:
                             description: |-
                               ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
                               This is where you may specify zpool create options, and the virtual device (vdev) such as
                               "mirror", or "draid".  See zpoolconcepts(7).
+                            type: string
+                          zpoolDestroy:
+                            description: ZpoolDestroy specifies the zpool destroy
+                              commandline, minus the "zpool destroy".
                             type: string
                           zpoolReplace:
                             type: string
@@ -593,11 +617,19 @@ spec:
                             items:
                               type: string
                             type: array
+                          unmountTarget:
+                            description: UnmountTarget specifies the unmount command
+                              line for the lustre target.
+                            type: string
                           zpoolCreate:
                             description: |-
                               ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
                               This is where you may specify zpool create options, and the virtual device (vdev) such as
                               "mirror", or "draid".  See zpoolconcepts(7).
+                            type: string
+                          zpoolDestroy:
+                            description: ZpoolDestroy specifies the zpool destroy
+                              commandline, minus the "zpool destroy".
                             type: string
                           zpoolReplace:
                             type: string
@@ -671,11 +703,19 @@ spec:
                             items:
                               type: string
                             type: array
+                          unmountTarget:
+                            description: UnmountTarget specifies the unmount command
+                              line for the lustre target.
+                            type: string
                           zpoolCreate:
                             description: |-
                               ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
                               This is where you may specify zpool create options, and the virtual device (vdev) such as
                               "mirror", or "draid".  See zpoolconcepts(7).
+                            type: string
+                          zpoolDestroy:
+                            description: ZpoolDestroy specifies the zpool destroy
+                              commandline, minus the "zpool destroy".
                             type: string
                           zpoolReplace:
                             type: string
@@ -769,11 +809,19 @@ spec:
                             items:
                               type: string
                             type: array
+                          unmountTarget:
+                            description: UnmountTarget specifies the unmount command
+                              line for the lustre target.
+                            type: string
                           zpoolCreate:
                             description: |-
                               ZpoolCreate specifies the zpool create commandline, minus the "zpool create".
                               This is where you may specify zpool create options, and the virtual device (vdev) such as
                               "mirror", or "draid".  See zpoolconcepts(7).
+                            type: string
+                          zpoolDestroy:
+                            description: ZpoolDestroy specifies the zpool destroy
+                              commandline, minus the "zpool destroy".
                             type: string
                           zpoolReplace:
                             type: string
@@ -1010,6 +1058,10 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
+                              on the Compute node.
+                            type: string
                           userCommands:
                             description: |-
                               UserCommands specifies commands that can be run on the Compute node when the file system is
@@ -1051,6 +1103,10 @@ spec:
                             type: string
                           mount:
                             description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
                               on the Rabbit.
                             type: string
                           userCommands:
@@ -1335,6 +1391,10 @@ spec:
                             description: Mount specifies mount options for mounting
                               on the Rabbit.
                             type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
+                              on the Compute node.
+                            type: string
                           userCommands:
                             description: |-
                               UserCommands specifies commands that can be run on the Compute node when the file system is
@@ -1376,6 +1436,10 @@ spec:
                             type: string
                           mount:
                             description: Mount specifies mount options for mounting
+                              on the Rabbit.
+                            type: string
+                          unmount:
+                            description: Unmount specifies unmount options for unmounting
                               on the Rabbit.
                             type: string
                           userCommands:

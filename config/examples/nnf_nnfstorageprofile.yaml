@@ -37,10 +37,12 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands:
       postSetup:
@@ -51,8 +53,10 @@ data:
       capacity: 5GiB
       commandlines:
         zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
         mkfs: --mgs --backfstype=$BACKFS --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
         mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
       colocateComputes: false
       count: 1
       preMountCommands:
@@ -80,9 +84,11 @@ data:
       exclusive: false
       commandlines:
         zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
         mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
           --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
         mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
         postActivate:
         - mountpoint $MOUNT_PATH
       colocateComputes: false
@@ -91,9 +97,11 @@ data:
       capacity: 5GiB
       commandlines:
         zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
         mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID"
           $ZVOL_NAME
         mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
         postActivate:
         - mountpoint $MOUNT_PATH
       colocateComputes: false
@@ -102,9 +110,11 @@ data:
       capacityScalingFactor: "1.0"
       commandlines:
         zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
         mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
           --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
         mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
         postActivate:
         - mountpoint $MOUNT_PATH
       colocateComputes: true
@@ -112,7 +122,9 @@ data:
     clientOptions:
       commandlines:
         mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
+        unmountCompute: $MOUNT_PATH
         mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+        unmountRabbit: $MOUNT_PATH
         rabbitPostSetup:
         - lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G
           -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH
@@ -143,9 +155,11 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: -o bind $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mount: -o bind $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands: {}
   xfsStorage:
@@ -174,10 +188,12 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mkfs: $DEVICE
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands:
       postSetup:

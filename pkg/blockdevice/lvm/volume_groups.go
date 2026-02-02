@@ -135,6 +135,10 @@ func (vg *VolumeGroup) parseArgs(args string, vars map[string]string) (string, e
 }
 
 func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -159,6 +163,10 @@ func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -172,6 +180,10 @@ func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	exists, err := vg.WaitForAppearance(ctx)
 	if err != nil {
 		return false, err
@@ -185,6 +197,10 @@ func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, err
 }
 
 func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	exists, err := vg.Exists(ctx)
 	if err != nil {
 		return false, err
@@ -205,6 +221,10 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -229,6 +249,10 @@ func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	existingPVs, err := pvsListVolumes(ctx, vg.Log)
 	if err != nil {
 		return false, err
@@ -267,6 +291,10 @@ func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Reduce(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
