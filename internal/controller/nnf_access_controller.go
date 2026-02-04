@@ -940,6 +940,15 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 			// Check that all of the StorageGroups we've requested have been created
 			for _, nodeName := range allocation.Access {
 				blockAccess, exists := nnfNodeBlockStorage.Status.Allocations[allocationIndex].Accesses[nodeName]
+
+				// During mount operations, skip checking computes that are Disabled in SystemStatus.
+				// The NnfNodeBlockStorage controller won't create StorageGroups for disabled computes,
+				// so we shouldn't wait for them.
+				disabled, _ := r.isComputeDisabledInSystemStatus(ctx, nodeName)
+				if disabled {
+					continue
+				}
+
 				if access.Spec.IgnoreOfflineComputes {
 					computeOffline := false
 					for _, compute := range storage.Status.Access.Computes {
@@ -981,6 +990,12 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 				}
 
 				if found {
+					continue
+				}
+
+				// During mount operations, skip checking computes that are Disabled in SystemStatus
+				disabled, _ := r.isComputeDisabledInSystemStatus(ctx, statusNodeName)
+				if disabled {
 					continue
 				}
 
@@ -1500,6 +1515,17 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 
 	log.V(1).Info("checkOfflineCompute: compute not found or not offline/fenced in Storage, checking SystemStatus", "compute", computeName)
 
+	disabled, _ := r.isComputeDisabledInSystemStatus(ctx, computeName)
+	if disabled {
+		return true, "disabled", nil
+	}
+
+	return false, "", nil
+}
+
+// isComputeDisabledInSystemStatus checks if a compute node is marked as Disabled in the SystemStatus resource.
+// Returns true if disabled, false otherwise. Also returns error if one occurred (but not for missing SystemStatus).
+func (r *NnfAccessReconciler) isComputeDisabledInSystemStatus(ctx context.Context, computeName string) (bool, error) {
 	systemStatus := &dwsv1alpha7.SystemStatus{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "default",
@@ -1509,17 +1535,17 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(systemStatus), systemStatus); err != nil {
 		// Don't rely on the SystemStatus existing. If it's not there, just return that the compute node
-		// isn't offline
-		return false, "", nil
+		// isn't disabled
+		return false, nil
 	}
 
 	if status, found := systemStatus.Data.Nodes[computeName]; found {
 		if status == dwsv1alpha7.SystemNodeStatusDisabled {
-			return true, "disabled", nil
+			return true, nil
 		}
 	}
 
-	return false, "", nil
+	return false, nil
 }
 
 // getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
