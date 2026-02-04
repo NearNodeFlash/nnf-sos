@@ -3395,6 +3395,8 @@ func autoConvert_v1alpha10_NnfStorageProfileLustreClientCmdLines_To_v1alpha7_Nnf
 	// WARNING: in.RabbitPostSetup requires manual conversion: does not exist in peer-type
 	// WARNING: in.RabbitPreTeardown requires manual conversion: does not exist in peer-type
 	out.MountCompute = in.MountCompute
+	// WARNING: in.UnmountRabbit requires manual conversion: does not exist in peer-type
+	// WARNING: in.UnmountCompute requires manual conversion: does not exist in peer-type
 	// WARNING: in.RabbitPreMount requires manual conversion: does not exist in peer-type
 	out.RabbitPostMount = *(*[]string)(unsafe.Pointer(&in.RabbitPostMount))
 	out.RabbitPreUnmount = *(*[]string)(unsafe.Pointer(&in.RabbitPreUnmount))
@@ -3422,9 +3424,11 @@ func Convert_v1alpha7_NnfStorageProfileLustreCmdLines_To_v1alpha10_NnfStoragePro
 
 func autoConvert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha7_NnfStorageProfileLustreCmdLines(in *v1alpha10.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s conversion.Scope) error {
 	out.ZpoolCreate = in.ZpoolCreate
+	// WARNING: in.ZpoolDestroy requires manual conversion: does not exist in peer-type
 	// WARNING: in.ZpoolReplace requires manual conversion: does not exist in peer-type
 	out.Mkfs = in.Mkfs
 	out.MountTarget = in.MountTarget
+	// WARNING: in.UnmountTarget requires manual conversion: does not exist in peer-type
 	out.PostActivate = *(*[]string)(unsafe.Pointer(&in.PostActivate))
 	out.PreDeactivate = *(*[]string)(unsafe.Pointer(&in.PreDeactivate))
 	return nil

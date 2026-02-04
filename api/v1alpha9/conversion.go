@@ -20,6 +20,8 @@
 package v1alpha9
 
 import (
+	"unsafe"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -515,6 +517,27 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.GFS2Storage.VariableOverride = restored.Data.GFS2Storage.VariableOverride
 		dst.Data.XFSStorage.VariableOverride = restored.Data.XFSStorage.VariableOverride
 		dst.Data.RawStorage.VariableOverride = restored.Data.RawStorage.VariableOverride
+
+		// Restore unmount fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute
+
+		// Restore ZpoolDestroy fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy
+
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount
 	}
 
 	return nil
@@ -985,5 +1008,61 @@ func Convert_v1alpha10_NnfStorageProfileSharedData_To_v1alpha9_NnfStorageProfile
 	out.CapacityScalingFactor = in.CapacityScalingFactor
 	out.AllocationPadding = in.AllocationPadding
 	// VariableOverride is lost during conversion from v1alpha10 to v1alpha9
+	return nil
+}
+
+// Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha9_NnfStorageProfileLustreCmdLines handles conversion.
+// v1alpha10 has UnmountTarget and ZpoolDestroy which don't exist in v1alpha9.
+func Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha9_NnfStorageProfileLustreCmdLines(in *nnfv1alpha10.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
+	out.ZpoolCreate = in.ZpoolCreate
+	// ZpoolDestroy is lost during conversion from v1alpha10 to v1alpha9
+	out.ZpoolReplace = in.ZpoolReplace
+	out.Mkfs = in.Mkfs
+	out.MountTarget = in.MountTarget
+	// UnmountTarget is lost during conversion from v1alpha10 to v1alpha9
+	out.PostActivate = *(*[]string)(unsafe.Pointer(&in.PostActivate))
+	out.PreDeactivate = *(*[]string)(unsafe.Pointer(&in.PreDeactivate))
+	return nil
+}
+
+// Convert_v1alpha10_NnfStorageProfileLustreClientCmdLines_To_v1alpha9_NnfStorageProfileLustreClientCmdLines handles conversion.
+// v1alpha10 has UnmountRabbit and UnmountCompute which don't exist in v1alpha9.
+func Convert_v1alpha10_NnfStorageProfileLustreClientCmdLines_To_v1alpha9_NnfStorageProfileLustreClientCmdLines(in *nnfv1alpha10.NnfStorageProfileLustreClientCmdLines, out *NnfStorageProfileLustreClientCmdLines, s apiconversion.Scope) error {
+	out.MountRabbit = in.MountRabbit
+	out.RabbitPostSetup = *(*[]string)(unsafe.Pointer(&in.RabbitPostSetup))
+	out.RabbitPreTeardown = *(*[]string)(unsafe.Pointer(&in.RabbitPreTeardown))
+	out.MountCompute = in.MountCompute
+	// UnmountRabbit and UnmountCompute are lost during conversion from v1alpha10 to v1alpha9
+	out.RabbitPreMount = *(*[]string)(unsafe.Pointer(&in.RabbitPreMount))
+	out.RabbitPostMount = *(*[]string)(unsafe.Pointer(&in.RabbitPostMount))
+	out.RabbitPreUnmount = *(*[]string)(unsafe.Pointer(&in.RabbitPreUnmount))
+	out.RabbitPostUnmount = *(*[]string)(unsafe.Pointer(&in.RabbitPostUnmount))
+	out.ComputePreMount = *(*[]string)(unsafe.Pointer(&in.ComputePreMount))
+	out.ComputePostMount = *(*[]string)(unsafe.Pointer(&in.ComputePostMount))
+	out.ComputePreUnmount = *(*[]string)(unsafe.Pointer(&in.ComputePreUnmount))
+	out.ComputePostUnmount = *(*[]string)(unsafe.Pointer(&in.ComputePostUnmount))
+	return nil
+}
+
+// Convert_v1alpha10_NnfStorageProfileRabbitFileSystemCommands_To_v1alpha9_NnfStorageProfileRabbitFileSystemCommands handles conversion.
+// v1alpha10 has Unmount which doesn't exist in v1alpha9.
+func Convert_v1alpha10_NnfStorageProfileRabbitFileSystemCommands_To_v1alpha9_NnfStorageProfileRabbitFileSystemCommands(in *nnfv1alpha10.NnfStorageProfileRabbitFileSystemCommands, out *NnfStorageProfileRabbitFileSystemCommands, s apiconversion.Scope) error {
+	out.Mkfs = in.Mkfs
+	out.Mount = in.Mount
+	// Unmount is lost during conversion from v1alpha10 to v1alpha9
+	if err := Convert_v1alpha10_NnfStorageProfileFileSystemUserCommands_To_v1alpha9_NnfStorageProfileFileSystemUserCommands(&in.UserCommands, &out.UserCommands, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha10_NnfStorageProfileComputeFileSystemCommands_To_v1alpha9_NnfStorageProfileComputeFileSystemCommands handles conversion.
+// v1alpha10 has Unmount which doesn't exist in v1alpha9.
+func Convert_v1alpha10_NnfStorageProfileComputeFileSystemCommands_To_v1alpha9_NnfStorageProfileComputeFileSystemCommands(in *nnfv1alpha10.NnfStorageProfileComputeFileSystemCommands, out *NnfStorageProfileComputeFileSystemCommands, s apiconversion.Scope) error {
+	out.Mount = in.Mount
+	// Unmount is lost during conversion from v1alpha10 to v1alpha9
+	if err := Convert_v1alpha10_NnfStorageProfileFileSystemUserCommands_To_v1alpha9_NnfStorageProfileFileSystemUserCommands(&in.UserCommands, &out.UserCommands, s); err != nil {
+		return err
+	}
 	return nil
 }

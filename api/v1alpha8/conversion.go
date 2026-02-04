@@ -659,6 +659,27 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
 		dst.Data.RawStorage.VariableOverride = restored.Data.RawStorage.VariableOverride
+
+		// Restore unmount fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.MdtOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit
+		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute
+
+		// Restore ZpoolDestroy fields
+		dst.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtMdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MdtOptions.CmdLines.ZpoolDestroy
+		dst.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.OstOptions.CmdLines.ZpoolDestroy
+
+		dst.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.GFS2Storage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.XFSStorage.FileSystemCommands.ComputeCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.RabbitCommands.Unmount
+		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount
 	} else {
 		dst.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostMount = []string{}
 
@@ -1279,5 +1300,19 @@ func Convert_v1alpha10_NnfStorageProfileLustreOstOptions_To_v1alpha8_NnfStorageP
 	out.Count = in.Count
 	out.Scale = in.Scale
 	out.StorageLabels = in.StorageLabels
+	return nil
+}
+
+// Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha8_NnfStorageProfileLustreCmdLines handles conversion.
+// v1alpha10 has UnmountTarget and ZpoolDestroy which don't exist in v1alpha8.
+func Convert_v1alpha10_NnfStorageProfileLustreCmdLines_To_v1alpha8_NnfStorageProfileLustreCmdLines(in *nnfv1alpha10.NnfStorageProfileLustreCmdLines, out *NnfStorageProfileLustreCmdLines, s apiconversion.Scope) error {
+	out.ZpoolCreate = in.ZpoolCreate
+	// ZpoolDestroy is lost during conversion from v1alpha10 to v1alpha8
+	out.ZpoolReplace = in.ZpoolReplace
+	out.Mkfs = in.Mkfs
+	out.MountTarget = in.MountTarget
+	// UnmountTarget is lost during conversion from v1alpha10 to v1alpha8
+	out.PostActivate = *(*[]string)(unsafe.Pointer(&in.PostActivate))
+	out.PreDeactivate = *(*[]string)(unsafe.Pointer(&in.PreDeactivate))
 	return nil
 }

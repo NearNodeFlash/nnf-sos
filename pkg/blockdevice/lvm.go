@@ -91,22 +91,26 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 
 	objectCreated := false
 
-	for _, pv := range l.PhysicalVolumes {
-		created, err := pv.Create(ctx, l.CommandArgs.PvArgs.Create)
+	if len(l.CommandArgs.PvArgs.Create) > 0 {
+		for _, pv := range l.PhysicalVolumes {
+			created, err := pv.Create(ctx, l.CommandArgs.PvArgs.Create)
+			if err != nil {
+				return false, err
+			}
+			if created {
+				objectCreated = true
+			}
+		}
+	}
+
+	if len(l.CommandArgs.VgArgs.Create) > 0 {
+		created, err := l.VolumeGroup.Create(ctx, l.CommandArgs.VgArgs.Create)
 		if err != nil {
 			return false, err
 		}
 		if created {
 			objectCreated = true
 		}
-	}
-
-	created, err := l.VolumeGroup.Create(ctx, l.CommandArgs.VgArgs.Create)
-	if err != nil {
-		return false, err
-	}
-	if created {
-		objectCreated = true
 	}
 
 	if len(l.CommandArgs.VgArgs.LockStart) > 0 {
@@ -119,12 +123,14 @@ func (l *Lvm) Create(ctx context.Context, complete bool) (bool, error) {
 		}
 	}
 
-	created, err = l.LogicalVolume.Create(ctx, l.CommandArgs.LvArgs.Create)
-	if err != nil {
-		return false, err
-	}
-	if created {
-		objectCreated = true
+	if len(l.CommandArgs.LvArgs.Create) > 0 {
+		created, err := l.LogicalVolume.Create(ctx, l.CommandArgs.LvArgs.Create)
+		if err != nil {
+			return false, err
+		}
+		if created {
+			objectCreated = true
+		}
 	}
 
 	return objectCreated, nil
@@ -150,36 +156,42 @@ func (l *Lvm) Destroy(ctx context.Context) (bool, error) {
 		}
 	}
 
-	destroyed, err := l.LogicalVolume.Remove(ctx, l.CommandArgs.LvArgs.Remove)
-	if err != nil {
-		return false, err
-	}
-	if destroyed {
-		objectDestroyed = true
-	}
-
-	// Check to ensure the VG has no LVs before removing
-	if count, err := l.VolumeGroup.NumLVs(ctx); err != nil {
-		return false, err
-	} else if count != 0 {
-		return objectDestroyed, nil
-	}
-
-	destroyed, err = l.VolumeGroup.Remove(ctx, l.CommandArgs.VgArgs.Remove)
-	if err != nil {
-		return false, err
-	}
-	if destroyed {
-		objectDestroyed = true
-	}
-
-	for _, pv := range l.PhysicalVolumes {
-		destroyed, err := pv.Remove(ctx, l.CommandArgs.PvArgs.Remove)
+	if len(l.CommandArgs.LvArgs.Remove) > 0 {
+		destroyed, err := l.LogicalVolume.Remove(ctx, l.CommandArgs.LvArgs.Remove)
 		if err != nil {
 			return false, err
 		}
 		if destroyed {
 			objectDestroyed = true
+		}
+	}
+
+	if len(l.CommandArgs.VgArgs.Remove) > 0 {
+		// Check to ensure the VG has no LVs before removing
+		if count, err := l.VolumeGroup.NumLVs(ctx); err != nil {
+			return false, err
+		} else if count != 0 {
+			return objectDestroyed, nil
+		}
+
+		destroyed, err := l.VolumeGroup.Remove(ctx, l.CommandArgs.VgArgs.Remove)
+		if err != nil {
+			return false, err
+		}
+		if destroyed {
+			objectDestroyed = true
+		}
+	}
+
+	if len(l.CommandArgs.PvArgs.Remove) > 0 {
+		for _, pv := range l.PhysicalVolumes {
+			destroyed, err := pv.Remove(ctx, l.CommandArgs.PvArgs.Remove)
+			if err != nil {
+				return false, err
+			}
+			if destroyed {
+				objectDestroyed = true
+			}
 		}
 	}
 
@@ -330,7 +342,7 @@ func (l *Lvm) CheckExists(ctx context.Context) (bool, error) {
 
 func (l *Lvm) CheckHealth(ctx context.Context) (bool, error) {
 	// If there is no LV, then consider the block device healthy
-	if l.CommandArgs.LvArgs.Create == "" {
+	if len(l.CommandArgs.LvArgs.Create) == 0 {
 		return true, nil
 	}
 
@@ -339,7 +351,7 @@ func (l *Lvm) CheckHealth(ctx context.Context) (bool, error) {
 
 func (l *Lvm) CheckReady(ctx context.Context) (bool, error) {
 	// If there is no LV, then consider the block device ready
-	if l.CommandArgs.LvArgs.Create == "" {
+	if len(l.CommandArgs.LvArgs.Create) == 0 {
 		return true, nil
 	}
 
@@ -347,14 +359,16 @@ func (l *Lvm) CheckReady(ctx context.Context) (bool, error) {
 }
 
 func (l *Lvm) Repair(ctx context.Context) (err error) {
-	for _, pv := range l.PhysicalVolumes {
-		created, err := pv.Create(ctx, l.CommandArgs.PvArgs.Create)
-		if err != nil {
-			return err
-		}
+	if len(l.CommandArgs.PvArgs.Create) > 0 {
+		for _, pv := range l.PhysicalVolumes {
+			created, err := pv.Create(ctx, l.CommandArgs.PvArgs.Create)
+			if err != nil {
+				return err
+			}
 
-		if created {
-			l.Log.Info("created new PV for rebuild", "Name", pv.Device, "VG", l.VolumeGroup.Name)
+			if created {
+				l.Log.Info("created new PV for rebuild", "Name", pv.Device, "VG", l.VolumeGroup.Name)
+			}
 		}
 	}
 
@@ -385,6 +399,7 @@ func (l *Lvm) Repair(ctx context.Context) (err error) {
 
 func (l *Lvm) RunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
 	if len(commands) == 0 {
+		l.Log.Info("Skipping " + phase + " - no commands specified")
 		return false, nil
 	}
 

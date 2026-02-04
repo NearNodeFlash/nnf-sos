@@ -240,6 +240,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	zpool.DataSet = useOverrideIfPresent(targetOptions.VariableOverride, "$ZPOOL_DATA_SET", nnfNodeStorage.Spec.LustreStorage.TargetType)
 
 	zpool.CommandArgs.Create = targetOptions.CmdLines.ZpoolCreate
+	zpool.CommandArgs.Destroy = targetOptions.CmdLines.ZpoolDestroy
 	zpool.CommandArgs.Replace = targetOptions.CmdLines.ZpoolReplace
 	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	zpool.CommandArgs.Vars = mergeVariables(zpool.CommandArgs.Vars, targetOptions.VariableOverride)
@@ -399,6 +400,7 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.RabbitCommands.Unmount
 		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
 		fs.CommandArgs.PreUnmount = fileSystemCommands.RabbitCommands.UserCommands.PreUnmount
@@ -410,6 +412,7 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
 	} else {
 		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.ComputeCommands.Unmount
 		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
 		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
@@ -438,6 +441,7 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.RabbitCommands.Unmount
 		fs.CommandArgs.Mkfs = fmt.Sprintf("-O %s", fileSystemCommands.RabbitCommands.Mkfs)
 		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
@@ -450,6 +454,7 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
 	} else {
 		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.ComputeCommands.Unmount
 		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
 		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
@@ -480,6 +485,7 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = fileSystemCommands.RabbitCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.RabbitCommands.Unmount
 		fs.CommandArgs.Mkfs = fileSystemCommands.RabbitCommands.Mkfs
 		fs.CommandArgs.PreMount = fileSystemCommands.RabbitCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.RabbitCommands.UserCommands.PostMount
@@ -492,6 +498,7 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 		fs.CommandArgs.PreTeardown = profileCommands.UserCommands.PreTeardown
 	} else {
 		fs.CommandArgs.Mount = fileSystemCommands.ComputeCommands.Mount
+		fs.CommandArgs.Unmount = fileSystemCommands.ComputeCommands.Unmount
 		fs.CommandArgs.PreMount = fileSystemCommands.ComputeCommands.UserCommands.PreMount
 		fs.CommandArgs.PostMount = fileSystemCommands.ComputeCommands.UserCommands.PostMount
 		fs.CommandArgs.PreUnmount = fileSystemCommands.ComputeCommands.UserCommands.PreUnmount
@@ -516,6 +523,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 
 	if _, found := os.LookupEnv("RABBIT_NODE"); found {
 		fs.CommandArgs.Mount = clientOptions.CmdLines.MountRabbit
+		fs.CommandArgs.Unmount = clientOptions.CmdLines.UnmountRabbit
 
 		fs.CommandArgs.PreMount = clientOptions.CmdLines.RabbitPreMount
 		fs.CommandArgs.PostMount = clientOptions.CmdLines.RabbitPostMount
@@ -528,6 +536,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 		fs.CommandArgs.PreTeardown = clientOptions.CmdLines.RabbitPreTeardown
 	} else {
 		fs.CommandArgs.Mount = clientOptions.CmdLines.MountCompute
+		fs.CommandArgs.Unmount = clientOptions.CmdLines.UnmountCompute
 		fs.CommandArgs.PreMount = clientOptions.CmdLines.ComputePreMount
 		fs.CommandArgs.PostMount = clientOptions.CmdLines.ComputePostMount
 		fs.CommandArgs.PreUnmount = clientOptions.CmdLines.ComputePreUnmount
@@ -545,6 +554,7 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	fs.Index = nnfNodeStorage.Spec.LustreStorage.StartIndex + index
 	fs.CommandArgs.Mkfs = targetOptions.CmdLines.Mkfs
 	fs.CommandArgs.MountTarget = targetOptions.CmdLines.MountTarget
+	fs.CommandArgs.UnmountTarget = targetOptions.CmdLines.UnmountTarget
 
 	fs.TempDir = fmt.Sprintf("/mnt/temp/%s-%d", nnfNodeStorage.Name, index)
 
@@ -670,6 +680,7 @@ func mergeVariables(baseVars map[string]string, overrideVars map[string]string) 
 	if baseVars == nil {
 		baseVars = make(map[string]string)
 	}
+
 	for key, value := range overrideVars {
 		baseVars[key] = value
 	}
