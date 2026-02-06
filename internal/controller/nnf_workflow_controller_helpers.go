@@ -1266,7 +1266,12 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 		if access.Status.Error != nil {
 			handleWorkflowErrorByIndex(access.Status.Error, workflow, index)
 
-			return Requeue("mount/unmount error").withObject(access), nil
+			// During unmount, we want to capture the error but continue with cleanup.
+			// During mount, we fail immediately.
+			if state == "mounted" {
+				return Requeue("mount error").withObject(access), nil
+			}
+			// For unmount, fall through to check if unmount is complete
 		}
 
 		if state == "mounted" {

@@ -200,7 +200,12 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	access.Status.Ready = true
-	access.Status.Error = nil
+
+	// Only clear the error if we're mounting. During unmount, preserve any error
+	// from the mount phase so the workflow can report it.
+	if access.Spec.DesiredState == "mounted" {
+		access.Status.Error = nil
+	}
 
 	return ctrl.Result{}, nil
 }
