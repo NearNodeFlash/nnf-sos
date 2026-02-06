@@ -1239,12 +1239,17 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 				return false, err
 			}
 
-			// If the compute node is fenced, fail the workflow immediately
+			// If the compute node is fenced and we're mounting, fail the workflow immediately
+			// During unmount, we ignore fenced computes so teardown can complete
 			if fenced {
-				return false, dwsv1alpha7.NewResourceError("compute node %s has been fenced", clientMount.GetNamespace()).WithFatal().WithUserMessage("Workflow failed: compute node %s was fenced during the job", clientMount.GetNamespace())
+				if access.Spec.DesiredState == "mounted" {
+					return false, dwsv1alpha7.NewResourceError("compute node %s has been fenced", clientMount.GetNamespace()).WithFatal().WithUserMessage("Workflow failed: compute node %s was fenced during the job", clientMount.GetNamespace())
+				}
+				log.Info("ignoring ClientMount from fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				continue
 			}
 
-			// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+			// If the compute node is offline and we're unmounting, ignore any mount status
 			// from this node since it can't respond. The filesystem won't be remounted if the
 			// compute comes back since spec.desiredState is "unmounted"
 			if offline && access.Spec.DesiredState == "unmounted" {
