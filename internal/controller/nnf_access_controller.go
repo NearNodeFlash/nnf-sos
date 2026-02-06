@@ -1182,13 +1182,19 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	// If access is already ready (mounts completed), check if any computes have been fenced since.
 	// This catches the case where mounts succeeded but a node was fenced afterward.
 	// This check is triggered by the Storage watch when a fence is detected.
-	// Only fail if we're mounting - during unmount we need to proceed with teardown.
-	if access.Status.Ready && access.Spec.DesiredState == "mounted" {
+	if access.Status.Ready {
 		fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
 		if err != nil {
 			log.Error(err, "failed to check for fenced computes")
 		} else if len(fencedComputes) > 0 {
-			return false, dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).WithFatal().WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
+			fenceErr := dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).WithFatal().WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
+			if access.Spec.DesiredState == "mounted" {
+				// During mount, fail immediately
+				return false, fenceErr
+			}
+			// During unmount, set the error but proceed with cleanup
+			access.Status.Error = fenceErr
+			log.Info("fenced computes detected during unmount, error recorded", "fencedComputes", fencedComputes)
 		}
 	}
 
@@ -1245,12 +1251,17 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			}
 
 			// If the compute node is fenced and we're mounting, fail the workflow immediately
-			// During unmount, we ignore fenced computes so teardown can complete
+			// During unmount, record the error but proceed with cleanup
 			if fenced {
+				fenceErr := dwsv1alpha7.NewResourceError("compute node %s has been fenced", clientMount.GetNamespace()).WithFatal().WithUserMessage("Workflow failed: compute node %s was fenced during the job", clientMount.GetNamespace())
 				if access.Spec.DesiredState == "mounted" {
-					return false, dwsv1alpha7.NewResourceError("compute node %s has been fenced", clientMount.GetNamespace()).WithFatal().WithUserMessage("Workflow failed: compute node %s was fenced during the job", clientMount.GetNamespace())
+					return false, fenceErr
 				}
-				log.Info("ignoring ClientMount from fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				// During unmount, set the error but continue with cleanup
+				if access.Status.Error == nil {
+					access.Status.Error = fenceErr
+					log.Info("fenced compute detected during unmount, error recorded", "node name", clientMount.GetNamespace())
+				}
 				continue
 			}
 
@@ -1273,27 +1284,24 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		if access.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
 
-			// Check for fenced computes - if any are fenced, fail the workflow (during mount only)
-			// During unmount, we need to proceed with teardown even if computes are fenced
-			if access.Spec.DesiredState == "mounted" {
-				fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
-				if err != nil {
-					log.Error(err, "failed to check for fenced computes")
-				} else if len(fencedComputes) > 0 {
-					return false, dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).WithFatal().WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
+			// Check for fenced computes - if any are fenced, record error
+			fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
+			if err != nil {
+				log.Error(err, "failed to check for fenced computes")
+			} else if len(fencedComputes) > 0 {
+				fenceErr := dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).WithFatal().WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
+				if access.Spec.DesiredState == "mounted" {
+					// During mount, fail immediately
+					return false, fenceErr
 				}
-			} else {
-				// During unmount, check if the missing mounts are from fenced computes.
-				// If so, consider them as unmounted and proceed.
-				fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
-				if err != nil {
-					log.Error(err, "failed to check for fenced computes")
-				} else if len(fencedComputes) > 0 {
-					log.Info("ignoring missing ClientMounts from fenced compute nodes during unmount", "fencedComputes", fencedComputes)
-					// If all missing mounts are from fenced computes, we're done
-					if len(fencedComputes) == len(clientList)-len(clientMounts) {
-						return true, nil
-					}
+				// During unmount, set the error but proceed with cleanup
+				if access.Status.Error == nil {
+					access.Status.Error = fenceErr
+					log.Info("fenced computes detected during unmount, error recorded", "fencedComputes", fencedComputes)
+				}
+				// If all missing mounts are from fenced computes, we're done
+				if len(fencedComputes) == len(clientList)-len(clientMounts) {
+					return true, nil
 				}
 			}
 		}
