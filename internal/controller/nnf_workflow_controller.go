@@ -918,7 +918,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
 			access.Spec.MakeClientMounts = true
-			access.Spec.MountPath = buildComputeMountPath(workflow, index)
+			access.Spec.MountPath = buildComputeMountPath(workflow, nnfStorageProfile, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
 				Name:      workflow.Name,
 				Namespace: workflow.Namespace,
@@ -1015,7 +1015,13 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		return nil, dwsv1alpha7.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
 	}
 
-	path := buildComputeMountPath(workflow, index)
+	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
+	if err != nil {
+		return nil, dwsv1alpha7.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
+	}
+
+	path := buildComputeMountPath(workflow, nnfStorageProfile, index)
 
 	// Add an environment variable with form "DW_JOB_myfs=/mnt/dw/path"
 	workflow.Status.Env[uniqueEnvName] = path

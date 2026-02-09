@@ -812,7 +812,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, 0) + "/my-file.out"))
+				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, storageProfile, 0) + "/my-file.out"))
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{
@@ -892,7 +892,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 						"Namespace": Equal(lustre.Namespace),
 					}))
 
-				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, 0) + "/my-persistent-file.out"))
+				Expect(dm.Spec.Destination.Path).To(Equal(buildComputeMountPath(workflow, storageProfile, 0) + "/my-persistent-file.out"))
 				Expect(dm.Spec.Destination.StorageReference).ToNot(BeNil())
 				Expect(dm.Spec.Destination.StorageReference).To(MatchFields(IgnoreExtras,
 					Fields{

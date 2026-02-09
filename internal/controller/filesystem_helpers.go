@@ -420,9 +420,6 @@ func newBindFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	}
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
-	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
-	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
-
 	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
 
 	return &fs, nil
@@ -465,8 +462,6 @@ func newGfs2FileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 	fs.CommandArgs.Vars["$CLUSTER_NAME"] = nnfNodeStorage.Namespace
 	fs.CommandArgs.Vars["$LOCK_SPACE"] = fmt.Sprintf("fs-%02d-%x", index, nnfNodeStorage.GetUID()[0:5])
 	fs.CommandArgs.Vars["$PROTOCOL"] = "lock_dlm"
-	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
-	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
 
 	return &fs, nil
@@ -506,8 +501,6 @@ func newXfsFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *nnfv
 	}
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
-	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
-	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 	fs.CommandArgs.Vars = mergeVariables(fs.CommandArgs.Vars, profileCommands.VariableOverride)
 
 	return &fs, nil
@@ -561,8 +554,6 @@ func newLustreFileSystem(ctx context.Context, c client.Client, nnfNodeStorage *n
 	components := nnfNodeStorage.Spec.LustreStorage.LustreComponents
 
 	fs.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
-	fs.CommandArgs.Vars["$USERID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.UserID)
-	fs.CommandArgs.Vars["$GROUPID"] = fmt.Sprintf("%d", nnfNodeStorage.Spec.GroupID)
 	fs.CommandArgs.Vars["$NUM_MDTS"] = fmt.Sprintf("%d", len(components.MDTs))
 	fs.CommandArgs.Vars["$NUM_MGTS"] = fmt.Sprintf("%d", len(components.MGTs))
 	fs.CommandArgs.Vars["$NUM_MGTMDTS"] = fmt.Sprintf("%d", len(components.MGTMDTs))
