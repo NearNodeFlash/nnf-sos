@@ -59,7 +59,11 @@ fi
 # lockspaces and lvmlockd) while keeping the node in corosync. Other nodes
 # see the resources depart cleanly rather than seeing a sudden membership loss.
 echo "Putting node in standby to drain resources..."
-sudo pcs node standby
+if ! sudo pcs node standby; then
+    echo "WARNING: pcs node standby failed. Falling through to cluster stop."
+    sudo pcs cluster stop --force
+    exit 0
+fi
 
 # 4. Wait for this node to appear in the Standby list (resources drained)
 echo "Waiting for node to reach Standby state (timeout: ${STANDBY_TIMEOUT}s)..."
