@@ -22,6 +22,7 @@ package fence
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -56,9 +57,12 @@ func AcknowledgeDLMFence(nodeName string, log logr.Logger) {
 		return
 	}
 
-	// Acknowledge the fence in DLM
+	// Acknowledge the fence in DLM.
+	// Use nsenter to enter the host network namespace because dlm_controld
+	// listens on an abstract Unix socket which is tied to the network namespace.
+	// The container runs in its own network namespace and cannot reach dlm_controld directly.
 	log.Info("Acknowledging DLM fence", "nodeName", nodeName, "nodeID", nodeID)
-	cmd := exec.Command("dlm_tool", "fence_ack", strconv.Itoa(nodeID))
+	cmd := exec.Command("nsenter", "-t", "1", "-n", "--", "dlm_tool", "fence_ack", strconv.Itoa(nodeID))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// dlm_tool fence_ack can fail if the node was never in a DLM lockspace
@@ -71,73 +75,106 @@ func AcknowledgeDLMFence(nodeName string, log logr.Logger) {
 	log.Info("Successfully acknowledged DLM fence", "nodeName", nodeName, "nodeID", nodeID)
 }
 
-// getCorosyncNodeID looks up the corosync node ID for a given hostname.
+// getCorosyncNodeID looks up the corosync node ID for a given hostname by
+// parsing /etc/corosync/corosync.conf.
+//
+// We cannot use corosync-cmapctl because corosync listens on an abstract Unix
+// socket (visible in the host network namespace only). The nnf-node-manager
+// container runs in its own network namespace and cannot reach it.
+//
 // Returns 0 if the node is not found in the corosync configuration.
 func getCorosyncNodeID(nodeName string) (int, error) {
-	// Use corosync-cmapctl to get the nodelist
-	cmd := exec.Command("corosync-cmapctl", "-g", "nodelist")
-	output, err := cmd.Output()
+	const corosyncConf = "/etc/corosync/corosync.conf"
+
+	data, err := os.ReadFile(corosyncConf)
 	if err != nil {
-		// Corosync might not be running or not configured
-		return 0, fmt.Errorf("corosync-cmapctl failed: %w", err)
+		return 0, fmt.Errorf("failed to read %s: %w", corosyncConf, err)
 	}
 
-	// Parse the output looking for nodelist entries
-	// Format is like:
-	// nodelist.node.0.name (str) = rabbit-node-1
-	// nodelist.node.0.nodeid (u32) = 1
-	// nodelist.node.1.name (str) = rabbit-compute-2
-	// nodelist.node.1.nodeid (u32) = 2
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
-	nodeNames := make(map[int]string) // index -> name
-	nodeIDs := make(map[int]int)      // index -> nodeid
+	// Parse the corosync.conf nodelist section.
+	// Format:
+	//   nodelist {
+	//       node {
+	//           ring0_addr: 10.1.1.5
+	//           name: rabbit-node-1
+	//           nodeid: 1
+	//           quorum_votes: 3
+	//       }
+	//       node {
+	//           name: rabbit-compute-2
+	//           nodeid: 2
+	//       }
+	//   }
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+
+	targetShort := strings.Split(nodeName, ".")[0]
+
+	inNodelist := false
+	inNode := false
+	braceDepth := 0
+	currentName := ""
+	currentID := 0
 
 	for scanner.Scan() {
-		line := scanner.Text()
+		line := strings.TrimSpace(scanner.Text())
 
-		// Parse name entries
-		if strings.Contains(line, ".name") && strings.Contains(line, "=") {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				name := strings.TrimSpace(parts[1])
-				// Extract the index from the key (e.g., "nodelist.node.0.name")
-				key := strings.TrimSpace(parts[0])
-				keyParts := strings.Split(key, ".")
-				if len(keyParts) >= 3 {
-					if idx, err := strconv.Atoi(keyParts[2]); err == nil {
-						nodeNames[idx] = name
-					}
-				}
-			}
+		// Track entry into the nodelist block
+		if !inNodelist && strings.HasPrefix(line, "nodelist") && strings.Contains(line, "{") {
+			inNodelist = true
+			braceDepth = 1
+			continue
 		}
 
-		// Parse nodeid entries
-		if strings.Contains(line, ".nodeid") && strings.Contains(line, "=") {
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				idStr := strings.TrimSpace(parts[1])
-				// Extract the index from the key (e.g., "nodelist.node.0.nodeid")
-				key := strings.TrimSpace(parts[0])
-				keyParts := strings.Split(key, ".")
-				if len(keyParts) >= 3 {
-					if idx, err := strconv.Atoi(keyParts[2]); err == nil {
-						if id, err := strconv.Atoi(idStr); err == nil {
-							nodeIDs[idx] = id
-						}
-					}
-				}
-			}
+		if !inNodelist {
+			continue
 		}
-	}
 
-	// Find the node ID for the requested hostname
-	for idx, name := range nodeNames {
-		// Match either the full name or short hostname
-		shortName := strings.Split(name, ".")[0]
-		targetShort := strings.Split(nodeName, ".")[0]
-		if name == nodeName || shortName == targetShort {
-			if id, ok := nodeIDs[idx]; ok {
-				return id, nil
+		// Track braces
+		if strings.Contains(line, "{") {
+			braceDepth++
+			if braceDepth == 2 {
+				// Entering a node block
+				inNode = true
+				currentName = ""
+				currentID = 0
+			}
+			continue
+		}
+		if strings.Contains(line, "}") {
+			if inNode && braceDepth == 2 {
+				// Leaving a node block — check if this was our target
+				shortName := strings.Split(currentName, ".")[0]
+				if currentID != 0 && (currentName == nodeName || shortName == targetShort) {
+					return currentID, nil
+				}
+				inNode = false
+			}
+			braceDepth--
+			if braceDepth <= 0 {
+				// Left the nodelist block
+				break
+			}
+			continue
+		}
+
+		if !inNode {
+			continue
+		}
+
+		// Parse key: value lines inside a node block
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+
+		switch key {
+		case "name":
+			currentName = val
+		case "nodeid":
+			if id, err := strconv.Atoi(val); err == nil {
+				currentID = id
 			}
 		}
 	}

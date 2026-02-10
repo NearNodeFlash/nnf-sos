@@ -94,7 +94,14 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha10.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
+	defer func() {
+		// If the status error was already set directly (e.g., by detectFencedComputes),
+		// don't let a nil err overwrite it.
+		if err == nil && access.Status.Error != nil {
+			return
+		}
+		access.Status.SetResourceErrorAndLog(err, log)
+	}()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
@@ -181,6 +188,16 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if access.Status.State == "mounted" {
 		result, err = r.mount(ctx, access, clientList, storageMapping)
+
+		// Check for fenced computes after every mount attempt. Fence errors
+		// take priority over any transient mount error so that flux can stop
+		// waiting and kill the job. Set the error on the status directly and
+		// return nil to avoid exponential backoff — a fence is permanent.
+		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
+			access.Status.Error = fenceErr
+			return ctrl.Result{}, nil
+		}
+
 		if err != nil {
 			return ctrl.Result{}, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("unable to mount file system on client nodes")
 		}
@@ -193,6 +210,19 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if result != nil {
 		return *result, nil
+	}
+
+	// After unmount completes, check for fenced computes. Unmount errors
+	// from non-fenced nodes have already been returned above, so any fence
+	// error here is additive. Set the error on the status directly and
+	// return nil to avoid exponential backoff — a fence is permanent.
+	// Mark Ready so the workflow helper can see the error and propagate it.
+	if access.Status.State == "unmounted" {
+		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
+			access.Status.Error = fenceErr
+			access.Status.Ready = true
+			return ctrl.Result{}, nil
+		}
 	}
 
 	if access.Status.Ready == false {
@@ -1142,7 +1172,7 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 	return g.Wait()
 }
 
-// getClientMountStatus aggregates the status from all the ClientMount resources
+// getClientMountStatus aggregates the status from all the ClientMount resources.
 func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string) (bool, error) {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
@@ -1221,16 +1251,23 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		// If mounts aren't ready, check if this compute node is offline/fenced
 		// Only do the expensive offline check when we need it to handle failures gracefully
 		if !allMountsReady || access.Spec.DesiredState == "unmounted" {
-			offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+			offline, fenced, err := r.checkOfflineOrFencedCompute(ctx, access, &clientMount)
 			if err != nil {
 				return false, err
 			}
 
-			// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+			// Skip fenced computes so unmount cleanup can proceed on healthy nodes.
+			// Reconcile will detect fenced computes and report errors after unmount completes.
+			if fenced {
+				log.Info("skipping fenced compute", "node name", clientMount.GetNamespace())
+				continue
+			}
+
+			// If the compute node is offline and we're unmounting, ignore any mount status
 			// from this node since it can't respond. The filesystem won't be remounted if the
 			// compute comes back since spec.desiredState is "unmounted"
 			if offline && access.Spec.DesiredState == "unmounted" {
-				log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				log.Info("ignoring ClientMount from offline compute node during unmount", "node name", clientMount.GetNamespace())
 				continue
 			}
 		}
@@ -1245,12 +1282,16 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		if access.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
 
-			// Check for fenced computes to provide a more informative log message
-			fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
-			if err != nil {
-				log.Error(err, "failed to check for fenced computes")
-			} else if len(fencedComputes) > 0 {
-				log.Info("waiting for fenced compute nodes to recover", "fencedComputes", fencedComputes)
+			// During unmount, if all missing ClientMounts are from fenced computes, proceed.
+			// Reconcile will detect the fenced computes and report the error after unmount.
+			if access.Spec.DesiredState == "unmounted" {
+				fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
+				if err != nil {
+					log.Error(err, "failed to check for fenced computes")
+				} else if len(fencedComputes) > 0 && len(fencedComputes) == len(clientList)-len(clientMounts) {
+					log.Info("all missing ClientMounts are from fenced computes, proceeding with unmount", "fencedComputes", fencedComputes)
+					return true, nil
+				}
 			}
 		}
 		return false, nil
@@ -1301,7 +1342,7 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 	// For each ClientMount, check whether the Compute node is marked as "Offline". If it is,
 	// remove the NnfClientMount finalizer and update the resource
 	for _, clientMount := range clientMountList.Items {
-		offline, err := r.checkOfflineCompute(ctx, nnfAccess, &clientMount)
+		offline, _, err := r.checkOfflineOrFencedCompute(ctx, nnfAccess, &clientMount)
 		if err != nil {
 			return err
 		}
@@ -1324,13 +1365,14 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 	return nil
 }
 
-// checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
-// compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection).
+// checkOfflineOrFencedCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
+// compute node, and checks whether the compute node is marked as "Offline" or "Fenced".
 // It also checks the SystemStatus resource to see if the compute node is marked as Disabled.
-// It also checks for fence response files indicating the node has been fenced.
-func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha10.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, error) {
+// Returns (offline, fenced, error) where offline indicates the node is offline/disabled/fenced,
+// and fenced specifically indicates a STONITH fence event occurred.
+func (r *NnfAccessReconciler) checkOfflineOrFencedCompute(ctx context.Context, nnfAccess *nnfv1alpha10.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, bool, error) {
 	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
-		return false, nil
+		return false, false, nil
 	}
 
 	computeName := clientMount.GetNamespace()
@@ -1338,12 +1380,12 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	// Find the name of the Rabbit attached to the compute node
 	rabbitName, err := r.getRabbitFromClientMount(ctx, clientMount)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	// Get the Storage resource for the Rabbit
 	// The Storage controller syncs compute node status from NnfNode.Status.Servers to Storage.Status.Access.Computes
-	// This includes marking fenced compute nodes as offline
+	// This includes marking fenced compute nodes
 	storage := &dwsv1alpha7.Storage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rabbitName,
@@ -1352,14 +1394,17 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-		return false, dwsv1alpha7.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
+		return false, false, dwsv1alpha7.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
 	}
 
 	// Check the status of the compute node in the Storage resource to determine if it's offline or fenced
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
-			if compute.Status == dwsv1alpha7.OfflineStatus || compute.Status == dwsv1alpha7.FencedStatus {
-				return true, nil
+			if compute.Status == dwsv1alpha7.FencedStatus {
+				return true, true, nil // offline=true, fenced=true
+			}
+			if compute.Status == dwsv1alpha7.OfflineStatus {
+				return true, false, nil // offline=true, fenced=false
 			}
 			break
 		}
@@ -1375,16 +1420,16 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	if err := r.Get(ctx, client.ObjectKeyFromObject(systemStatus), systemStatus); err != nil {
 		// Don't rely on the SystemStatus existing. If it's not there, just return that the compute node
 		// isn't offline
-		return false, nil
+		return false, false, nil
 	}
 
 	if status, found := systemStatus.Data.Nodes[computeName]; found {
 		if status == dwsv1alpha7.SystemNodeStatusDisabled {
-			return true, nil
+			return true, false, nil // offline=true (disabled), fenced=false
 		}
 	}
 
-	return false, nil
+	return false, false, nil
 }
 
 // getFencedComputes returns a list of compute nodes that are fenced (i.e., don't have ClientMounts created).
@@ -1447,6 +1492,57 @@ func (r *NnfAccessReconciler) getFencedComputes(ctx context.Context, access *nnf
 	}
 
 	return fencedComputes, nil
+}
+
+// detectFencedComputes checks if any computes associated with this access have been fenced.
+// Unlike getFencedComputes (which only checks missing ClientMounts), this checks ALL computes
+// in the client list against the Storage resource. This is used after unmount completes to
+// record a fence error on the workflow.
+func (r *NnfAccessReconciler) detectFencedComputes(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string) *dwsv1alpha7.ResourceErrorInfo {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
+
+	// Only check for compute NnfAccess (not servers)
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil
+	}
+
+	// Group computes by Rabbit to minimize Storage lookups
+	rabbitComputes := make(map[string][]string)
+	for _, computeName := range clientList {
+		rabbitName, err := helpers.GetRabbitFromCompute(ctx, r.Client, computeName)
+		if err != nil {
+			log.Error(err, "failed to get Rabbit from compute", "compute", computeName)
+			continue
+		}
+		rabbitComputes[rabbitName] = append(rabbitComputes[rabbitName], computeName)
+	}
+
+	fencedComputes := []string{}
+	for rabbitName, computes := range rabbitComputes {
+		storage := &dwsv1alpha7.Storage{}
+		storageKey := types.NamespacedName{Name: rabbitName, Namespace: "default"}
+		if err := r.Get(ctx, storageKey, storage); err != nil {
+			log.Error(err, "failed to get Storage", "rabbit", rabbitName)
+			continue
+		}
+
+		for _, computeName := range computes {
+			for _, compute := range storage.Status.Access.Computes {
+				if compute.Name == computeName && compute.Status == dwsv1alpha7.FencedStatus {
+					fencedComputes = append(fencedComputes, computeName)
+					break
+				}
+			}
+		}
+	}
+
+	if len(fencedComputes) == 0 {
+		return nil
+	}
+
+	return dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).
+		WithFatal().
+		WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
 }
 
 // getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
