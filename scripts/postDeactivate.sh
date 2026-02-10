@@ -44,12 +44,20 @@ if [ -n "$unclean_nodes" ]; then
     # Wait a moment for the cluster to process the fence confirmations
     sleep 2
 
-    # Also acknowledge fences in DLM to unblock any pending lock operations
-    echo "Acknowledging fences in DLM..."
-    for nodeid in $(corosync-cmapctl -g nodelist 2>/dev/null | grep -oP 'nodeid\s*=\s*\K\d+' | sort -u); do
-        local_nodeid=$(corosync-cmapctl -g runtime.votequorum.this_node_id 2>/dev/null | grep -oP 'value\s*=\s*\K\d+' || echo "")
-        if [ -n "$local_nodeid" ] && [ "$nodeid" != "$local_nodeid" ]; then
-            dlm_tool fence_ack "$nodeid" 2>/dev/null || true
+    # Also acknowledge fences in DLM to unblock any pending lock operations.
+    # Look up the corosync nodeid for each unclean node by matching its name
+    # in the nodelist, then call dlm_tool fence_ack for that specific nodeid.
+    echo "Acknowledging fences in DLM for UNCLEAN nodes..."
+    nodelist_output=$(corosync-cmapctl 2>/dev/null | grep 'nodelist\.node\.' || true)
+    for node in $unclean_nodes; do
+        # Find the nodelist index whose name matches this unclean node
+        idx=$(echo "$nodelist_output" | grep -oP "nodelist\.node\.\K\d+(?=\.name\s.*=\s*${node}$)")
+        if [ -n "$idx" ]; then
+            nodeid=$(echo "$nodelist_output" | grep -oP "nodelist\.node\.${idx}\.nodeid\s.*=\s*\K\d+")
+            if [ -n "$nodeid" ]; then
+                echo "Acknowledging DLM fence for node $node (nodeid $nodeid)"
+                dlm_tool fence_ack "$nodeid" 2>/dev/null || true
+            fi
         fi
     done
 fi
