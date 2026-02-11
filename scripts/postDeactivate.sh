@@ -28,38 +28,15 @@ if ! pcs status > /dev/null 2>&1; then
 fi
 
 # 2. Handle any UNCLEAN nodes before entering standby
-# UNCLEAN nodes can block resource operations. If nodes have been fenced
-# (e.g., via STONITH), we need to confirm the fence to mark them as cleanly
-# removed from the cluster.
+# UNCLEAN nodes can block resource operations. Log them for diagnostic
+# purposes but do NOT confirm fences from the compute side — only the
+# rabbit knows whether fencing actually occurred.
 echo "Checking for UNCLEAN nodes..."
 unclean_nodes=$(pcs status nodes 2>/dev/null | grep -oP 'UNCLEAN \(offline\):\s*\[\s*\K[^\]]+' | tr ' ' '\n' | grep -v '^$')
 
 if [ -n "$unclean_nodes" ]; then
-    echo "Found UNCLEAN nodes: $unclean_nodes"
-    for node in $unclean_nodes; do
-        echo "Confirming fence for UNCLEAN node: $node"
-        echo 'y' | sudo pcs stonith confirm "$node" 2>/dev/null || true
-    done
-
-    # Wait a moment for the cluster to process the fence confirmations
-    sleep 2
-
-    # Also acknowledge fences in DLM to unblock any pending lock operations.
-    # Look up the corosync nodeid for each unclean node by matching its name
-    # in the nodelist, then call dlm_tool fence_ack for that specific nodeid.
-    echo "Acknowledging fences in DLM for UNCLEAN nodes..."
-    nodelist_output=$(corosync-cmapctl 2>/dev/null | grep 'nodelist\.node\.' || true)
-    for node in $unclean_nodes; do
-        # Find the nodelist index whose name matches this unclean node
-        idx=$(echo "$nodelist_output" | grep -oP "nodelist\.node\.\K\d+(?=\.name\s.*=\s*${node}$)")
-        if [ -n "$idx" ]; then
-            nodeid=$(echo "$nodelist_output" | grep -oP "nodelist\.node\.${idx}\.nodeid\s.*=\s*\K\d+")
-            if [ -n "$nodeid" ]; then
-                echo "Acknowledging DLM fence for node $node (nodeid $nodeid)"
-                dlm_tool fence_ack "$nodeid" 2>/dev/null || true
-            fi
-        fi
-    done
+    echo "WARNING: Found UNCLEAN nodes: $unclean_nodes"
+    echo "Fence confirmation must be handled by the rabbit, not compute nodes."
 fi
 
 # 3. Put node in standby to drain all resources gracefully
