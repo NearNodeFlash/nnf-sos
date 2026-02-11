@@ -698,6 +698,11 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 
 	nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
 		{
+			Name:    "$JOBID",
+			Indexed: false,
+			Value:   labels[nnfv1alpha10.JobIDLabel],
+		},
+		{
 			Name:    "$DIRECTIVE_INDEX",
 			Indexed: false,
 			Value:   labels[nnfv1alpha10.DirectiveIndexLabel],

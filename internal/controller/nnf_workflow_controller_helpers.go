@@ -469,6 +469,7 @@ func (r *NnfWorkflowReconciler) generateDirectiveBreakdown(ctx context.Context, 
 					dwsv1alpha7.AddWorkflowLabels(directiveBreakdown, workflow)
 					dwsv1alpha7.AddOwnerLabels(directiveBreakdown, workflow)
 					addDirectiveIndexLabel(directiveBreakdown, dwIndex)
+					addJobIDLabel(directiveBreakdown, workflow.Spec.JobID.String())
 
 					directiveBreakdown.Spec.Directive = directive
 					directiveBreakdown.Spec.UserID = workflow.Spec.UserID
@@ -589,6 +590,7 @@ func (r *NnfWorkflowReconciler) createNnfStorage(ctx context.Context, workflow *
 			dwsv1alpha7.AddWorkflowLabels(nnfStorage, workflow)
 			dwsv1alpha7.AddOwnerLabels(nnfStorage, owner)
 			addDirectiveIndexLabel(nnfStorage, index)
+			addJobIDLabel(nnfStorage, workflow.Spec.JobID.String())
 			addPinnedStorageProfileLabel(nnfStorage, nnfStorageProfile)
 
 			nnfStorage.Spec.FileSystemType = dwArgs["type"]
@@ -879,6 +881,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 			dwsv1alpha7.AddOwnerLabels(access, workflow)
 			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
+			addJobIDLabel(access, workflow.Spec.JobID.String())
 			nnfv1alpha10.AddDataMovementTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha10.NnfAccessSpec{
@@ -1174,6 +1177,25 @@ func getStorageReferenceNameFromDBD(dbd *dwsv1alpha7.DirectiveBreakdown) (string
 		name = dbd.Name
 	}
 	return name, namespace
+}
+
+func addJobIDLabel(object metav1.Object, jobID string) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	labels[nnfv1alpha10.JobIDLabel] = strings.ReplaceAll(jobID, " ", "-")
+	object.SetLabels(labels)
+}
+
+func getJobIDLabel(object metav1.Object) string {
+	labels := object.GetLabels()
+	if labels == nil {
+		return ""
+	}
+
+	return labels[nnfv1alpha10.JobIDLabel]
 }
 
 func addDirectiveIndexLabel(object metav1.Object, index int) {

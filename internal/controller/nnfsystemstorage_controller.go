@@ -316,6 +316,7 @@ func (r *NnfSystemStorageReconciler) createServers(ctx context.Context, nnfSyste
 		func() error {
 			dwsv1alpha7.AddOwnerLabels(servers, nnfSystemStorage)
 			addDirectiveIndexLabel(servers, 0)
+			addJobIDLabel(servers, "SystemStorage")
 
 			servers.Spec.AllocationSets = []dwsv1alpha7.ServersSpecAllocationSet{{
 				Label:          "system-storage",
@@ -447,6 +448,7 @@ func (r *NnfSystemStorageReconciler) createComputes(ctx context.Context, nnfSyst
 		func() error {
 			dwsv1alpha7.AddOwnerLabels(computes, nnfSystemStorage)
 			addDirectiveIndexLabel(computes, 0)
+			addJobIDLabel(computes, "SystemStorage")
 
 			computes.Data = []dwsv1alpha7.ComputesData{}
 
@@ -503,6 +505,7 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 		func() error {
 			dwsv1alpha7.AddOwnerLabels(nnfStorage, nnfSystemStorage)
 			addDirectiveIndexLabel(nnfStorage, 0)
+			addJobIDLabel(nnfStorage, "SystemStorage")
 			addPinnedStorageProfileLabel(nnfStorage, storageProfile)
 
 			nnfStorage.Spec.FileSystemType = nnfSystemStorage.Spec.Type
@@ -524,6 +527,34 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 				for _, storage := range servers.Spec.AllocationSets[i].Storage {
 					node := nnfv1alpha10.NnfStorageAllocationNodes{Name: storage.Name, Count: storage.AllocationCount}
 					nnfAllocationSet.Nodes = append(nnfAllocationSet.Nodes, node)
+				}
+
+				nnfAllocationSet.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+					{
+						Name:    "$JOBID",
+						Indexed: false,
+						Value:   "SystemStorage",
+					},
+					{
+						Name:    "$DIRECTIVE_INDEX",
+						Indexed: false,
+						Value:   "0",
+					},
+					{
+						Name:    "$WORKFLOW_UID",
+						Indexed: false,
+						Value:   fmt.Sprintf("systemstorage-%s", nnfSystemStorage.UID),
+					},
+					{
+						Name:    "$USERID",
+						Indexed: false,
+						Value:   fmt.Sprintf("%d", nnfStorage.Spec.UserID),
+					},
+					{
+						Name:    "$GROUPID",
+						Indexed: false,
+						Value:   fmt.Sprintf("%d", nnfStorage.Spec.GroupID),
+					},
 				}
 
 				commandVariable := nnfv1alpha10.CommandVariablesSpec{}
@@ -625,6 +656,7 @@ func (r *NnfSystemStorageReconciler) createNnfAccess(ctx context.Context, nnfSys
 			dwsv1alpha7.AddOwnerLabels(nnfAccess, nnfSystemStorage)
 			addPinnedStorageProfileLabel(nnfAccess, storageProfile)
 			addDirectiveIndexLabel(nnfAccess, 0)
+			addJobIDLabel(nnfAccess, "SystemStorage")
 
 			nnfAccess.Spec.TeardownState = dwsv1alpha7.StatePostRun
 			nnfAccess.Spec.DesiredState = "mounted"
