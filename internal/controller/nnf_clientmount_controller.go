@@ -696,6 +696,34 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 		nnfNodeStorage.Spec.LustreStorage.MgsAddress = clientMount.Spec.Mounts[index].Device.Lustre.MgsAddresses
 	}
 
+	nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+		{
+			Name:    "$JOBID",
+			Indexed: false,
+			Value:   labels[nnfv1alpha10.JobIDLabel],
+		},
+		{
+			Name:    "$DIRECTIVE_INDEX",
+			Indexed: false,
+			Value:   labels[nnfv1alpha10.DirectiveIndexLabel],
+		},
+		{
+			Name:    "$WORKFLOW_UID",
+			Indexed: false,
+			Value:   labels[dwsv1alpha7.WorkflowUidLabel],
+		},
+		{
+			Name:    "$USERID",
+			Indexed: false,
+			Value:   fmt.Sprintf("%d", clientMount.Spec.Mounts[index].UserID),
+		},
+		{
+			Name:    "$GROUPID",
+			Indexed: false,
+			Value:   fmt.Sprintf("%d", clientMount.Spec.Mounts[index].GroupID),
+		},
+	}
+
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfNodeStorage)
 	if err != nil {
 		return nil, dwsv1alpha7.NewResourceError("unable to find pinned storage profile").WithError(err).WithMajor()

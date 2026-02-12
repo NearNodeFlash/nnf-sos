@@ -26,6 +26,10 @@ const (
 	// resources for the directive being processed
 	DirectiveIndexLabel = "nnf.cray.hpe.com/directive_index"
 
+	// JobIDLabel is a label applied to child objects of the workflow
+	// to show which job ID they were created for.
+	JobIDLabel = "nnf.cray.hpe.com/job_id"
+
 	// TargetDirectiveIndexLabel is used for ClientMount resources to indicate the
 	// directive index of the storage they're targeting.
 	TargetDirectiveIndexLabel = "nnf.cray.hpe.com/target_directive_index"

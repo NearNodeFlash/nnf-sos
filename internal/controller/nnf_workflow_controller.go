@@ -49,6 +49,7 @@ import (
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
 	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
+	"github.com/NearNodeFlash/nnf-sos/pkg/var_handler"
 )
 
 const (
@@ -772,6 +773,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				nnfv1alpha10.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 				nnfv1alpha10.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 				addDirectiveIndexLabel(dm, index)
+				addJobIDLabel(dm, workflow.Spec.JobID.String())
 
 				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
@@ -810,6 +812,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		nnfv1alpha10.AddDataMovementTeardownStateLabel(dm, workflow.Status.State)
 		nnfv1alpha10.AddDataMovementInitiatorLabel(dm, dwArgs["command"])
 		addDirectiveIndexLabel(dm, index)
+		addJobIDLabel(dm, workflow.Spec.JobID.String())
 
 		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
@@ -911,6 +914,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			dwsv1alpha7.AddOwnerLabels(access, workflow)
 			addPinnedStorageProfileLabel(access, nnfStorageProfile)
 			addDirectiveIndexLabel(access, index)
+			addJobIDLabel(access, workflow.Spec.JobID.String())
 
 			access.Spec.TeardownState = dwsv1alpha7.StatePostRun
 			access.Spec.DesiredState = "mounted"
@@ -918,7 +922,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
 			access.Spec.MakeClientMounts = true
-			access.Spec.MountPath = buildComputeMountPath(workflow, index)
+			access.Spec.MountPath = buildComputeMountPath(workflow, nnfStorageProfile, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
 				Name:      workflow.Name,
 				Namespace: workflow.Namespace,
@@ -1015,7 +1019,24 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		return nil, dwsv1alpha7.NewResourceError("unexpected directive: %v", dwArgs["command"]).WithFatal().WithUserMessage("could not mount file system on compute nodes")
 	}
 
-	path := buildComputeMountPath(workflow, index)
+	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
+	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
+	if err != nil {
+		return nil, dwsv1alpha7.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
+	}
+
+	path := buildComputeMountPath(workflow, nnfStorageProfile, index)
+	variableMap := map[string]string{
+		"$JOBID":           workflow.Spec.JobID.String(),
+		"$DIRECTIVE_INDEX": strconv.Itoa(index),
+		"$WORKFLOW_UID":    string(workflow.UID),
+		"$USERID":          fmt.Sprintf("%d", workflow.Spec.UserID),
+		"$GROUPID":         fmt.Sprintf("%d", workflow.Spec.GroupID),
+	}
+
+	// Initialize the VarHandler substitution variables
+	varHandler := var_handler.NewVarHandler(variableMap)
+	path = varHandler.ReplaceAll(path)
 
 	// Add an environment variable with form "DW_JOB_myfs=/mnt/dw/path"
 	workflow.Status.Env[uniqueEnvName] = path
@@ -1241,6 +1262,7 @@ func (r *NnfWorkflowReconciler) finishTeardownState(ctx context.Context, workflo
 
 		dwsv1alpha7.AddOwnerLabels(persistentStorage, workflow)
 		addDirectiveIndexLabel(persistentStorage, index)
+		addJobIDLabel(persistentStorage, workflow.Spec.JobID.String())
 
 		if err := controllerutil.SetControllerReference(workflow, persistentStorage, r.Scheme); err != nil {
 			return nil, dwsv1alpha7.NewResourceError("could not assign workflow as owner of PersistentInstance: %v", client.ObjectKeyFromObject(persistentStorage)).WithError(err).WithUserMessage("could not delete persistent storage %v", dwArgs["name"])

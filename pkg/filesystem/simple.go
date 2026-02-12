@@ -133,6 +133,14 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 	}
 
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = f.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -174,11 +182,6 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 		}
 	}
 
-	// Build the mount command from the args provided
-	if f.CommandArgs.Vars == nil {
-		f.CommandArgs.Vars = make(map[string]string)
-	}
-	f.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
 	if _, err := command.Run(mountCmd, f.Log); err != nil {
@@ -195,6 +198,14 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	}
 
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = f.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -210,12 +221,6 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		if f.Type != "none" && (m.Device != f.BlockDevice.GetDevice() || m.Type != f.Type) {
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
-
-		// Build the unmount command from the args provided
-		if f.CommandArgs.Vars == nil {
-			f.CommandArgs.Vars = make(map[string]string)
-		}
-		f.CommandArgs.Vars["$MOUNT_PATH"] = path
 
 		if _, err := command.Run(fmt.Sprintf("umount %s", f.parseArgs(f.CommandArgs.Unmount)), f.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)

@@ -127,13 +127,21 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 		return false, nil
 	}
 
+	path := filepath.Clean(l.TargetPath)
+
+	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = l.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
 		return false, err
 	}
 
-	path := filepath.Clean(l.TargetPath)
 	for _, m := range mounts {
 		if m.Path != path {
 			continue
@@ -157,11 +165,6 @@ func (l *LustreFileSystem) Activate(ctx context.Context, complete bool) (bool, e
 		return false, fmt.Errorf("could not activate block device for mounting %s: %w", path, err)
 	}
 
-	// Build the mount command from the args provided
-	if l.CommandArgs.Vars == nil {
-		l.CommandArgs.Vars = make(map[string]string)
-	}
-	l.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.MountTarget))
 
 	// Run the mount command
@@ -182,13 +185,21 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
+	path := filepath.Clean(l.TargetPath)
+
+	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = l.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
 		return false, err
 	}
 
-	path := filepath.Clean(l.TargetPath)
 	for _, m := range mounts {
 		if m.Path != path {
 			continue
@@ -198,12 +209,6 @@ func (l *LustreFileSystem) Deactivate(ctx context.Context) (bool, error) {
 		if m.Device != l.BlockDevice.GetDevice() || m.Type != "lustre" {
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
-
-		// Build the unmount command from the args provided
-		if l.CommandArgs.Vars == nil {
-			l.CommandArgs.Vars = make(map[string]string)
-		}
-		l.CommandArgs.Vars["$MOUNT_PATH"] = path
 
 		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.UnmountTarget)), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
@@ -235,6 +240,14 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 	}
 
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = l.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -261,11 +274,6 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 		return false, fmt.Errorf("could not create mount directory %s: %w", path, err)
 	}
 
-	// Build the mount command from the args provided
-	if l.CommandArgs.Vars == nil {
-		l.CommandArgs.Vars = make(map[string]string)
-	}
-	l.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t lustre %s", l.parseArgs(l.CommandArgs.Mount))
 
 	// Run the mount command
@@ -283,6 +291,14 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 	}
 
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if l.CommandArgs.Vars == nil {
+		l.CommandArgs.Vars = make(map[string]string)
+	}
+	l.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = l.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -299,12 +315,6 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		if m.Device != devStr || m.Type != "lustre" {
 			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
-
-		// Build the unmount command from the args provided
-		if l.CommandArgs.Vars == nil {
-			l.CommandArgs.Vars = make(map[string]string)
-		}
-		l.CommandArgs.Vars["$MOUNT_PATH"] = path
 
 		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.Unmount)), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
