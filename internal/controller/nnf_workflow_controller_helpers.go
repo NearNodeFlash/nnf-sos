@@ -1324,17 +1324,10 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 			return nil, dwsv1alpha7.NewResourceError("could not get NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 		}
 
-		var accessError error
 		if access.Status.Error != nil {
 			handleWorkflowErrorByIndex(access.Status.Error, workflow, index)
 
-			// During unmount, we want to capture the error but continue with cleanup.
-			// During mount, we fail immediately.
-			if state == "mounted" {
-				return Requeue("mount error").withObject(access), nil
-			}
-			// For unmount, remember the error and check if unmount is complete below
-			accessError = access.Status.Error
+			return Requeue("mount/unmount error").withObject(access), nil
 		}
 
 		if state == "mounted" {
@@ -1349,12 +1342,6 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 			if !found || dwsv1alpha7.WorkflowState(teardownState) == workflow.Status.State {
 				if access.Status.State != "unmounted" || !access.Status.Ready {
 					return Requeue("pending unmount").withObject(access), nil
-				}
-
-				// Unmount is complete. If there was an error (e.g., fenced computes),
-				// return it now so the workflow records the failure.
-				if accessError != nil {
-					return nil, accessError
 				}
 			}
 		}

@@ -94,14 +94,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha10.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
-	defer func() {
-		// If the status error was already set directly (e.g., by detectFencedComputes),
-		// don't let a nil err overwrite it.
-		if err == nil && access.Status.Error != nil {
-			return
-		}
-		access.Status.SetResourceErrorAndLog(err, log)
-	}()
+	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
@@ -191,11 +184,9 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		// Check for fenced computes after every mount attempt. Fence errors
 		// take priority over any transient mount error so that flux can stop
-		// waiting and kill the job. Set the error on the status directly and
-		// return nil to avoid exponential backoff — a fence is permanent.
+		// waiting and kill the job.
 		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
-			access.Status.Error = fenceErr
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, fenceErr
 		}
 
 		if err != nil {
@@ -213,15 +204,12 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// After unmount completes, check for fenced computes. Unmount errors
-	// from non-fenced nodes have already been returned above, so any fence
-	// error here is additive. Set the error on the status directly and
-	// return nil to avoid exponential backoff — a fence is permanent.
-	// Mark Ready so the workflow helper can see the error and propagate it.
+	// from non-fenced nodes have already been returned above. Mark Ready
+	// so teardown (unmountNnfAccessIfNecessary) can see unmount completed.
 	if access.Status.State == "unmounted" {
 		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
-			access.Status.Error = fenceErr
 			access.Status.Ready = true
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, fenceErr
 		}
 	}
 
@@ -1256,10 +1244,10 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 				return false, err
 			}
 
-			// Skip fenced computes so unmount cleanup can proceed on healthy nodes.
+			// Skip fenced computes during unmount so cleanup can proceed on healthy nodes.
 			// Reconcile will detect fenced computes and report errors after unmount completes.
-			if fenced {
-				log.Info("skipping fenced compute", "node name", clientMount.GetNamespace())
+			if fenced && access.Spec.DesiredState == "unmounted" {
+				log.Info("skipping fenced compute during unmount", "node name", clientMount.GetNamespace())
 				continue
 			}
 
