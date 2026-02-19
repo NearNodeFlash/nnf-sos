@@ -707,7 +707,18 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 				nnfNodeStorage.Spec.Count = node.Count
 				nnfNodeStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
 				nnfNodeStorage.Spec.FileSystemType = nnfStorage.Spec.FileSystemType
-				nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{}
+				nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+					{
+						Name:    "$ALLOCATION_COUNT",
+						Value:   strconv.Itoa(node.Count),
+						Indexed: false,
+					},
+					{
+						Name:    "$HOST_COUNT",
+						Value:   strconv.Itoa(node.Count + 1),
+						Indexed: false,
+					},
+				}
 
 				varMap := map[string]string{}
 				for computeIndex := range storage.Status.Access.Computes {
