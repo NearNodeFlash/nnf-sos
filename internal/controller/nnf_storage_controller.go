@@ -715,7 +715,7 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 					},
 					{
 						Name:    "$HOST_COUNT",
-						Value:   strconv.Itoa(node.Count + 1),
+						Value:   strconv.Itoa(node.Count + 1), // The number of computes is node.Count, and add 1 to include the Rabbit
 						Indexed: false,
 					},
 				}
