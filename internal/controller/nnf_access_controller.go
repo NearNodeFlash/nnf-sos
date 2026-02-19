@@ -204,11 +204,9 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// After unmount completes, check for fenced computes. Unmount errors
-	// from non-fenced nodes have already been returned above. Mark Ready
-	// so teardown (unmountNnfAccessIfNecessary) can see unmount completed.
+	// from non-fenced nodes have already been returned above.
 	if access.Status.State == "unmounted" {
 		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
-			access.Status.Ready = true
 			return ctrl.Result{}, fenceErr
 		}
 	}
