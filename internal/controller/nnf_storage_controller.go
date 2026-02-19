@@ -707,7 +707,18 @@ func (r *NnfStorageReconciler) createNodeStorage(ctx context.Context, nnfStorage
 				nnfNodeStorage.Spec.Count = node.Count
 				nnfNodeStorage.Spec.SharedAllocation = allocationSet.SharedAllocation
 				nnfNodeStorage.Spec.FileSystemType = nnfStorage.Spec.FileSystemType
-				nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{}
+				nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+					{
+						Name:    "$ALLOCATION_COUNT",
+						Value:   strconv.Itoa(node.Count),
+						Indexed: false,
+					},
+					{
+						Name:    "$HOST_COUNT",
+						Value:   strconv.Itoa(node.Count + 1), // The number of computes is node.Count, and add 1 to include the Rabbit
+						Indexed: false,
+					},
+				}
 
 				varMap := map[string]string{}
 				for computeIndex := range storage.Status.Access.Computes {
