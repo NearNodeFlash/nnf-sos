@@ -1343,7 +1343,6 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 				if access.Status.State != "unmounted" || !access.Status.Ready {
 					return Requeue("pending unmount").withObject(access), nil
 				}
-
 			}
 		}
 	}
