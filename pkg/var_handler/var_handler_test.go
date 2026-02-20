@@ -77,3 +77,111 @@ func TestVarHandler(t *testing.T) {
 // Just touch ginkgo, so it's here to interpret any ginkgo args from
 // "make test", so that doesn't fail on this test file.
 var _ = BeforeSuite(func() {})
+
+func TestReplaceAllNested(t *testing.T) {
+	tests := []struct {
+		name     string
+		varMap   map[string]string
+		input    string
+		expected string
+	}{
+		{
+			name: "simple replacement",
+			varMap: map[string]string{
+				"$VAR1": "value1",
+			},
+			input:    "This is $VAR1",
+			expected: "This is value1",
+		},
+		{
+			name: "nested variable replacement",
+			varMap: map[string]string{
+				"$OUTER": "$INNER",
+				"$INNER": "final_value",
+			},
+			input:    "Result: $OUTER",
+			expected: "Result: final_value",
+		},
+		{
+			name: "double nested replacement",
+			varMap: map[string]string{
+				"$LEVEL1": "$LEVEL2",
+				"$LEVEL2": "$LEVEL3",
+				"$LEVEL3": "deep_value",
+			},
+			input:    "Deep: $LEVEL1",
+			expected: "Deep: deep_value",
+		},
+		{
+			name: "multiple variables in one string",
+			varMap: map[string]string{
+				"$A": "alpha",
+				"$B": "beta",
+				"$C": "gamma",
+			},
+			input:    "$A-$B-$C",
+			expected: "alpha-beta-gamma",
+		},
+		{
+			name: "nested with multiple variables",
+			varMap: map[string]string{
+				"$PATH": "/mnt/$DIR/$FILE",
+				"$DIR":  "data",
+				"$FILE": "output.txt",
+			},
+			input:    "Writing to $PATH",
+			expected: "Writing to /mnt/data/output.txt",
+		},
+		{
+			name: "depth limit protection - deep nesting within limit",
+			varMap: map[string]string{
+				"$L1": "$L2",
+				"$L2": "$L3",
+				"$L3": "resolved",
+			},
+			input:    "Deep: $L1",
+			expected: "Deep: resolved", // Within depth limit, fully resolves
+		},
+		{
+			name: "no variables to replace",
+			varMap: map[string]string{
+				"$VAR": "value",
+			},
+			input:    "No variables here",
+			expected: "No variables here",
+		},
+		{
+			name: "variable not in map",
+			varMap: map[string]string{
+				"$KNOWN": "known_value",
+			},
+			input:    "$UNKNOWN stays as is",
+			expected: "$UNKNOWN stays as is",
+		},
+		{
+			name:     "empty var map",
+			varMap:   map[string]string{},
+			input:    "$VAR should stay",
+			expected: "$VAR should stay",
+		},
+		{
+			name: "variable value contains partial variable name",
+			varMap: map[string]string{
+				"$PREFIX":    "/mnt/nnf",
+				"$FULL_PATH": "$PREFIX/subdir",
+			},
+			input:    "Path is $FULL_PATH",
+			expected: "Path is /mnt/nnf/subdir",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := NewVarHandler(tt.varMap)
+			result := v.ReplaceAll(tt.input)
+			if result != tt.expected {
+				t.Errorf("ReplaceAll() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}

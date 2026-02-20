@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha9
+apiVersion: nnf.cray.hpe.com/v1alpha10
 kind: NnfStorageProfile
 metadata:
   name: template
@@ -37,83 +37,97 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mkfs: -j2 -p $PROTOCOL -t $CLUSTER_NAME:$LOCK_SPACE $DEVICE
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands:
       postSetup:
       - chown $USERID:$GROUPID $MOUNT_PATH
   lustreStorage:
-    capacityMdt: 5GiB
-    capacityMgt: 5GiB
-    capacityScalingFactor: "1.0"
-    clientCommandLines:
-      mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
-      mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
-      rabbitPostSetup:
-      - lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G
-        -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH
     combinedMgtMdt: true
-    exclusiveMdt: false
-    mdtCommandlines:
-      mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
-        --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
-      mountTarget: $ZVOL_NAME $MOUNT_PATH
-      postActivate:
-      - mountpoint $MOUNT_PATH
-      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-    mdtOptions:
-      colocateComputes: false
-      count: 1
-    mgtCommandlines:
-      mkfs: --mgs --backfstype=$BACKFS --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
-      mountTarget: $ZVOL_NAME $MOUNT_PATH
-      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-    mgtMdtCommandlines:
-      mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID"
-        $ZVOL_NAME
-      mountTarget: $ZVOL_NAME $MOUNT_PATH
-      postActivate:
-      - mountpoint $MOUNT_PATH
-      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
-    mgtMdtOptions:
-      colocateComputes: false
-      count: 1
     mgtOptions:
+      capacity: 5GiB
+      commandlines:
+        zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
+        mkfs: --mgs --backfstype=$BACKFS --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
+        mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
       colocateComputes: false
       count: 1
-    ostCommandlines:
-      mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
-        --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
-      mountTarget: $ZVOL_NAME $MOUNT_PATH
-      postActivate:
-      - mountpoint $MOUNT_PATH
-      zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+      preMountCommands:
+      - lctl set_param -P osc.$FS_NAME-*.max_rpcs_in_flight=64
+      - lctl set_param -P osc.$FS_NAME-*.max_dirty_mb=2000
+      - lctl set_param -P osc.$FS_NAME-*.checksums=1
+      - lctl set_param -P osc.$FS_NAME-*.max_pages_per_rpc=4096
+      - lctl set_param -P osc.$FS_NAME-*.grant_shrink=0
+      - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_mb=512
+      - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_per_file_mb=512
+      - lctl set_param -P mdc.$FS_NAME-*.max_rpcs_in_flight=64
+      - lctl set_param -P mdt.$FS_NAME-*.enable_remote_dir_gid=-1
+      - lctl set_param -P obdfilter.$FS_NAME-*.brw_size=16
+      - lctl set_param -P osp.$FS_NAME-*-osc-*.max_rpcs_in_progress=65536
+      - lctl set_param -P *.$FS_NAME-*.job_cleanup_interval=21600
+      - lctl set_param -P bulk_timeout=127
+      - lctl set_param -P ldlm.lock_reclaim_threshold_mb=16993
+      - lctl set_param -P ldlm.lock_limit_mb=25747
+      - lctl conf_param $FS_NAME.sys.timeout=200
+      - lctl conf_param $FS_NAME-MDT*.lov.qos_threshold_rr=100
+      - lctl conf_param $FS_NAME-OST*.osc.checksums=1
+      - lctl conf_param $FS_NAME-OST*.osc.resend_count=43
+    mdtOptions:
+      capacity: 5GiB
+      exclusive: false
+      commandlines:
+        zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
+        mkfs: --mdt --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
+          --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
+        mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
+        postActivate:
+        - mountpoint $MOUNT_PATH
+      colocateComputes: false
+      count: 1
+    mgtMdtOptions:
+      capacity: 5GiB
+      commandlines:
+        zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
+        mkfs: --mgs --mdt --backfstype=$BACKFS --fsname=$FS_NAME --index=$INDEX --mkfsoptions="nnf:jobid=$JOBID"
+          $ZVOL_NAME
+        mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
+        postActivate:
+        - mountpoint $MOUNT_PATH
+      colocateComputes: false
+      count: 1
     ostOptions:
+      capacityScalingFactor: "1.0"
+      commandlines:
+        zpoolCreate: -O canmount=off -o cachefile=none $POOL_NAME $DEVICE_LIST
+        zpoolDestroy: $POOL_NAME
+        mkfs: --ost --backfstype=$BACKFS --fsname=$FS_NAME --mgsnode=$MGS_NID --index=$INDEX
+          --mkfsoptions="nnf:jobid=$JOBID" $ZVOL_NAME
+        mountTarget: $ZVOL_NAME $MOUNT_PATH
+        unmountTarget: $MOUNT_PATH
+        postActivate:
+        - mountpoint $MOUNT_PATH
       colocateComputes: true
       scale: 5
-    preMountMGTCommands:
-    - lctl set_param -P osc.$FS_NAME-*.max_rpcs_in_flight=64
-    - lctl set_param -P osc.$FS_NAME-*.max_dirty_mb=2000
-    - lctl set_param -P osc.$FS_NAME-*.checksums=1
-    - lctl set_param -P osc.$FS_NAME-*.max_pages_per_rpc=4096
-    - lctl set_param -P osc.$FS_NAME-*.grant_shrink=0
-    - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_mb=512
-    - lctl set_param -P llite.$FS_NAME-*.max_read_ahead_per_file_mb=512
-    - lctl set_param -P mdc.$FS_NAME-*.max_rpcs_in_flight=64
-    - lctl set_param -P mdt.$FS_NAME-*.enable_remote_dir_gid=-1
-    - lctl set_param -P obdfilter.$FS_NAME-*.brw_size=16
-    - lctl set_param -P osp.$FS_NAME-*-osc-*.max_rpcs_in_progress=65536
-    - lctl set_param -P *.$FS_NAME-*.job_cleanup_interval=21600
-    - lctl set_param -P bulk_timeout=127
-    - lctl set_param -P ldlm.lock_reclaim_threshold_mb=16993
-    - lctl set_param -P ldlm.lock_limit_mb=25747
-    - lctl conf_param $FS_NAME.sys.timeout=200
-    - lctl conf_param $FS_NAME-MDT*.lov.qos_threshold_rr=100
-    - lctl conf_param $FS_NAME-OST*.osc.checksums=1
-    - lctl conf_param $FS_NAME-OST*.osc.resend_count=43
+    clientOptions:
+      commandlines:
+        mountCompute: $MGS_NID:/$FS_NAME $MOUNT_PATH
+        unmountCompute: $MOUNT_PATH
+        mountRabbit: $MGS_NID:/$FS_NAME $MOUNT_PATH
+        unmountRabbit: $MOUNT_PATH
+        rabbitPostSetup:
+        - lfs setstripe -E 64K -L mdt -E 16m -c 1 -S 16m -E 1G -c 2 -E 4G -c 4 -E 16G
+          -c 8 -E 64G -c 16 -E -1 -c -1 $MOUNT_PATH
   pinned: false
   rawStorage:
     blockDeviceCommands:
@@ -141,9 +155,11 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: -o bind $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mount: -o bind $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands: {}
   xfsStorage:
@@ -172,10 +188,12 @@ data:
     fileSystemCommands:
       computeCommands:
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
       rabbitCommands:
         mkfs: $DEVICE
         mount: $DEVICE $MOUNT_PATH
+        unmount: $MOUNT_PATH
         userCommands: {}
     userCommands:
       postSetup:

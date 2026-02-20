@@ -46,7 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
 	//+kubebuilder:scaffold:imports
@@ -69,7 +69,7 @@ type Service struct {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha7.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha9.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha10.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

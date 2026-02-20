@@ -32,6 +32,7 @@ import (
 
 type ZpoolCommandArgs struct {
 	Create         string
+	Destroy        string
 	Replace        string
 	PreActivate    []string
 	PostActivate   []string
@@ -79,6 +80,11 @@ func (z *Zpool) parseArgs(args string, vars map[string]string) string {
 }
 
 func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
+	if len(z.CommandArgs.Create) == 0 {
+		z.Log.Info("Skipping Create - no zpool create command specified")
+		return false, nil
+	}
+
 	if complete {
 		return false, nil
 	}
@@ -107,7 +113,12 @@ func (z *Zpool) Create(ctx context.Context, complete bool) (bool, error) {
 }
 
 func (z *Zpool) Destroy(ctx context.Context) (bool, error) {
-	_, err := command.Run(fmt.Sprintf("zpool destroy %s", z.Name), z.Log)
+	if len(z.CommandArgs.Destroy) == 0 {
+		z.Log.Info("Skipping Destroy - no zpool destroy command specified")
+		return false, nil
+	}
+
+	_, err := command.Run(fmt.Sprintf("zpool destroy %s", z.parseArgs(z.CommandArgs.Destroy, nil)), z.Log)
 	if err != nil && !strings.Contains(err.Error(), "no such pool") {
 		return false, fmt.Errorf("could not destroy zpool %s", z.Name)
 	}
@@ -189,7 +200,7 @@ func (z *Zpool) CheckHealth(ctx context.Context) (bool, error) {
 }
 
 func (z *Zpool) Repair(ctx context.Context) error {
-	if z.CommandArgs.Replace == "" {
+	if len(z.CommandArgs.Replace) == 0 {
 		return nil
 	}
 
