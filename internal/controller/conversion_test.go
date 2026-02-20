@@ -83,26 +83,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfAccess resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfAccess{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfAccess resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfAccess{}
@@ -161,26 +141,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfContainerProfile resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfContainerProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfContainerProfile resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfContainerProfile{}
@@ -231,26 +191,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 		It("is unable to read NnfDataMovement resource via spoke v1alpha8", func() {
 			resSpoke := &nnfv1alpha8.NnfDataMovement{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
-		})
-
-		PIt("reads NnfDataMovement resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfDataMovement{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfDataMovement resource via hub and via spoke v1alpha9", func() {
@@ -312,26 +252,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfDataMovementManager resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfDataMovementManager{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfDataMovementManager resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfDataMovementManager{}
@@ -382,26 +302,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 		It("is unable to read NnfDataMovementProfile resource via spoke v1alpha8", func() {
 			resSpoke := &nnfv1alpha8.NnfDataMovementProfile{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
-		})
-
-		PIt("reads NnfDataMovementProfile resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfDataMovementProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfDataMovementProfile resource via hub and via spoke v1alpha9", func() {
@@ -458,26 +358,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfLustreMGT resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfLustreMGT{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfLustreMGT resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfLustreMGT{}
@@ -532,26 +412,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfNode resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfNode{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfNode resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfNode{}
@@ -602,26 +462,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 		It("is unable to read NnfNodeBlockStorage resource via spoke v1alpha8", func() {
 			resSpoke := &nnfv1alpha8.NnfNodeBlockStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
-		})
-
-		PIt("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfNodeBlockStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha9", func() {
@@ -676,26 +516,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfNodeECData resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfNodeECData{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfNodeECData resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfNodeECData{}
@@ -746,26 +566,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 		It("is unable to read NnfNodeStorage resource via spoke v1alpha8", func() {
 			resSpoke := &nnfv1alpha8.NnfNodeStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
-		})
-
-		PIt("reads NnfNodeStorage resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfNodeStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfNodeStorage resource via hub and via spoke v1alpha9", func() {
@@ -822,26 +622,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfPortManager resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfPortManager{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfPortManager resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfPortManager{}
@@ -896,26 +676,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfStorage resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfStorage resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfStorage{}
@@ -968,26 +728,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
 		})
 
-		PIt("reads NnfStorageProfile resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfStorageProfile{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
-		})
-
 		It("reads NnfStorageProfile resource via hub and via spoke v1alpha9", func() {
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha9.NnfStorageProfile{}
@@ -1038,26 +778,6 @@ var _ = Describe("Conversion Webhook Test", func() {
 		It("is unable to read NnfSystemStorage resource via spoke v1alpha8", func() {
 			resSpoke := &nnfv1alpha8.NnfSystemStorage{}
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
-		})
-
-		PIt("reads NnfSystemStorage resource via hub and via spoke v1alpha8", func() {
-			// ACTION: v1alpha8 is no longer served, and this test can be removed.
-
-			// Spoke should have annotation.
-			resSpoke := &nnfv1alpha8.NnfSystemStorage{}
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).To(Succeed())
-				anno := resSpoke.GetAnnotations()
-				g.Expect(anno).To(HaveLen(1))
-				g.Expect(anno).Should(HaveKey(utilconversion.DataAnnotation))
-			}).Should(Succeed())
-
-			// Hub should not have annotation.
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resHub)).To(Succeed())
-				anno := resHub.GetAnnotations()
-				g.Expect(anno).To(HaveLen(0))
-			}).Should(Succeed())
 		})
 
 		It("reads NnfSystemStorage resource via hub and via spoke v1alpha9", func() {
