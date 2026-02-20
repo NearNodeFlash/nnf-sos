@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -113,6 +113,7 @@ type NnfSystemStorageStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:unservedversion
 // NnfSystemStorage is the Schema for the nnfsystemstorages API
 type NnfSystemStorage struct {
 	metav1.TypeMeta   `json:",inline"`
