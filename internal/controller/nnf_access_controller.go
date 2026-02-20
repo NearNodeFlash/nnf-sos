@@ -47,7 +47,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/helpers"
 )
@@ -84,7 +84,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	metrics.NnfAccessReconcilesTotal.Inc()
 
-	access := &nnfv1alpha9.NnfAccess{}
+	access := &nnfv1alpha10.NnfAccess{}
 	if err := r.Get(ctx, req.NamespacedName, access); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -92,7 +92,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha9.NnfAccessStatus](access)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha10.NnfAccessStatus](access)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -181,6 +181,14 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if access.Status.State == "mounted" {
 		result, err = r.mount(ctx, access, clientList, storageMapping)
+
+		// Check for fenced computes after every mount attempt. Fence errors
+		// take priority over any transient mount error so that flux can stop
+		// waiting and kill the job.
+		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
+			return ctrl.Result{}, fenceErr
+		}
+
 		if err != nil {
 			return ctrl.Result{}, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("unable to mount file system on client nodes")
 		}
@@ -195,6 +203,14 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return *result, nil
 	}
 
+	// After unmount completes, check for fenced computes. Unmount errors
+	// from non-fenced nodes have already been returned above.
+	if access.Status.State == "unmounted" {
+		if fenceErr := r.detectFencedComputes(ctx, access, clientList); fenceErr != nil {
+			return ctrl.Result{}, fenceErr
+		}
+	}
+
 	if access.Status.Ready == false {
 		log.Info("State achieved", "State", access.Status.State)
 	}
@@ -205,7 +221,7 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha9.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (*ctrl.Result, error) {
+func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (*ctrl.Result, error) {
 	// Lock the NnfStorage by adding an annotation with the name/namespace for this
 	// NnfAccess. This is used for non-clustered file systems that can only be mounted
 	// from a single host.
@@ -262,7 +278,7 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha9.Nnf
 	return nil, nil
 }
 
-func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha9.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (*ctrl.Result, error) {
+func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (*ctrl.Result, error) {
 	// Update client mounts to trigger unmount operation
 	err := r.manageClientMounts(ctx, access, storageMapping)
 	if err != nil {
@@ -306,9 +322,9 @@ func (r *NnfAccessReconciler) unmount(ctx context.Context, access *nnfv1alpha9.N
 // lockStorage applies an annotation to the NnfStorage resource with the name and namespace of the NnfAccess resource.
 // This acts as a lock to prevent multiple NnfAccess resources from mounting the same file system. This is only necessary
 // for non-clustered file systems
-func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alpha9.NnfAccess) (bool, error) {
+func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alpha10.NnfAccess) (bool, error) {
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
 		return false, fmt.Errorf("invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -317,13 +333,15 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
-	nnfStorage := &nnfv1alpha9.NnfStorage{}
+	nnfStorage := &nnfv1alpha10.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return false, err
 	}
 
-	if !controllerutil.ContainsFinalizer(nnfStorage, access.Name) {
-		controllerutil.AddFinalizer(nnfStorage, access.Name)
+	// Use domain-qualified finalizer to avoid conflicts with other controllers
+	finalizerName := "nnf.cray.hpe.com/" + access.Name
+	if !controllerutil.ContainsFinalizer(nnfStorage, finalizerName) {
+		controllerutil.AddFinalizer(nnfStorage, finalizerName)
 	}
 
 	// Clustered file systems don't need to add the annotation
@@ -360,10 +378,10 @@ func (r *NnfAccessReconciler) lockStorage(ctx context.Context, access *nnfv1alph
 }
 
 // unlockStorage removes the NnfAccess annotation from an NnfStorage resource if it was added from lockStorage()
-func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1alpha9.NnfAccess) error {
-	nnfStorage := &nnfv1alpha9.NnfStorage{}
+func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1alpha10.NnfAccess) error {
+	nnfStorage := &nnfv1alpha10.NnfStorage{}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
 		return nil
 	}
 
@@ -397,8 +415,10 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 		nnfStorage.SetAnnotations(annotations)
 	}
 
-	if controllerutil.ContainsFinalizer(nnfStorage, access.Name) {
-		controllerutil.RemoveFinalizer(nnfStorage, access.Name)
+	// Use domain-qualified finalizer to match the one added in lockStorage
+	finalizerName := "nnf.cray.hpe.com/" + access.Name
+	if controllerutil.ContainsFinalizer(nnfStorage, finalizerName) {
+		controllerutil.RemoveFinalizer(nnfStorage, finalizerName)
 	}
 
 	err := r.Update(ctx, nnfStorage)
@@ -410,7 +430,7 @@ func (r *NnfAccessReconciler) unlockStorage(ctx context.Context, access *nnfv1al
 }
 
 // getClientList returns the list of client node names from either the Computes resource of the NnfStorage resource
-func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1alpha9.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1alpha10.NnfAccess) ([]string, error) {
 	if access.Spec.ClientReference != (corev1.ObjectReference{}) {
 		return r.getClientListFromClientReference(ctx, access)
 	}
@@ -419,7 +439,7 @@ func (r *NnfAccessReconciler) getClientList(ctx context.Context, access *nnfv1al
 }
 
 // getClientListFromClientReference returns a list of client nodes names from the Computes resource
-func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Context, access *nnfv1alpha9.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Context, access *nnfv1alpha10.NnfAccess) ([]string, error) {
 	computes := &dwsv1alpha7.Computes{}
 
 	if access.Spec.ClientReference.Kind != reflect.TypeOf(dwsv1alpha7.Computes{}).Name() {
@@ -445,9 +465,9 @@ func (r *NnfAccessReconciler) getClientListFromClientReference(ctx context.Conte
 
 // getClientListFromStorageReference returns a list of client node names from the NnfStorage resource. This is the list of Rabbit
 // nodes that host the storage
-func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Context, access *nnfv1alpha9.NnfAccess) ([]string, error) {
+func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Context, access *nnfv1alpha10.NnfAccess) ([]string, error) {
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
 		return nil, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -456,7 +476,7 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 		Namespace: access.Spec.StorageReference.Namespace,
 	}
 
-	nnfStorage := &nnfv1alpha9.NnfStorage{}
+	nnfStorage := &nnfv1alpha10.NnfStorage{}
 	if err := r.Get(ctx, namespacedName, nnfStorage); err != nil {
 		return nil, err
 	}
@@ -478,10 +498,10 @@ func (r *NnfAccessReconciler) getClientListFromStorageReference(ctx context.Cont
 }
 
 // mapClientStorage returns a map of the clients with a list of mounts to make. This picks a device for each client
-func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv1alpha9.NnfAccess, clients []string) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
-	nnfStorage := &nnfv1alpha9.NnfStorage{}
+func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv1alpha10.NnfAccess, clients []string) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
+	nnfStorage := &nnfv1alpha10.NnfStorage{}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
 		return nil, fmt.Errorf("Invalid StorageReference kind %s", access.Spec.StorageReference.Kind)
 	}
 
@@ -519,7 +539,7 @@ func (r *NnfAccessReconciler) mapClientStorage(ctx context.Context, access *nnfv
 
 // mapClientNetworkStorage provides the Lustre MGS address information for the clients. All clients get the same
 // mount information
-func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha9.NnfAccess, clients []string, nnfStorage *nnfv1alpha9.NnfStorage, setIndex int) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
+func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, access *nnfv1alpha10.NnfAccess, clients []string, nnfStorage *nnfv1alpha10.NnfStorage, setIndex int) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
 	storageMapping := make(map[string][]dwsv1alpha7.ClientMountInfo)
 
 	for _, client := range clients {
@@ -550,7 +570,7 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 
 // mapClientLocalStorage picks storage device(s) for each client to access based on locality information
 // from the (DWS) Storage resources.
-func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access *nnfv1alpha9.NnfAccess, clients []string, nnfStorage *nnfv1alpha9.NnfStorage, setIndex int) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
+func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access *nnfv1alpha10.NnfAccess, clients []string, nnfStorage *nnfv1alpha10.NnfStorage, setIndex int) (map[string][]dwsv1alpha7.ClientMountInfo, error) {
 	allocationSetSpec := nnfStorage.Spec.AllocationSets[setIndex]
 
 	// Use information from the NnfStorage resource to determine how many allocations
@@ -582,14 +602,14 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 	// allocation.
 	for nodeName, storageCount := range storageCountMap {
 		matchLabels := dwsv1alpha7.MatchingOwner(nnfStorage)
-		matchLabels[nnfv1alpha9.AllocationSetLabel] = allocationSetSpec.Name
+		matchLabels[nnfv1alpha10.AllocationSetLabel] = allocationSetSpec.Name
 
 		listOptions := []client.ListOption{
 			matchLabels,
 			client.InNamespace(nodeName),
 		}
 
-		nnfNodeStorageList := &nnfv1alpha9.NnfNodeStorageList{}
+		nnfNodeStorageList := &nnfv1alpha10.NnfNodeStorageList{}
 		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
 			return nil, err
 		}
@@ -604,7 +624,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 			if !nnfNodeStorage.Status.Ready {
 				continue
 			}
-			nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
+			nnfNodeBlockStorage := &nnfv1alpha10.NnfNodeBlockStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nnfNodeStorage.Name,
 					Namespace: nnfNodeStorage.Namespace,
@@ -625,7 +645,7 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 				// so clientmountd will not look at the DeviceReference struct. The DeviceReference information is used by
 				// the data movement code to match up mounts between the Rabbit and compute node.
 				mountInfo.Device.DeviceReference = &dwsv1alpha7.ClientMountDeviceReference{}
-				mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha9.NnfNodeStorage{}).Name()
+				mountInfo.Device.DeviceReference.ObjectReference.Kind = reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name()
 				mountInfo.Device.DeviceReference.ObjectReference.Name = nnfNodeStorage.Name
 				mountInfo.Device.DeviceReference.ObjectReference.Namespace = nnfNodeStorage.Namespace
 				mountInfo.Device.DeviceReference.Data = i
@@ -747,7 +767,7 @@ type mountReference struct {
 // addNodeStorageEndpoints adds the compute node information to the NnfNodeStorage resource
 // so it can make the NVMe namespaces accessible on the compute node. This is done on the rabbit
 // by creating StorageGroup resources through swordfish for the correct endpoint.
-func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access *nnfv1alpha9.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
+func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access *nnfv1alpha10.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be added for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -764,7 +784,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -780,7 +800,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 	// Loop through the NnfNodeBlockStorages and add client access information for each of the
 	// computes that need access to an allocation.
 	for nodeStorageReference, mountRefList := range nodeStorageMap {
-		nnfNodeStorage := &nnfv1alpha9.NnfNodeStorage{
+		nnfNodeStorage := &nnfv1alpha10.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nodeStorageReference.Name,
 				Namespace: nodeStorageReference.Namespace,
@@ -791,7 +811,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 			return err
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
+		nnfNodeBlockStorage := &nnfv1alpha10.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
 				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -837,7 +857,7 @@ func (r *NnfAccessReconciler) addBlockStorageAccess(ctx context.Context, access 
 	return nil
 }
 
-func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, access *nnfv1alpha9.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (bool, error) {
+func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, access *nnfv1alpha10.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) (bool, error) {
 	// NnfNodeStorage clientReferences only need to be checked for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -854,7 +874,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -868,10 +888,10 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 		}
 	}
 
-	nnfNodeBlockStorages := []nnfv1alpha9.NnfNodeBlockStorage{}
+	nnfNodeBlockStorages := []nnfv1alpha10.NnfNodeBlockStorage{}
 
 	for nodeStorageReference := range nodeStorageMap {
-		nnfNodeStorage := &nnfv1alpha9.NnfNodeStorage{
+		nnfNodeStorage := &nnfv1alpha10.NnfNodeStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nodeStorageReference.Name,
 				Namespace: nodeStorageReference.Namespace,
@@ -882,7 +902,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 			return false, err
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{
+		nnfNodeBlockStorage := &nnfv1alpha10.NnfNodeBlockStorage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      nnfNodeStorage.Spec.BlockReference.Name,
 				Namespace: nnfNodeStorage.Spec.BlockReference.Namespace,
@@ -996,7 +1016,7 @@ func (r *NnfAccessReconciler) getBlockStorageAccessStatus(ctx context.Context, a
 // removeNodeStorageEndpoints modifies the NnfNodeStorage resources to remove the client endpoints for the
 // compute nodes that had mounted the storage. This causes NnfNodeStorage to remove the StorageGroups for
 // those compute nodes and remove access to the NVMe namespaces from the computes.
-func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, access *nnfv1alpha9.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
+func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, access *nnfv1alpha10.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
 	// NnfNodeStorage clientReferences only need to be removed for compute nodes. If
 	// this nnfAccess is not for compute nodes, then there's no work to do.
 	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
@@ -1013,7 +1033,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 				continue
 			}
 
-			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfNodeStorage{}).Name() {
+			if mount.Device.DeviceReference.ObjectReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
 				continue
 			}
 
@@ -1030,7 +1050,7 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 			Namespace: nodeBlockStorageReference.Namespace,
 		}
 
-		nnfNodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{}
+		nnfNodeBlockStorage := &nnfv1alpha10.NnfNodeBlockStorage{}
 		err := r.Get(ctx, namespacedName, nnfNodeBlockStorage)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -1058,18 +1078,18 @@ func (r *NnfAccessReconciler) removeBlockStorageAccess(ctx context.Context, acce
 }
 
 // manageClientMounts creates or updates the ClientMount resources based on the information in the storageMapping map.
-func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha9.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
+func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nnfv1alpha10.NnfAccess, storageMapping map[string][]dwsv1alpha7.ClientMountInfo) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
 	if !access.Spec.MakeClientMounts {
 		return nil
 	}
 
-	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha9.NnfStorage{}).Name() {
+	if access.Spec.StorageReference.Kind != reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name() {
 		return dwsv1alpha7.NewResourceError("invalid StorageReference kind %s", access.Spec.StorageReference.Kind).WithFatal()
 	}
 
-	nnfStorage := &nnfv1alpha9.NnfStorage{
+	nnfStorage := &nnfv1alpha10.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      access.Spec.StorageReference.Name,
 			Namespace: access.Spec.StorageReference.Namespace,
@@ -1116,10 +1136,11 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 
 			namespacedName := client.ObjectKeyFromObject(clientMount).String()
 			if err != nil {
-				if !apierrors.IsConflict(err) {
-					log.Error(err, "failed to create or update ClientMount", "name", namespacedName)
+				// Absorb conflict and already-exists errors - they're recoverable through reconciler retry
+				if apierrors.IsConflict(err) || apierrors.IsAlreadyExists(err) {
+					return nil
 				}
-
+				log.Error(err, "failed to create or update ClientMount", "name", namespacedName)
 				return err
 			}
 			if result == controllerutil.OperationResultCreated {
@@ -1137,8 +1158,8 @@ func (r *NnfAccessReconciler) manageClientMounts(ctx context.Context, access *nn
 	return g.Wait()
 }
 
-// getClientMountStatus aggregates the status from all the ClientMount resources
-func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha9.NnfAccess, clientList []string) (bool, error) {
+// getClientMountStatus aggregates the status from all the ClientMount resources.
+func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string) (bool, error) {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
 
 	if !access.Spec.MakeClientMounts {
@@ -1216,16 +1237,23 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		// If mounts aren't ready, check if this compute node is offline/fenced
 		// Only do the expensive offline check when we need it to handle failures gracefully
 		if !allMountsReady || access.Spec.DesiredState == "unmounted" {
-			offline, err := r.checkOfflineCompute(ctx, access, &clientMount)
+			offline, fenced, err := r.checkOfflineOrFencedCompute(ctx, access, &clientMount)
 			if err != nil {
 				return false, err
 			}
 
-			// If the compute node is offline/fenced and we're unmounting, ignore any mount status
+			// Skip fenced computes during unmount so cleanup can proceed on healthy nodes.
+			// Reconcile will detect fenced computes and report errors after unmount completes.
+			if fenced && access.Spec.DesiredState == "unmounted" {
+				log.Info("skipping fenced compute during unmount", "node name", clientMount.GetNamespace())
+				continue
+			}
+
+			// If the compute node is offline and we're unmounting, ignore any mount status
 			// from this node since it can't respond. The filesystem won't be remounted if the
 			// compute comes back since spec.desiredState is "unmounted"
 			if offline && access.Spec.DesiredState == "unmounted" {
-				log.Info("ignoring ClientMount from offline/fenced compute node during unmount", "node name", clientMount.GetNamespace())
+				log.Info("ignoring ClientMount from offline compute node during unmount", "node name", clientMount.GetNamespace())
 				continue
 			}
 		}
@@ -1239,19 +1267,31 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	if len(clientMounts) != len(clientList) {
 		if access.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of ClientMounts", "found", len(clientMounts), "expected", len(clientList))
+
+			// During unmount, if all missing ClientMounts are from fenced computes, proceed.
+			// Reconcile will detect the fenced computes and report the error after unmount.
+			if access.Spec.DesiredState == "unmounted" {
+				fencedComputes, err := r.getFencedComputes(ctx, access, clientList, clientMounts)
+				if err != nil {
+					log.Error(err, "failed to check for fenced computes")
+				} else if len(fencedComputes) > 0 && len(fencedComputes) == len(clientList)-len(clientMounts) {
+					log.Info("all missing ClientMounts are from fenced computes, proceeding with unmount", "fencedComputes", fencedComputes)
+					return true, nil
+				}
+			}
 		}
 		return false, nil
 	}
 	return true, nil
 }
 
-func clientMountName(access *nnfv1alpha9.NnfAccess) string {
+func clientMountName(access *nnfv1alpha10.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
 }
 
 // removeOfflineClientMounts deletes the NnfClientMount finalizer from any ClientMounts that
 // have a Compute node marked as "Offline" in the Storage resource
-func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnfAccess *nnfv1alpha9.NnfAccess) error {
+func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnfAccess *nnfv1alpha10.NnfAccess) error {
 	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(nnfAccess))
 
 	if !nnfAccess.Spec.MakeClientMounts {
@@ -1288,7 +1328,7 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 	// For each ClientMount, check whether the Compute node is marked as "Offline". If it is,
 	// remove the NnfClientMount finalizer and update the resource
 	for _, clientMount := range clientMountList.Items {
-		offline, err := r.checkOfflineCompute(ctx, nnfAccess, &clientMount)
+		offline, _, err := r.checkOfflineOrFencedCompute(ctx, nnfAccess, &clientMount)
 		if err != nil {
 			return err
 		}
@@ -1311,13 +1351,14 @@ func (r *NnfAccessReconciler) removeOfflineClientMounts(ctx context.Context, nnf
 	return nil
 }
 
-// checkOfflineCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
-// compute node, and checks whether the compute node is marked as "Offline" (indicating no PCIe connection).
+// checkOfflineOrFencedCompute finds the Storage resource for the Rabbit physically attached to the clientMount's
+// compute node, and checks whether the compute node is marked as "Offline" or "Fenced".
 // It also checks the SystemStatus resource to see if the compute node is marked as Disabled.
-// It also checks for fence response files indicating the node has been fenced.
-func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess *nnfv1alpha9.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, error) {
+// Returns (offline, fenced, error) where offline indicates the node is offline/disabled/fenced,
+// and fenced specifically indicates a STONITH fence event occurred.
+func (r *NnfAccessReconciler) checkOfflineOrFencedCompute(ctx context.Context, nnfAccess *nnfv1alpha10.NnfAccess, clientMount *dwsv1alpha7.ClientMount) (bool, bool, error) {
 	if nnfAccess.Spec.ClientReference == (corev1.ObjectReference{}) {
-		return false, nil
+		return false, false, nil
 	}
 
 	computeName := clientMount.GetNamespace()
@@ -1325,12 +1366,12 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	// Find the name of the Rabbit attached to the compute node
 	rabbitName, err := r.getRabbitFromClientMount(ctx, clientMount)
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	// Get the Storage resource for the Rabbit
 	// The Storage controller syncs compute node status from NnfNode.Status.Servers to Storage.Status.Access.Computes
-	// This includes marking fenced compute nodes as offline
+	// This includes marking fenced compute nodes
 	storage := &dwsv1alpha7.Storage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rabbitName,
@@ -1339,14 +1380,17 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	}
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
-		return false, dwsv1alpha7.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
+		return false, false, dwsv1alpha7.NewResourceError("could not get Storage %v", client.ObjectKeyFromObject(storage)).WithError(err).WithMajor()
 	}
 
 	// Check the status of the compute node in the Storage resource to determine if it's offline or fenced
 	for _, compute := range storage.Status.Access.Computes {
 		if compute.Name == computeName {
-			if compute.Status == dwsv1alpha7.OfflineStatus || compute.Status == dwsv1alpha7.FencedStatus {
-				return true, nil
+			if compute.Status == dwsv1alpha7.FencedStatus {
+				return true, true, nil // offline=true, fenced=true
+			}
+			if compute.Status == dwsv1alpha7.OfflineStatus {
+				return true, false, nil // offline=true, fenced=false
 			}
 			break
 		}
@@ -1362,16 +1406,129 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 	if err := r.Get(ctx, client.ObjectKeyFromObject(systemStatus), systemStatus); err != nil {
 		// Don't rely on the SystemStatus existing. If it's not there, just return that the compute node
 		// isn't offline
-		return false, nil
+		return false, false, nil
 	}
 
 	if status, found := systemStatus.Data.Nodes[computeName]; found {
 		if status == dwsv1alpha7.SystemNodeStatusDisabled {
-			return true, nil
+			return true, false, nil // offline=true (disabled), fenced=false
 		}
 	}
 
-	return false, nil
+	return false, false, nil
+}
+
+// getFencedComputes returns a list of compute nodes that are fenced (i.e., don't have ClientMounts created).
+// It compares the expected client list with the actual ClientMounts and checks if missing clients are fenced.
+func (r *NnfAccessReconciler) getFencedComputes(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string, clientMounts []dwsv1alpha7.ClientMount) ([]string, error) {
+	// Only check for computes NnfAccess (not servers)
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil, nil
+	}
+
+	// Build a set of clients that have ClientMounts
+	clientsWithMounts := make(map[string]struct{})
+	for _, cm := range clientMounts {
+		clientsWithMounts[cm.GetNamespace()] = struct{}{}
+	}
+
+	// Find clients that don't have ClientMounts
+	missingClients := []string{}
+	for _, client := range clientList {
+		if _, exists := clientsWithMounts[client]; !exists {
+			missingClients = append(missingClients, client)
+		}
+	}
+
+	if len(missingClients) == 0 {
+		return nil, nil
+	}
+
+	// For each missing client, check if it's fenced by looking at the Storage resource
+	fencedComputes := []string{}
+	for _, computeName := range missingClients {
+		// Find the Rabbit for this compute
+		rabbitName, err := helpers.GetRabbitFromCompute(ctx, r.Client, computeName)
+		if err != nil {
+			// If we can't find the Rabbit, skip this compute
+			continue
+		}
+
+		// Get the Storage resource for the Rabbit
+		storage := &dwsv1alpha7.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      rabbitName,
+				Namespace: "default",
+			},
+		}
+
+		if err := r.Get(ctx, client.ObjectKeyFromObject(storage), storage); err != nil {
+			continue
+		}
+
+		// Check the status of the compute node in the Storage resource
+		for _, compute := range storage.Status.Access.Computes {
+			if compute.Name == computeName {
+				if compute.Status == dwsv1alpha7.FencedStatus {
+					fencedComputes = append(fencedComputes, computeName)
+				}
+				break
+			}
+		}
+	}
+
+	return fencedComputes, nil
+}
+
+// detectFencedComputes checks if any computes associated with this access have been fenced.
+// Unlike getFencedComputes (which only checks missing ClientMounts), this checks ALL computes
+// in the client list against the Storage resource. This is used after unmount completes to
+// record a fence error on the workflow.
+func (r *NnfAccessReconciler) detectFencedComputes(ctx context.Context, access *nnfv1alpha10.NnfAccess, clientList []string) *dwsv1alpha7.ResourceErrorInfo {
+	log := r.Log.WithValues("NnfAccess", client.ObjectKeyFromObject(access))
+
+	// Only check for compute NnfAccess (not servers)
+	if access.Spec.ClientReference == (corev1.ObjectReference{}) {
+		return nil
+	}
+
+	// Group computes by Rabbit to minimize Storage lookups
+	rabbitComputes := make(map[string][]string)
+	for _, computeName := range clientList {
+		rabbitName, err := helpers.GetRabbitFromCompute(ctx, r.Client, computeName)
+		if err != nil {
+			log.Error(err, "failed to get Rabbit from compute", "compute", computeName)
+			continue
+		}
+		rabbitComputes[rabbitName] = append(rabbitComputes[rabbitName], computeName)
+	}
+
+	fencedComputes := []string{}
+	for rabbitName, computes := range rabbitComputes {
+		storage := &dwsv1alpha7.Storage{}
+		storageKey := types.NamespacedName{Name: rabbitName, Namespace: "default"}
+		if err := r.Get(ctx, storageKey, storage); err != nil {
+			log.Error(err, "failed to get Storage", "rabbit", rabbitName)
+			continue
+		}
+
+		for _, computeName := range computes {
+			for _, compute := range storage.Status.Access.Computes {
+				if compute.Name == computeName && compute.Status == dwsv1alpha7.FencedStatus {
+					fencedComputes = append(fencedComputes, computeName)
+					break
+				}
+			}
+		}
+	}
+
+	if len(fencedComputes) == 0 {
+		return nil
+	}
+
+	return dwsv1alpha7.NewResourceError("compute nodes have been fenced: %v", fencedComputes).
+		WithFatal().
+		WithUserMessage("Workflow failed: compute nodes %v were fenced during the job", fencedComputes)
 }
 
 // getRabbitFromClientMount finds the name of the Rabbit that is physically connected to the ClientMount's
@@ -1379,7 +1536,7 @@ func (r *NnfAccessReconciler) checkOfflineCompute(ctx context.Context, nnfAccess
 func (r *NnfAccessReconciler) getRabbitFromClientMount(ctx context.Context, clientMount *dwsv1alpha7.ClientMount) (string, error) {
 	// If the ClientMount has a block device reference that points to an NnNodeStorage, use the namespace of the NnfNodeStorage
 	// as the Rabbit name
-	if clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Kind == reflect.TypeOf(nnfv1alpha9.NnfNodeStorage{}).Name() {
+	if clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Kind == reflect.TypeOf(nnfv1alpha10.NnfNodeStorage{}).Name() {
 		return clientMount.Spec.Mounts[0].Device.DeviceReference.ObjectReference.Namespace, nil
 	}
 
@@ -1456,7 +1613,7 @@ func (r *NnfAccessReconciler) ComputesEnqueueRequests(ctx context.Context, o cli
 		}),
 	}
 
-	nnfAccessList := &nnfv1alpha9.NnfAccessList{}
+	nnfAccessList := &nnfv1alpha10.NnfAccessList{}
 	if err := r.List(context.TODO(), nnfAccessList, listOptions...); err != nil {
 		log.Info("Could not list NnfAccesses", "error", err)
 		return requests
@@ -1496,7 +1653,7 @@ func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
-		For(&nnfv1alpha9.NnfAccess{}).
+		For(&nnfv1alpha10.NnfAccess{}).
 		Watches(&dwsv1alpha7.Computes{}, handler.EnqueueRequestsFromMapFunc(r.ComputesEnqueueRequests)).
 		Watches(&dwsv1alpha7.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
 		Complete(r)

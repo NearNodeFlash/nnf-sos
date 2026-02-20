@@ -1,4 +1,4 @@
-apiVersion: nnf.cray.hpe.com/v1alpha9
+apiVersion: nnf.cray.hpe.com/v1alpha10
 kind: NnfPortManager
 metadata:
   name: port-manager

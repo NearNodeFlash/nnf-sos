@@ -68,11 +68,13 @@ func (vg *VolumeGroup) Exists(ctx context.Context) (bool, error) {
 }
 
 // WaitForAppearance checks the existence of the VG and
-// waits a brief time for the VG to be created if it is not present
+// waits a brief time for the VG to be created if it is not present.
+// This intentionally fails quickly to trigger an NVMe namespace rescan,
+// relying on the controller's exponential backoff for retries.
 func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 
-	// Default to 10 second timeout
-	retryPeriod := 10 * time.Second
+	// Default to 1 second timeout - fail quickly to trigger ns-rescan
+	retryPeriod := 1 * time.Second
 
 	// Look for environment variable to override
 	timeoutString, found := os.LookupEnv("NNF_MAPPER_WAIT_TIMEOUT")
@@ -86,7 +88,7 @@ func (vg *VolumeGroup) WaitForAppearance(ctx context.Context) (bool, error) {
 	// Give the VG time to appear
 	var exists bool
 	var err error
-	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(time.Second) {
+	for start := time.Now(); time.Since(start) < retryPeriod; time.Sleep(100 * time.Millisecond) {
 		exists, err = vg.Exists(ctx)
 		if err != nil {
 			return false, err
@@ -133,6 +135,10 @@ func (vg *VolumeGroup) parseArgs(args string, vars map[string]string) (string, e
 }
 
 func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -157,6 +163,10 @@ func (vg *VolumeGroup) Create(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -170,6 +180,10 @@ func (vg *VolumeGroup) Change(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	exists, err := vg.WaitForAppearance(ctx)
 	if err != nil {
 		return false, err
@@ -183,6 +197,10 @@ func (vg *VolumeGroup) LockStart(ctx context.Context, rawArgs string) (bool, err
 }
 
 func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	exists, err := vg.Exists(ctx)
 	if err != nil {
 		return false, err
@@ -203,6 +221,10 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 }
 
 func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err
@@ -227,6 +249,10 @@ func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	existingPVs, err := pvsListVolumes(ctx, vg.Log)
 	if err != nil {
 		return false, err
@@ -265,6 +291,10 @@ func (vg *VolumeGroup) Extend(ctx context.Context, rawArgs string) (bool, error)
 }
 
 func (vg *VolumeGroup) Reduce(ctx context.Context, rawArgs string) (bool, error) {
+	if len(rawArgs) == 0 {
+		return false, nil
+	}
+
 	args, err := vg.parseArgs(rawArgs, nil)
 	if err != nil {
 		return false, err

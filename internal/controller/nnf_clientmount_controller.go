@@ -22,6 +22,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,7 +46,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -66,7 +67,29 @@ const (
 
 	// filepath to append to clientmount directory to store lustre information in (servers resource)
 	lustreServersFilepath = ".nnf-servers.json"
+
+	// quickRetryDelay is the delay used when a quick retry is requested after ns-rescan discovers devices
+	quickRetryDelay = 1 * time.Second
 )
+
+// quickRetryError is a sentinel error that indicates a quick retry should be performed
+// rather than using exponential backoff. This is used when ns-rescan discovers new devices
+// and we want to retry activation quickly.
+type quickRetryError struct {
+	err error
+}
+
+func (e *quickRetryError) Error() string {
+	return e.err.Error()
+}
+
+func (e *quickRetryError) Unwrap() error {
+	return e.err
+}
+
+func newQuickRetryError(err error) *quickRetryError {
+	return &quickRetryError{err: err}
+}
 
 // NnfClientMountReconciler contains the pieces used by the reconciler
 type NnfClientMountReconciler struct {
@@ -223,6 +246,13 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		resourceError := dwsv1alpha7.NewResourceError("mount/unmount failed").WithError(err)
 		log.Info(resourceError.Error())
 
+		// Check if this is a quick retry error (e.g., after ns-rescan discovered new devices)
+		var qrErr *quickRetryError
+		if errors.As(err, &qrErr) {
+			log.Info("Quick retry requested after NVMe rescan", "delay", quickRetryDelay)
+			return ctrl.Result{RequeueAfter: quickRetryDelay}, nil
+		}
+
 		return ctrl.Result{}, resourceError
 	}
 
@@ -314,6 +344,8 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				return dwsv1alpha7.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
 			}
 
+			// Check if all expected devices are now present after the rescan
+			allDevicesFound := true
 			for _, expectedDevice := range clientMountInfo.Device.LVM.NVMeInfo {
 				found := false
 				for _, existingDevice := range existingDevices {
@@ -324,10 +356,16 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 				}
 				if !found {
 					log.Info("Could not find expected NVMe device", "NQN", expectedDevice.DeviceSerial, "NSID", expectedDevice.NamespaceID)
+					allDevicesFound = false
 				}
 			}
 
-			return dwsv1alpha7.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+			activateErr := dwsv1alpha7.NewResourceError("unable to activate block device").WithError(err).WithMajor()
+			// If all devices are now present after rescan, request a quick retry
+			if allDevicesFound {
+				return newQuickRetryError(activateErr)
+			}
+			return activateErr
 		}
 		if activated {
 			log.Info("Activated block device", "block device path", blockDevice.GetDevice())
@@ -341,7 +379,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Ran PostActivate commands")
 		}
 
-		ran, err = fileSystem.PreMount(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = fileSystem.PreMount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PreMount commands").WithError(err).WithMajor()
 		}
@@ -406,7 +444,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 			log.Info("Unmounted file system", "Mount path", clientMountInfo.MountPath)
 		}
 
-		ran, err = fileSystem.PostUnmount(ctx, clientMount.Status.Mounts[index].Ready)
+		ran, err = fileSystem.PostUnmount(ctx, clientMountInfo.MountPath, clientMount.Status.Mounts[index].Ready)
 		if err != nil {
 			return dwsv1alpha7.NewResourceError("unable to run file system PostUnmount commands").WithError(err).WithMajor()
 		}
@@ -515,7 +553,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha7.OwnerKindLabel]
 	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha7.OwnerNameLabel]
 	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha7.OwnerNamespaceLabel]
-	_, idxExists := clientMount.Labels[nnfv1alpha9.DirectiveIndexLabel]
+	_, idxExists := clientMount.Labels[nnfv1alpha10.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
@@ -523,7 +561,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	}
 
 	// Retrieve the NnfStorage resource
-	storage := &nnfv1alpha9.NnfStorage{
+	storage := &nnfv1alpha10.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ownerName,
 			Namespace: ownerNS,
@@ -537,7 +575,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists = storage.Labels[dwsv1alpha7.OwnerKindLabel]
 	ownerName, ownerNameExists = storage.Labels[dwsv1alpha7.OwnerNameLabel]
 	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha7.OwnerNamespaceLabel]
-	idx, idxExists := storage.Labels[nnfv1alpha9.DirectiveIndexLabel]
+	idx, idxExists := storage.Labels[nnfv1alpha10.DirectiveIndexLabel]
 
 	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
 	// have the expected labels
@@ -553,7 +591,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 			client.MatchingLabels(map[string]string{
 				dwsv1alpha7.WorkflowNameLabel:      ownerName,
 				dwsv1alpha7.WorkflowNamespaceLabel: ownerNS,
-				nnfv1alpha9.DirectiveIndexLabel:    idx,
+				nnfv1alpha10.DirectiveIndexLabel:   idx,
 			}),
 		}
 	} else {
@@ -620,8 +658,8 @@ func getLustreMappingFromServer(server *dwsv1alpha7.Servers) map[string][]string
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, index int) (*nnfv1alpha9.NnfNodeStorage, error) {
-	nnfNodeStorage := &nnfv1alpha9.NnfNodeStorage{
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, index int) (*nnfv1alpha10.NnfNodeStorage, error) {
+	nnfNodeStorage := &nnfv1alpha10.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
 			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
@@ -633,7 +671,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha7.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha9.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[nnfv1alpha10.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	labels[dwsv1alpha7.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 
@@ -656,6 +694,34 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 		nnfNodeStorage.Spec.LustreStorage.TargetType = "ost"
 		nnfNodeStorage.Spec.LustreStorage.FileSystemName = clientMount.Spec.Mounts[index].Device.Lustre.FileSystemName
 		nnfNodeStorage.Spec.LustreStorage.MgsAddress = clientMount.Spec.Mounts[index].Device.Lustre.MgsAddresses
+	}
+
+	nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+		{
+			Name:    "$JOBID",
+			Indexed: false,
+			Value:   labels[nnfv1alpha10.JobIDLabel],
+		},
+		{
+			Name:    "$DIRECTIVE_INDEX",
+			Indexed: false,
+			Value:   labels[nnfv1alpha10.DirectiveIndexLabel],
+		},
+		{
+			Name:    "$WORKFLOW_UID",
+			Indexed: false,
+			Value:   labels[dwsv1alpha7.WorkflowUidLabel],
+		},
+		{
+			Name:    "$USERID",
+			Indexed: false,
+			Value:   fmt.Sprintf("%d", clientMount.Spec.Mounts[index].UserID),
+		},
+		{
+			Name:    "$GROUPID",
+			Indexed: false,
+			Value:   fmt.Sprintf("%d", clientMount.Spec.Mounts[index].GroupID),
+		},
 	}
 
 	nnfStorageProfile, err := getPinnedStorageProfileFromLabel(ctx, r.Client, nnfNodeStorage)

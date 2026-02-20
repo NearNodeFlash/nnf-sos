@@ -57,7 +57,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha9 "github.com/NearNodeFlash/nnf-sos/api/v1alpha9"
+	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -111,7 +111,7 @@ func (r *NnfNodeBlockStorageReconciler) EventHandler(e nnfevent.Event) error {
 
 	log.V(1).Info("triggering watch")
 
-	r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNodeBlockStorage{
+	r.Events <- event.GenericEvent{Object: &nnfv1alpha10.NnfNodeBlockStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "nnf-ec-event",
 			Namespace: "nnf-ec-event",
@@ -164,7 +164,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	metrics.NnfNodeBlockStorageReconcilesTotal.Inc()
 
-	nodeBlockStorage := &nnfv1alpha9.NnfNodeBlockStorage{}
+	nodeBlockStorage := &nnfv1alpha10.NnfNodeBlockStorage{}
 	if err := r.Get(ctx, req.NamespacedName, nodeBlockStorage); err != nil {
 		// ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
@@ -183,7 +183,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha9.NnfNodeBlockStorageStatus](nodeBlockStorage)
+	statusUpdater := updater.NewStatusUpdater[*nnfv1alpha10.NnfNodeBlockStorageStatus](nodeBlockStorage)
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { nodeBlockStorage.Status.SetResourceErrorAndLog(err, log) }()
 
@@ -234,9 +234,9 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// Initialize the status section with empty allocation statuses.
 	if len(nodeBlockStorage.Status.Allocations) == 0 {
-		nodeBlockStorage.Status.Allocations = make([]nnfv1alpha9.NnfNodeBlockStorageAllocationStatus, len(nodeBlockStorage.Spec.Allocations))
+		nodeBlockStorage.Status.Allocations = make([]nnfv1alpha10.NnfNodeBlockStorageAllocationStatus, len(nodeBlockStorage.Spec.Allocations))
 		for i := range nodeBlockStorage.Status.Allocations {
-			nodeBlockStorage.Status.Allocations[i].Accesses = make(map[string]nnfv1alpha9.NnfNodeBlockStorageAccessStatus)
+			nodeBlockStorage.Status.Allocations[i].Accesses = make(map[string]nnfv1alpha10.NnfNodeBlockStorageAccessStatus)
 		}
 
 		return ctrl.Result{}, nil
@@ -317,7 +317,7 @@ func (r *NnfNodeBlockStorageReconciler) Reconcile(ctx context.Context, req ctrl.
 	return ctrl.Result{}, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1alpha9.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1alpha10.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
@@ -337,7 +337,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	}
 
 	if len(allocationStatus.Devices) == 0 {
-		allocationStatus.Devices = make([]nnfv1alpha9.NnfNodeBlockStorageDeviceStatus, len(vc.Members))
+		allocationStatus.Devices = make([]nnfv1alpha10.NnfNodeBlockStorageDeviceStatus, len(vc.Members))
 	}
 
 	if len(allocationStatus.Devices) != len(vc.Members) {
@@ -375,7 +375,7 @@ func (r *NnfNodeBlockStorageReconciler) allocateStorage(nodeBlockStorage *nnfv1a
 	return nil, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, nodeBlockStorage *nnfv1alpha9.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, nodeBlockStorage *nnfv1alpha10.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
@@ -436,10 +436,11 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 		// If the endpoint doesn't need a storage group, remove one if it exists
 		if nodeName == "" {
 			if _, err := r.getStorageGroup(ss, storageGroupId); err == nil {
-				if err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
+				if actuallyDeleted, err := r.deleteStorageGroup(ss, storageGroupId); err != nil {
 					return nil, dwsv1alpha7.NewResourceError("could not delete storage group").WithError(err).WithMajor()
+				} else if actuallyDeleted {
+					log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 				}
-				log.Info("Deleted storage group", "storageGroupId", storageGroupId)
 			}
 
 			for oldNodeName, accessStatus := range allocationStatus.Accesses {
@@ -464,7 +465,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 			// The kind environment doesn't support endpoints beyond the Rabbit
 			if os.Getenv("ENVIRONMENT") == "kind" && endpointID != os.Getenv("RABBIT_NODE") {
-				allocationStatus.Accesses[nodeName] = nnfv1alpha9.NnfNodeBlockStorageAccessStatus{StorageGroupId: storageGroupId}
+				allocationStatus.Accesses[nodeName] = nnfv1alpha10.NnfNodeBlockStorageAccessStatus{StorageGroupId: storageGroupId}
 				continue
 			}
 
@@ -474,7 +475,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			}
 
 			// Skip the endpoints that are not ready
-			if nnfv1alpha9.StaticResourceStatus(endPoint.Status) != nnfv1alpha9.ResourceReady {
+			if nnfv1alpha10.StaticResourceStatus(endPoint.Status) != nnfv1alpha10.ResourceReady {
 				continue
 			}
 
@@ -484,13 +485,13 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 			}
 
 			if allocationStatus.Accesses == nil {
-				allocationStatus.Accesses = make(map[string]nnfv1alpha9.NnfNodeBlockStorageAccessStatus)
+				allocationStatus.Accesses = make(map[string]nnfv1alpha10.NnfNodeBlockStorageAccessStatus)
 			}
 
 			// If the access status doesn't exist then we just created the resource. Save the ID in the NnfNodeBlockStorage
 			if _, ok := allocationStatus.Accesses[nodeName]; !ok {
 				log.Info("Created storage group", "Id", storageGroupId)
-				allocationStatus.Accesses[nodeName] = nnfv1alpha9.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
+				allocationStatus.Accesses[nodeName] = nnfv1alpha10.NnfNodeBlockStorageAccessStatus{StorageGroupId: sg.Id}
 			}
 
 			// The device paths are discovered below. This is only relevant for the Rabbit node access
@@ -547,7 +548,7 @@ func (r *NnfNodeBlockStorageReconciler) createBlockDevice(ctx context.Context, n
 
 }
 
-func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alpha9.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
+func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alpha10.NnfNodeBlockStorage, index int) (*ctrl.Result, error) {
 	log := r.Log.WithValues("NnfNodeBlockStorage", types.NamespacedName{Name: nodeBlockStorage.Name, Namespace: nodeBlockStorage.Namespace})
 
 	ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
@@ -572,7 +573,7 @@ func (r *NnfNodeBlockStorageReconciler) deleteStorage(nodeBlockStorage *nnfv1alp
 	return nil, nil
 }
 
-func getStoragePoolID(nodeBlockStorage *nnfv1alpha9.NnfNodeBlockStorage, index int) string {
+func getStoragePoolID(nodeBlockStorage *nnfv1alpha10.NnfNodeBlockStorage, index int) string {
 	return fmt.Sprintf("%s-%d", nodeBlockStorage.Name, index)
 }
 
@@ -682,21 +683,24 @@ func (r *NnfNodeBlockStorageReconciler) getStorageGroup(ss nnf.StorageServiceApi
 	return sg, nil
 }
 
-func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) error {
+// deleteStorageGroup deletes a storage group, treating 404 as success for idempotency.
+// Returns (actuallyDeleted, error) where actuallyDeleted is false if the group was already gone (404).
+func (r *NnfNodeBlockStorageReconciler) deleteStorageGroup(ss nnf.StorageServiceApi, id string) (bool, error) {
 	err := ss.StorageServiceIdStorageGroupIdDelete(ss.Id(), id)
 	if err != nil {
 		ecErr, ok := err.(*ec.ControllerError)
 		// If the error is from a 404 error, treat as success (idempotent deletion)
 		if ok && ecErr.StatusCode() == http.StatusNotFound {
-			return nil
+			return false, nil // Already deleted
 		}
+		return false, err
 	}
-	return err
+	return true, nil // Actually deleted
 }
 
 // getComputeNodesWithAccess returns a deduplicated list of compute node names
 // that have access to this NnfNodeBlockStorage.
-func (r *NnfNodeBlockStorageReconciler) getComputeNodesWithAccess(blockStorage *nnfv1alpha9.NnfNodeBlockStorage) []string {
+func (r *NnfNodeBlockStorageReconciler) getComputeNodesWithAccess(blockStorage *nnfv1alpha10.NnfNodeBlockStorage) []string {
 	computeNodes := make(map[string]bool)
 
 	for _, allocation := range blockStorage.Status.Allocations {
@@ -792,7 +796,7 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 	}
 
 	// List all NnfNodeBlockStorage resources in this rabbit node's namespace
-	nnfNodeBlockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
+	nnfNodeBlockStorageList := &nnfv1alpha10.NnfNodeBlockStorageList{}
 	listOptions := []client.ListOption{
 		client.InNamespace(r.Namespace),
 	}
@@ -859,32 +863,44 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 		ss := nnf.NewDefaultStorageService(r.Options.DeleteUnknownVolumes(), r.Options.ReplaceMissingVolumes())
 
 		deletedCount := 0
+		alreadyDeletedCount := 0
 		var deleteErrors []string
 
 		// Delete each storage group
 		for _, storageGroupID := range storageGroupsToDelete {
-			if err := r.deleteStorageGroup(ss, storageGroupID); err != nil {
+			actuallyDeleted, err := r.deleteStorageGroup(ss, storageGroupID)
+			if err != nil {
 				log.Error(err, "Failed to delete storage group",
 					"storageGroupId", storageGroupID,
 					"computeNodes", computeNodes)
 				deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", storageGroupID, err))
-			} else {
+			} else if actuallyDeleted {
 				log.Info("Successfully deleted storage group",
 					"storageGroupId", storageGroupID,
 					"computeNodes", computeNodes)
 				deletedCount++
+			} else {
+				log.Info("Storage group already deleted",
+					"storageGroupId", storageGroupID,
+					"computeNodes", computeNodes)
+				alreadyDeletedCount++
 			}
 		}
 
-		// Set success based on whether we deleted all storage groups
-		if deletedCount == len(storageGroupsToDelete) {
+		// Set success based on whether we deleted or verified deletion of all storage groups
+		totalHandled := deletedCount + alreadyDeletedCount
+		if totalHandled == len(storageGroupsToDelete) {
 			success = true
 			actionPerformed = "off"
-			message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
-		} else if deletedCount > 0 {
+			if alreadyDeletedCount > 0 {
+				message = fmt.Sprintf("Successfully fenced node (%d deleted, %d already deleted)", deletedCount, alreadyDeletedCount)
+			} else {
+				message = fmt.Sprintf("Successfully fenced node by deleting %d GFS2 storage groups", deletedCount)
+			}
+		} else if totalHandled > 0 {
 			success = false
-			message = fmt.Sprintf("Partially fenced node: deleted %d of %d storage groups. Errors: %s",
-				deletedCount, len(storageGroupsToDelete), strings.Join(deleteErrors, "; "))
+			message = fmt.Sprintf("Partially fenced node: handled %d of %d storage groups (%d deleted, %d already deleted). Errors: %s",
+				totalHandled, len(storageGroupsToDelete), deletedCount, alreadyDeletedCount, strings.Join(deleteErrors, "; "))
 		} else {
 			success = false
 			message = fmt.Sprintf("Failed to fence node: could not delete any storage groups. Errors: %s",
@@ -895,6 +911,14 @@ func (r *NnfNodeBlockStorageReconciler) processFenceRequests(ctx context.Context
 		success = true
 		actionPerformed = "off"
 		message = fmt.Sprintf("No GFS2 storage groups found for compute nodes %v (already fenced or no GFS2 access)", computeNodes)
+	}
+
+	// Acknowledge the fence in DLM for each compute node to unblock any pending lock operations.
+	// This is necessary because DLM independently tracks node membership via corosync and will
+	// block lock operations (vgchange --lock-start, lvchange -ay, GFS2 I/O) until the fence is
+	// acknowledged. We do this regardless of success since the node has been removed from storage.
+	for computeNode := range computeNodeMap {
+		fence.AcknowledgeDLMFence(computeNode, log)
 	}
 
 	// Write response files. On failure, Pacemaker retries based on pcmk_off_retries.
@@ -978,7 +1002,7 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 		client.InNamespace(os.Getenv("NNF_NODE_NAME")),
 	}
 
-	nnfNodeBlockStorageList := &nnfv1alpha9.NnfNodeBlockStorageList{}
+	nnfNodeBlockStorageList := &nnfv1alpha10.NnfNodeBlockStorageList{}
 	if err := r.List(context.TODO(), nnfNodeBlockStorageList, listOptions...); err != nil {
 		log.Error(err, "Could not list block storages")
 
@@ -987,7 +1011,7 @@ func (r *NnfNodeBlockStorageReconciler) NnfEcEventEnqueueHandler(ctx context.Con
 			time.Sleep(time.Second * 10)
 
 			log.Info("triggering watch after List() error")
-			r.Events <- event.GenericEvent{Object: &nnfv1alpha9.NnfNodeBlockStorage{
+			r.Events <- event.GenericEvent{Object: &nnfv1alpha10.NnfNodeBlockStorage{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "nnf-ec-event",
 					Namespace: "nnf-ec-event",
@@ -1062,7 +1086,7 @@ func (r *NnfNodeBlockStorageReconciler) SetupWithManager(mgr ctrl.Manager) error
 	// nnf-ec is not thread safe, so we are limited to a single reconcile thread.
 	builder := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
-		For(&nnfv1alpha9.NnfNodeBlockStorage{}).
+		For(&nnfv1alpha10.NnfNodeBlockStorage{}).
 		WatchesRawSource(&source.Channel{Source: r.Events}, handler.EnqueueRequestsFromMapFunc(r.NnfEcEventEnqueueHandler))
 
 	// Watch fence events to trigger reconciliation for storage group deletion

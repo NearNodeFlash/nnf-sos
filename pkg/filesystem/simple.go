@@ -36,6 +36,7 @@ import (
 type SimpleFileSystemCommandArgs struct {
 	Mkfs           string
 	Mount          string
+	Unmount        string
 	PreActivate    []string
 	PostActivate   []string
 	PreDeactivate  []string
@@ -66,7 +67,10 @@ var _ FileSystem = &SimpleFileSystem{}
 
 func (f *SimpleFileSystem) parseArgs(args string) string {
 	m := map[string]string{
-		"$DEVICE": f.BlockDevice.GetDevice(),
+		"$DEVICE":       f.BlockDevice.GetDevice(),
+		"$FSTYPE":       f.Type,
+		"$MOUNT_TARGET": f.MountTarget,
+		"$TEMP_DIR":     f.TempDir,
 	}
 
 	for k, v := range f.CommandArgs.Vars {
@@ -79,6 +83,11 @@ func (f *SimpleFileSystem) parseArgs(args string) string {
 }
 
 func (f *SimpleFileSystem) Create(ctx context.Context, complete bool) (bool, error) {
+	if len(f.CommandArgs.Mkfs) == 0 {
+		f.Log.Info("Skipping Create - no mkfs command specified")
+		return false, nil
+	}
+
 	if complete == true {
 		return false, nil
 	}
@@ -119,10 +128,19 @@ func (f *SimpleFileSystem) Deactivate(ctx context.Context) (bool, error) {
 
 func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool) (bool, error) {
 	if len(f.CommandArgs.Mount) == 0 {
+		f.Log.Info("Skipping Mount - no mount command specified")
 		return false, nil
 	}
 
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = f.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -164,11 +182,6 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 		}
 	}
 
-	// Build the mount command from the args provided
-	if f.CommandArgs.Vars == nil {
-		f.CommandArgs.Vars = make(map[string]string)
-	}
-	f.CommandArgs.Vars["$MOUNT_PATH"] = path
 	mountCmd := fmt.Sprintf("mount -t %s %s", f.Type, f.parseArgs(f.CommandArgs.Mount))
 
 	if _, err := command.Run(mountCmd, f.Log); err != nil {
@@ -179,7 +192,20 @@ func (f *SimpleFileSystem) Mount(ctx context.Context, path string, complete bool
 }
 
 func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
+	if len(f.CommandArgs.Unmount) == 0 {
+		f.Log.Info("Skipping Unmount - no unmount command specified")
+		return false, nil
+	}
+
 	path = filepath.Clean(path)
+
+	// Build the mount command from the args provided
+	if f.CommandArgs.Vars == nil {
+		f.CommandArgs.Vars = make(map[string]string)
+	}
+	f.CommandArgs.Vars["$MOUNT_PATH"] = path
+	path = f.parseArgs(path)
+
 	mounter := mount.New("")
 	mounts, err := mounter.List()
 	if err != nil {
@@ -196,7 +222,7 @@ func (f *SimpleFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Device %s type %s", path, m.Device, m.Type)
 		}
 
-		if _, err := command.Run(fmt.Sprintf("umount %s", path), f.Log); err != nil {
+		if _, err := command.Run(fmt.Sprintf("umount %s", f.parseArgs(f.CommandArgs.Unmount)), f.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
 
@@ -243,8 +269,8 @@ func (f *SimpleFileSystem) SimpleRunCommands(ctx context.Context, complete bool,
 	return true, nil
 }
 
-func (f *SimpleFileSystem) PreMount(ctx context.Context, complete bool) (bool, error) {
-	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreMount, "PreMount", nil)
+func (f *SimpleFileSystem) PreMount(ctx context.Context, path string, complete bool) (bool, error) {
+	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreMount, "PreMount", map[string]string{"$MOUNT_PATH": path})
 }
 
 func (f *SimpleFileSystem) PostMount(ctx context.Context, path string, complete bool) (bool, error) {
@@ -255,8 +281,8 @@ func (f *SimpleFileSystem) PreUnmount(ctx context.Context, path string, complete
 	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PreUnmount, "PreUnmount", map[string]string{"$MOUNT_PATH": path})
 }
 
-func (f *SimpleFileSystem) PostUnmount(ctx context.Context, complete bool) (bool, error) {
-	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PostUnmount, "PostUnmount", nil)
+func (f *SimpleFileSystem) PostUnmount(ctx context.Context, path string, complete bool) (bool, error) {
+	return f.SimpleRunCommands(ctx, complete, f.CommandArgs.PostUnmount, "PostUnmount", map[string]string{"$MOUNT_PATH": path})
 }
 
 func (f *SimpleFileSystem) PostActivate(ctx context.Context, complete bool) (bool, error) {

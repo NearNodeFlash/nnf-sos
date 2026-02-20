@@ -52,9 +52,24 @@ func (v *VarHandler) ListToVars(listVarName, newVarPrefix string) error {
 	return nil
 }
 
-func (v *VarHandler) ReplaceAll(s string) string {
+func (v *VarHandler) replaceAllNested(s string, depth int) string {
+	if depth > 5 {
+		return s
+	}
+
 	for key, value := range v.VarMap {
 		s = strings.ReplaceAll(s, key, value)
 	}
+
+	for key := range v.VarMap {
+		if strings.Contains(s, key) {
+			return v.replaceAllNested(s, depth+1)
+		}
+	}
+
 	return s
+}
+
+func (v *VarHandler) ReplaceAll(s string) string {
+	return v.replaceAllNested(s, 0)
 }
