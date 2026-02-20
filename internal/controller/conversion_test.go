@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -78,7 +78,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfAccess resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfAccess resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfAccess{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfAccess resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfAccess{}
 			Eventually(func(g Gomega) {
@@ -149,7 +156,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfContainerProfile resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfContainerProfile resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfContainerProfile{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfContainerProfile resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfContainerProfile{}
 			Eventually(func(g Gomega) {
@@ -214,7 +228,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfDataMovement resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfDataMovement resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfDataMovement{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfDataMovement resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfDataMovement{}
 			Eventually(func(g Gomega) {
@@ -286,7 +307,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfDataMovementManager resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfDataMovementManager resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfDataMovementManager{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfDataMovementManager resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfDataMovementManager{}
 			Eventually(func(g Gomega) {
@@ -351,7 +379,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfDataMovementProfile resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfDataMovementProfile resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfDataMovementProfile{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfDataMovementProfile resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfDataMovementProfile{}
 			Eventually(func(g Gomega) {
@@ -418,7 +453,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfLustreMGT resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfLustreMGT resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfLustreMGT{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfLustreMGT resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfLustreMGT{}
 			Eventually(func(g Gomega) {
@@ -485,7 +527,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNode resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfNode resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfNode{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfNode resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfNode{}
 			Eventually(func(g Gomega) {
@@ -550,7 +599,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfNodeBlockStorage resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfNodeBlockStorage{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfNodeBlockStorage resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfNodeBlockStorage{}
 			Eventually(func(g Gomega) {
@@ -615,7 +671,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNodeECData resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfNodeECData resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfNodeECData{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfNodeECData resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfNodeECData{}
 			Eventually(func(g Gomega) {
@@ -680,7 +743,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfNodeStorage resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfNodeStorage resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfNodeStorage{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfNodeStorage resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfNodeStorage{}
 			Eventually(func(g Gomega) {
@@ -747,7 +817,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfPortManager resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfPortManager resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfPortManager{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfPortManager resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfPortManager{}
 			Eventually(func(g Gomega) {
@@ -814,7 +891,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfStorage resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfStorage resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfStorage{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfStorage resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfStorage{}
 			Eventually(func(g Gomega) {
@@ -879,7 +963,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfStorageProfile resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfStorageProfile resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfStorageProfile{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfStorageProfile resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfStorageProfile{}
 			Eventually(func(g Gomega) {
@@ -944,7 +1035,14 @@ var _ = Describe("Conversion Webhook Test", func() {
 			}
 		})
 
-		It("reads NnfSystemStorage resource via hub and via spoke v1alpha8", func() {
+		It("is unable to read NnfSystemStorage resource via spoke v1alpha8", func() {
+			resSpoke := &nnfv1alpha8.NnfSystemStorage{}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(resHub), resSpoke)).ToNot(Succeed())
+		})
+
+		PIt("reads NnfSystemStorage resource via hub and via spoke v1alpha8", func() {
+			// ACTION: v1alpha8 is no longer served, and this test can be removed.
+
 			// Spoke should have annotation.
 			resSpoke := &nnfv1alpha8.NnfSystemStorage{}
 			Eventually(func(g Gomega) {
