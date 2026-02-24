@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -20,74 +20,113 @@
 package v1alpha11
 
 import (
+	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
+	"github.com/DataWorkflowServices/dws/utils/updater"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // NnfAccessSpec defines the desired state of NnfAccess
 type NnfAccessSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// DesiredState is the desired state for the mounts on the client
+	// +kubebuilder:validation:Enum=mounted;unmounted
+	DesiredState string `json:"desiredState"`
 
-	// foo is an example field of NnfAccess. Edit nnfaccess_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
+	// TeardownState is the desired state of the workflow for this NNF Access resource to
+	// be torn down and deleted.
+	// +kubebuilder:validation:Enum:=PreRun;PostRun;Teardown
+	// +kubebuilder:validation:Type:=string
+	TeardownState dwsv1alpha7.WorkflowState `json:"teardownState"`
+
+	// Target specifies which storage targets the client should mount
+	// - single: Only one of the storage the client can access
+	// - all: All of the storage the client can access
+	// - shared: Multiple clients access the same storage
+	// +kubebuilder:validation:Enum=single;all;shared
+	Target string `json:"target"`
+
+	// UserID for the new mount. Currently only used for raw
+	UserID uint32 `json:"userID"`
+
+	// GroupID for the new mount. Currently only used for raw
+	GroupID uint32 `json:"groupID"`
+
+	// ClientReference is for a client resource. (DWS) Computes is the only client
+	// resource type currently supported
+	ClientReference corev1.ObjectReference `json:"clientReference,omitempty"`
+
+	// MountPath for the storage target on the client
+	MountPath string `json:"mountPath,omitempty"`
+
+	// MakeClientMounts determines whether the ClientMount resources are made, or if only
+	// the access list on the NnfNodeBlockStorage is updated
+	// +kubebuilder:default=true
+	MakeClientMounts bool `json:"makeClientMounts"`
+
+	// MountPathPrefix to  mount the storage target on the client when there is
+	// more than one mount on a client
+
+	MountPathPrefix string `json:"mountPathPrefix,omitempty"`
+
+	// StorageReference is the NnfStorage reference
+	StorageReference corev1.ObjectReference `json:"storageReference"`
+
+	// +kubebuilder:default=false
+	IgnoreOfflineComputes bool `json:"ignoreOfflineComputes"`
 }
 
-// NnfAccessStatus defines the observed state of NnfAccess.
+// NnfAccessStatus defines the observed state of NnfAccess
 type NnfAccessStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// State is the current state
+	// +kubebuilder:validation:Enum=mounted;unmounted
+	State string `json:"state"`
 
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	// Ready signifies whether status.state has been achieved
+	Ready bool `json:"ready"`
 
-	// conditions represent the current state of the NnfAccess resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
-	// +listType=map
-	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	dwsv1alpha7.ResourceError `json:",inline"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+// +kubebuilder:storageversion
+//+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="The desired state"
+//+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="The current state"
+//+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="Whether the state has been achieved"
+//+kubebuilder:printcolumn:name="ERROR",type="string",JSONPath=".status.error.severity"
+//+kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // NnfAccess is the Schema for the nnfaccesses API
 type NnfAccess struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// metadata is a standard object metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitzero"`
-
-	// spec defines the desired state of NnfAccess
-	// +required
-	Spec NnfAccessSpec `json:"spec"`
-
-	// status defines the observed state of NnfAccess
-	// +optional
-	Status NnfAccessStatus `json:"status,omitzero"`
+	Spec   NnfAccessSpec   `json:"spec,omitempty"`
+	Status NnfAccessStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
+func (a *NnfAccess) GetStatus() updater.Status[*NnfAccessStatus] {
+	return &a.Status
+}
+
+//+kubebuilder:object:root=true
 
 // NnfAccessList contains a list of NnfAccess
 type NnfAccessList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitzero"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []NnfAccess `json:"items"`
+}
+
+func (n *NnfAccessList) GetObjectList() []client.Object {
+	objectList := []client.Object{}
+
+	for i := range n.Items {
+		objectList = append(objectList, &n.Items[i])
+	}
+
+	return objectList
 }
 
 func init() {
