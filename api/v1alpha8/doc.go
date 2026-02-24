@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2025-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -19,5 +19,5 @@
 
 // The following tag tells conversion-gen to generate conversion routines, and
 // it tells conversion-gen the name of the hub version.
-// +k8s:conversion-gen=github.com/NearNodeFlash/nnf-sos/api/v1alpha10
+// +k8s:conversion-gen=github.com/NearNodeFlash/nnf-sos/api/v1alpha11
 package v1alpha8
