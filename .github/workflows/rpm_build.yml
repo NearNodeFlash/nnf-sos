@@ -26,9 +26,6 @@ jobs:
         echo "want go version: $(grep -E '^go ' go.mod)"
 
     - name: setup go
-      # This is needed only because the 'make build-daemon' target will run
-      # the 'go fmt' and 'go vet' commands before it starts the docker build.
-      if: ${{ env.ACT }} # use during local actions testing
       uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'

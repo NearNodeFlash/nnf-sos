@@ -620,7 +620,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 
 	// We should only have 1
 	if len(serversList.Items) != 1 {
-		return nil, dwsv1alpha7.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("wrong number of NnfServers resources: expected: %d, got: %d", 1, len(serversList.Items)).WithMajor()
 	}
 
 	return &serversList.Items[0], nil
