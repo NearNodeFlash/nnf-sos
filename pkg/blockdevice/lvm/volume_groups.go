@@ -211,13 +211,29 @@ func (vg *VolumeGroup) LockStop(ctx context.Context, rawArgs string) (bool, erro
 	}
 
 	lvs, err := lvsListVolumes(ctx, vg.Log)
+	if err != nil {
+		return false, fmt.Errorf("could not list logical volumes for lock-stop check: %w", err)
+	}
 	for _, lv := range lvs {
 		if lv.VGName == vg.Name && lv.Attrs[4] == 'a' {
 			return false, nil
 		}
 	}
 
-	return vg.Change(ctx, rawArgs)
+	changed, err := vg.Change(ctx, rawArgs)
+	if err != nil {
+		// If lvmlockd is not running, the lockspace is already effectively stopped.
+		// This can happen when compute_post_deactivate has already stopped the pacemaker
+		// cluster (killing lvmlockd and dlm_controld) and a subsequent reconcile
+		// re-attempts deactivation.
+		if strings.Contains(err.Error(), "lvmlockd process is not running") {
+			vg.Log.Info("lvmlockd is not running, considering lockspace already stopped", "VG", vg.Name)
+			return false, nil
+		}
+		return false, err
+	}
+
+	return changed, nil
 }
 
 func (vg *VolumeGroup) Remove(ctx context.Context, rawArgs string) (bool, error) {

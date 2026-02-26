@@ -161,6 +161,12 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Unmount everything before removing the finalizer
+		// NOTE: A race condition exists where the informer cache may have stale Ready=false
+		// values when a deletion reconcile fires immediately after a successful unmount
+		// reconcile. The changeMountAll call below may re-attempt deactivation against
+		// already-stopped services (lvmlockd, dlm_controld killed by PostDeactivate).
+		// The LVM LockStop method handles this by treating "lvmlockd process is not
+		// running" as a successful lock-stop.
 		log.Info("Unmounting all file systems due to resource deletion")
 		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha7.ClientMountStateUnmounted); err != nil {
 			return ctrl.Result{}, err
@@ -468,24 +474,25 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
-			log.Error(err, "unable to deactivate block device")
+			deactivateErr := err
+			log.Error(deactivateErr, "unable to deactivate block device")
 
 			// Log some debug information to figure out why the deactivate failed
-			devices, err := nvme.NvmeGetNamespaceDevices()
-			if err != nil {
-				log.Info("failed to get namespace devices", "error", err)
+			devices, diagErr := nvme.NvmeGetNamespaceDevices()
+			if diagErr != nil {
+				log.Info("failed to get namespace devices", "error", diagErr)
 			} else {
 				log.Info("deactivate failed", "current namespace devices", devices)
 			}
 
-			output, err := command.Run("dlm_tool ls -n", log)
-			if err != nil {
-				log.Info("failed to run dlm_tool", "error", err)
+			output, diagErr := command.Run("dlm_tool ls -n", log)
+			if diagErr != nil {
+				log.Info("failed to run dlm_tool", "error", diagErr)
 			} else {
 				log.Info("deactivate failed", "dlm_tool output", output)
 			}
 
-			return dwsv1alpha7.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
+			return dwsv1alpha7.NewResourceError("unable to deactivate block device").WithError(deactivateErr).WithMajor()
 		}
 		if deactivated {
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())

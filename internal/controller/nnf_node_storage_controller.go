@@ -322,10 +322,10 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		if lustreOST0 || nnfNodeStorage.Spec.FileSystemType != "lustre" {
 			ran, err = fileSystem.PreTeardown(ctx, false)
 			if err != nil {
-				return nil, dwsv1alpha7.NewResourceError("could not run pre unmount for file system").WithError(err).WithMajor()
+				return nil, dwsv1alpha7.NewResourceError("could not run pre teardown for file system").WithError(err).WithMajor()
 			}
 			if ran {
-				log.Info("Pre unmount file system")
+				log.Info("Pre teardown file system")
 			}
 		}
 
