@@ -135,9 +135,9 @@ func (r *NnfContainerProfile) validateContent() error {
 			} else if r.Data.NnfMPISpec.CopyOffload {
 				// When the container doesn't looke like copy offload, ensure the CopyOffload flag is not set
 				return fmt.Errorf(
-					"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API. " +
-						"but the CopyOffload flag is set to true in the NnfMPISpec" +
-						c.Name,
+					"the specified Launcher container name ('%s') suggests that this container profile is NOT intended for use with the Copy Offload API, "+
+						"but the CopyOffload flag is set to true in the NnfMPISpec",
+					c.Name,
 				)
 			}
 		}

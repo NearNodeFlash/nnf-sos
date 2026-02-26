@@ -1613,7 +1613,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			// If timeout, don't allow requeue and return an error
 			if timeoutElapsed {
 				return nil, dwsv1alpha7.NewResourceError("could not retrieve MPIJobs to set timeout").
-					WithUserMessage(timeoutMessage).WithFatal()
+					WithUserMessage("%s", timeoutMessage).WithFatal()
 			}
 			return result, nil
 		}
@@ -1646,9 +1646,9 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 				r.Log.Info("container prerun timeout occurred, attempting to set MPIJob activeDeadlineSeconds")
 				if err := r.setMPIJobTimeout(ctx, workflow, mpiJob, time.Duration(1*time.Millisecond)); err != nil {
 					return nil, dwsv1alpha7.NewResourceError("could not set timeout on MPIJobs").
-						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+						WithUserMessage("%s", timeoutMessage).WithError(err).WithFatal()
 				} else {
-					return nil, dwsv1alpha7.NewResourceError("MPIJob timeout set").WithUserMessage(timeoutMessage).WithFatal()
+					return nil, dwsv1alpha7.NewResourceError("MPIJob timeout set").WithUserMessage("%s", timeoutMessage).WithFatal()
 				}
 			}
 			return Requeue(fmt.Sprintf("pending MPIJob start for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
@@ -1658,7 +1658,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 		if err != nil {
 			if timeoutElapsed {
 				return nil, dwsv1alpha7.NewResourceError("could not retrieve Jobs to set timeout").
-					WithUserMessage(timeoutMessage).WithFatal().WithError(err)
+					WithUserMessage("%s", timeoutMessage).WithFatal().WithError(err)
 			}
 			return nil, err
 		}
@@ -1668,7 +1668,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 			// If timeout, don't allow a requeue and return an error
 			if timeoutElapsed {
 				return nil, dwsv1alpha7.NewResourceError("no Jobs found in JobList to set timeout").
-					WithUserMessage(timeoutMessage).WithFatal()
+					WithUserMessage("%s", timeoutMessage).WithFatal()
 			}
 			return Requeue(fmt.Sprintf("pending job creation for workflow '%s', index: %d", workflow.Name, index)).after(2 * time.Second), nil
 		}
@@ -1680,7 +1680,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 				r.Log.Info("container prerun timeout occurred, attempting to set Job activeDeadlineSeconds")
 				if err := r.setJobTimeout(ctx, job, time.Duration(1*time.Millisecond)); err != nil {
 					return nil, dwsv1alpha7.NewResourceError("could not set timeout on MPIJobs").
-						WithUserMessage(timeoutMessage).WithError(err).WithFatal()
+						WithUserMessage("%s", timeoutMessage).WithError(err).WithFatal()
 				} else {
 					continue
 				}
@@ -1699,7 +1699,7 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 
 		// Report the timeout error
 		if timeoutElapsed {
-			return nil, dwsv1alpha7.NewResourceError("job(s) timeout set").WithUserMessage(timeoutMessage).WithFatal()
+			return nil, dwsv1alpha7.NewResourceError("job(s) timeout set").WithUserMessage("%s", timeoutMessage).WithFatal()
 		}
 	}
 
@@ -1966,7 +1966,7 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 			if c.Type == mpiv2beta1.JobFailed {
 				if c.Reason == "DeadlineExceeded" {
 					return nil, dwsv1alpha7.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
-						WithUserMessage(timeoutMessage)
+						WithUserMessage("%s", timeoutMessage)
 				}
 				return nil, dwsv1alpha7.NewResourceError("container MPIJob %s (%s): %s", c.Type, c.Reason, c.Message).WithFatal().
 					WithUserMessage("user container(s) failed to run successfully after %d attempts", profile.Data.RetryLimit+1)
@@ -1991,7 +1991,7 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 					continue
 				default:
 					if condition.Reason == "DeadlineExceeded" {
-						return nil, dwsv1alpha7.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal().WithUserMessage(timeoutMessage)
+						return nil, dwsv1alpha7.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal().WithUserMessage("%s", timeoutMessage)
 					}
 					return nil, dwsv1alpha7.NewResourceError("container job %s (%s): %s", condition.Type, condition.Reason, condition.Message).WithFatal()
 				}

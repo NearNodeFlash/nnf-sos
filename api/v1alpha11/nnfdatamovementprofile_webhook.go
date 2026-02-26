@@ -90,8 +90,7 @@ func (r *NnfDataMovementProfile) ValidateUpdate(old runtime.Object) (admission.W
 		// ownerReferences, and labels, but do not allow Data to be
 		// updated.
 		if !reflect.DeepEqual(r.Data, obj.Data) {
-			msg := "update on pinned resource not allowed"
-			err := fmt.Errorf(msg)
+			err := fmt.Errorf("update on pinned resource not allowed")
 			nnfdatamovementprofilelog.Error(err, "invalid")
 			return nil, err
 		}
