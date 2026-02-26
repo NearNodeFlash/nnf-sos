@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,7 +23,7 @@ import (
 	"reflect"
 
 	lusv1beta1 "github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -69,13 +69,13 @@ var _ = Describe("NnfWorkflowControllerHelpers", func() {
 		DescribeTable("Test NNF filesystems (NnfAccess)",
 			func(fsType, path, output string) {
 				// We can hardwire these fields and assume the same mountpath/mountpathprefix, index, namespace, etc
-				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha10.NnfStorage{}).Name()}
+				objRef := corev1.ObjectReference{Kind: reflect.TypeOf(nnfv1alpha11.NnfStorage{}).Name()}
 				mntPath := "/mnt/nnf/123456-0/"
 				idx := 0
 				ns := "slushy44"
 
-				access := nnfv1alpha10.NnfAccess{
-					Spec: nnfv1alpha10.NnfAccessSpec{
+				access := nnfv1alpha11.NnfAccess{
+					Spec: nnfv1alpha11.NnfAccessSpec{
 						MountPath:       mntPath,
 						MountPathPrefix: mntPath,
 					},

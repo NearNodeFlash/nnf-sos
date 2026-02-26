@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2024-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -23,32 +23,32 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 )
 
 var _ = Describe("NNFStorage Controller Test", func() {
 
 	It("It should correctly create a human-readable lustre mapping for NnfStorage", func() {
-		s := nnfv1alpha10.NnfStorage{
-			Spec: nnfv1alpha10.NnfStorageSpec{
-				AllocationSets: []nnfv1alpha10.NnfStorageAllocationSetSpec{
-					{Name: "ost", Nodes: []nnfv1alpha10.NnfStorageAllocationNodes{
+		s := nnfv1alpha11.NnfStorage{
+			Spec: nnfv1alpha11.NnfStorageSpec{
+				AllocationSets: []nnfv1alpha11.NnfStorageAllocationSetSpec{
+					{Name: "ost", Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-1", Count: 2},
 						{Name: "rabbit-node-2", Count: 1}},
 					},
 					// throw another OST on rabbit-node-2
-					{Name: "ost", Nodes: []nnfv1alpha10.NnfStorageAllocationNodes{
+					{Name: "ost", Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-2", Count: 1}},
 					},
-					{Name: "mdt", Nodes: []nnfv1alpha10.NnfStorageAllocationNodes{
+					{Name: "mdt", Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1},
 						{Name: "rabbit-node-4", Count: 1},
 						{Name: "rabbit-node-8", Count: 1}},
 					},
-					{Name: "mgt", Nodes: []nnfv1alpha10.NnfStorageAllocationNodes{
+					{Name: "mgt", Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-3", Count: 1}},
 					},
-					{Name: "mgtmdt", Nodes: []nnfv1alpha10.NnfStorageAllocationNodes{
+					{Name: "mgtmdt", Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
 						{Name: "rabbit-node-4", Count: 1}},
 					},
 				},

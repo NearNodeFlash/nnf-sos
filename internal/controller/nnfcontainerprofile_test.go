@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -31,17 +31,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 )
 
 // createNnfContainerProfile creates the given profile in the "default" namespace.
 // When expectSuccess=false, we expect to find that it was failed by the webhook.
-func createNnfContainerProfile(containerProfile *nnfv1alpha10.NnfContainerProfile, expectSuccess bool) *nnfv1alpha10.NnfContainerProfile {
+func createNnfContainerProfile(containerProfile *nnfv1alpha11.NnfContainerProfile, expectSuccess bool) *nnfv1alpha11.NnfContainerProfile {
 	// Place NnfContainerProfiles in "default" for the test environment.
 	containerProfile.ObjectMeta.Namespace = corev1.NamespaceDefault
 
 	profKey := client.ObjectKeyFromObject(containerProfile)
-	profExpected := &nnfv1alpha10.NnfContainerProfile{}
+	profExpected := &nnfv1alpha11.NnfContainerProfile{}
 	err := k8sClient.Get(context.TODO(), profKey, profExpected)
 	Expect(err).ToNot(BeNil())
 	Expect(apierrors.IsNotFound(err)).To(BeTrue())
@@ -62,26 +62,26 @@ func createNnfContainerProfile(containerProfile *nnfv1alpha10.NnfContainerProfil
 }
 
 // basicNnfContainerProfile creates a simple NnfContainerProfile struct.
-func basicNnfContainerProfile(name string, storages []nnfv1alpha10.NnfContainerProfileStorage) *nnfv1alpha10.NnfContainerProfile {
+func basicNnfContainerProfile(name string, storages []nnfv1alpha11.NnfContainerProfileStorage) *nnfv1alpha11.NnfContainerProfile {
 
 	// default storages if not supplied, optional by default
 	if len(storages) == 0 {
-		storages = []nnfv1alpha10.NnfContainerProfileStorage{
+		storages = []nnfv1alpha11.NnfContainerProfileStorage{
 			{Name: "DW_JOB_foo_local_storage", Optional: true},
 			{Name: "DW_PERSISTENT_foo_persistent_storage", Optional: true},
 			{Name: "DW_GLOBAL_foo_global_lustre", Optional: true},
 		}
 	}
 
-	containerProfile := &nnfv1alpha10.NnfContainerProfile{
+	containerProfile := &nnfv1alpha11.NnfContainerProfile{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Data: nnfv1alpha10.NnfContainerProfileData{
+		Data: nnfv1alpha11.NnfContainerProfileData{
 			Pinned:   false,
 			Storages: storages,
-			NnfSpec: &nnfv1alpha10.NnfPodSpec{
-				Containers: []nnfv1alpha10.NnfContainer{
+			NnfSpec: &nnfv1alpha11.NnfPodSpec{
+				Containers: []nnfv1alpha11.NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"true"}},
 				},
 			},
@@ -92,7 +92,7 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha10.NnfContainerP
 }
 
 // createBasicNnfContainerProfile creates a simple default container profile.
-func createBasicNnfContainerProfile(storages []nnfv1alpha10.NnfContainerProfileStorage) *nnfv1alpha10.NnfContainerProfile {
+func createBasicNnfContainerProfile(storages []nnfv1alpha11.NnfContainerProfileStorage) *nnfv1alpha11.NnfContainerProfile {
 	containerProfile := basicNnfContainerProfile("sample-"+uuid.NewString()[:8], storages)
 	return createNnfContainerProfile(containerProfile, true)
 }
