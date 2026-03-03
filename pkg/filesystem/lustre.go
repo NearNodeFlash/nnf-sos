@@ -311,12 +311,12 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
 
-		// If no unmount command is specified but there is an active mount, this is an error.
-		// An empty unmount command in the NnfStorageProfile would silently skip the unmount
-		// and leak the mount, leading to stale Lustre client mounts accumulating across
-		// workflow runs.
+		// If no unmount command is specified but there is an active mount, log a warning
+		// and return. Users may intentionally leave the unmount command empty when they
+		// handle unmounts manually via Pre/Post callouts.
 		if len(l.CommandArgs.Unmount) == 0 {
-			return false, fmt.Errorf("mount exists at %s but no unmount command is specified in the NnfStorageProfile; cannot unmount. Ensure the storage profile has an unmountCompute (or unmountRabbit) command", path)
+			l.Log.Info("Unmount skipped - mount exists but no unmount command is specified in the NnfStorageProfile", "path", path, "device", devStr)
+			return false, nil
 		}
 
 		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.Unmount)), l.Log); err != nil {
