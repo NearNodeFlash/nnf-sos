@@ -623,7 +623,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 			}
 
 			// Setup NNF Access for the NNF Servers so we can run data movement on them.
-			access, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, parentDwIndex, teardownState, log)
+			access, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, parentDwIndex, teardownState, fsType, log)
 			if err != nil {
 				return storageReference, access, nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not create data movement mount points")
 			}
@@ -900,6 +900,11 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 		return nil, dwsv1alpha7.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
 	}
 
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
+	}
+
 	access := &nnfv1alpha11.NnfAccess{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      indexedResourceName(workflow, index) + "-computes",
@@ -922,7 +927,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
 			access.Spec.MakeClientMounts = true
-			access.Spec.MountPath = buildComputeMountPath(workflow, nnfStorageProfile, index)
+			access.Spec.MountPath = buildComputeMountPath(workflow, nnfStorageProfile, fsType, index)
 			access.Spec.ClientReference = corev1.ObjectReference{
 				Name:      workflow.Name,
 				Namespace: workflow.Namespace,
@@ -959,11 +964,6 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// NnfAccess may already be present if a data_in directive was specified for the
 	// particular $DW_JOB_[name]; in this case we only need to recreate the resource
 
-	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
-	if err != nil {
-		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
-	}
-
 	if fsType == "gfs2" || fsType == "lustre" {
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
@@ -982,7 +982,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			teardownState = dwsv1alpha7.StateTeardown
 		}
 
-		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, log)
+		_, err := r.setupNnfAccessForServers(ctx, storage, workflow, index, index, teardownState, fsType, log)
 		if err != nil {
 			return nil, dwsv1alpha7.NewResourceError("could not setup NNF Access in state %s", workflow.Status.State).WithError(err).WithUserMessage("could not mount file system on Rabbit nodes")
 		}
@@ -1025,7 +1025,12 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 		return nil, dwsv1alpha7.NewResourceError("could not find pinned NnfStorageProfile: %v", types.NamespacedName{Name: pinnedName, Namespace: pinnedNamespace}).WithError(err).WithFatal()
 	}
 
-	path := buildComputeMountPath(workflow, nnfStorageProfile, index)
+	fsType, err := r.getDirectiveFileSystemType(ctx, workflow, index)
+	if err != nil {
+		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
+	}
+
+	path := buildComputeMountPath(workflow, nnfStorageProfile, fsType, index)
 	variableMap := map[string]string{
 		"$JOBID":           workflow.Spec.JobID.String(),
 		"$DIRECTIVE_INDEX": strconv.Itoa(index),

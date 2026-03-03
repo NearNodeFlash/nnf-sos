@@ -861,7 +861,7 @@ func (r *NnfWorkflowReconciler) findLustreFileSystemForPath(ctx context.Context,
 	return nil
 }
 
-func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha11.NnfStorage, workflow *dwsv1alpha7.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha7.WorkflowState, log logr.Logger) (*nnfv1alpha11.NnfAccess, error) {
+func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, storage *nnfv1alpha11.NnfStorage, workflow *dwsv1alpha7.Workflow, index int, parentDwIndex int, teardownState dwsv1alpha7.WorkflowState, fsType string, log logr.Logger) (*nnfv1alpha11.NnfAccess, error) {
 	pinnedName, pinnedNamespace := getStorageReferenceNameFromWorkflowActual(workflow, parentDwIndex)
 	nnfStorageProfile, err := findPinnedProfile(ctx, r.Client, pinnedNamespace, pinnedName)
 	if err != nil {
@@ -891,8 +891,8 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 				UserID:           workflow.Spec.UserID,
 				GroupID:          workflow.Spec.GroupID,
 				MakeClientMounts: true,
-				MountPath:        buildServerMountPath(workflow, nnfStorageProfile, parentDwIndex),
-				MountPathPrefix:  buildServerMountPath(workflow, nnfStorageProfile, parentDwIndex),
+				MountPath:        buildServerMountPath(workflow, nnfStorageProfile, fsType, parentDwIndex),
+				MountPathPrefix:  buildServerMountPath(workflow, nnfStorageProfile, fsType, parentDwIndex),
 
 				// NNF Storage is Namespaced Name to the servers object
 				StorageReference: corev1.ObjectReference{
@@ -942,9 +942,8 @@ func (r *NnfWorkflowReconciler) getDirectiveFileSystemType(ctx context.Context, 
 	}
 }
 
-func getOverrideMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, index int, defaultPath string) string {
-	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-	switch dwArgs["type"] {
+func getOverrideMountPath(nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, fsType string, defaultPath string) string {
+	switch fsType {
 	case "raw":
 		return useOverrideIfPresent(nnfStorageProfile.Data.RawStorage.VariableOverride, "$MOUNT_PATH", defaultPath)
 	case "xfs":
@@ -955,25 +954,28 @@ func getOverrideMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnf
 		return useOverrideIfPresent(nnfStorageProfile.Data.LustreStorage.ClientOptions.VariableOverride, "$MOUNT_PATH", defaultPath)
 	}
 
-	return ""
+	// Return the default path for unrecognized filesystem types. Returning "" here would
+	// cause the mount to resolve to the current working directory ("/"), creating stale
+	// mounts that can never be cleaned up.
+	return defaultPath
 }
 
-func buildComputeMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, index int) string {
+func buildComputeMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, fsType string, index int) string {
 	prefix := os.Getenv("COMPUTE_MOUNT_PREFIX")
 	if len(prefix) == 0 {
 		prefix = "/mnt/nnf"
 	}
 
-	return getOverrideMountPath(workflow, nnfStorageProfile, index, filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)))
+	return getOverrideMountPath(nnfStorageProfile, fsType, filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)))
 }
 
-func buildServerMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, index int) string {
+func buildServerMountPath(workflow *dwsv1alpha7.Workflow, nnfStorageProfile *nnfv1alpha11.NnfStorageProfile, fsType string, index int) string {
 	prefix := os.Getenv("SERVER_MOUNT_PREFIX")
 	if len(prefix) == 0 {
 		prefix = "/mnt/nnf"
 	}
 
-	return getOverrideMountPath(workflow, nnfStorageProfile, index, filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)))
+	return getOverrideMountPath(nnfStorageProfile, fsType, filepath.Clean(fmt.Sprintf("/%s/%s-%d", prefix, workflow.UID, index)))
 }
 
 func (r *NnfWorkflowReconciler) findPersistentInstance(ctx context.Context, wf *dwsv1alpha7.Workflow, psiName string) (*dwsv1alpha7.PersistentStorageInstance, error) {
