@@ -399,7 +399,6 @@ func (l *Lvm) Repair(ctx context.Context) (err error) {
 
 func (l *Lvm) RunCommands(ctx context.Context, complete bool, commands []string, phase string, args map[string]string) (bool, error) {
 	if len(commands) == 0 {
-		l.Log.Info("Skipping " + phase + " - no commands specified")
 		return false, nil
 	}
 

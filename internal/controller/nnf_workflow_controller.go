@@ -775,11 +775,12 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				addDirectiveIndexLabel(dm, index)
 				addJobIDLabel(dm, workflow.Spec.JobID.String())
 
-				log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				if err := r.Create(ctx, dm); err != nil {
 					if !errors.IsAlreadyExists(err) {
 						return nil, dwsv1alpha7.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 					}
+				} else {
+					log.Info("Created NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 				}
 			}
 
@@ -814,11 +815,12 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 		addDirectiveIndexLabel(dm, index)
 		addJobIDLabel(dm, workflow.Spec.JobID.String())
 
-		log.Info("Creating NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		if err := r.Create(ctx, dm); err != nil {
 			if !errors.IsAlreadyExists(err) {
 				return nil, dwsv1alpha7.NewResourceError("could not create NnfDataMovement: %v", client.ObjectKeyFromObject(dm)).WithError(err).WithUserMessage("could not start data movement")
 			}
+		} else {
+			log.Info("Created NNF Data Movement", "name", client.ObjectKeyFromObject(dm).String())
 		}
 	}
 
