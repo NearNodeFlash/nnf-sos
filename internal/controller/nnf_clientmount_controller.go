@@ -198,12 +198,16 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
 			}
 
+			var staleDevices []string
 			for _, mountDevice := range mount.Device.LVM.NVMeInfo {
 				for _, existingDevice := range existingDevices {
 					if existingDevice.NQN == mountDevice.DeviceSerial && strconv.Itoa(int(existingDevice.NSID)) == mountDevice.NamespaceID {
-						log.Info("NVMe device is still present but should have been removed", "NQN", mountDevice.DeviceSerial, "NSID", mountDevice.NamespaceID)
+						staleDevices = append(staleDevices, fmt.Sprintf("%s/nsid=%s", mountDevice.DeviceSerial, mountDevice.NamespaceID))
 					}
 				}
+			}
+			if len(staleDevices) > 0 {
+				log.Info("NVMe devices still present after removal", "count", len(staleDevices), "devices", staleDevices)
 			}
 		}
 
@@ -438,7 +442,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 		// Skip the unmount/deactivate if already complete to avoid hitting expected errors
 		if clientMount.Status.Mounts[index].Ready {
-			log.Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
+			log.V(1).Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
 			return nil
 		}
 

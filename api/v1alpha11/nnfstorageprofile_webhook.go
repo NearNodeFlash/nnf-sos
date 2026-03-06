@@ -67,8 +67,6 @@ func (r *NnfStorageProfile) ValidateCreate() (admission.Warnings, error) {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *NnfStorageProfile) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	nnfstorageprofilelog.V(1).Info("validate update", "name", r.Name)
-
 	obj := old.(*NnfStorageProfile)
 	if obj.Data.Pinned != r.Data.Pinned {
 		err := fmt.Errorf("the pinned flag is immutable")
