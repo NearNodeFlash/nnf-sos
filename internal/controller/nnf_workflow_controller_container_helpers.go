@@ -373,13 +373,26 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 	// Since the launcher container is running as non-root, we need to make use of an InitContainer
 	// to edit /etc/passwd and copy it to a volume which can then be mounted into the non-root
 	// container to replace /etc/passwd.
-	script := `# tie the UID/GID to the user
-sed -i '/^$USER/d' /etc/passwd
-echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /etc/passwd
-cp /etc/passwd /config/
+	//
+	// The host's /etc/passwd is mounted at /host/passwd so we can look up the real username for
+	// the UID without relying on a read-write root filesystem. We write directly to /config/passwd
+	// (the EmptyDir volume) to avoid any in-place edits of /etc/passwd.
+	script := `# Find the entry for the UID from the host passwd and add it to the container's passwd.
+# This avoids sed -i which requires a writable /etc/ directory.
+HOST_ENTRY=$(grep ":$UID:" /host/passwd | head -n1)
+HOST_GID=$(echo "$HOST_ENTRY" | cut -d: -f4)
+if [ -n "$HOST_ENTRY" ] && [ "$HOST_GID" = "$GID" ]; then
+    HOST_USER=$(echo "$HOST_ENTRY" | cut -d: -f1)
+    grep -v "^${HOST_USER}:" /etc/passwd | grep -v ":$UID:" > /config/passwd
+    echo "$HOST_ENTRY" >> /config/passwd
+else
+    # If the UID/GID doesn't exist in the host's passwd, create a new entry with the provided username and UID/GID.
+    grep -v "^$USER:" /etc/passwd | grep -v ":$UID:" > /config/passwd
+    echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /config/passwd
+fi
 exit 0
 `
-	// Replace the user and UID/GID
+	// Replace the fallback user and UID/GID
 	script = strings.ReplaceAll(script, "$USER", c.username)
 	script = strings.ReplaceAll(script, "$UID", fmt.Sprintf("%d", c.uid))
 	script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", c.gid))
@@ -394,6 +407,7 @@ exit 0
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "passwd", MountPath: "/config"},
+			{Name: "host-passwd", MountPath: "/host/passwd", ReadOnly: true},
 		},
 	})
 }
@@ -457,6 +471,19 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 		Name: "passwd",
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+
+	// Add a read-only host path volume for the node's /etc/passwd so the init
+	// container can look up the real username for the workflow UID.
+	hostPathFile := corev1.HostPathFile
+	spec.Volumes = append(spec.Volumes, corev1.Volume{
+		Name: "host-passwd",
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/etc/passwd",
+				Type: &hostPathFile,
+			},
 		},
 	})
 
