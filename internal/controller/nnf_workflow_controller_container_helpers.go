@@ -371,24 +371,28 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 	// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
 	// worker nodes. ssh itself requires that the UID is tied to a username in the container.
 	// Since the launcher container is running as non-root, we need to make use of an InitContainer
-	// to edit /etc/passwd and copy it to a volume which can then be mounted into the non-root
+	// to write a modified /etc/passwd to a volume which can then be mounted into the non-root
 	// container to replace /etc/passwd.
 	//
-	// The host's /etc/passwd is mounted at /host/passwd so we can look up the real username for
-	// the UID without relying on a read-write root filesystem. We write directly to /config/passwd
-	// (the EmptyDir volume) to avoid any in-place edits of /etc/passwd.
+	// The host's /etc/passwd is mounted read-only at /host/passwd. The script looks up the entry
+	// for the workflow UID there (using field-precise awk matching) and, if the GID also matches,
+	// uses that real entry. Otherwise it synthesizes a fallback entry from the provided username
+	// and UID/GID. Either way the result is written directly to /config/passwd (the EmptyDir
+	// volume) — /etc/passwd inside the container is never modified in place, avoiding issues with
+	// read-only root filesystems.
 	script := `# Find the entry for the UID from the host passwd and add it to the container's passwd.
 # This avoids sed -i which requires a writable /etc/ directory.
-HOST_ENTRY=$(grep ":$UID:" /host/passwd | head -n1)
+# Use awk for precise field matching on UID (field 3) to avoid false matches on GID.
+HOST_ENTRY=$(awk -F: '$3 == "$UID" {print; exit}' /host/passwd) || echo "warning: could not read /host/passwd" >&2
 HOST_GID=$(echo "$HOST_ENTRY" | cut -d: -f4)
 if [ -n "$HOST_ENTRY" ] && [ "$HOST_GID" = "$GID" ]; then
     HOST_USER=$(echo "$HOST_ENTRY" | cut -d: -f1)
-    grep -v "^${HOST_USER}:" /etc/passwd | grep -v ":$UID:" > /config/passwd
-    echo "$HOST_ENTRY" >> /config/passwd
+    awk -F: '$1 != "'"$HOST_USER"'" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
+    echo "$HOST_ENTRY" >> /config/passwd || echo "warning: could not write host entry to /config/passwd" >&2
 else
     # If the UID/GID doesn't exist in the host's passwd, create a new entry with the provided username and UID/GID.
-    grep -v "^$USER:" /etc/passwd | grep -v ":$UID:" > /config/passwd
-    echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /config/passwd
+    awk -F: '$1 != "$USER" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
+    echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /config/passwd || echo "warning: could not write fallback entry to /config/passwd" >&2
 fi
 exit 0
 `
