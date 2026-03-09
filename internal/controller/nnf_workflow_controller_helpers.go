@@ -1761,6 +1761,22 @@ func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *
 		doneNonMpi = true
 	}
 
+	// Delete NnfContainerData (created when CreateContainer=false)
+	containerDataList := &nnfv1alpha11.NnfContainerDataList{}
+	if err := r.List(ctx, containerDataList, client.InNamespace(workflow.Namespace), matchLabels); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, dwsv1alpha7.NewResourceError("could not list NnfContainerData").WithError(err).WithMajor().WithInternal()
+		}
+	} else {
+		for i := range containerDataList.Items {
+			if err := r.Delete(ctx, &containerDataList.Items[i]); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return nil, dwsv1alpha7.NewResourceError("could not delete NnfContainerData '%s'", containerDataList.Items[i].Name).WithError(err).WithMajor().WithInternal()
+				}
+			}
+		}
+	}
+
 	if doneMpi && doneNonMpi {
 		return nil, nil
 	}

@@ -374,6 +374,17 @@ resources:
     namespaced: true
   domain: cray.hpe.com
   group: nnf
+  kind: NnfContainerData
+  path: github.com/NearNodeFlash/nnf-sos/api/v1alpha11
+  version: v1alpha11
+  webhooks:
+    conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cray.hpe.com
+  group: nnf
   kind: NnfDataMovement
   path: github.com/NearNodeFlash/nnf-sos/api/v1alpha11
   version: v1alpha11

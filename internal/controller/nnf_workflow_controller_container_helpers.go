@@ -242,13 +242,19 @@ func (c *nnfUserContainer) createMPIJob() error {
 		launcherSpec.ServiceAccountName = nnfv1alpha11.CopyOffloadServiceAccountName
 	}
 
-	err = c.client.Create(c.ctx, mpiJob)
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
+	if c.profile.Data.CreateContainer {
+		err = c.client.Create(c.ctx, mpiJob)
+		if err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+		} else {
+			c.log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
 		}
 	} else {
-		c.log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
+		if err := c.createNnfContainerData(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -320,14 +326,71 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 		newJob := &batchv1.Job{}
 		job.DeepCopyInto(newJob)
 
-		err := c.client.Create(c.ctx, newJob)
-		if err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return err
+		if c.profile.Data.CreateContainer {
+			err := c.client.Create(c.ctx, newJob)
+			if err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+			} else {
+				c.log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 			}
-		} else {
-			c.log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 		}
+	}
+
+	if !c.profile.Data.CreateContainer {
+		if err := c.createNnfContainerData(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createNnfContainerData creates an NnfContainerData resource that captures the NNF storage volumes
+// that would have been mounted into the user container. This is used when CreateContainer=false to
+// record volume information without actually launching a container.
+func (c *nnfUserContainer) createNnfContainerData() error {
+	containerData := &nnfv1alpha11.NnfContainerData{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(c.workflow, c.index),
+			Namespace: c.workflow.Namespace,
+		},
+	}
+
+	for _, vol := range c.volumes {
+		var cmd nnfv1alpha11.NnfContainerDataVolumeCommand
+		switch vol.command {
+		case "jobdw":
+			cmd = nnfv1alpha11.ContainerDataVolumeCommandJobDW
+		case "persistentdw":
+			cmd = nnfv1alpha11.ContainerDataVolumeCommandPersistentDW
+		default:
+			// Skip volumes that are not NNF-managed (e.g. globaldw)
+			continue
+		}
+
+		containerData.Data.Volumes = append(containerData.Data.Volumes, nnfv1alpha11.NnfContainerDataVolume{
+			Name:           vol.name,
+			Command:        cmd,
+			DirectiveIndex: vol.directiveIndex,
+			MountPath:      vol.mountPath,
+		})
+	}
+
+	dwsv1alpha7.InheritParentLabels(containerData, c.workflow)
+	dwsv1alpha7.AddWorkflowLabels(containerData, c.workflow)
+	dwsv1alpha7.AddOwnerLabels(containerData, c.workflow)
+	if err := ctrl.SetControllerReference(c.workflow, containerData, c.scheme); err != nil {
+		return err
+	}
+
+	if err := c.client.Create(c.ctx, containerData); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	} else {
+		c.log.Info("Created NnfContainerData", "name", containerData.Name, "namespace", containerData.Namespace)
 	}
 
 	return nil

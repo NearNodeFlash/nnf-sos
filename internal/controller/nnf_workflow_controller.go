@@ -84,6 +84,7 @@ type NnfWorkflowReconciler struct {
 //+kubebuilder:rbac:groups=lus.cray.hpe.com,resources=lustrefilesystems,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerprofiles,verbs=get;create;list;watch;update;patch;delete;deletecollection
+//+kubebuilder:rbac:groups=nnf.cray.hpe.com,resources=nnfcontainerdata,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;watch;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete;deletecollection
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;delete;deletecollection

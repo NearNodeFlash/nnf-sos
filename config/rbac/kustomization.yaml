@@ -57,5 +57,7 @@ resources:
 - nnfdatamovement_viewer_role.yaml
 - nnfcontainerprofile_editor_role.yaml
 - nnfcontainerprofile_viewer_role.yaml
+- nnfcontainerdata_editor_role.yaml
+- nnfcontainerdata_viewer_role.yaml
 - nnfaccess_editor_role.yaml
 - nnfaccess_viewer_role.yaml

@@ -12,6 +12,7 @@ resources:
   - bases/nnf.cray.hpe.com_nnfstorageprofiles.yaml
   - bases/nnf.cray.hpe.com_nnfnodeecdata.yaml
   - bases/nnf.cray.hpe.com_nnfcontainerprofiles.yaml
+  - bases/nnf.cray.hpe.com_nnfcontainerdata.yaml
   - bases/nnf.cray.hpe.com_nnfportmanagers.yaml
   - bases/nnf.cray.hpe.com_nnflustremgts.yaml
   - bases/nnf.cray.hpe.com_nnfdatamovementprofiles.yaml
@@ -30,6 +31,7 @@ patches:
 - path: patches/webhook_in_nnfstorageprofiles.yaml
 - path: patches/webhook_in_nnfnodeecdata.yaml
 - path: patches/webhook_in_nnfcontainerprofiles.yaml
+- path: patches/webhook_in_nnfcontainerdata.yaml
 - path: patches/webhook_in_nnfportmanagers.yaml
 - path: patches/webhook_in_nnflustremgts.yaml
 - path: patches/webhook_in_nnfdatamovementprofiles.yaml
@@ -51,6 +53,7 @@ patches:
 - path: patches/cainjection_in_nnfstorageprofiles.yaml
 - path: patches/cainjection_in_nnfnodeecdata.yaml
 - path: patches/cainjection_in_nnfcontainerprofiles.yaml
+- path: patches/cainjection_in_nnfcontainerdata.yaml
 - path: patches/cainjection_in_nnfportmanagers.yaml
 - path: patches/cainjection_in_nnflustremgts.yaml
 - path: patches/cainjection_in_nnfdatamovementprofiles.yaml
@@ -64,6 +67,7 @@ patches:
 #- path: patches/cainjection_in_nnfnodes.yaml
 #- path: patches/cainjection_in_nnfnodeblockstorages.yaml
 #- path: patches/cainjection_in_nnfnodeecdata.yaml
+#- path: patches/cainjection_in_nnfcontainerdata.yaml
 #- path: patches/cainjection_in_nnfnodestorages.yaml
 #- path: patches/cainjection_in_nnfportmanagers.yaml
 #- path: patches/cainjection_in_nnfstorages.yaml
