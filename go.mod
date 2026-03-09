@@ -9,7 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.4.2
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.3.1
@@ -49,7 +49,7 @@ require (
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.1.0 // indirect
+	github.com/golang/glog v1.2.4 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
@@ -76,7 +76,7 @@ require (
 	github.com/rs/cors v1.8.3 // indirect
 	github.com/senseyeio/duration v0.0.0-20180430131211-7c2a214ada46 // indirect
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.chromium.org/luci v0.0.0-20230227223707-c4460eb434d8 // indirect
 	go.opencensus.io v0.24.0 // indirect

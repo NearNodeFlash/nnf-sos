@@ -106,11 +106,11 @@ github.com/go-task/slim-sprig/v3
 ## explicit; go 1.15
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/golang-jwt/jwt/v5 v5.2.1
+# github.com/golang-jwt/jwt/v5 v5.2.2
 ## explicit; go 1.18
 github.com/golang-jwt/jwt/v5
-# github.com/golang/glog v1.1.0
-## explicit; go 1.18
+# github.com/golang/glog v1.2.4
+## explicit; go 1.19
 github.com/golang/glog
 github.com/golang/glog/internal/logsink
 github.com/golang/glog/internal/stackdump
@@ -276,7 +276,7 @@ github.com/senseyeio/duration
 # github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
 ## explicit; go 1.17
 github.com/sigurn/crc8
-# github.com/sirupsen/logrus v1.9.0
+# github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v1.0.5
@@ -380,8 +380,6 @@ golang.org/x/tools/go/ast/inspector
 # gomodules.xyz/jsonpatch/v2 v2.4.0
 ## explicit; go 1.20
 gomodules.xyz/jsonpatch/v2
-# google.golang.org/appengine v1.6.8-0.20221117013220-504804fb50de
-## explicit; go 1.11
 # google.golang.org/protobuf v1.36.1
 ## explicit; go 1.21
 google.golang.org/protobuf/encoding/prototext
