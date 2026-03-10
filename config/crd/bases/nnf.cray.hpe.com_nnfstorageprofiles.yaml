@@ -1614,6 +1614,13 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
+                                items:
+                                  type: string
+                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -1705,6 +1712,13 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
                                 items:
                                   type: string
                                 type: array
@@ -2430,6 +2444,13 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
+                                items:
+                                  type: string
+                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -2521,6 +2542,13 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
                                 items:
                                   type: string
                                 type: array
@@ -2763,6 +2791,13 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
+                                items:
+                                  type: string
+                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -2854,6 +2889,13 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
+                                items:
+                                  type: string
+                                type: array
+                              postTeardown:
+                                description: PostTeardown specifies a list of commands
+                                  to run after the block device is destroyed during
+                                  teardown
                                 items:
                                   type: string
                                 type: array

@@ -425,12 +425,20 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha11.NnfStorageProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
-	// EDIT THIS FUNCTION! If the annotation is holding anything that is
-	// hub-specific then copy it into 'dst' from 'restored'.
-	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		// Restore hub-specific PostTeardown fields from annotation
+		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
+		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
+		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
+		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+	}
 
 	return nil
 }
@@ -604,4 +612,15 @@ func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 // CreateContainer does not exist in v1alpha10; it is intentionally dropped on downgrade.
 func Convert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in *nnfv1alpha11.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in, out, s)
+}
+
+// Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha10_NnfStorageProfileBlockDeviceUserCommands handles conversion.
+// v1alpha11 has PostTeardown which doesn't exist in v1alpha10.
+func Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha10_NnfStorageProfileBlockDeviceUserCommands(in *nnfv1alpha11.NnfStorageProfileBlockDeviceUserCommands, out *NnfStorageProfileBlockDeviceUserCommands, s apiconversion.Scope) error {
+	out.PreActivate = in.PreActivate
+	out.PostActivate = in.PostActivate
+	out.PreDeactivate = in.PreDeactivate
+	out.PostDeactivate = in.PostDeactivate
+	// PostTeardown is lost during conversion from v1alpha11 to v1alpha10
+	return nil
 }

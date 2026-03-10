@@ -123,3 +123,13 @@ func (m *MockBlockDevice) PostDeactivate(ctx context.Context, complete bool) (bo
 
 	return true, nil
 }
+
+func (m *MockBlockDevice) PostTeardown(ctx context.Context, complete bool) (bool, error) {
+	if complete {
+		return false, nil
+	}
+
+	m.Log.Info("Ran PostTeardown")
+
+	return true, nil
+}

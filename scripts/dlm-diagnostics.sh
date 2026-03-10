@@ -7,32 +7,74 @@
 # compute node's dlm_controld to kill corosync on the rabbit during the
 # next workflow.
 #
-# Expected clean state after workflow teardown:
+# Two modes of operation:
+#
+#   Per-VG mode (VG_NAME argument given):
+#     Only checks that the named VG's lockspace was properly released from
+#     lvmlockd and DLM.  Other VGs' lockspaces (from sibling allocations
+#     still being torn down) are expected and ignored.  Use this when the
+#     script is called as a PostTeardown callout — the controller substitutes
+#     $VG_NAME automatically.
+#
+#   Global mode (no VG_NAME):
+#     Full diagnostic — checks corosync membership, pacemaker, all DLM
+#     lockspaces, fence status, lvmlockd, and kernel state.  Expects only
+#     lvm_global to be active.  Use for manual post-workflow verification.
+#
+# Expected clean state after workflow teardown (global mode):
 #   - Only the rabbit should be in corosync membership
 #   - lvm_global should be the only DLM lockspace
 #   - No nodes should be marked "needs fencing" in dlm_controld
 #   - No per-VG DLM lockspaces should remain
+#
+# When run as a storage profile postTeardown callout, a non-zero exit
+# causes the workflow to fail (.WithMajor).  All output is saved to
+# /var/log/nnf-dlm-diagnostics.log on the rabbit for post-mortem.
+#
+# Container support:
+#   The script auto-detects whether it is running inside a container
+#   (e.g., nnf-node-manager pod with hostPID: true) by comparing mount
+#   namespaces.  When in a container, host-side tools (dlm_tool, pcs,
+#   corosync-cmapctl, lvmlockctl) are invoked via nsenter.  No flags or
+#   separate scripts are needed — it works the same on the host or in
+#   a pod.
 #
 # Exit codes:
 #   0 = clean — no stale DLM state detected (or --no-fail used)
 #   1 = WARNINGS found — stale state that may cause next workflow to fail
 #   2 = script error (missing tools, etc.)
 #
-# Use --no-fail when running as a storage profile callout so warnings
-# are logged but do not block the workflow.
+# Use --no-fail for advisory-only manual runs where you do not want a
+# non-zero exit code.
 
 usage() {
-    echo "Usage: $(basename "$0") [-h|--help] [--no-fail]"
+    echo "Usage: $(basename "$0") [-h|--help] [--no-fail] [VG_NAME]"
     echo ""
     echo "Post-workflow DLM state diagnostic for rabbit nodes."
     echo "Run after GFS2 workflow teardown to detect stale DLM artifacts"
     echo "that could cause compute nodes to kill corosync on the rabbit."
     echo ""
-
+    echo "Arguments:"
+    echo "  VG_NAME    Optional LVM volume group name.  When provided, the"
+    echo "             script runs in per-VG mode: it only checks whether"
+    echo "             that specific VG's lockspace is properly cleaned up"
+    echo "             from lvmlockd and DLM, skipping global cluster checks."
+    echo "             Use this when the script is called as a PostTeardown"
+    echo "             callout (\$VG_NAME is substituted by the controller)."
+    echo ""
     echo "Options:"
     echo "  --no-fail  Always exit 0, even if warnings are found."
-    echo "             Use this in storage profile callouts so diagnostics"
-    echo "             never block the workflow."
+    echo "             Use for advisory-only manual runs."
+    echo ""
+    echo "Modes:"
+    echo "  Per-VG mode (VG_NAME given):"
+    echo "    Only checks that the named VG's lockspace was removed from"
+    echo "    lvmlockd and DLM after block device teardown.  Other VGs'"
+    echo "    lockspaces (from sibling allocations) are ignored."
+    echo ""
+    echo "  Global mode (no VG_NAME):"
+    echo "    Full diagnostic — checks corosync membership, pacemaker,"
+    echo "    DLM lockspaces, fence status, lvmlockd, and kernel state."
     echo ""
     echo "Exit codes:"
     echo "  0  Clean — no stale DLM state detected (or --no-fail)"
@@ -42,12 +84,47 @@ usage() {
 }
 
 NO_FAIL=false
+VG_NAME=""
 for arg in "$@"; do
     case "$arg" in
         -h|--help) usage ;;
         --no-fail) NO_FAIL=true ;;
+        -*) echo "Unknown option: $arg" >&2; exit 2 ;;
+        *) VG_NAME="$arg" ;;
     esac
 done
+
+# ---------------------------------------------------------------------------
+# Container auto-detection
+# ---------------------------------------------------------------------------
+# When running inside a Kubernetes container (e.g., nnf-node-manager pod
+# with hostPID: true), host-side tools like dlm_tool, pcs, corosync-cmapctl,
+# and lvmlockctl live in the host mount namespace, not the container's.
+# Detect this by comparing our mount namespace to PID 1 (host init).
+# If they differ, we prefix host commands with nsenter to enter the
+# host's mount, IPC, and network namespaces.  IPC is needed for
+# corosync-cmapctl (shared memory) and pcs/crm_mon.  Network is
+# needed for dlm_tool (abstract Unix sockets).
+# ---------------------------------------------------------------------------
+NSENTER=""
+if [ -r /proc/1/ns/mnt ] && [ "$(readlink /proc/self/ns/mnt)" != "$(readlink /proc/1/ns/mnt)" ]; then
+    NSENTER="nsenter -t 1 -m -i -n --"
+    # Log file must be written to the host filesystem via nsenter.
+    TEE_CMD="$NSENTER tee"
+else
+    TEE_CMD="tee"
+fi
+
+# Save full output to a persistent log file for post-mortem inspection.
+# In normal mode, tee mirrors everything to both stdout and the log file.
+# In --no-fail mode, the log is not written (advisory-only manual runs).
+LOG_FILE="/var/log/nnf-dlm-diagnostics.log"
+if [ -z "${_DLM_DIAG_WRAPPED:-}" ] && [ "$NO_FAIL" = false ]; then
+    export _DLM_DIAG_WRAPPED=1
+    export NSENTER
+    "$0" "$@" 2>&1 | $TEE_CMD "$LOG_FILE"
+    exit "${PIPESTATUS[0]}"
+fi
 
 set -o pipefail
 set -u
@@ -60,7 +137,7 @@ else
     exec 3>&1
 fi
 
-HOSTNAME_SHORT=$(hostname -s)
+HOSTNAME_SHORT=$($NSENTER hostname -s)
 WARNINGS=0
 WARN_MESSAGES=()
 DIVIDER="================================================================"
@@ -92,12 +169,13 @@ header() {
     echo "$DIVIDER"
 }
 
-# Run a command with a timeout.  Returns 0 on timeout (so || true patterns
-# in callers stay clean) and logs a warning so operators know the command
-# was skipped.
+# Run a host command with a timeout.  Automatically prefixes with nsenter
+# when running inside a container.  Returns 0 on timeout (so || true
+# patterns in callers stay clean) and logs a warning so operators know the
+# command was skipped.
 timed() {
     local output
-    output=$(timeout "$CMD_TIMEOUT" "$@" 2>&1) && { echo "$output"; return 0; }
+    output=$(timeout "$CMD_TIMEOUT" $NSENTER "$@" 2>&1) && { echo "$output"; return 0; }
     local rc=$?
     if [ "$rc" -eq 124 ]; then
         log "TIMEOUT: '$*' did not complete within ${CMD_TIMEOUT}s — skipping"
@@ -114,7 +192,7 @@ header "Preflight Checks"
 
 MISSING_TOOLS=0
 for tool in dlm_tool corosync-cmapctl pcs lvmlockctl; do
-    if ! command -v "$tool" > /dev/null 2>&1; then
+    if ! $NSENTER command -v "$tool" > /dev/null 2>&1; then
         log "ERROR: Required tool '$tool' not found in PATH"
         MISSING_TOOLS=1
     fi
@@ -125,9 +203,107 @@ if [ "$MISSING_TOOLS" -eq 1 ]; then
     exit 2
 fi
 
+if [ -n "$NSENTER" ]; then
+    log "Running in container mode (nsenter into host mount namespace)"
+fi
+
 log "All required tools found."
 log "Hostname: $HOSTNAME_SHORT"
 log "Date: $(date)"
+
+# ---------------------------------------------------------------------------
+# Per-VG mode: when VG_NAME is given, only check that VG's lockspace
+# ---------------------------------------------------------------------------
+# PostTeardown runs per-allocation inside deleteAllocation(), AFTER the
+# block device is destroyed.  With multiple allocations on the same rabbit,
+# sibling allocations' VGs may still be active.  In per-VG mode we only
+# check that THIS allocation's VG lockspace was properly released from
+# lvmlockd and DLM — other VGs are expected and ignored.
+# ---------------------------------------------------------------------------
+if [ -n "$VG_NAME" ]; then
+    header "Per-VG Teardown Check: $VG_NAME"
+    log "Running in per-VG mode — checking only lockspace for VG '$VG_NAME'."
+
+    # Check lvmlockctl for our VG.  After Destroy(), the VG should be gone
+    # from lvmlockd.  If it's still there, check whether the VG still has
+    # LVs from sibling allocations.  For shared GFS2 VGs, Destroy() only
+    # removes this allocation's LV; the VG (and its lockspace) stays until
+    # the last LV is removed.  That's expected, not a warning.
+    LVMLOCKCTL=$(timed lvmlockctl -i 2>&1 || true)
+
+    # lvmlockctl -i output format:
+    #   VG <vg_name> lock_type=dlm vg_lock_args=<version>:<vg_uuid>
+    #     LV <lv_name> lock_args=...
+    VG_LOCK_LINE=$(echo "$LVMLOCKCTL" | grep -E "^VG $VG_NAME " || true)
+
+    if [ -n "$VG_LOCK_LINE" ]; then
+        # VG lockspace still active — check if there are remaining LVs.
+        # If sibling allocations still have LVs, the VG is expected to
+        # stay until their Destroy() runs.
+        LV_COUNT=$(timed lvs --noheadings --nosuffix -o lv_name "$VG_NAME" 2>/dev/null | wc -l || echo 0)
+        LV_COUNT=$(echo "$LV_COUNT" | tr -d ' ')
+
+        if [ "$LV_COUNT" -gt 0 ]; then
+            log "VG '$VG_NAME' lockspace still active, but $LV_COUNT LV(s) remain from sibling allocations — expected."
+            log "The lockspace will be released when the last allocation is torn down."
+        else
+            warn "VG '$VG_NAME' still has an active lockspace in lvmlockd after teardown (0 LVs remaining):"
+            echo "  $VG_LOCK_LINE"
+
+            # Extract the VG UUID from vg_lock_args to check DLM directly.
+            # Format: vg_lock_args=<version>:<uuid>  e.g. vg_lock_args=1.0.0:AbCd1234...
+            VG_UUID=$(echo "$VG_LOCK_LINE" | sed -n 's/.*vg_lock_args=[^:]*:\([^ ]*\).*/\1/p')
+            if [ -n "$VG_UUID" ]; then
+                DLM_LS_NAME="lvm_${VG_UUID}"
+                DLM_LS=$(timed dlm_tool ls 2>&1 || true)
+                if echo "$DLM_LS" | grep -q "^name.*${DLM_LS_NAME}"; then
+                    warn "DLM lockspace '$DLM_LS_NAME' still active for VG '$VG_NAME'."
+                else
+                    log "DLM lockspace for VG UUID not found in dlm_tool ls (may have been partially cleaned up)."
+                fi
+            fi
+        fi
+    else
+        log "OK — VG '$VG_NAME' lockspace properly cleaned up from lvmlockd."
+
+        # Double-check: see if any DLM lockspace references our VG name.
+        # This shouldn't happen if lvmlockctl is clean, but catches edge cases.
+        DLM_LS=$(timed dlm_tool ls 2>&1 || true)
+        LS_COUNT=$(echo "$DLM_LS" | grep -c "^name" || true)
+        log "Active DLM lockspaces: $LS_COUNT"
+        if [ "$LS_COUNT" -gt 0 ]; then
+            echo "$DLM_LS" | grep "^name" || true
+        fi
+    fi
+
+    # --- Per-VG Summary ---
+    header "SUMMARY (per-VG: $VG_NAME)"
+
+    if [ "$WARNINGS" -eq 0 ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] CLEAN — VG '$VG_NAME' lockspace properly cleaned up on $HOSTNAME_SHORT." >&3
+        exit 0
+    else
+        echo "" >&3
+        echo "$WARN_DIVIDER" >&3
+        echo "  FOUND $WARNINGS WARNING(S) FOR VG '$VG_NAME' ON $HOSTNAME_SHORT" >&3
+        echo "$WARN_DIVIDER" >&3
+        for i in "${!WARN_MESSAGES[@]}"; do
+            echo "  $((i+1)). ${WARN_MESSAGES[$i]}" >&3
+        done
+        echo "$WARN_DIVIDER" >&3
+        echo "  Full diagnostics: $LOG_FILE on $HOSTNAME_SHORT" >&3
+        echo "" >&3
+        if [ "$NO_FAIL" = true ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] --no-fail: exiting 0 despite warnings (advisory mode)" >&3
+            exit 0
+        fi
+        exit 1
+    fi
+fi
+
+# ===========================================================================
+# Global mode: full cluster diagnostic (no VG_NAME given)
+# ===========================================================================
 
 # ---------------------------------------------------------------------------
 # 1. Corosync Membership — only the rabbit should be present
@@ -323,7 +499,7 @@ fi
 # ---------------------------------------------------------------------------
 header "6. lvmlockd Status"
 
-if command -v lvmlockctl > /dev/null 2>&1; then
+if $NSENTER command -v lvmlockctl > /dev/null 2>&1; then
     log "lvmlockd lock info (lvmlockctl -i):"
     LVMLOCKCTL=$(timed lvmlockctl -i 2>&1 || true)
     echo "$LVMLOCKCTL"
@@ -370,9 +546,9 @@ fi
 # ---------------------------------------------------------------------------
 header "8. Corosync Configuration (for reference)"
 
-if [ -f /etc/corosync/corosync.conf ]; then
+if $NSENTER test -f /etc/corosync/corosync.conf; then
     log "Current corosync.conf:"
-    cat /etc/corosync/corosync.conf
+    $NSENTER cat /etc/corosync/corosync.conf
 else
     log "No corosync.conf found."
 fi
@@ -394,6 +570,7 @@ else
         echo "  $((i+1)). ${WARN_MESSAGES[$i]}" >&3
     done
     echo "$WARN_DIVIDER" >&3
+    echo "  Full diagnostics: $LOG_FILE on $HOSTNAME_SHORT" >&3
     echo "" >&3
     if [ "$NO_FAIL" = true ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] --no-fail: exiting 0 despite warnings (advisory mode)" >&3
