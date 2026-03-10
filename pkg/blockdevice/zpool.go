@@ -38,6 +38,7 @@ type ZpoolCommandArgs struct {
 	PostActivate   []string
 	PreDeactivate  []string
 	PostDeactivate []string
+	PostTeardown   []string
 
 	Vars map[string]string
 }
@@ -338,4 +339,8 @@ func (z *Zpool) PreDeactivate(ctx context.Context, complete bool) (bool, error) 
 
 func (z *Zpool) PostDeactivate(ctx context.Context, complete bool) (bool, error) {
 	return z.RunCommands(ctx, complete, z.CommandArgs.PostDeactivate, "PostDeactivate", nil)
+}
+
+func (z *Zpool) PostTeardown(ctx context.Context, complete bool) (bool, error) {
+	return z.RunCommands(ctx, complete, z.CommandArgs.PostTeardown, "PostTeardown", nil)
 }

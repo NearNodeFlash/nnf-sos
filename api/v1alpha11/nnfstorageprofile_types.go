@@ -295,6 +295,9 @@ type NnfStorageProfileBlockDeviceUserCommands struct {
 
 	// PostDeactivate specifies a list of commands to run after the block device is deactivated
 	PostDeactivate []string `json:"postDeactivate,omitempty"`
+
+	// PostTeardown specifies a list of commands to run after the block device is destroyed during teardown
+	PostTeardown []string `json:"postTeardown,omitempty"`
 }
 
 type NnfStorageProfileRabbitFileSystemCommands struct {

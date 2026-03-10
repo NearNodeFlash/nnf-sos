@@ -1411,6 +1411,16 @@ func (r *NnfStorageReconciler) teardownStorage(ctx context.Context, storage *nnf
 		return nodeStoragesExist, err
 	}
 
+	// Collect status information from the NnfNodeStorage resources and aggregate it into the
+	// NnfStorage. This propagates errors (e.g., PostTeardown failures) from NnfNodeStorage
+	// resources that are being deleted but still have finalizers held.
+	for i := range storage.Status.AllocationSets {
+		_, err := r.aggregateNodeStorageStatus(ctx, storage, i, true, false)
+		if err != nil {
+			return nodeStoragesExist, err
+		}
+	}
+
 	if !nodeStorageDeleteStatus.Complete() {
 		return nodeStoragesExist, nil
 	}

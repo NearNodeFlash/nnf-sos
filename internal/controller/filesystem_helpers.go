@@ -364,6 +364,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
 		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
+		lvmDesc.CommandArgs.UserArgs.PostTeardown = blockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
 	} else {
 		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.ComputeCommands.VgChange.LockStart
 		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.ComputeCommands.VgChange.LockStop

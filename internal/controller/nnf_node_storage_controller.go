@@ -370,6 +370,14 @@ func (r *NnfNodeStorageReconciler) deleteAllocation(ctx context.Context, nnfNode
 		log.Info("Destroyed block device")
 	}
 
+	ran, err = blockDevice.PostTeardown(ctx, !nnfNodeStorage.Status.Allocations[index].Ready)
+	if err != nil {
+		return nil, dwsv1alpha7.NewResourceError("PostTeardown command failed").WithError(err).WithMajor()
+	}
+	if ran {
+		log.Info("Ran PostTeardown commands")
+	}
+
 	return nil, nil
 }
 
