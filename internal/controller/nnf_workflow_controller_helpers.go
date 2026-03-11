@@ -1587,6 +1587,12 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there's nothing to wait for
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
@@ -1887,6 +1893,12 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there's nothing to wait for
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	// If PostRunTimeoutSeconds is set to 0, then don't wait at all and don't check the results.
@@ -1966,6 +1978,12 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there are no results to check
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	timeout := time.Duration(0)
