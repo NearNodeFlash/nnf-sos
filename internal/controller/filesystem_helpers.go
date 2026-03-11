@@ -140,7 +140,7 @@ func getBlockDeviceAndFileSystem(ctx context.Context, c client.Client, nnfNodeSt
 			return nil, nil, dwsv1alpha7.NewResourceError("invalid Lustre target type %s", nnfNodeStorage.Spec.LustreStorage.TargetType).WithFatal()
 		}
 
-		blockDevice, err := newZpoolBlockDevice(ctx, c, nnfNodeStorage, targetOptions, index, log)
+		blockDevice, err := newZpoolBlockDevice(ctx, c, nnfNodeStorage, targetOptions, nnfStorageProfile.Data.LustreStorage.ClientOptions, index, log)
 		if err != nil {
 			return nil, nil, dwsv1alpha7.NewResourceError("could not create zpool block device").WithError(err).WithMajor()
 		}
@@ -195,7 +195,7 @@ func isNodeBlockStorageCurrent(ctx context.Context, c client.Client, nnfNodeBloc
 	return false, nil
 }
 
-func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha11.NnfNodeStorage, targetOptions nnfv1alpha11.NnfStorageProfileLustreTargetOptions, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
+func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnfv1alpha11.NnfNodeStorage, targetOptions nnfv1alpha11.NnfStorageProfileLustreTargetOptions, clientOptions nnfv1alpha11.NnfStorageProfileLustreClientOptions, index int, log logr.Logger) (blockdevice.BlockDevice, error) {
 	zpool := blockdevice.Zpool{}
 
 	// This is for the fake NnfNodeStorage case. We don't need to create the zpool BlockDevice
@@ -242,6 +242,7 @@ func newZpoolBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *n
 	zpool.CommandArgs.Create = targetOptions.CmdLines.ZpoolCreate
 	zpool.CommandArgs.Destroy = targetOptions.CmdLines.ZpoolDestroy
 	zpool.CommandArgs.Replace = targetOptions.CmdLines.ZpoolReplace
+	zpool.CommandArgs.PostTeardown = clientOptions.CmdLines.RabbitPostTeardown
 	zpool.CommandArgs.Vars = unpackCommandVariables(nnfNodeStorage, index)
 	zpool.CommandArgs.Vars = mergeVariables(zpool.CommandArgs.Vars, targetOptions.VariableOverride)
 
@@ -364,7 +365,7 @@ func newLvmBlockDevice(ctx context.Context, c client.Client, nnfNodeStorage *nnf
 		lvmDesc.CommandArgs.UserArgs.PostActivate = blockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		lvmDesc.CommandArgs.UserArgs.PreDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
 		lvmDesc.CommandArgs.UserArgs.PostDeactivate = blockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
-		lvmDesc.CommandArgs.UserArgs.PostTeardown = blockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
+		lvmDesc.CommandArgs.UserArgs.PostTeardown = profileCommands.UserCommands.PostTeardown
 	} else {
 		lvmDesc.CommandArgs.VgArgs.LockStart = blockDeviceCommands.ComputeCommands.VgChange.LockStart
 		lvmDesc.CommandArgs.VgArgs.LockStop = blockDeviceCommands.ComputeCommands.VgChange.LockStop

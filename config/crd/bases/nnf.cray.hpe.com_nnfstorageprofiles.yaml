@@ -1614,13 +1614,6 @@ spec:
                                 items:
                                   type: string
                                 type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
-                                items:
-                                  type: string
-                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -1712,13 +1705,6 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
                                 items:
                                   type: string
                                 type: array
@@ -1893,6 +1879,12 @@ spec:
                         items:
                           type: string
                         type: array
+                      postTeardown:
+                        description: PostTeardown specifies a list of commands to
+                          run after the file system is destroyed during teardown
+                        items:
+                          type: string
+                        type: array
                       preDeactivate:
                         description: PostActivate specifies a list of commands to
                           run before the file system is deactivated
@@ -1970,6 +1962,13 @@ spec:
                             description: |-
                               RabbitPostSetup specifies a list of commands to run on the Rabbit with a Lustre client mounted after the Lustre file system
                               has been set up. This includes mounting the Lustre filesystem beforehand and unmounting it afterward.
+                            items:
+                              type: string
+                            type: array
+                          rabbitPostTeardown:
+                            description: |-
+                              RabbitPostTeardown specifies a list of commands to run on the Rabbit after the
+                              Lustre file system is torn down.
                             items:
                               type: string
                             type: array
@@ -2444,13 +2443,6 @@ spec:
                                 items:
                                   type: string
                                 type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
-                                items:
-                                  type: string
-                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -2542,13 +2534,6 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
                                 items:
                                   type: string
                                 type: array
@@ -2720,6 +2705,12 @@ spec:
                         description: |-
                           PostSetup specifies a list of commands to run after the file system is setup. The file system
                           is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                      postTeardown:
+                        description: PostTeardown specifies a list of commands to
+                          run after the file system is destroyed during teardown
                         items:
                           type: string
                         type: array
@@ -2791,13 +2782,6 @@ spec:
                                 items:
                                   type: string
                                 type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
-                                items:
-                                  type: string
-                                type: array
                               preActivate:
                                 description: PreActivate specifies a list of commands
                                   to run before the block device is activated
@@ -2889,13 +2873,6 @@ spec:
                               postDeactivate:
                                 description: PostDeactivate specifies a list of commands
                                   to run after the block device is deactivated
-                                items:
-                                  type: string
-                                type: array
-                              postTeardown:
-                                description: PostTeardown specifies a list of commands
-                                  to run after the block device is destroyed during
-                                  teardown
                                 items:
                                   type: string
                                 type: array
@@ -3067,6 +3044,12 @@ spec:
                         description: |-
                           PostSetup specifies a list of commands to run after the file system is setup. The file system
                           is mounted on the Rabbit when these commands are run
+                        items:
+                          type: string
+                        type: array
+                      postTeardown:
+                        description: PostTeardown specifies a list of commands to
+                          run after the file system is destroyed during teardown
                         items:
                           type: string
                         type: array
