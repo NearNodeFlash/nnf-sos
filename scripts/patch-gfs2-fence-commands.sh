@@ -31,7 +31,7 @@
 
 # PostTeardown command (rabbit-side):
 # /usr/bin/dlm-diagnostics.sh $VG_NAME
-#   Runs DLM state diagnostics after block device teardown on the rabbit.
+#   Runs DLM state diagnostics after file system teardown on the rabbit.
 #   $VG_NAME is substituted by the controller with the actual LVM volume
 #   group name for the current allocation.  In per-VG mode, the script
 #   only checks that THIS VG's lockspace was cleaned up — sibling
@@ -63,7 +63,7 @@ kubectl patch nnfstorageprofile default -n nnf-system --type='json' -p='[
   },
   {
     "op": "replace",
-    "path": "/data/gfs2Storage/blockDeviceCommands/rabbitCommands/userCommands/postTeardown",
+    "path": "/data/gfs2Storage/userCommands/postTeardown",
     "value": ["/usr/bin/dlm-diagnostics.sh $VG_NAME"]
   }
 ]'
@@ -72,5 +72,5 @@ echo ""
 echo "Verifying compute commands..."
 kubectl get nnfstorageprofile default -n nnf-system -o jsonpath='{.data.gfs2Storage.blockDeviceCommands.computeCommands.userCommands}' | jq .
 echo ""
-echo "Verifying rabbit commands..."
-kubectl get nnfstorageprofile default -n nnf-system -o jsonpath='{.data.gfs2Storage.blockDeviceCommands.rabbitCommands.userCommands}' | jq .
+echo "Verifying userCommands..."
+kubectl get nnfstorageprofile default -n nnf-system -o jsonpath='{.data.gfs2Storage.userCommands}' | jq .

@@ -598,7 +598,6 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
-		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.LvChange.Activate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.LvChange.Activate
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart
@@ -607,7 +606,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
 		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
-		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.GFS2Storage.UserCommands.PostTeardown = restored.Data.GFS2Storage.UserCommands.PostTeardown
 		dst.Data.GFS2Storage.VariableOverride = restored.Data.GFS2Storage.VariableOverride
 
 		dst.Data.XFSStorage.SharedAllocation = restored.Data.XFSStorage.SharedAllocation
@@ -626,7 +625,6 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
 		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
-		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.LvChange.Activate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.LvChange.Activate
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart
@@ -635,7 +633,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
 		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
-		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.XFSStorage.UserCommands.PostTeardown = restored.Data.XFSStorage.UserCommands.PostTeardown
 		dst.Data.XFSStorage.VariableOverride = restored.Data.XFSStorage.VariableOverride
 
 		dst.Data.RawStorage.SharedAllocation = restored.Data.RawStorage.SharedAllocation
@@ -654,7 +652,6 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostActivate
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PreDeactivate
 		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostDeactivate
-		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.LvChange.Activate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.LvChange.Activate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.LvChange.Deactivate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.VgChange.LockStart
@@ -663,7 +660,7 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostActivate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PreDeactivate
 		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostDeactivate
-		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.RawStorage.UserCommands.PostTeardown = restored.Data.RawStorage.UserCommands.PostTeardown
 		dst.Data.RawStorage.VariableOverride = restored.Data.RawStorage.VariableOverride
 
 		// Restore unmount fields
@@ -673,6 +670,9 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget = restored.Data.LustreStorage.OstOptions.CmdLines.UnmountTarget
 		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountRabbit
 		dst.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute = restored.Data.LustreStorage.ClientOptions.CmdLines.UnmountCompute
+
+		// Restore RabbitPostTeardown field
+		dst.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown = restored.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown
 
 		// Restore ZpoolDestroy fields
 		dst.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy = restored.Data.LustreStorage.MgtOptions.CmdLines.ZpoolDestroy

@@ -3426,6 +3426,7 @@ func autoConvert_v1alpha11_NnfStorageProfileLustreClientCmdLines_To_v1alpha8_Nnf
 	out.MountRabbit = in.MountRabbit
 	// WARNING: in.RabbitPostSetup requires manual conversion: does not exist in peer-type
 	// WARNING: in.RabbitPreTeardown requires manual conversion: does not exist in peer-type
+	// WARNING: in.RabbitPostTeardown requires manual conversion: does not exist in peer-type
 	out.MountCompute = in.MountCompute
 	// WARNING: in.UnmountRabbit requires manual conversion: does not exist in peer-type
 	// WARNING: in.UnmountCompute requires manual conversion: does not exist in peer-type

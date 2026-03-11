@@ -540,12 +540,12 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 		dst.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount = restored.Data.RawStorage.FileSystemCommands.ComputeCommands.Unmount
 
 		// Restore hub-specific PostTeardown fields
-		dst.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
-		dst.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.GFS2Storage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
-		dst.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
-		dst.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.XFSStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
-		dst.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.RabbitCommands.UserCommands.PostTeardown
-		dst.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown = restored.Data.RawStorage.BlockDeviceCommands.ComputeCommands.UserCommands.PostTeardown
+		dst.Data.GFS2Storage.UserCommands.PostTeardown = restored.Data.GFS2Storage.UserCommands.PostTeardown
+		dst.Data.XFSStorage.UserCommands.PostTeardown = restored.Data.XFSStorage.UserCommands.PostTeardown
+		dst.Data.RawStorage.UserCommands.PostTeardown = restored.Data.RawStorage.UserCommands.PostTeardown
+
+		// Restore hub-specific RabbitPostTeardown field
+		dst.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown = restored.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown
 	}
 
 	return nil
@@ -1076,12 +1076,21 @@ func Convert_v1alpha11_NnfStorageProfileComputeFileSystemCommands_To_v1alpha9_Nn
 }
 
 // Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha9_NnfStorageProfileBlockDeviceUserCommands handles conversion.
-// v1alpha11 has PostTeardown which doesn't exist in v1alpha9.
 func Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha9_NnfStorageProfileBlockDeviceUserCommands(in *nnfv1alpha11.NnfStorageProfileBlockDeviceUserCommands, out *NnfStorageProfileBlockDeviceUserCommands, s apiconversion.Scope) error {
 	out.PreActivate = in.PreActivate
 	out.PostActivate = in.PostActivate
 	out.PreDeactivate = in.PreDeactivate
 	out.PostDeactivate = in.PostDeactivate
+	return nil
+}
+
+// Convert_v1alpha11_NnfStorageProfileUserCommands_To_v1alpha9_NnfStorageProfileUserCommands handles conversion.
+// v1alpha11 has PostTeardown which doesn't exist in v1alpha9.
+func Convert_v1alpha11_NnfStorageProfileUserCommands_To_v1alpha9_NnfStorageProfileUserCommands(in *nnfv1alpha11.NnfStorageProfileUserCommands, out *NnfStorageProfileUserCommands, s apiconversion.Scope) error {
+	out.PostActivate = in.PostActivate
+	out.PreDeactivate = in.PreDeactivate
+	out.PostSetup = in.PostSetup
+	out.PreTeardown = in.PreTeardown
 	// PostTeardown is lost during conversion from v1alpha11 to v1alpha9
 	return nil
 }
