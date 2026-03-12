@@ -78,8 +78,9 @@ func basicNnfContainerProfile(name string, storages []nnfv1alpha11.NnfContainerP
 			Name: name,
 		},
 		Data: nnfv1alpha11.NnfContainerProfileData{
-			Pinned:   false,
-			Storages: storages,
+			Pinned:          false,
+			CreateContainer: true,
+			Storages:        storages,
 			NnfSpec: &nnfv1alpha11.NnfPodSpec{
 				Containers: []nnfv1alpha11.NnfContainer{
 					{Name: "test", Image: "alpine:latest", Command: []string{"true"}},

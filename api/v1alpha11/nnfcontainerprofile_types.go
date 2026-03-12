@@ -38,6 +38,11 @@ type NnfContainerProfileData struct {
 	// +kubebuilder:default:=false
 	Pinned bool `json:"pinned,omitempty"`
 
+	// CreateContainer specifies whether a user container should be created from this profile.
+	// Defaults to true. Set to false to disable container creation without removing the profile.
+	// +kubebuilder:default:=true
+	CreateContainer bool `json:"createContainer"`
+
 	// List of possible filesystems supported by this container profile
 	Storages []NnfContainerProfileStorage `json:"storages,omitempty"`
 

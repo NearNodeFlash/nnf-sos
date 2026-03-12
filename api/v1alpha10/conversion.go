@@ -21,6 +21,7 @@ package v1alpha10
 
 import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apiconversion "k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -76,9 +77,8 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
-	// EDIT THIS FUNCTION! If the annotation is holding anything that is
-	// hub-specific then copy it into 'dst' from 'restored'.
-	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	// Restore hub-only fields from the annotation.
+	dst.Data.CreateContainer = restored.Data.CreateContainer
 
 	return nil
 }
@@ -598,4 +598,10 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// Convert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData is a manual conversion function.
+// CreateContainer does not exist in v1alpha10; it is intentionally dropped on downgrade.
+func Convert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in *nnfv1alpha11.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in, out, s)
 }

@@ -3,6 +3,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-success
 data:
+  createContainer: true
   retryLimit: 6
   storages:
     - name: DW_JOB_foo_local_storage
@@ -25,6 +26,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-fail
 data:
+  createContainer: true
   spec:
     containers:
       - name: example-fail
@@ -39,6 +41,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-randomly-fail
 data:
+  createContainer: true
   retryLimit: 6
   storages:
     - name: DW_JOB_foo_local_storage
@@ -64,6 +67,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-forever
 data:
+  createContainer: true
   postRunTimeoutSeconds: 5
   retryLimit: 6
   storages:
@@ -85,6 +89,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-forever-nowait
 data:
+  createContainer: true
   postRunTimeoutSeconds: 0
   retryLimit: 6
   storages:
@@ -106,6 +111,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-mpi
 data:
+  createContainer: true
   retryLimit: 6
   numPorts: 1
   storages:
@@ -137,6 +143,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-mpi-fail
 data:
+  createContainer: true
   numPorts: 1
   mpiSpec:
     launcher:
@@ -158,6 +165,7 @@ kind: NnfContainerProfile
 metadata:
   name: example-mpi-webserver
 data:
+  createContainer: true
   retryLimit: 6
   numPorts: 1
   storages:

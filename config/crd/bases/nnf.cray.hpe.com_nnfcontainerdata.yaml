@@ -1,0 +1,78 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: nnfcontainerdata.nnf.cray.hpe.com
+spec:
+  group: nnf.cray.hpe.com
+  names:
+    kind: NnfContainerData
+    listKind: NnfContainerDataList
+    plural: nnfcontainerdata
+    singular: nnfcontainerdata
+  scope: Namespaced
+  versions:
+  - name: v1alpha11
+    schema:
+      openAPIV3Schema:
+        description: NnfContainerData is the Schema for the nnfcontainerdata API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          data:
+            description: NnfContainerDataData defines the data stored in NnfContainerData
+            properties:
+              volumes:
+                description: Volumes is the list of NNF storage volumes to be mounted
+                  into the user container.
+                items:
+                  description: NnfContainerDataVolume describes an NNF storage volume
+                    to be mounted into a user container.
+                  properties:
+                    command:
+                      description: Command is the DW directive command type that created
+                        the storage.
+                      enum:
+                      - jobdw
+                      - persistentdw
+                      type: string
+                    directiveIndex:
+                      description: 'DirectiveIndex is the index of the #DW directive
+                        in the workflow that created this storage.'
+                      type: integer
+                    mountPath:
+                      description: MountPath is the path at which the storage will
+                        be mounted on the NNF node
+                      type: string
+                    name:
+                      description: Name is the volume name defined in the container
+                        profile
+                      type: string
+                  required:
+                  - command
+                  - directiveIndex
+                  - mountPath
+                  - name
+                  type: object
+                type: array
+            type: object
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: true

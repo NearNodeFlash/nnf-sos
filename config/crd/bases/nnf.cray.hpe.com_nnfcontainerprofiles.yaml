@@ -9614,6 +9614,12 @@ spec:
           data:
             description: NnfContainerProfileSpec defines the desired state of NnfContainerProfile
             properties:
+              createContainer:
+                default: true
+                description: |-
+                  CreateContainer specifies whether a user container should be created from this profile.
+                  Defaults to true. Set to false to disable container creation without removing the profile.
+                type: boolean
               groupID:
                 description: |-
                   GroupID specifies the group ID that is allowed to use this profile. If this is specified,
@@ -19165,6 +19171,7 @@ spec:
                 format: int32
                 type: integer
             required:
+            - createContainer
             - retryLimit
             type: object
           kind:

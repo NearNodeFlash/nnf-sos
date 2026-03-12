@@ -81,9 +81,8 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
 		return err
 	}
-	// EDIT THIS FUNCTION! If the annotation is holding anything that is
-	// hub-specific then copy it into 'dst' from 'restored'.
-	// Otherwise, you may comment out UnmarshalData() until it's needed.
+	// Restore hub-only fields from the annotation.
+	dst.Data.CreateContainer = restored.Data.CreateContainer
 
 	return nil
 }
@@ -989,6 +988,12 @@ func (src *NnfSystemStorageList) ConvertTo(dstRaw conversion.Hub) error {
 
 func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 	return apierrors.NewMethodNotSupported(resource("NnfSystemStorageList"), "ConvertFrom")
+}
+
+// Convert_v1alpha11_NnfContainerProfileData_To_v1alpha8_NnfContainerProfileData is a manual conversion function.
+// CreateContainer does not exist in v1alpha8; it is intentionally dropped on downgrade.
+func Convert_v1alpha11_NnfContainerProfileData_To_v1alpha8_NnfContainerProfileData(in *nnfv1alpha11.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
+	return autoConvert_v1alpha11_NnfContainerProfileData_To_v1alpha8_NnfContainerProfileData(in, out, s)
 }
 
 // +crdbumper:carryforward:begin="Epilog"

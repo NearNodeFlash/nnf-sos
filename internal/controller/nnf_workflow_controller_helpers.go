@@ -1587,6 +1587,12 @@ func (r *NnfWorkflowReconciler) waitForContainersToStart(ctx context.Context, wo
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there's nothing to wait for
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	// Timeouts - If the containers don't start after PreRunTimeoutSeconds, we need to send an error
@@ -1761,6 +1767,22 @@ func (r *NnfWorkflowReconciler) deleteContainers(ctx context.Context, workflow *
 		doneNonMpi = true
 	}
 
+	// Delete NnfContainerData (created when CreateContainer=false)
+	containerDataList := &nnfv1alpha11.NnfContainerDataList{}
+	if err := r.List(ctx, containerDataList, client.InNamespace(workflow.Namespace), matchLabels); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, dwsv1alpha7.NewResourceError("could not list NnfContainerData").WithError(err).WithMajor().WithInternal()
+		}
+	} else {
+		for i := range containerDataList.Items {
+			if err := r.Delete(ctx, &containerDataList.Items[i]); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return nil, dwsv1alpha7.NewResourceError("could not delete NnfContainerData '%s'", containerDataList.Items[i].Name).WithError(err).WithMajor().WithInternal()
+				}
+			}
+		}
+	}
+
 	if doneMpi && doneNonMpi {
 		return nil, nil
 	}
@@ -1871,6 +1893,12 @@ func (r *NnfWorkflowReconciler) waitForContainersToFinish(ctx context.Context, w
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there's nothing to wait for
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	// If PostRunTimeoutSeconds is set to 0, then don't wait at all and don't check the results.
@@ -1950,6 +1978,12 @@ func (r *NnfWorkflowReconciler) checkContainersResults(ctx context.Context, work
 	if err != nil {
 		return nil, err
 	}
+
+	// If CreateContainer=false, no jobs were created so there are no results to check
+	if !profile.Data.CreateContainer {
+		return nil, nil
+	}
+
 	isMPIJob := profile.Data.NnfMPISpec != nil
 
 	timeout := time.Duration(0)
