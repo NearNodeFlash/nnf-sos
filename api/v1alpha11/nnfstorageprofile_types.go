@@ -38,6 +38,10 @@ type NnfStorageProfileLustreClientCmdLines struct {
 	// unmounting it afterward.
 	RabbitPreTeardown []string `json:"rabbitPreTeardown,omitempty"`
 
+	// RabbitPostTeardown specifies a list of commands to run on the Rabbit after the
+	// Lustre file system is torn down.
+	RabbitPostTeardown []string `json:"rabbitPostTeardown,omitempty"`
+
 	// MountCompute specifies mount options for making the Lustre client mount on the Compute.
 	MountCompute string `json:"mountCompute,omitempty"`
 
@@ -390,6 +394,9 @@ type NnfStorageProfileUserCommands struct {
 	// PreTeardown specifies a list of commands to run before the file system is destroyed. The file system
 	// is mounted on the Rabbit when these commands are run
 	PreTeardown []string `json:"preTeardown,omitempty"`
+
+	// PostTeardown specifies a list of commands to run after the file system is destroyed during teardown
+	PostTeardown []string `json:"postTeardown,omitempty"`
 }
 
 // NnfStorageProfileSharedData defines the shared parameters for simple file systems (xfs, gfs2, and raw)

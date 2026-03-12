@@ -425,12 +425,20 @@ func (src *NnfStorageProfile) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Manually restore data.
 	restored := &nnfv1alpha11.NnfStorageProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	hasAnno, err := utilconversion.UnmarshalData(src, restored)
+	if err != nil {
 		return err
 	}
-	// EDIT THIS FUNCTION! If the annotation is holding anything that is
-	// hub-specific then copy it into 'dst' from 'restored'.
-	// Otherwise, you may comment out UnmarshalData() until it's needed.
+
+	if hasAnno {
+		// Restore hub-specific PostTeardown fields from annotation
+		dst.Data.GFS2Storage.UserCommands.PostTeardown = restored.Data.GFS2Storage.UserCommands.PostTeardown
+		dst.Data.XFSStorage.UserCommands.PostTeardown = restored.Data.XFSStorage.UserCommands.PostTeardown
+		dst.Data.RawStorage.UserCommands.PostTeardown = restored.Data.RawStorage.UserCommands.PostTeardown
+
+		// Restore hub-specific RabbitPostTeardown field from annotation
+		dst.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown = restored.Data.LustreStorage.ClientOptions.CmdLines.RabbitPostTeardown
+	}
 
 	return nil
 }
@@ -604,4 +612,45 @@ func (dst *NnfSystemStorageList) ConvertFrom(srcRaw conversion.Hub) error {
 // CreateContainer does not exist in v1alpha10; it is intentionally dropped on downgrade.
 func Convert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in *nnfv1alpha11.NnfContainerProfileData, out *NnfContainerProfileData, s apiconversion.Scope) error {
 	return autoConvert_v1alpha11_NnfContainerProfileData_To_v1alpha10_NnfContainerProfileData(in, out, s)
+}
+
+// Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha10_NnfStorageProfileBlockDeviceUserCommands handles conversion.
+func Convert_v1alpha11_NnfStorageProfileBlockDeviceUserCommands_To_v1alpha10_NnfStorageProfileBlockDeviceUserCommands(in *nnfv1alpha11.NnfStorageProfileBlockDeviceUserCommands, out *NnfStorageProfileBlockDeviceUserCommands, s apiconversion.Scope) error {
+	out.PreActivate = in.PreActivate
+	out.PostActivate = in.PostActivate
+	out.PreDeactivate = in.PreDeactivate
+	out.PostDeactivate = in.PostDeactivate
+	return nil
+}
+
+// Convert_v1alpha11_NnfStorageProfileUserCommands_To_v1alpha10_NnfStorageProfileUserCommands handles conversion.
+// v1alpha11 has PostTeardown which doesn't exist in v1alpha10.
+func Convert_v1alpha11_NnfStorageProfileUserCommands_To_v1alpha10_NnfStorageProfileUserCommands(in *nnfv1alpha11.NnfStorageProfileUserCommands, out *NnfStorageProfileUserCommands, s apiconversion.Scope) error {
+	out.PostActivate = in.PostActivate
+	out.PreDeactivate = in.PreDeactivate
+	out.PostSetup = in.PostSetup
+	out.PreTeardown = in.PreTeardown
+	// PostTeardown is lost during conversion from v1alpha11 to v1alpha10
+	return nil
+}
+
+// Convert_v1alpha11_NnfStorageProfileLustreClientCmdLines_To_v1alpha10_NnfStorageProfileLustreClientCmdLines handles conversion.
+// v1alpha11 has RabbitPostTeardown which doesn't exist in v1alpha10.
+func Convert_v1alpha11_NnfStorageProfileLustreClientCmdLines_To_v1alpha10_NnfStorageProfileLustreClientCmdLines(in *nnfv1alpha11.NnfStorageProfileLustreClientCmdLines, out *NnfStorageProfileLustreClientCmdLines, s apiconversion.Scope) error {
+	out.MountRabbit = in.MountRabbit
+	out.RabbitPostSetup = in.RabbitPostSetup
+	out.RabbitPreTeardown = in.RabbitPreTeardown
+	// RabbitPostTeardown is lost during conversion from v1alpha11 to v1alpha10
+	out.MountCompute = in.MountCompute
+	out.UnmountRabbit = in.UnmountRabbit
+	out.UnmountCompute = in.UnmountCompute
+	out.RabbitPreMount = in.RabbitPreMount
+	out.RabbitPostMount = in.RabbitPostMount
+	out.RabbitPreUnmount = in.RabbitPreUnmount
+	out.RabbitPostUnmount = in.RabbitPostUnmount
+	out.ComputePreMount = in.ComputePreMount
+	out.ComputePostMount = in.ComputePostMount
+	out.ComputePreUnmount = in.ComputePreUnmount
+	out.ComputePostUnmount = in.ComputePostUnmount
+	return nil
 }

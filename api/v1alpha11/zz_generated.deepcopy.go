@@ -2268,6 +2268,11 @@ func (in *NnfStorageProfileLustreClientCmdLines) DeepCopyInto(out *NnfStoragePro
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.RabbitPostTeardown != nil {
+		in, out := &in.RabbitPostTeardown, &out.RabbitPostTeardown
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.RabbitPreMount != nil {
 		in, out := &in.RabbitPreMount, &out.RabbitPreMount
 		*out = make([]string, len(*in))
@@ -2586,6 +2591,11 @@ func (in *NnfStorageProfileUserCommands) DeepCopyInto(out *NnfStorageProfileUser
 	}
 	if in.PreTeardown != nil {
 		in, out := &in.PreTeardown, &out.PreTeardown
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.PostTeardown != nil {
+		in, out := &in.PostTeardown, &out.PostTeardown
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

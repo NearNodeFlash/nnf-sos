@@ -60,6 +60,7 @@ type LvmUserCommandArgs struct {
 	PostActivate   []string
 	PreDeactivate  []string
 	PostDeactivate []string
+	PostTeardown   []string
 }
 
 type LvmCommandArgs struct {
@@ -447,4 +448,8 @@ func (l *Lvm) PreDeactivate(ctx context.Context, complete bool) (bool, error) {
 
 func (l *Lvm) PostDeactivate(ctx context.Context, complete bool) (bool, error) {
 	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PostDeactivate, "PostDeactivate", nil)
+}
+
+func (l *Lvm) PostTeardown(ctx context.Context, complete bool) (bool, error) {
+	return l.RunCommands(ctx, complete, l.CommandArgs.UserArgs.PostTeardown, "PostTeardown", nil)
 }
