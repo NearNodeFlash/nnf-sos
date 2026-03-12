@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2025 Hewlett Packard Enterprise Development LP
+# Copyright 2025-2026 Hewlett Packard Enterprise Development LP
 # Other additional copyright holders may be indicated within.
 #
 # The entirety of this work is licensed under the Apache License,
@@ -19,12 +19,18 @@
 """
 Fence Recorder Configuration
 
-These paths are shared between nnf-sos and fence-agents repositories.
-If you change these values, ensure both repositories are updated.
+Override with NNF_FENCE_REQUEST_DIR and NNF_FENCE_RESPONSE_DIR
+environment variables.
 """
 
+import os
+
+# Default paths
+_DEFAULT_REQUEST_DIR = "/localdisk/fence-recorder/requests"
+_DEFAULT_RESPONSE_DIR = "/localdisk/fence-recorder/responses"
+
 # Directory where fence agents write fence request files
-REQUEST_DIR = "/localdisk/fence-recorder/requests"
+REQUEST_DIR = os.environ.get("NNF_FENCE_REQUEST_DIR", _DEFAULT_REQUEST_DIR)
 
 # Directory where nnf-sos writes fence response files
-RESPONSE_DIR = "/localdisk/fence-recorder/responses"
+RESPONSE_DIR = os.environ.get("NNF_FENCE_RESPONSE_DIR", _DEFAULT_RESPONSE_DIR)

@@ -4,8 +4,9 @@ This directory contains shared configuration for fence recorder paths used by bo
 
 ## Files
 
-- **config.go** - Go package with fence directory constants for nnf-sos
-- **config.py** - Python module with fence directory constants for fence-agents
+- **config.go** - Go package with fence directory paths for nnf-sos (reads env vars at init)
+- **config.py** - Python module with fence directory paths for fence-agents (reads env vars at import)
+- **config_test.go** - Unit tests for config.go env var handling
 
 ## Usage
 
@@ -14,7 +15,7 @@ This directory contains shared configuration for fence recorder paths used by bo
 ```go
 import "github.com/NearNodeFlash/nnf-sos/pkg/fence"
 
-// Use the shared constants
+// Use the directory paths (populated from env vars or defaults at init)
 requestDir := fence.RequestDir
 responseDir := fence.ResponseDir
 ```
@@ -35,13 +36,34 @@ REQUEST_DIR = config.REQUEST_DIR
 RESPONSE_DIR = config.RESPONSE_DIR
 ```
 
-## Updating Paths
+## Configuring Paths
 
-When you need to change the fence request/response directory paths:
+The directory paths default to `/localdisk/fence-recorder/requests` and `/localdisk/fence-recorder/responses`. To override them, set environment variables **before** the process starts:
 
-1. Update the constants in **both** `config.go` and `config.py`
-2. Ensure both repositories are updated together
-3. Test both the nnf-sos controller and fence agents with the new paths
+```bash
+export NNF_FENCE_REQUEST_DIR=/my/custom/requests
+export NNF_FENCE_RESPONSE_DIR=/my/custom/responses
+```
+
+Both `config.go` (via `init()`) and `config.py` (via `os.environ.get()`) read these variables automatically, falling back to the defaults when unset.
+
+In Kubernetes, set these in the pod spec for **both** the nnf-node-manager and fence-agent pods:
+
+```yaml
+env:
+  - name: NNF_FENCE_REQUEST_DIR
+    value: "/my/custom/requests"
+  - name: NNF_FENCE_RESPONSE_DIR
+    value: "/my/custom/responses"
+```
+
+### Changing the Defaults
+
+If you need to change the compiled-in default paths:
+
+1. Update `DefaultRequestDir` / `DefaultResponseDir` in `config.go`
+2. Update `_DEFAULT_REQUEST_DIR` / `_DEFAULT_RESPONSE_DIR` in `config.py`
+3. Ensure both repositories are updated together
 
 ## Directory Structure
 
@@ -52,18 +74,9 @@ The fencing protocol uses two directories:
 
 ## Alternative Approaches
 
-If you prefer a different approach to sharing configuration:
+If environment variables are insufficient for your use case:
 
-### Option 1: Environment Variables
-
-Set environment variables on both systems:
-
-```bash
-export FENCE_RECORDER_REQUEST_DIR=/localdisk/fence-recorder/requests
-export FENCE_RECORDER_RESPONSE_DIR=/localdisk/fence-recorder/responses
-```
-
-### Option 2: System Configuration File
+### System Configuration File
 
 Create `/etc/nnf/fence-config.json`:
 
@@ -74,17 +87,20 @@ Create `/etc/nnf/fence-config.json`:
 }
 ```
 
-Both Go and Python code can read this file at runtime.
-
-### Option 3: Git Submodule
-
-Make this configuration directory a separate git repository and include it as a submodule in both nnf-sos and fence-agents.
+Both Go and Python code could read this file at runtime. This would require adding a `LoadConfig()` function.
 
 ## Current Implementation
 
-The nnf-sos controller currently uses the constants from `config.go` in:
+The nnf-sos controller uses `fence.RequestDir` and `fence.ResponseDir` from `config.go` in:
 
 - `internal/controller/nnf_node_controller.go` - NnfNode controller watches both request and response directories using fsnotify
 - `internal/controller/nnf_node_block_storage_controller.go` - Processes fence requests and writes response files
 
 The fence agent should import `config.py` to use the same paths.
+
+## Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NNF_FENCE_REQUEST_DIR` | `/localdisk/fence-recorder/requests` | Directory where fence agents write JSON request files |
+| `NNF_FENCE_RESPONSE_DIR` | `/localdisk/fence-recorder/responses` | Directory where nnf-sos writes JSON response files |
