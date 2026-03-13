@@ -439,11 +439,12 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 	//
 	// The host's /etc/passwd is mounted read-only at /host/passwd. The script looks up the entry
 	// for the workflow UID there (using field-precise awk matching) and, if the GID also matches,
-	// uses that real entry with the home directory rewritten to /home/<username> so it matches
-	// the SSH key mount path. Otherwise it synthesizes a fallback entry from the provided username
-	// and UID/GID. Either way the result is written directly to /config/passwd (the EmptyDir
-	// volume) — /etc/passwd inside the container is never modified in place, avoiding issues with
-	// read-only root filesystems.
+	// uses that real entry with the home directory rewritten to /home/<c.username> so it matches
+	// the SSH key mount path. It also updates /etc/shadow so the host username has a valid account
+	// entry (PAM's pam_unix requires the username from /etc/passwd to exist in /etc/shadow).
+	// Otherwise it synthesizes a fallback entry from the provided username and UID/GID.
+	// Results are written to EmptyDir volumes — /etc/passwd and /etc/shadow inside the container
+	// are never modified in place, avoiding issues with read-only root filesystems.
 	script := `# Find the entry for the UID from the host passwd and add it to the container's passwd.
 # This avoids sed -i which requires a writable /etc/ directory.
 # Use awk for precise field matching on UID (field 3) to avoid false matches on GID.
@@ -451,12 +452,16 @@ HOST_ENTRY=$(awk -F: '$3 == "$UID" {print; exit}' /host/passwd) || echo "warning
 HOST_GID=$(echo "$HOST_ENTRY" | cut -d: -f4)
 if [ -n "$HOST_ENTRY" ] && [ "$HOST_GID" = "$GID" ]; then
     HOST_USER=$(echo "$HOST_ENTRY" | cut -d: -f1)
-    awk -F: '$1 != "'"$HOST_USER"'" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
+    awk -F: '$1 != "'"$HOST_USER"'" && $1 != "$USER" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
     echo "$HOST_ENTRY" | awk -F: -v home="/home/$USER" 'BEGIN{OFS=":"} {$6=home; print}' >> /config/passwd || echo "warning: could not write host entry to /config/passwd" >&2
+    # Update /etc/shadow: rename the $USER entry to HOST_USER so PAM can find it.
+    sed "s/^$USER:/"$HOST_USER":/" /etc/shadow > /config-shadow/shadow || echo "warning: could not write /config-shadow/shadow" >&2
 else
     # If the UID/GID doesn't exist in the host's passwd, create a new entry with the provided username and UID/GID.
     awk -F: '$1 != "$USER" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
     echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /config/passwd || echo "warning: could not write fallback entry to /config/passwd" >&2
+    # Shadow is unchanged in the fallback case since we use $USER which matches the image's /etc/shadow.
+    cp /etc/shadow /config-shadow/shadow || echo "warning: could not copy /etc/shadow" >&2
 fi
 exit 0
 `
@@ -475,6 +480,7 @@ exit 0
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "passwd", MountPath: "/config"},
+			{Name: "shadow", MountPath: "/config-shadow"},
 			{Name: "host-passwd", MountPath: "/host/passwd", ReadOnly: true},
 		},
 	})
@@ -527,6 +533,7 @@ exit 1
 		// And use the necessary volumes to support the UID/GID
 		VolumeMounts: []corev1.VolumeMount{
 			{MountPath: "/etc/passwd", Name: "passwd", SubPath: "passwd"},
+			{MountPath: "/etc/shadow", Name: "shadow", SubPath: "shadow"},
 			{MountPath: "/home/mpiuser/.ssh", Name: "ssh-auth"},
 		},
 	})
@@ -537,6 +544,16 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 	// Add volume for /etc/passwd to map user to UID/GID
 	spec.Volumes = append(spec.Volumes, corev1.Volume{
 		Name: "passwd",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+
+	// Add volume for /etc/shadow so the init container can update the username
+	// to match /etc/passwd. PAM's pam_unix requires the username from /etc/passwd
+	// to exist in /etc/shadow for account verification.
+	spec.Volumes = append(spec.Volumes, corev1.Volume{
+		Name: "shadow",
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
 		},
@@ -582,12 +599,19 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 			c.addInitContainerPasswd(spec, container.Image)
 		}
 
-		// Add a mount to copy the modified /etc/passwd to
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      "passwd",
-			MountPath: "/etc/passwd",
-			SubPath:   "passwd",
-		})
+		// Add mounts for the modified /etc/passwd and /etc/shadow
+		container.VolumeMounts = append(container.VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "passwd",
+				MountPath: "/etc/passwd",
+				SubPath:   "passwd",
+			},
+			corev1.VolumeMount{
+				Name:      "shadow",
+				MountPath: "/etc/shadow",
+				SubPath:   "shadow",
+			},
+		)
 
 		// Create SecurityContext if necessary
 		if container.SecurityContext == nil {
