@@ -439,7 +439,8 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 	//
 	// The host's /etc/passwd is mounted read-only at /host/passwd. The script looks up the entry
 	// for the workflow UID there (using field-precise awk matching) and, if the GID also matches,
-	// uses that real entry. Otherwise it synthesizes a fallback entry from the provided username
+	// uses that real entry with the home directory rewritten to /home/<username> so it matches
+	// the SSH key mount path. Otherwise it synthesizes a fallback entry from the provided username
 	// and UID/GID. Either way the result is written directly to /config/passwd (the EmptyDir
 	// volume) — /etc/passwd inside the container is never modified in place, avoiding issues with
 	// read-only root filesystems.
@@ -451,7 +452,7 @@ HOST_GID=$(echo "$HOST_ENTRY" | cut -d: -f4)
 if [ -n "$HOST_ENTRY" ] && [ "$HOST_GID" = "$GID" ]; then
     HOST_USER=$(echo "$HOST_ENTRY" | cut -d: -f1)
     awk -F: '$1 != "'"$HOST_USER"'" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
-    echo "$HOST_ENTRY" >> /config/passwd || echo "warning: could not write host entry to /config/passwd" >&2
+    echo "$HOST_ENTRY" | awk -F: -v home="/home/$USER" 'BEGIN{OFS=":"} {$6=home; print}' >> /config/passwd || echo "warning: could not write host entry to /config/passwd" >&2
 else
     # If the UID/GID doesn't exist in the host's passwd, create a new entry with the provided username and UID/GID.
     awk -F: '$1 != "$USER" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
