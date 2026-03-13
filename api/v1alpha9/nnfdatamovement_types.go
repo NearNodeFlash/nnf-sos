@@ -217,6 +217,7 @@ const (
 	DataMovementConditionReasonCancelled = "Cancelled"
 )
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".status.state",description="Current state"

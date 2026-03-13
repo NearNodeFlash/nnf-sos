@@ -95,6 +95,7 @@ type NnfNodeBlockStorageAllocationStatus struct {
 	StoragePoolId string `json:"storagePoolId,omitempty"`
 }
 
+// +kubebuilder:unservedversion
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.ready"

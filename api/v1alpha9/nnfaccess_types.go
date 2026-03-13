@@ -88,6 +88,7 @@ type NnfAccessStatus struct {
 	dwsv1alpha7.ResourceError `json:",inline"`
 }
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="DESIREDSTATE",type="string",JSONPath=".spec.desiredState",description="The desired state"
