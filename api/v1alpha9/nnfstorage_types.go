@@ -201,6 +201,7 @@ type NnfStorageStatus struct {
 	Ready bool `json:"ready,omitempty"`
 }
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="READY",type="string",JSONPath=".status.ready"

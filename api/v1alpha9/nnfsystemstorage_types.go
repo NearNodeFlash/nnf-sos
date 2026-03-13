@@ -111,6 +111,7 @@ type NnfSystemStorageStatus struct {
 	dwsv1alpha7.ResourceError `json:",inline"`
 }
 
+// +kubebuilder:unservedversion
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // NnfSystemStorage is the Schema for the nnfsystemstorages API
