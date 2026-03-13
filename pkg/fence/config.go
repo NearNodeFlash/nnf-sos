@@ -19,13 +19,33 @@
 
 package fence
 
-// Fence Recorder Configuration
-// These paths are shared between nnf-sos and fence-agents repositories.
-// If you change these values, ensure both repositories are updated.
-const (
-	// RequestDir is where fence agents write fence request files
-	RequestDir = "/localdisk/fence-recorder/requests"
+import "os"
 
-	// ResponseDir is where nnf-sos writes fence response files
-	ResponseDir = "/localdisk/fence-recorder/responses"
+// Default fence recorder directory paths.
+const (
+	DefaultRequestDir  = "/localdisk/fence-recorder/requests"
+	DefaultResponseDir = "/localdisk/fence-recorder/responses"
 )
+
+// Environment variable names for overriding the default paths.
+const (
+	EnvRequestDir  = "NNF_FENCE_REQUEST_DIR"
+	EnvResponseDir = "NNF_FENCE_RESPONSE_DIR"
+)
+
+// RequestDir is where fence agents write fence request files.
+// Override with NNF_FENCE_REQUEST_DIR environment variable.
+var RequestDir = DefaultRequestDir
+
+// ResponseDir is where nnf-sos writes fence response files.
+// Override with NNF_FENCE_RESPONSE_DIR environment variable.
+var ResponseDir = DefaultResponseDir
+
+func init() {
+	if v := os.Getenv(EnvRequestDir); v != "" {
+		RequestDir = v
+	}
+	if v := os.Getenv(EnvResponseDir); v != "" {
+		ResponseDir = v
+	}
+}
