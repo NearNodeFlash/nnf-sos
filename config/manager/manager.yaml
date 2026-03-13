@@ -72,6 +72,13 @@ spec:
                 fieldPath: status.podIP
           - name: NNF_MAPPER_WAIT_TIMEOUT
             value: "5"
+          # Fence recorder directory paths. Change these to match your
+          # system configuration. Both the nnf-node-manager and fence-agent
+          # pods must use the same paths.
+          - name: NNF_FENCE_REQUEST_DIR
+            value: "/localdisk/fence-recorder/requests"
+          - name: NNF_FENCE_RESPONSE_DIR
+            value: "/localdisk/fence-recorder/responses"
         ports:
           - containerPort: 50057
             name: nnf-ec

@@ -285,11 +285,6 @@ func (l *LustreFileSystem) Mount(ctx context.Context, path string, complete bool
 }
 
 func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, error) {
-	if len(l.CommandArgs.Unmount) == 0 {
-		l.Log.Info("Skipping Unmount - no unmount command specified")
-		return false, nil
-	}
-
 	path = filepath.Clean(path)
 
 	// Build the mount command from the args provided
@@ -316,6 +311,14 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 			return false, fmt.Errorf("unexpected mount at path %s. Expected device %s of type lustre, found device %s type %s", path, devStr, m.Device, m.Type)
 		}
 
+		// If no unmount command is specified but there is an active mount, log a warning
+		// and return. Users may intentionally leave the unmount command empty when they
+		// handle unmounts manually via Pre/Post callouts.
+		if len(l.CommandArgs.Unmount) == 0 {
+			l.Log.Info("Unmount skipped - mount exists but no unmount command is specified in the NnfStorageProfile", "path", path, "device", devStr)
+			return false, nil
+		}
+
 		if _, err := command.Run(fmt.Sprintf("umount %s", l.parseArgs(l.CommandArgs.Unmount)), l.Log); err != nil {
 			return false, fmt.Errorf("could not unmount file system %s: %w", path, err)
 		}
@@ -324,6 +327,10 @@ func (l *LustreFileSystem) Unmount(ctx context.Context, path string) (bool, erro
 		_ = os.Remove(path)
 
 		return true, nil
+	}
+
+	if len(l.CommandArgs.Unmount) == 0 {
+		l.Log.Info("Skipping Unmount - no unmount command specified and no active mount found")
 	}
 
 	// file system already unmounted

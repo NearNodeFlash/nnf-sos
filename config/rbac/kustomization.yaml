@@ -27,10 +27,12 @@ resources:
 - auth_proxy_role_binding.yaml
 - auth_proxy_client_clusterrole.yaml
 - auth_proxy_client_clusterrole_binding.yaml
-# For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
+# For each CRD, "Editor" and "Viewer" roles are scaffolded by
 # default, aiding admins in cluster management. Those roles are
-# not used by the {{ .ProjectName }} itself. You can comment the following lines
+# not used by the nnf-sos itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- nnfsystemstorage_editor_role.yaml
+- nnfsystemstorage_viewer_role.yaml
 - nnfstorageprofile_editor_role.yaml
 - nnfstorageprofile_viewer_role.yaml
 - nnfstorage_editor_role.yaml
@@ -45,6 +47,8 @@ resources:
 - nnfnodeblockstorage_viewer_role.yaml
 - nnfnode_editor_role.yaml
 - nnfnode_viewer_role.yaml
+- nnflustremgt_editor_role.yaml
+- nnflustremgt_viewer_role.yaml
 - nnfdatamovementprofile_editor_role.yaml
 - nnfdatamovementprofile_viewer_role.yaml
 - nnfdatamovementmanager_editor_role.yaml
@@ -53,13 +57,7 @@ resources:
 - nnfdatamovement_viewer_role.yaml
 - nnfcontainerprofile_editor_role.yaml
 - nnfcontainerprofile_viewer_role.yaml
+- nnfcontainerdata_editor_role.yaml
+- nnfcontainerdata_viewer_role.yaml
 - nnfaccess_editor_role.yaml
 - nnfaccess_viewer_role.yaml
-- nnfsystemstorage_editor_role.yaml
-- nnfsystemstorage_viewer_role.yaml
-- nnflustremgt_editor_role.yaml
-- nnflustremgt_viewer_role.yaml
-# For each CRD, "Editor" and "Viewer" roles are scaffolded by
-# default, aiding admins in cluster management. Those roles are
-# not used by the Project itself. You can comment the following lines
-# if you do not want those helpers be installed with your Project.

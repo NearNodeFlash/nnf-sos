@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -46,7 +46,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 	"github.com/NearNodeFlash/nnf-sos/pkg/blockdevice/nvme"
 	"github.com/NearNodeFlash/nnf-sos/pkg/command"
@@ -161,6 +161,12 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 
 		// Unmount everything before removing the finalizer
+		// NOTE: A race condition exists where the informer cache may have stale Ready=false
+		// values when a deletion reconcile fires immediately after a successful unmount
+		// reconcile. The changeMountAll call below may re-attempt deactivation against
+		// already-stopped services (lvmlockd, dlm_controld killed by PostDeactivate).
+		// The LVM LockStop method handles this by treating "lvmlockd process is not
+		// running" as a successful lock-stop.
 		log.Info("Unmounting all file systems due to resource deletion")
 		if err := r.changeMountAll(ctx, clientMount, dwsv1alpha7.ClientMountStateUnmounted); err != nil {
 			return ctrl.Result{}, err
@@ -192,12 +198,16 @@ func (r *NnfClientMountReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				return ctrl.Result{}, dwsv1alpha7.NewResourceError("could not get NVMe device list").WithError(err).WithMajor()
 			}
 
+			var staleDevices []string
 			for _, mountDevice := range mount.Device.LVM.NVMeInfo {
 				for _, existingDevice := range existingDevices {
 					if existingDevice.NQN == mountDevice.DeviceSerial && strconv.Itoa(int(existingDevice.NSID)) == mountDevice.NamespaceID {
-						log.Info("NVMe device is still present but should have been removed", "NQN", mountDevice.DeviceSerial, "NSID", mountDevice.NamespaceID)
+						staleDevices = append(staleDevices, fmt.Sprintf("%s/nsid=%s", mountDevice.DeviceSerial, mountDevice.NamespaceID))
 					}
 				}
+			}
+			if len(staleDevices) > 0 {
+				log.Info("NVMe devices still present after removal", "count", len(staleDevices), "devices", staleDevices)
 			}
 		}
 
@@ -432,7 +442,7 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 
 		// Skip the unmount/deactivate if already complete to avoid hitting expected errors
 		if clientMount.Status.Mounts[index].Ready {
-			log.Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
+			log.V(1).Info("Skipping unmount/deactivate, already complete", "Mount path", clientMountInfo.MountPath)
 			return nil
 		}
 
@@ -468,24 +478,25 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 		deactivated, err := blockDevice.Deactivate(ctx, fullDeactivate)
 		if err != nil {
-			log.Error(err, "unable to deactivate block device")
+			deactivateErr := err
+			log.Error(deactivateErr, "unable to deactivate block device")
 
 			// Log some debug information to figure out why the deactivate failed
-			devices, err := nvme.NvmeGetNamespaceDevices()
-			if err != nil {
-				log.Info("failed to get namespace devices", "error", err)
+			devices, diagErr := nvme.NvmeGetNamespaceDevices()
+			if diagErr != nil {
+				log.Info("failed to get namespace devices", "error", diagErr)
 			} else {
 				log.Info("deactivate failed", "current namespace devices", devices)
 			}
 
-			output, err := command.Run("dlm_tool ls -n", log)
-			if err != nil {
-				log.Info("failed to run dlm_tool", "error", err)
+			output, diagErr := command.Run("dlm_tool ls -n", log)
+			if diagErr != nil {
+				log.Info("failed to run dlm_tool", "error", diagErr)
 			} else {
 				log.Info("deactivate failed", "dlm_tool output", output)
 			}
 
-			return dwsv1alpha7.NewResourceError("unable to deactivate block device").WithError(err).WithMajor()
+			return dwsv1alpha7.NewResourceError("unable to deactivate block device").WithError(deactivateErr).WithMajor()
 		}
 		if deactivated {
 			log.Info("Deactivated block device", "block device path", blockDevice.GetDevice())
@@ -553,7 +564,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists := clientMount.Labels[dwsv1alpha7.OwnerKindLabel]
 	ownerName, ownerNameExists := clientMount.Labels[dwsv1alpha7.OwnerNameLabel]
 	ownerNS, ownerNSExists := clientMount.Labels[dwsv1alpha7.OwnerNamespaceLabel]
-	_, idxExists := clientMount.Labels[nnfv1alpha10.DirectiveIndexLabel]
+	_, idxExists := clientMount.Labels[nnfv1alpha11.DirectiveIndexLabel]
 
 	// We should expect the owner to be NnfStorage and have the expected labels
 	if !ownerExists || !ownerNameExists || !ownerNSExists || !idxExists || ownerKind != storageKind {
@@ -561,7 +572,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	}
 
 	// Retrieve the NnfStorage resource
-	storage := &nnfv1alpha10.NnfStorage{
+	storage := &nnfv1alpha11.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ownerName,
 			Namespace: ownerNS,
@@ -575,7 +586,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 	ownerKind, ownerExists = storage.Labels[dwsv1alpha7.OwnerKindLabel]
 	ownerName, ownerNameExists = storage.Labels[dwsv1alpha7.OwnerNameLabel]
 	ownerNS, ownerNSExists = storage.Labels[dwsv1alpha7.OwnerNamespaceLabel]
-	idx, idxExists := storage.Labels[nnfv1alpha10.DirectiveIndexLabel]
+	idx, idxExists := storage.Labels[nnfv1alpha11.DirectiveIndexLabel]
 
 	// We should expect the owner of the NnfStorage to be Workflow or PersistentStorageInstance and
 	// have the expected labels
@@ -591,7 +602,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 			client.MatchingLabels(map[string]string{
 				dwsv1alpha7.WorkflowNameLabel:      ownerName,
 				dwsv1alpha7.WorkflowNamespaceLabel: ownerNS,
-				nnfv1alpha10.DirectiveIndexLabel:   idx,
+				nnfv1alpha11.DirectiveIndexLabel:   idx,
 			}),
 		}
 	} else {
@@ -613,7 +624,7 @@ func (r *NnfClientMountReconciler) getServerForClientMount(ctx context.Context, 
 
 	// We should only have 1
 	if len(serversList.Items) != 1 {
-		return nil, dwsv1alpha7.NewResourceError(fmt.Sprintf("wrong number of NnfServers resources: expected 1, got %d", len(serversList.Items))).WithMajor()
+		return nil, dwsv1alpha7.NewResourceError("wrong number of NnfServers resources: expected: %d, got: %d", 1, len(serversList.Items)).WithMajor()
 	}
 
 	return &serversList.Items[0], nil
@@ -658,8 +669,8 @@ func getLustreMappingFromServer(server *dwsv1alpha7.Servers) map[string][]string
 // fakeNnfNodeStorage creates an NnfNodeStorage resource filled in with only the fields
 // that are necessary to mount the file system. This is done to reduce the API server load
 // because the compute nodes don't need to Get() the actual NnfNodeStorage.
-func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, index int) (*nnfv1alpha10.NnfNodeStorage, error) {
-	nnfNodeStorage := &nnfv1alpha10.NnfNodeStorage{
+func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clientMount *dwsv1alpha7.ClientMount, index int) (*nnfv1alpha11.NnfNodeStorage, error) {
+	nnfNodeStorage := &nnfv1alpha11.NnfNodeStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Name,
 			Namespace: clientMount.Spec.Mounts[index].Device.DeviceReference.ObjectReference.Namespace,
@@ -671,7 +682,7 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 	// labels that are important for doing the mount are there and correct
 	dwsv1alpha7.InheritParentLabels(nnfNodeStorage, clientMount)
 	labels := nnfNodeStorage.GetLabels()
-	labels[nnfv1alpha10.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
+	labels[nnfv1alpha11.DirectiveIndexLabel] = getTargetDirectiveIndexLabel(clientMount)
 	labels[dwsv1alpha7.OwnerUidLabel] = getTargetOwnerUIDLabel(clientMount)
 	nnfNodeStorage.SetLabels(labels)
 
@@ -696,16 +707,16 @@ func (r *NnfClientMountReconciler) fakeNnfNodeStorage(ctx context.Context, clien
 		nnfNodeStorage.Spec.LustreStorage.MgsAddress = clientMount.Spec.Mounts[index].Device.Lustre.MgsAddresses
 	}
 
-	nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha10.CommandVariablesSpec{
+	nnfNodeStorage.Spec.CommandVariables = []nnfv1alpha11.CommandVariablesSpec{
 		{
 			Name:    "$JOBID",
 			Indexed: false,
-			Value:   labels[nnfv1alpha10.JobIDLabel],
+			Value:   labels[nnfv1alpha11.JobIDLabel],
 		},
 		{
 			Name:    "$DIRECTIVE_INDEX",
 			Indexed: false,
-			Value:   labels[nnfv1alpha10.DirectiveIndexLabel],
+			Value:   labels[nnfv1alpha11.DirectiveIndexLabel],
 		},
 		{
 			Name:    "$WORKFLOW_UID",

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -37,6 +37,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
+	"go.uber.org/zap/zapcore"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -46,7 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 	controllers "github.com/NearNodeFlash/nnf-sos/internal/controller"
 	"github.com/NearNodeFlash/nnf-sos/mount-daemon/version"
 	//+kubebuilder:scaffold:imports
@@ -69,7 +70,7 @@ type Service struct {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwsv1alpha7.AddToScheme(scheme))
-	utilruntime.Must(nnfv1alpha10.AddToScheme(scheme))
+	utilruntime.Must(nnfv1alpha11.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -150,7 +151,8 @@ func getOptions() *options {
 	flag.DurationVar(&opts.timeout, "command-timeout", opts.timeout, "Timeout value before subcommands are killed")
 
 	zapOptions := zap.Options{
-		Development: true,
+		Development:     true,
+		StacktraceLevel: zapcore.DPanicLevel,
 	}
 	zapOptions.BindFlags(flag.CommandLine)
 

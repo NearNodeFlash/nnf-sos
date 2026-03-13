@@ -139,7 +139,7 @@ func (d *cliDevice) AssignControllerResources(controllerId uint16, resourceType 
 	}
 
 	if !strings.HasPrefix(rsp, "success") {
-		return fmt.Errorf(strings.TrimRight(rsp, "\n"))
+		return fmt.Errorf("%s", strings.TrimRight(rsp, "\n"))
 	}
 
 	return nil
@@ -152,7 +152,7 @@ func (d *cliDevice) OnlineController(controllerId uint16) error {
 	}
 
 	if !strings.HasPrefix(rsp, "success") {
-		return fmt.Errorf(strings.TrimRight(rsp, "\n"))
+		return fmt.Errorf("%s", strings.TrimRight(rsp, "\n"))
 	}
 	return nil
 }

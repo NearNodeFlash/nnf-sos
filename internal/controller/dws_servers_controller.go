@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2021-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -42,7 +42,7 @@ import (
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
 	"github.com/DataWorkflowServices/dws/utils/updater"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 	"github.com/NearNodeFlash/nnf-sos/internal/controller/metrics"
 )
 
@@ -170,7 +170,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 
 	// Get the NnfStorage with the same name/namespace as the servers resource. It may not exist
 	// yet if we're still in proposal phase, or if it was deleted in teardown.
-	nnfStorage := &nnfv1alpha10.NnfStorage{}
+	nnfStorage := &nnfv1alpha11.NnfStorage{}
 	if err := r.Get(ctx, types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace}, nnfStorage); err != nil {
 		if apierrors.IsNotFound(err) {
 			return r.statusSetEmpty(ctx, servers)
@@ -222,13 +222,13 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 
 		// Loop through the nnfNodeStorages corresponding to each of the Rabbit nodes and find
 		matchLabels := dwsv1alpha7.MatchingOwner(nnfStorage)
-		matchLabels[nnfv1alpha10.AllocationSetLabel] = label
+		matchLabels[nnfv1alpha11.AllocationSetLabel] = label
 
 		listOptions := []client.ListOption{
 			matchLabels,
 		}
 
-		nnfNodeStorageList := &nnfv1alpha10.NnfNodeStorageList{}
+		nnfNodeStorageList := &nnfv1alpha11.NnfNodeStorageList{}
 		if err := r.List(ctx, nnfNodeStorageList, listOptions...); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -253,7 +253,7 @@ func (r *DWSServersReconciler) updateCapacityUsed(ctx context.Context, servers *
 			servers.Status.AllocationSets[serversIndex].Storage[name] = dwsv1alpha7.ServersStatusStorage{AllocationSize: 0, Ready: serversReady}
 		}
 
-		nnfNodeBlockStorageList := &nnfv1alpha10.NnfNodeBlockStorageList{}
+		nnfNodeBlockStorageList := &nnfv1alpha11.NnfNodeBlockStorageList{}
 		if err := r.List(ctx, nnfNodeBlockStorageList, listOptions...); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -393,7 +393,7 @@ func (r *DWSServersReconciler) checkDeletedStorage(ctx context.Context, servers 
 	log := r.Log.WithValues("Servers", types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace})
 
 	// Get the NnfStorage with the same name/namespace as the servers resource
-	nnfStorage := &nnfv1alpha10.NnfStorage{}
+	nnfStorage := &nnfv1alpha11.NnfStorage{}
 	if err := r.Get(ctx, types.NamespacedName{Name: servers.Name, Namespace: servers.Namespace}, nnfStorage); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("NnfStorage is deleted")
@@ -424,8 +424,8 @@ func (r *DWSServersReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&dwsv1alpha7.Servers{}).
-		Watches(&nnfv1alpha10.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
-		Watches(&nnfv1alpha10.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
-		Watches(&nnfv1alpha10.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha11.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(nnfStorageServersMapFunc)).
+		Watches(&nnfv1alpha11.NnfNodeStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
+		Watches(&nnfv1alpha11.NnfNodeBlockStorage{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
 		Complete(r)
 }

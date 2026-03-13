@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 Hewlett Packard Enterprise Development LP
+ * Copyright 2023-2026 Hewlett Packard Enterprise Development LP
  * Other additional copyright holders may be indicated within.
  *
  * The entirety of this work is licensed under the Apache License,
@@ -35,7 +35,7 @@ import (
 	"time"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
-	nnfv1alpha10 "github.com/NearNodeFlash/nnf-sos/api/v1alpha10"
+	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 	nnftoken "github.com/NearNodeFlash/nnf-sos/pkg/token"
 	"github.com/go-logr/logr"
 	mpicommonv1 "github.com/kubeflow/common/pkg/apis/common/v1"
@@ -52,7 +52,7 @@ import (
 
 type nnfUserContainer struct {
 	workflow    *dwsv1alpha7.Workflow
-	profile     *nnfv1alpha10.NnfContainerProfile
+	profile     *nnfv1alpha11.NnfContainerProfile
 	nnfNodes    []string
 	volumes     []nnfContainerVolume
 	secrets     []nnfContainerSecret
@@ -137,7 +137,7 @@ func (c *nnfUserContainer) createMPIJob() error {
 	launcherSpec := &launcher.Template.Spec
 	workerSpec := &worker.Template.Spec
 
-	c.username = nnfv1alpha10.ContainerMPIUser
+	c.username = nnfv1alpha11.ContainerMPIUser
 
 	if err := c.applyLabels(&mpiJob.ObjectMeta, true /* applyOwner */); err != nil {
 		return err
@@ -239,16 +239,22 @@ func (c *nnfUserContainer) createMPIJob() error {
 
 	// Copy offload containers need to use the copy offload service account
 	if c.profile.Data.NnfMPISpec.CopyOffload {
-		launcherSpec.ServiceAccountName = nnfv1alpha10.CopyOffloadServiceAccountName
+		launcherSpec.ServiceAccountName = nnfv1alpha11.CopyOffloadServiceAccountName
 	}
 
-	err = c.client.Create(c.ctx, mpiJob)
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
+	if c.profile.Data.CreateContainer {
+		err = c.client.Create(c.ctx, mpiJob)
+		if err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return err
+			}
+		} else {
+			c.log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
 		}
 	} else {
-		c.log.Info("Created MPIJob", "name", mpiJob.Name, "namespace", mpiJob.Namespace)
+		if err := c.createNnfContainerData(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -320,14 +326,71 @@ func (c *nnfUserContainer) createNonMPIJob() error {
 		newJob := &batchv1.Job{}
 		job.DeepCopyInto(newJob)
 
-		err := c.client.Create(c.ctx, newJob)
-		if err != nil {
-			if !apierrors.IsAlreadyExists(err) {
-				return err
+		if c.profile.Data.CreateContainer {
+			err := c.client.Create(c.ctx, newJob)
+			if err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+			} else {
+				c.log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 			}
-		} else {
-			c.log.Info("Created non-MPI job", "name", newJob.Name, "namespace", newJob.Namespace)
 		}
+	}
+
+	if !c.profile.Data.CreateContainer {
+		if err := c.createNnfContainerData(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createNnfContainerData creates an NnfContainerData resource that captures the NNF storage volumes
+// that would have been mounted into the user container. This is used when CreateContainer=false to
+// record volume information without actually launching a container.
+func (c *nnfUserContainer) createNnfContainerData() error {
+	containerData := &nnfv1alpha11.NnfContainerData{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      indexedResourceName(c.workflow, c.index),
+			Namespace: c.workflow.Namespace,
+		},
+	}
+
+	for _, vol := range c.volumes {
+		var cmd nnfv1alpha11.NnfContainerDataVolumeCommand
+		switch vol.command {
+		case "jobdw":
+			cmd = nnfv1alpha11.ContainerDataVolumeCommandJobDW
+		case "persistentdw":
+			cmd = nnfv1alpha11.ContainerDataVolumeCommandPersistentDW
+		default:
+			// Skip volumes that are not NNF-managed (e.g. globaldw)
+			continue
+		}
+
+		containerData.Data.Volumes = append(containerData.Data.Volumes, nnfv1alpha11.NnfContainerDataVolume{
+			Name:           vol.name,
+			Command:        cmd,
+			DirectiveIndex: vol.directiveIndex,
+			MountPath:      vol.mountPath,
+		})
+	}
+
+	dwsv1alpha7.InheritParentLabels(containerData, c.workflow)
+	dwsv1alpha7.AddWorkflowLabels(containerData, c.workflow)
+	dwsv1alpha7.AddOwnerLabels(containerData, c.workflow)
+	if err := ctrl.SetControllerReference(c.workflow, containerData, c.scheme); err != nil {
+		return err
+	}
+
+	if err := c.client.Create(c.ctx, containerData); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	} else {
+		c.log.Info("Created NnfContainerData", "name", containerData.Name, "namespace", containerData.Namespace)
 	}
 
 	return nil
@@ -342,10 +405,10 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 	}
 
 	labels := obj.GetLabels()
-	labels[nnfv1alpha10.ContainerLabel] = c.workflow.Name
-	labels[nnfv1alpha10.PinnedContainerProfileLabelName] = c.profile.GetName()
-	labels[nnfv1alpha10.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
-	labels[nnfv1alpha10.DirectiveIndexLabel] = strconv.Itoa(c.index)
+	labels[nnfv1alpha11.ContainerLabel] = c.workflow.Name
+	labels[nnfv1alpha11.PinnedContainerProfileLabelName] = c.profile.GetName()
+	labels[nnfv1alpha11.PinnedContainerProfileLabelNameSpace] = c.profile.GetNamespace()
+	labels[nnfv1alpha11.DirectiveIndexLabel] = strconv.Itoa(c.index)
 	obj.SetLabels(labels)
 
 	if applyOwner {
@@ -360,7 +423,7 @@ func (c *nnfUserContainer) applyLabels(obj metav1.Object, applyOwner bool) error
 func (c *nnfUserContainer) applyTolerations(spec *corev1.PodSpec) {
 	spec.Tolerations = append(spec.Tolerations, corev1.Toleration{
 		Effect:   corev1.TaintEffectNoSchedule,
-		Key:      nnfv1alpha10.RabbitNodeTaintKey,
+		Key:      nnfv1alpha11.RabbitNodeTaintKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    "true",
 	})
@@ -371,15 +434,32 @@ func (c *nnfUserContainer) addInitContainerPasswd(spec *corev1.PodSpec, image st
 	// InitContainer. This is necessary for mpirun because it uses ssh to communicate with the
 	// worker nodes. ssh itself requires that the UID is tied to a username in the container.
 	// Since the launcher container is running as non-root, we need to make use of an InitContainer
-	// to edit /etc/passwd and copy it to a volume which can then be mounted into the non-root
+	// to write a modified /etc/passwd to a volume which can then be mounted into the non-root
 	// container to replace /etc/passwd.
-	script := `# tie the UID/GID to the user
-sed -i '/^$USER/d' /etc/passwd
-echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /etc/passwd
-cp /etc/passwd /config/
+	//
+	// The host's /etc/passwd is mounted read-only at /host/passwd. The script looks up the entry
+	// for the workflow UID there (using field-precise awk matching) and, if the GID also matches,
+	// uses that real entry. Otherwise it synthesizes a fallback entry from the provided username
+	// and UID/GID. Either way the result is written directly to /config/passwd (the EmptyDir
+	// volume) — /etc/passwd inside the container is never modified in place, avoiding issues with
+	// read-only root filesystems.
+	script := `# Find the entry for the UID from the host passwd and add it to the container's passwd.
+# This avoids sed -i which requires a writable /etc/ directory.
+# Use awk for precise field matching on UID (field 3) to avoid false matches on GID.
+HOST_ENTRY=$(awk -F: '$3 == "$UID" {print; exit}' /host/passwd) || echo "warning: could not read /host/passwd" >&2
+HOST_GID=$(echo "$HOST_ENTRY" | cut -d: -f4)
+if [ -n "$HOST_ENTRY" ] && [ "$HOST_GID" = "$GID" ]; then
+    HOST_USER=$(echo "$HOST_ENTRY" | cut -d: -f1)
+    awk -F: '$1 != "'"$HOST_USER"'" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
+    echo "$HOST_ENTRY" >> /config/passwd || echo "warning: could not write host entry to /config/passwd" >&2
+else
+    # If the UID/GID doesn't exist in the host's passwd, create a new entry with the provided username and UID/GID.
+    awk -F: '$1 != "$USER" && $3 != "$UID"' /etc/passwd > /config/passwd || echo "warning: could not filter /etc/passwd" >&2
+    echo "$USER:x:$UID:$GID::/home/$USER:/bin/sh" >> /config/passwd || echo "warning: could not write fallback entry to /config/passwd" >&2
+fi
 exit 0
 `
-	// Replace the user and UID/GID
+	// Replace the fallback user and UID/GID
 	script = strings.ReplaceAll(script, "$USER", c.username)
 	script = strings.ReplaceAll(script, "$UID", fmt.Sprintf("%d", c.uid))
 	script = strings.ReplaceAll(script, "$GID", fmt.Sprintf("%d", c.gid))
@@ -394,6 +474,7 @@ exit 0
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "passwd", MountPath: "/config"},
+			{Name: "host-passwd", MountPath: "/host/passwd", ReadOnly: true},
 		},
 	})
 }
@@ -457,6 +538,19 @@ func (c *nnfUserContainer) applyPermissions(spec *corev1.PodSpec, mpiJobSpec *mp
 		Name: "passwd",
 		VolumeSource: corev1.VolumeSource{
 			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	})
+
+	// Add a read-only host path volume for the node's /etc/passwd so the init
+	// container can look up the real username for the workflow UID.
+	hostPathFile := corev1.HostPathFile
+	spec.Volumes = append(spec.Volumes, corev1.Volume{
+		Name: "host-passwd",
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/etc/passwd",
+				Type: &hostPathFile,
+			},
 		},
 	})
 
@@ -539,7 +633,7 @@ func (c *nnfUserContainer) getHostPorts() ([]uint16, error) {
 
 	// Get the ports from the port manager for this workflow
 	for _, alloc := range pm.Status.Allocations {
-		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha10.NnfPortManagerAllocationStatusInUse {
+		if alloc.Requester != nil && alloc.Requester.UID == c.workflow.UID && alloc.Status == nnfv1alpha11.NnfPortManagerAllocationStatusInUse {
 			ports = append(ports, alloc.Ports...)
 		}
 	}
@@ -662,7 +756,7 @@ func addPortsEnvVars(workflow dwsv1alpha7.Workflow, spec *corev1.PodSpec, ports 
 
 // Look in the PodSpec and count the number of containers. For MPI containers, only count Launcher
 // containers
-func countContainersInProfile(profile *nnfv1alpha10.NnfContainerProfile) int {
+func countContainersInProfile(profile *nnfv1alpha11.NnfContainerProfile) int {
 	if profile.Data.NnfMPISpec != nil {
 		return len(profile.Data.NnfMPISpec.Launcher.Containers)
 	} else if profile.Data.NnfSpec != nil {
@@ -951,7 +1045,7 @@ func (r *NnfWorkflowReconciler) createContainerToken(ctx context.Context, workfl
 // POST request to the `/shutdown` endpoint of the user container. This might fail if the user
 // container does not implement the `/shutdown` endpoint, but we still want to try to send the
 // request.
-func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha7.Workflow, profile *nnfv1alpha10.NnfContainerProfile) error {
+func (r *NnfWorkflowReconciler) sendContainerShutdown(ctx context.Context, workflow *dwsv1alpha7.Workflow, profile *nnfv1alpha11.NnfContainerProfile) error {
 	isMPIJob := profile.Data.NnfMPISpec != nil
 	isCopyOffload := isMPIJob && profile.Data.NnfMPISpec.CopyOffload
 

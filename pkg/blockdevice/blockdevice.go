@@ -63,4 +63,7 @@ type BlockDevice interface {
 
 	// PostDeactivate runs any command against the OS after the block device is deactivated
 	PostDeactivate(ctx context.Context, complete bool) (bool, error)
+
+	// PostTeardown runs any command against the OS after the block device is destroyed during teardown
+	PostTeardown(ctx context.Context, complete bool) (bool, error)
 }
