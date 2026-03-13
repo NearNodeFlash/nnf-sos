@@ -42,6 +42,7 @@ type NnfNodeECDataStatus struct {
 
 type NnfNodeECPrivateData map[string]string
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

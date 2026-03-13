@@ -94,6 +94,7 @@ type NnfLustreMGTStatusClaim struct {
 	FsName    string                 `json:"fsname,omitempty"`
 }
 
+// +kubebuilder:unservedversion
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // NnfLustreMGT is the Schema for the nnfstorageprofiles API

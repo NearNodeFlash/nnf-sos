@@ -72,6 +72,7 @@ type NnfDataMovementManagerStatus struct {
 	Ready bool `json:"ready"`
 }
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="READY",type="boolean",JSONPath=".status.ready",description="True if manager readied all resoures"

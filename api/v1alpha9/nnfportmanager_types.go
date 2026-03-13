@@ -111,6 +111,7 @@ type NnfPortManagerStatus struct {
 	Status NnfPortManagerStatusStatus `json:"status"`
 }
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

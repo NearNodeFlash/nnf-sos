@@ -257,6 +257,7 @@ type NnfContainerProfileStorage struct {
 	PVCMode corev1.PersistentVolumeAccessMode `json:"pvcMode,omitempty"`
 }
 
+// +kubebuilder:unservedversion
 // +kubebuilder:object:root=true
 
 // NnfContainerProfile is the Schema for the nnfcontainerprofiles API

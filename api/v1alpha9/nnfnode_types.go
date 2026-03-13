@@ -96,6 +96,7 @@ type NnfDriveStatus struct {
 	NnfResourceStatus `json:",inline"`
 }
 
+// +kubebuilder:unservedversion
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:name="STATE",type="string",JSONPath=".spec.state",description="Current desired state"
