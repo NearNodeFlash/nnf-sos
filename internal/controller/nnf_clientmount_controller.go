@@ -406,8 +406,12 @@ func (r *NnfClientMountReconciler) changeMount(ctx context.Context, clientMount 
 		}
 
 		if clientMount.Spec.Mounts[index].SetPermissions {
-			if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
-				return dwsv1alpha7.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
+			// In the test environment there are no real mounts, so the mount path does not
+			// exist on disk. Skip os.Chown since it would fail on a non-existent path.
+			if _, testEnv := os.LookupEnv("NNF_TEST_ENVIRONMENT"); !testEnv {
+				if err := os.Chown(clientMountInfo.MountPath, int(clientMount.Spec.Mounts[index].UserID), int(clientMount.Spec.Mounts[index].GroupID)); err != nil {
+					return dwsv1alpha7.NewResourceError("unable to set owner and group for file system").WithError(err).WithMajor()
+				}
 			}
 
 			// If we're setting permissions then we know this is only happening once.  Dump the
