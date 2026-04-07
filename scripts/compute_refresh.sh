@@ -123,10 +123,10 @@ clush -b -f 16 -w "$COMPUTES_NET" "
     NNF_VGS=\$(pvs --noheadings -o vg_name,pv_name 2>/dev/null | grep nvme | awk '{print \$1}' | sort -u)
     for vg in \$NNF_VGS; do
         vg_dm=\$(echo \$vg | sed 's/-/--/g')
-        mount | grep \"/dev/mapper/\${vg_dm}-\" | awk '{print \$3}' >> /run/nnf/mount_points
+        mount | grep "/dev/mapper/\${vg_dm}-" | awk '{print \$1, \$3}' >> /run/nnf/mount_points
     done
     FAIL=0
-    while read mp; do
+    while read dev mp; do
         if [ -n \"\$mp\" ]; then
             umount \$mp || { echo \"ERROR: umount \$mp failed\"; FAIL=1; }
         fi
@@ -175,30 +175,35 @@ clush -b -f 16 -w "$COMPUTES_NET" "
         vgchange --activate y \$vg || echo \"WARNING: vgchange --activate y \$vg failed\"
     done
     FAIL=0
-    # Use saved mount points if available, otherwise fall back to -m paths
     if [ -s /run/nnf/mount_points ]; then
-        MOUNT_POINTS=\$(cat /run/nnf/mount_points)
+        # Saved mapping has \"device mountpoint\" pairs. Use the exact device
+        # path to correctly handle shared: false where each compute has a
+        # distinct LV index in the same VG.
+        while read dev mp; do
+            [ -n \"\$dev\" ] && [ -n \"\$mp\" ] || continue
+            mkdir -p \$mp 2>/dev/null || true
+            mount \$dev \$mp || { echo \"ERROR: mount \$dev \$mp failed\"; FAIL=1; }
+        done < /run/nnf/mount_points
     elif [ -n '$FALLBACK_MOUNTS' ]; then
-        MOUNT_POINTS='$FALLBACK_MOUNTS'
+        # No saved mapping. Discover LVs and pair with fallback -m paths.
+        # NOTE: with shared: false this picks lv-0; -m is intended for
+        # shared: true configurations only.
+        NEW_LVS=\"\"
+        for vg in \$NNF_VGS; do
+            lv_path=\$(lvs --noheadings -o lv_path \$vg 2>/dev/null | awk '{print \$1}' | head -1)
+            [ -n \"\$lv_path\" ] && NEW_LVS=\"\$NEW_LVS \$lv_path\"
+        done
+        set -- $FALLBACK_MOUNTS
+        for lv in \$NEW_LVS; do
+            mp=\$1; shift 2>/dev/null || true
+            if [ -n \"\$mp\" ] && [ -n \"\$lv\" ]; then
+                mkdir -p \$mp 2>/dev/null || true
+                mount \$lv \$mp || { echo \"ERROR: mount \$lv \$mp failed\"; FAIL=1; }
+            fi
+        done
     else
         echo \"WARNING: No mount points saved and no -m paths provided, skipping remount\"
-        exit 0
     fi
-    NEW_LVS=\"\"
-    for vg in \$NNF_VGS; do
-        lv_path=\$(lvs --noheadings -o lv_path \$vg 2>/dev/null | awk '{print \$1}' | head -1)
-        if [ -n \"\$lv_path\" ]; then
-            NEW_LVS=\"\$NEW_LVS \$lv_path\"
-        fi
-    done
-    set -- \$MOUNT_POINTS
-    for lv in \$NEW_LVS; do
-        mp=\$1; shift 2>/dev/null || true
-        if [ -n \"\$mp\" ] && [ -n \"\$lv\" ]; then
-            mkdir -p \$mp 2>/dev/null || true
-            mount \$lv \$mp || { echo \"ERROR: mount \$lv \$mp failed\"; FAIL=1; }
-        fi
-    done
     rm -f /run/nnf/mount_points
     exit \$FAIL
 " || { log "ERROR: Failed to refresh compute storage (see clush output above)"; exit 1; }

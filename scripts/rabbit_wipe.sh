@@ -22,8 +22,8 @@
 #      startup and rebuilds from scratch
 #   11. Re-enables the rabbit
 #   12. Waits for storage resources to be recreated and ready
-#   13. Annotates NnfAccess to trigger a reconcile that adds computes
-#      to the wiped rabbit's NBS access lists (may wait for backoff)
+#   13. (when NnfSystemStorage configured) Annotates NnfAccess to trigger
+#      a reconcile that adds computes to the wiped rabbit's NBS access lists
 #   14. (with -c) Discovers new NVMe-backed VGs, activates, and mounts
 #
 # After this script completes, either:
@@ -127,11 +127,42 @@ export KUBECONFIG=/etc/kubernetes/admin.conf
 export RABBIT=$RABBIT_ARG
 FALLBACK_MOUNTS=$(printf '%s\n' "${MOUNT_PATHS[@]}")
 
-# Always look up computes — Step 13 needs them to verify NBS access lists.
+# Detect whether any NnfSystemStorage resources target this rabbit.
+# When no NnfSystemStorage exists, there are no compute-facing NVMe namespaces
+# to manage — skip compute waits, NnfAccess annotation, and compute refresh.
+#
+# NnfSystemStorage selects rabbits via includeRabbits/excludeRabbits against
+# the SystemConfiguration. A resource targets this rabbit if:
+#   - includeRabbits is set and contains this rabbit, OR
+#   - includeRabbits is empty (meaning all rabbits in SystemConfiguration)
+#     and excludeRabbits does not contain this rabbit.
+# If no NnfSystemStorage resources exist at all, we skip compute steps.
+HAS_SYSTEM_STORAGE=false
+if kubectl get nnfsystemstorages -A --no-headers 2>/dev/null | grep -q .; then
+    # At least one NnfSystemStorage exists — check if any targets this rabbit.
+    # An NnfSystemStorage with empty includeRabbits covers all rabbits.
+    if kubectl get nnfsystemstorages -A -o json 2>/dev/null \
+            | jq -e --arg r "$RABBIT" '
+                .items[] |
+                (
+                    ((.spec.includeRabbits // []) | length == 0) or
+                    ((.spec.includeRabbits // []) | index($r) != null)
+                ) and
+                ((.spec.excludeRabbits // []) | index($r) == null)
+            ' >/dev/null 2>&1; then
+        HAS_SYSTEM_STORAGE=true
+    fi
+fi
+
+# Look up computes — needed for Step 13 NBS verification when system storage
+# is configured. Not required (and possibly absent) when there is none.
 COMPUTES=$(get_computes "$RABBIT")
 if [ -z "$COMPUTES" ]; then
-    log "ERROR: No computes found for $RABBIT"
-    exit 1
+    if [ "$HAS_SYSTEM_STORAGE" = true ]; then
+        log "ERROR: No computes found for $RABBIT (required when NnfSystemStorage is configured)"
+        exit 1
+    fi
+    log "NOTE: No computes found for $RABBIT — skipping compute steps (no NnfSystemStorage)."
 fi
 
 # Derive network-reachable compute names. LLNL prefixes hostnames with "e"
@@ -186,11 +217,14 @@ if [ "$REFRESH_COMPUTES" = true ]; then
         NNF_VGS=\$(pvs --noheadings -o vg_name,pv_name 2>/dev/null | grep nvme | awk '{print \$1}' | sort -u)
         for vg in \$NNF_VGS; do
             vg_dm=\$(echo \$vg | sed 's/-/--/g')
-            mount | grep \"/dev/mapper/\${vg_dm}-\" | awk '{print \$3}' >> /run/nnf/mount_points
+            # Save "device mountpoint" pairs — device path is needed in Step 14
+            # to remount the correct LV per compute (e.g. with shared: false
+            # each compute has a distinct LV index, not always lv-0).
+            mount | grep "/dev/mapper/\${vg_dm}-" | awk '{print \$1, \$3}' >> /run/nnf/mount_points
         done
         # Unmount all discovered NNF filesystems
         FAIL=0
-        while read mp; do
+        while read dev mp; do
             if [ -n \"\$mp\" ]; then
                 umount \$mp || { echo \"ERROR: umount \$mp failed\"; FAIL=1; }
             fi
@@ -338,27 +372,33 @@ log "Step 11: Enabling rabbit..."
 /admin/scripts/nnf/rabbit_enable "$RABBIT" || { log "ERROR: Failed to enable $RABBIT"; exit 1; }
 
 # --- Step 12: Wait for storage resources to be recreated and ready ---
-# Wait for the expected count of NnfNodeBlockStorage, not just "at least one".
-# The controller-manager recreates them asynchronously and xfs-0 often appears
-# 30-40s before the rest.
-log "Step 12: Waiting for $EXPECTED_NBS_COUNT NnfNodeBlockStorage resources..."
-if [ "$EXPECTED_NBS_COUNT" -gt 0 ] 2>/dev/null; then
-    wait_for "all $EXPECTED_NBS_COUNT NnfNodeBlockStorage resources recreated" "$POLL_TIMEOUT" \
-        bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages --no-headers 2>/dev/null | wc -l) -ge $EXPECTED_NBS_COUNT ]" || exit 1
+# NnfNodeBlockStorage and NnfNodeStorage are only created when NnfSystemStorage
+# is configured. Skip those waits entirely when there is no NnfSystemStorage.
+log "Step 12: Waiting for storage resources to be recreated and ready..."
+if [ "$HAS_SYSTEM_STORAGE" = true ]; then
+    # Wait for the expected count of NnfNodeBlockStorage, not just "at least one".
+    # The controller-manager recreates them asynchronously and xfs-0 often appears
+    # 30-40s before the rest.
+    if [ "$EXPECTED_NBS_COUNT" -gt 0 ] 2>/dev/null; then
+        wait_for "all $EXPECTED_NBS_COUNT NnfNodeBlockStorage resources recreated" "$POLL_TIMEOUT" \
+            bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages --no-headers 2>/dev/null | wc -l) -ge $EXPECTED_NBS_COUNT ]" || exit 1
+    else
+        wait_for "NnfNodeBlockStorage resources recreated" "$POLL_TIMEOUT" \
+            bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages --no-headers 2>/dev/null | wc -l) -gt 0 ]" || exit 1
+    fi
+
+    wait_for "all NnfNodeBlockStorage ready" "$POLL_TIMEOUT" \
+        bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages -o jsonpath='{range .items[*]}{.status.ready}{\"\\n\"}{end}' 2>/dev/null | grep -c false) -eq 0 ]" || exit 1
+
+    # Also wait for NnfNodeStorage ready. The NnfAccess controller's
+    # mapClientLocalStorage() skips allocations whose NnfNodeStorage isn't ready
+    # (nnf_access_controller.go:601), which would cause Step 13's reconciliation
+    # to succeed without adding computes to the NBS access lists.
+    wait_for "all NnfNodeStorage ready" "$POLL_TIMEOUT" \
+        bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodestorages -o jsonpath='{range .items[*]}{.status.ready}{\"\\n\"}{end}' 2>/dev/null | grep -c false) -eq 0 ]" || exit 1
 else
-    wait_for "NnfNodeBlockStorage resources recreated" "$POLL_TIMEOUT" \
-        bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages --no-headers 2>/dev/null | wc -l) -gt 0 ]" || exit 1
+    log "  Skipping NnfNodeBlockStorage/NnfNodeStorage waits (no NnfSystemStorage configured for $RABBIT)."
 fi
-
-wait_for "all NnfNodeBlockStorage ready" "$POLL_TIMEOUT" \
-    bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodeblockstorages -o jsonpath='{range .items[*]}{.status.ready}{\"\\n\"}{end}' 2>/dev/null | grep -c false) -eq 0 ]" || exit 1
-
-# Also wait for NnfNodeStorage ready. The NnfAccess controller's
-# mapClientLocalStorage() skips allocations whose NnfNodeStorage isn't ready
-# (nnf_access_controller.go:601), which would cause Step 13's reconciliation
-# to succeed without adding computes to the NBS access lists.
-wait_for "all NnfNodeStorage ready" "$POLL_TIMEOUT" \
-    bash -c "[ \$(kubectl get -n '$RABBIT' nnfnodestorages -o jsonpath='{range .items[*]}{.status.ready}{\"\\n\"}{end}' 2>/dev/null | grep -c false) -eq 0 ]" || exit 1
 
 # Wait for Storage to transition from Disabled to Ready. Step 11 enabled
 # the rabbit, but the DWSStorage controller must reconcile to update the
@@ -367,24 +407,31 @@ wait_for "all NnfNodeStorage ready" "$POLL_TIMEOUT" \
 wait_for "Storage status Ready" "$POLL_TIMEOUT" \
     bash -c "[ \$(kubectl get storages '$RABBIT' -o jsonpath='{.status.status}' 2>/dev/null) = 'Ready' ]" || exit 1
 
-# Wait for Storage.Status.Access.Computes to be populated. The NnfAccess
-# controller's mapClientLocalStorage() reads this field (line 721-723) to
-# build the compute-to-allocation mapping. If computes aren't listed here,
-# addBlockStorageAccess() receives an empty nodeStorageMap and returns nil
-# without updating NBS — causing NnfAccess to report ready=true while NBS
-# still has rabbit-only access.
-FIRST_COMPUTE=$(flux hostlist -n0 "$COMPUTES")
-wait_for "computes in Storage.Status.Access" "$POLL_TIMEOUT" \
-    bash -c "kubectl get storages '$RABBIT' -o jsonpath='{.status.access.computes[*].name}' 2>/dev/null | grep -q '$FIRST_COMPUTE'" || exit 1
+if [ "$HAS_SYSTEM_STORAGE" = true ]; then
+    # Wait for Storage.Status.Access.Computes to be populated. The NnfAccess
+    # controller's mapClientLocalStorage() reads this field (line 721-723) to
+    # build the compute-to-allocation mapping. If computes aren't listed here,
+    # addBlockStorageAccess() receives an empty nodeStorageMap and returns nil
+    # without updating NBS — causing NnfAccess to report ready=true while NBS
+    # still has rabbit-only access.
+    FIRST_COMPUTE=$(flux hostlist -n0 "$COMPUTES")
+    wait_for "computes in Storage.Status.Access" "$POLL_TIMEOUT" \
+        bash -c "kubectl get storages '$RABBIT' -o jsonpath='{.status.access.computes[*].name}' 2>/dev/null | grep -q '$FIRST_COMPUTE'" || exit 1
 
-# Wait for NnfNodeBlockStorage to have NVMe device info populated. The
-# NnfAccess controller's mapClientLocalStorage() reads NBS status allocations
-# (line 695) for NQN/namespace data. If devices aren't populated yet, the
-# storageMapping entries will be incomplete.
-wait_for "NBS devices populated" "$POLL_TIMEOUT" \
-    bash -c "kubectl get nnfnodeblockstorages -n '$RABBIT' -o jsonpath='{.items[0].status.allocations[0].devices[0].NQN}' 2>/dev/null | grep -q 'nqn'" || exit 1
+    # Wait for NnfNodeBlockStorage to have NVMe device info populated. The
+    # NnfAccess controller's mapClientLocalStorage() reads NBS status allocations
+    # (line 695) for NQN/namespace data. If devices aren't populated yet, the
+    # storageMapping entries will be incomplete.
+    wait_for "NBS devices populated" "$POLL_TIMEOUT" \
+        bash -c "kubectl get nnfnodeblockstorages -n '$RABBIT' -o jsonpath='{.items[0].status.allocations[0].devices[0].NQN}' 2>/dev/null | grep -q 'nqn'" || exit 1
+fi
 
 # --- Step 13: Annotate NnfAccess to trigger reconcile ---
+# Skipped when no NnfSystemStorage is configured for this rabbit — there are
+# no NnfAccess resources to nudge and no computes to verify.
+if [ "$HAS_SYSTEM_STORAGE" = false ]; then
+    log "Step 13: Skipping NnfAccess annotation (no NnfSystemStorage configured for $RABBIT)."
+else
 # The resource deletion storm in Steps 4-5 triggers a flood of errors in the
 # NnfStorage, NnfSystemStorage, and NnfAccess controllers (e.g. "incorrect
 # number of NnfNodeStorages", "NnfNodeStorage has not been reconciled after
@@ -458,6 +505,7 @@ while true; do
 
     sleep "$ACCESS_INTERVAL"
 done
+fi # end HAS_SYSTEM_STORAGE check for Step 13
 
 # --- Step 14: Refresh compute storage (with -c) or advise reboot ---
 if [ "$REFRESH_COMPUTES" = true ]; then
@@ -475,6 +523,10 @@ if [ "$REFRESH_COMPUTES" = true ]; then
     # since namespaces may appear at different times on different computes.
     # Rescan NVMe namespaces on each compute — sometimes new namespaces
     # from the rebuilt rabbit don't appear without an explicit rescan.
+    if [ "$HAS_SYSTEM_STORAGE" = false ]; then
+        log "Step 14: Skipping NVMe VG rediscovery and remount (no NnfSystemStorage for $RABBIT)."
+    else
+
     log "  Rescanning NVMe namespaces on computes..."
     clush -b -f 16 -w "$COMPUTES_NET" "
         for dev in /dev/nvme*; do
@@ -497,32 +549,40 @@ if [ "$REFRESH_COMPUTES" = true ]; then
         for vg in \$NNF_VGS; do
             vgchange --activate y \$vg || echo \"WARNING: vgchange --activate y \$vg failed\"
         done
-        # Mount each discovered LV to its saved or fallback mount point
+        # Mount each LV to its saved or fallback mount point.
         FAIL=0
-        # Use saved mount points if available, otherwise fall back to -m paths
         if [ -s /run/nnf/mount_points ]; then
-            MOUNT_POINTS=\$(cat /run/nnf/mount_points)
+            # Saved mapping has "device mountpoint" pairs from Step 2.
+            # Use the exact device path — this correctly handles shared: false
+            # where each compute has a distinct LV (lv-0, lv-1, ...) in the
+            # same VG. The VG UUID is stable across wipe cycles (derived from
+            # NnfNodeBlockStorage name), so device paths are preserved.
+            while read dev mp; do
+                [ -n \"\$dev\" ] && [ -n \"\$mp\" ] || continue
+                mkdir -p \$mp 2>/dev/null || true
+                mount \$dev \$mp || { echo \"ERROR: mount \$dev \$mp failed\"; FAIL=1; }
+            done < /run/nnf/mount_points
         elif [ -n '$FALLBACK_MOUNTS' ]; then
-            MOUNT_POINTS='$FALLBACK_MOUNTS'
+            # No saved mapping (first run or compute never had a mount).
+            # Discover LVs and pair them with fallback -m paths.
+            # NOTE: with shared: false this picks lv-0 for all computes;
+            # -m should only be used with shared: true configurations.
+            NEW_LVS=\"\"
+            for vg in \$NNF_VGS; do
+                lv_path=\$(lvs --noheadings -o lv_path \$vg 2>/dev/null | awk '{print \$1}' | head -1)
+                [ -n \"\$lv_path\" ] && NEW_LVS=\"\$NEW_LVS \$lv_path\"
+            done
+            set -- $FALLBACK_MOUNTS
+            for lv in \$NEW_LVS; do
+                mp=\$1; shift 2>/dev/null || true
+                if [ -n \"\$mp\" ] && [ -n \"\$lv\" ]; then
+                    mkdir -p \$mp 2>/dev/null || true
+                    mount \$lv \$mp || { echo \"ERROR: mount \$lv \$mp failed\"; FAIL=1; }
+                fi
+            done
         else
             echo \"WARNING: No mount points saved and no -m paths provided, skipping remount\"
-            exit 0
         fi
-        NEW_LVS=\"\"
-        for vg in \$NNF_VGS; do
-            lv_path=\$(lvs --noheadings -o lv_path \$vg 2>/dev/null | awk '{print \$1}' | head -1)
-            if [ -n \"\$lv_path\" ]; then
-                NEW_LVS=\"\$NEW_LVS \$lv_path\"
-            fi
-        done
-        set -- \$MOUNT_POINTS
-        for lv in \$NEW_LVS; do
-            mp=\$1; shift 2>/dev/null || true
-            if [ -n \"\$mp\" ] && [ -n \"\$lv\" ]; then
-                mkdir -p \$mp 2>/dev/null || true
-                mount \$lv \$mp || { echo \"ERROR: mount \$lv \$mp failed\"; FAIL=1; }
-            fi
-        done
         rm -f /run/nnf/mount_points
         exit \$FAIL
     " || { log "ERROR: Failed to refresh compute storage (see clush output above)"; exit 1; }
@@ -542,6 +602,8 @@ if [ "$REFRESH_COMPUTES" = true ]; then
         log "These computes may need to be rebooted."
         exit 1
     fi
+
+    fi # end HAS_SYSTEM_STORAGE check for Step 14
 fi
 
 log ""
