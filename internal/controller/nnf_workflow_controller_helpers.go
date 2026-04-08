@@ -267,7 +267,7 @@ func (r *NnfWorkflowReconciler) validateContainerDirective(ctx context.Context, 
 			return err
 		}
 
-		if strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" {
+		if strings.ToLower(t) != "lustre" && strings.ToLower(t) != "gfs2" && strings.ToLower(t) != "raw" {
 			return dwsv1alpha7.NewResourceError("").WithUserMessage("unsupported container filesystem: %s", t).WithFatal().WithUser()
 		}
 
@@ -1309,7 +1309,7 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 		return nil, dwsv1alpha7.NewResourceError("unable to determine directive file system type").WithError(err).WithFatal()
 	}
 
-	if fsType == "gfs2" || fsType == "lustre" {
+	if fsType == "gfs2" || fsType == "lustre" || fsType == "raw" {
 		accessSuffixes = append(accessSuffixes, "-servers")
 	}
 
