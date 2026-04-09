@@ -75,12 +75,16 @@ func (src *NnfContainerProfile) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	// Manually restore data.
+	// Default CreateContainer to true to match the implicit behavior of v1alpha9, which
+	// always created containers. The annotation restores the explicit value on round-trips.
+	dst.Data.CreateContainer = true
 	restored := &nnfv1alpha11.NnfContainerProfile{}
-	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil {
 		return err
+	} else if ok {
+		// Restore hub-only fields from the annotation.
+		dst.Data.CreateContainer = restored.Data.CreateContainer
 	}
-	// Restore hub-only fields from the annotation.
-	dst.Data.CreateContainer = restored.Data.CreateContainer
 
 	return nil
 }
