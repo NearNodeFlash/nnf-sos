@@ -1760,7 +1760,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Entry("when gfs2 jobdw storage is used", "gfs2", false),
 				Entry("when lustre jobdw storage is used", "lustre", false),
 				Entry("when xfs jobdw storage is used", "xfs", true),
-				Entry("when raw jobdw storage is used", "raw", true),
+				Entry("when raw jobdw storage is used", "raw", false),
 			)
 		})
 
@@ -1798,7 +1798,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Entry("when gfs2 persistentdw storage is used", "gfs2", false),
 				Entry("when lustre persistentdw storage is used", "lustre", false),
 				Entry("when xfs persistentdw storage is used", "xfs", true),
-				Entry("when raw persistentdw storage is used", "raw", true),
+				Entry("when raw persistentdw storage is used", "raw", false),
 			)
 		})
 	})

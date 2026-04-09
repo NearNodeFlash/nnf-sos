@@ -967,7 +967,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 	// NnfAccess may already be present if a data_in directive was specified for the
 	// particular $DW_JOB_[name]; in this case we only need to recreate the resource
 
-	if fsType == "gfs2" || fsType == "lustre" {
+	if fsType == "gfs2" || fsType == "lustre" || fsType == "raw" {
 		name, namespace := getStorageReferenceNameFromWorkflowActual(workflow, index)
 
 		storage := &nnfv1alpha11.NnfStorage{
@@ -1123,7 +1123,7 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 		return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithFatal().WithUser().WithUserMessage("Unable to determine directive file system type")
 	}
 
-	if fsType == "gfs2" || fsType == "lustre" {
+	if fsType == "gfs2" || fsType == "lustre" || fsType == "raw" {
 		if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers"); result != nil || err != nil {
 			return result, err
 		}
