@@ -1,4 +1,4 @@
-apiVersion: dataworkflowservices.github.io/v1alpha6
+apiVersion: dataworkflowservices.github.io/v1alpha7
 kind: DWDirectiveRule
 metadata:
   name: nnf
