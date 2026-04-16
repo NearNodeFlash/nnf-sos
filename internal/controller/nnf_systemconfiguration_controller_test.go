@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/util/taints"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dwsv1alpha7 "github.com/DataWorkflowServices/dws/api/v1alpha7"
@@ -149,8 +148,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 			labels := tnode.GetLabels()
 			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha11.RabbitNodeSelectorLabel, "true"))
 			g.Expect(labels).To(HaveKeyWithValue(nnfv1alpha11.TaintsAndLabelsCompletedLabel, "true"))
-			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeTrue())
-			g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
+			g.Expect(taintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeTrue())
+			g.Expect(taintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 		}).Should(Succeed(), "verify failed for node %s", node.Name)
 		return tnode.ObjectMeta.ResourceVersion
 	}
@@ -191,10 +190,10 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 
 			By("verifying node1 repairs itself when its two taints are flipped")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
-			node1, updated, err = taints.RemoveTaint(node1, taintNoSchedule)
+			node1, updated, err = removeTaint(node1, taintNoSchedule)
 			Expect(err).To(BeNil())
 			Expect(updated).To(BeTrue())
-			node1, updated, err = taints.AddOrUpdateTaint(node1, taintNoExecute)
+			node1, updated, err = addOrUpdateTaint(node1, taintNoExecute)
 			Expect(err).To(BeNil())
 			Expect(updated).To(BeTrue())
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
@@ -203,7 +202,7 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 
 			By("verifying node1 repairs itself when it loses its NoSchedule taint")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
-			node1, updated, err = taints.RemoveTaint(node1, taintNoSchedule)
+			node1, updated, err = removeTaint(node1, taintNoSchedule)
 			Expect(err).To(BeNil())
 			Expect(updated).To(BeTrue())
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
@@ -212,7 +211,7 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 
 			By("verifying node1 repairs itself when it acquires its NoExecute taint")
 			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(node1), node1))
-			node1, updated, err = taints.AddOrUpdateTaint(node1, taintNoExecute)
+			node1, updated, err = addOrUpdateTaint(node1, taintNoExecute)
 			Expect(err).To(BeNil())
 			Expect(updated).To(BeTrue())
 			Expect(k8sClient.Update(context.TODO(), node1)).To(Succeed())
@@ -229,8 +228,8 @@ var _ = Describe("Adding taints and labels to nodes", func() {
 				labels := tnode.GetLabels()
 				g.Expect(labels).ToNot(HaveKey(nnfv1alpha11.RabbitNodeSelectorLabel))
 				g.Expect(labels).ToNot(HaveKey(nnfv1alpha11.TaintsAndLabelsCompletedLabel))
-				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeFalse())
-				g.Expect(taints.TaintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
+				g.Expect(taintExists(tnode.Spec.Taints, taintNoSchedule)).To(BeFalse())
+				g.Expect(taintExists(tnode.Spec.Taints, taintNoExecute)).To(BeFalse())
 			}).Should(Succeed(), "verify failed for node %s", node4.Name)
 		})
 	})
