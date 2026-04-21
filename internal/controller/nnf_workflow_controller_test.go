@@ -197,6 +197,7 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				// DWDirective: workflow.Spec.DWDirectives[0],
 				DWDirective: "#DW create_persistent capacity=1GB name=" + name,
 				State:       dwsv1alpha7.PSIStateActive,
+				UserID:      baseWorkflowUserID,
 			},
 		}
 		Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
@@ -1800,6 +1801,68 @@ var _ = Describe("NNF Workflow Unit Tests", func() {
 				Entry("when xfs persistentdw storage is used", "xfs", true),
 				Entry("when raw persistentdw storage is used", "raw", false),
 			)
+		})
+	})
+
+	When("enforcing persistentdw user ID ownership", func() {
+		AfterEach(func() {
+			deletePersistentStorageInstance(persistentStorageName)
+		})
+
+		It("succeeds at Proposal when user IDs match", func() {
+			createPersistentStorageInstance(persistentStorageName, "lustre")
+			workflow.Spec.DWDirectives = []string{
+				fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), key, workflow)).To(Succeed())
+				return workflow.Status.Ready && workflow.Status.State == dwsv1alpha7.StateProposal && getErroredDriverStatus(workflow) == nil
+			}).Should(BeTrue(), "reach Proposal state with no error")
+		})
+
+		It("errors at Proposal when accessing storage owned by a different user", func() {
+			By("Fabricate a persistent storage instance owned by a different user")
+			psi := &dwsv1alpha7.PersistentStorageInstance{
+				ObjectMeta: metav1.ObjectMeta{Name: persistentStorageName, Namespace: workflow.Namespace},
+				Spec: dwsv1alpha7.PersistentStorageInstanceSpec{
+					Name:        persistentStorageName,
+					FsType:      "lustre",
+					DWDirective: "#DW create_persistent capacity=1GB name=" + persistentStorageName,
+					State:       dwsv1alpha7.PSIStateActive,
+					UserID:      altWorkflowUserID,
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), psi)).To(Succeed())
+
+			nnfStorage := &nnfv1alpha11.NnfStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      persistentStorageName,
+					Namespace: workflow.Namespace,
+				},
+				Spec: nnfv1alpha11.NnfStorageSpec{
+					FileSystemType: "lustre",
+					AllocationSets: []nnfv1alpha11.NnfStorageAllocationSetSpec{},
+				},
+			}
+			nnfStorageProfile := &nnfv1alpha11.NnfStorageProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      persistentStorageName,
+					Namespace: workflow.Namespace,
+				},
+			}
+			addPinnedStorageProfileLabel(nnfStorage, nnfStorageProfile)
+			Expect(k8sClient.Create(context.TODO(), nnfStorage)).To(Succeed())
+
+			workflow.Spec.DWDirectives = []string{
+				fmt.Sprintf("#DW persistentdw name=%s", persistentStorageName),
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed(), "create workflow")
+			Eventually(func() *dwsv1alpha7.WorkflowDriverStatus {
+				expected := &dwsv1alpha7.Workflow{}
+				k8sClient.Get(context.TODO(), key, expected)
+				return getErroredDriverStatus(expected)
+			}).ShouldNot(BeNil(), "have an error present")
 		})
 	})
 })
