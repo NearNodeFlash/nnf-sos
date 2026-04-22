@@ -403,6 +403,10 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.
 		return dwsv1alpha7.NewResourceError("").WithUserMessage("Persistent storage instance '%s' is deleting", args["name"]).WithUser().WithFatal()
 	}
 
+	if psi.Spec.UserID != wf.Spec.UserID {
+		return dwsv1alpha7.NewResourceError("existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, wf.Spec.UserID).WithUserMessage("User ID does not match existing persistent storage").WithFatal().WithUser()
+	}
+
 	return nil
 }
 
