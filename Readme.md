@@ -173,3 +173,9 @@ VERSION: 0.0.1-20220131231031_11b401a
 # Deploy the freshly built docker image to your cluster
 make deploy
 ```
+
+## Helper CLI
+
+---
+
+The `tools/nnf` directory contains a small Python helper CLI for creating and destroying NNF persistent storage workflows during development and testing. As the tool grows to support additional subcommands, its usage and setup are documented in `tools/nnf/README.md`.
