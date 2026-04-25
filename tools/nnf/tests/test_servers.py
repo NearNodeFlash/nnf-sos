@@ -1,4 +1,4 @@
-"""Tests for servers helpers (now in workflow.py)."""
+"""Tests for servers helpers."""
 
 import math
 from typing import Any, Dict, Optional
@@ -6,49 +6,19 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from nnf.workflow import (
+from nnf.servers import (
+    _wait_for_breakdown,
     build_alloc_sets,
     fill_computes,
     fill_servers,
     fill_servers_default,
     get_rabbits_from_system_config,
-    get_storage_profile,
-    has_standalone_mgt,
 )
 
 
 # ---------------------------------------------------------------------------
 # Resource shape helpers
 # ---------------------------------------------------------------------------
-
-
-def test_get_storage_profile_fetches_profile_from_nnf_system() -> None:
-    """get_storage_profile fetches the named NNF storage profile."""
-    mock_get = MagicMock(return_value={"metadata": {"name": "profile-a"}})
-
-    with patch("nnf.workflow.k8s.get_object", mock_get):
-        result = get_storage_profile("profile-a")
-
-    assert result["metadata"]["name"] == "profile-a"
-    mock_get.assert_called_once_with(
-        group="nnf.cray.hpe.com",
-        version="v1alpha11",
-        namespace="nnf-system",
-        plural="nnfstorageprofiles",
-        name="profile-a",
-    )
-
-
-def test_has_standalone_mgt_returns_true_when_pool_name_present() -> None:
-    """has_standalone_mgt detects standaloneMgtPoolName in the profile."""
-    profile = {"data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}}
-    assert has_standalone_mgt(profile) is True
-
-
-def test_has_standalone_mgt_returns_false_when_missing() -> None:
-    """has_standalone_mgt returns False when the nested field is absent."""
-    assert has_standalone_mgt({"data": {"lustreStorage": {}}}) is False
-    assert has_standalone_mgt({}) is False
 
 
 def test_get_rabbits_from_system_config_filters_rabbit_nodes() -> None:
@@ -63,7 +33,7 @@ def test_get_rabbits_from_system_config_filters_rabbit_nodes() -> None:
         }
     })
 
-    with patch("nnf.workflow.k8s.get_object", mock_get):
+    with patch("nnf.servers.k8s.get_object", mock_get):
         rabbits = get_rabbits_from_system_config(namespace="ns-a", name="cfg-a")
 
     assert rabbits == ["rabbit-0", "rabbit-1"]
@@ -80,7 +50,7 @@ def test_get_rabbits_from_system_config_raises_when_no_rabbits() -> None:
     """get_rabbits_from_system_config raises ValueError when no Rabbit nodes exist."""
     mock_get = MagicMock(return_value={"spec": {"storageNodes": [{"name": "n-0", "type": "Other"}]}})
 
-    with patch("nnf.workflow.k8s.get_object", mock_get):
+    with patch("nnf.servers.k8s.get_object", mock_get):
         with pytest.raises(ValueError, match="No Rabbit nodes found"):
             get_rabbits_from_system_config()
 
@@ -146,6 +116,17 @@ def test_build_alloc_sets_across_servers_alloc_count() -> None:
     assert sets[0]["allocationSize"] == math.ceil(1000 / 4)
     assert len(sets[0]["storage"]) == 2
     assert sets[0]["storage"][0]["allocationCount"] == 2
+
+
+@pytest.mark.parametrize("alloc_count", [0, -1])
+def test_build_alloc_sets_alloc_count_must_be_positive(alloc_count: int) -> None:
+    """build_alloc_sets rejects non-positive allocation counts."""
+    with pytest.raises(ValueError, match="alloc_count must be at least 1"):
+        build_alloc_sets(
+            [_alloc_set("AllocateAcrossServers", 1000, "ost")],
+            ["rabbit-0"],
+            alloc_count=alloc_count,
+        )
 
 
 def test_build_alloc_sets_across_servers_with_count_constraint() -> None:
@@ -306,6 +287,57 @@ def test_build_alloc_sets_multiple_sets() -> None:
 
 
 # ---------------------------------------------------------------------------
+# _wait_for_breakdown
+# ---------------------------------------------------------------------------
+
+
+def test_wait_for_breakdown_succeeds_immediately() -> None:
+    """Returns True when the DirectiveBreakdown is already ready."""
+    with patch("nnf.servers.k8s.get_object", return_value={"status": {"ready": True}}):
+        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
+
+    assert ok is True
+    assert msg == ""
+
+
+def test_wait_for_breakdown_timeout() -> None:
+    """Returns False after the DirectiveBreakdown timeout is exceeded."""
+    with patch("nnf.servers.k8s.get_object", return_value={"status": {"ready": False}}), \
+            patch("nnf.servers.time.sleep"), \
+            patch("nnf.servers.time.monotonic", side_effect=[0.0, 999.0, 999.0]):
+        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
+
+    assert ok is False
+    assert "Timed out waiting for DirectiveBreakdown 'bd-0'" in msg
+
+
+def test_wait_for_breakdown_api_exception() -> None:
+    """Returns False for a non-retryable API error on a DirectiveBreakdown."""
+    import kubernetes.client.exceptions  # type: ignore[import-untyped]
+
+    exc = kubernetes.client.exceptions.ApiException(status=404, reason="Not Found")
+    with patch("nnf.servers.k8s.get_object", side_effect=exc):
+        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
+
+    assert ok is False
+    assert "API error fetching DirectiveBreakdown 'bd-0'" in msg
+
+
+def test_wait_for_breakdown_retries_on_5xx() -> None:
+    """Retries on transient 5xx errors before succeeding."""
+    import kubernetes.client.exceptions  # type: ignore[import-untyped]
+
+    exc = kubernetes.client.exceptions.ApiException(status=500, reason="Server Error")
+    responses = [exc, {"status": {"ready": True}}]
+    with patch("nnf.servers.k8s.get_object", side_effect=responses), \
+            patch("nnf.servers.time.sleep"):
+        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=60)
+
+    assert ok is True
+    assert msg == ""
+
+
+# ---------------------------------------------------------------------------
 # fill_servers
 # ---------------------------------------------------------------------------
 
@@ -315,7 +347,7 @@ def test_fill_servers_patches_named_servers_resource() -> None:
     alloc_sets = [{"label": "ost", "allocationSize": 1024, "storage": [{"name": "rabbit-0", "allocationCount": 1}]}]
     mock_patch = MagicMock(return_value={})
 
-    with patch("nnf.workflow.k8s.patch_object", mock_patch):
+    with patch("nnf.servers.k8s.patch_object", mock_patch):
         ok, msg = fill_servers("wf", "default", "servers-0", alloc_sets)
 
     assert ok is True
@@ -336,7 +368,7 @@ def test_fill_servers_returns_false_on_patch_failure() -> None:
 
     exc = kubernetes.client.exceptions.ApiException(status=422, reason="Unprocessable")
 
-    with patch("nnf.workflow.k8s.patch_object", side_effect=exc):
+    with patch("nnf.servers.k8s.patch_object", side_effect=exc):
         ok, msg = fill_servers("wf", "default", "servers-0", [])
 
     assert ok is False
@@ -377,9 +409,9 @@ def test_fill_servers_patches_servers_resource() -> None:
     mock_get = MagicMock(side_effect=[_workflow_with_breakdowns(), _ready_breakdown(), _ready_breakdown()])
     mock_patch = MagicMock(return_value={})
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", mock_patch), \
-            patch("nnf.workflow.time.sleep"):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", mock_patch), \
+            patch("nnf.servers.time.sleep"):
         ok, msg = fill_servers_default("wf", "default", ["rabbit-0"], timeout=10)
 
     assert ok is True
@@ -394,9 +426,9 @@ def test_fill_servers_skips_when_no_storage_breakdown() -> None:
     mock_get = MagicMock(side_effect=[_workflow_with_breakdowns(), breakdown_no_storage, breakdown_no_storage])
     mock_patch = MagicMock(return_value={})
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", mock_patch), \
-            patch("nnf.workflow.time.sleep"):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", mock_patch), \
+            patch("nnf.servers.time.sleep"):
         ok, _ = fill_servers_default("wf", "default", ["rabbit-0"], timeout=10)
 
     assert ok is True
@@ -408,7 +440,7 @@ def test_fill_servers_returns_false_when_workflow_fetch_fails() -> None:
     import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
     exc = kubernetes.client.exceptions.ApiException(status=404, reason="Not Found")
-    with patch("nnf.workflow.k8s.get_object", side_effect=exc):
+    with patch("nnf.servers.k8s.get_object", side_effect=exc):
         ok, msg = fill_servers_default("wf", "default", ["rabbit-0"], timeout=10)
     assert ok is False
     assert "Failed to fetch Workflow" in msg
@@ -422,9 +454,9 @@ def test_fill_servers_returns_false_on_servers_patch_failure() -> None:
     mock_get = MagicMock(side_effect=[_workflow_with_breakdowns(), _ready_breakdown(), _ready_breakdown()])
     exc = kubernetes.client.exceptions.ApiException(status=422, reason="Unprocessable")
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", side_effect=exc), \
-            patch("nnf.workflow.time.sleep"):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", side_effect=exc), \
+            patch("nnf.servers.time.sleep"):
         ok, msg = fill_servers_default("wf", "default", ["rabbit-0"], timeout=10)
 
     assert ok is False
@@ -449,8 +481,8 @@ def test_fill_computes_patches_computes_resource() -> None:
     mock_get = MagicMock(return_value=_workflow_with_computes_ref())
     mock_patch = MagicMock(return_value={})
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", mock_patch):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", mock_patch):
         ok, msg = fill_computes("wf", "default", ["compute-0", "compute-1"])
 
     assert ok is True
@@ -466,8 +498,8 @@ def test_fill_computes_skips_when_no_computes_ref() -> None:
     mock_get = MagicMock(return_value={"status": {}})
     mock_patch = MagicMock(return_value={})
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", mock_patch):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", mock_patch):
         ok, _ = fill_computes("wf", "default", [])
 
     assert ok is True
@@ -479,7 +511,7 @@ def test_fill_computes_returns_false_when_workflow_fetch_fails() -> None:
     import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
     exc = kubernetes.client.exceptions.ApiException(status=500, reason="Internal Server Error")
-    with patch("nnf.workflow.k8s.get_object", side_effect=exc):
+    with patch("nnf.servers.k8s.get_object", side_effect=exc):
         ok, msg = fill_computes("wf", "default", [])
     assert ok is False
     assert "Failed to fetch Workflow" in msg
@@ -492,8 +524,8 @@ def test_fill_computes_returns_false_on_patch_failure() -> None:
     mock_get = MagicMock(return_value=_workflow_with_computes_ref())
     exc = kubernetes.client.exceptions.ApiException(status=422, reason="Unprocessable")
 
-    with patch("nnf.workflow.k8s.get_object", mock_get), \
-            patch("nnf.workflow.k8s.patch_object", side_effect=exc):
+    with patch("nnf.servers.k8s.get_object", mock_get), \
+            patch("nnf.servers.k8s.patch_object", side_effect=exc):
         ok, msg = fill_computes("wf", "default", ["compute-0"])
 
     assert ok is False

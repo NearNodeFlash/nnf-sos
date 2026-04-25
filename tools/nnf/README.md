@@ -68,6 +68,20 @@ nnf --verbose create_persistent --help
 nnf create_persistent --verbose --help
 ```
 
+Both subcommands support these common flags:
+
+- `--namespace` to target a namespace other than `default`
+- `--user-id` to override the owning user ID
+- `--group-id` to override the owning group ID
+- `--timeout` to control how long the CLI waits for each workflow state
+
+The default timeout is `180` seconds per workflow state. On a slow or heavily loaded cluster, you may need to raise it:
+
+```bash
+nnf create_persistent --timeout 600 ...
+nnf destroy_persistent --timeout 600 ...
+```
+
 ## create_persistent
 
 Show help for the `create_persistent` subcommand:
@@ -75,6 +89,22 @@ Show help for the `create_persistent` subcommand:
 ```bash
 nnf create_persistent --help
 ```
+
+Key `create_persistent` flags:
+
+- `--name` required name of the persistent storage instance
+- `--fs-type` required filesystem type: `raw`, `xfs`, `gfs2`, `lustre`
+- `--capacity` allocation capacity per Rabbit; required unless the selected profile defines `standaloneMgtPoolName`
+- `--namespace` target namespace, default `default`
+- `--user-id` override owning user ID
+- `--group-id` override owning group ID
+- `--rabbits` explicit Rabbit node list
+- `--rabbits-mdt` Rabbit node list for `mdt` and `mgtmdt`
+- `--rabbits-mgt` Rabbit node list for `mgt`
+- `--rabbit-count` choose Rabbits randomly from the default SystemConfiguration instead of specifying them directly
+- `--alloc-count` number of allocations per Rabbit node, default `1`
+- `--profile` storage profile name
+- `--timeout` seconds to wait per workflow state, default `180`
 
 Use `--profile` to select the `NnfStorageProfile` if the default profile is not desired. For Lustre, the profile drives allocation-set behavior for labels such as `ost`, `mdt`, `mgt`, and `mgtmdt`.
 
@@ -158,6 +188,14 @@ Show help for the `destroy_persistent` subcommand:
 ```bash
 nnf destroy_persistent --help
 ```
+
+Key `destroy_persistent` flags:
+
+- `--name` required name of the persistent storage instance to destroy
+- `--namespace` target namespace, default `default`
+- `--user-id` override owning user ID
+- `--group-id` override owning group ID
+- `--timeout` seconds to wait per workflow state, default `180`
 
 Destroy a persistent storage instance:
 

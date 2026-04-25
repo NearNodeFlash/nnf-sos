@@ -16,6 +16,8 @@ import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
 from nnf import crd
 from nnf import k8s
+from nnf import profile
+from nnf import servers
 from nnf import utils
 from nnf import workflow
 from nnf.commands import add_command_parser
@@ -103,7 +105,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         type=int,
         default=1,
         dest="alloc_count",
-        help="Number of allocations per Rabbit for the AllocatePerCompute strategy (default: 1).",
+        help="Number of allocations per Rabbit node (default: 1).",
     )
     parser.add_argument(
         "--profile",
@@ -135,15 +137,21 @@ def _split_nodes(values: Optional[List[str]]) -> List[str]:
 
 def run(args: argparse.Namespace) -> int:
     """Execute the create_persistent sub-command."""
+    try:
+        utils.validate_k8s_name(args.name, "nnf-create-persistent-")
+    except ValueError as exc:
+        print(f"error: invalid --name: {exc}")
+        return 1
+
     # Resolve profile and check standaloneMgtPoolName (Lustre only).
     standalone_mgt = False
     if args.profile is not None and args.fs_type == "lustre":
         try:
-            profile = workflow.get_storage_profile(args.profile)
+            profile_obj = profile.get_storage_profile(args.profile)
         except kubernetes.client.exceptions.ApiException as exc:
             print(f"error: failed to fetch storage profile '{args.profile}': {exc}")
             return 1
-        standalone_mgt = workflow.has_standalone_mgt(profile)
+        standalone_mgt = profile.has_standalone_mgt(profile_obj)
 
     if standalone_mgt:
         if args.capacity is not None:
@@ -180,7 +188,7 @@ def run(args: argparse.Namespace) -> int:
             print("error: --rabbit-count must be at least 1")
             return 1
         try:
-            all_rabbits = workflow.get_rabbits_from_system_config()
+            all_rabbits = servers.get_rabbits_from_system_config()
         except (kubernetes.client.exceptions.ApiException, ValueError) as exc:
             print(f"error: failed to read SystemConfiguration: {exc}")
             return 1
@@ -200,6 +208,10 @@ def run(args: argparse.Namespace) -> int:
         rabbits = _split_nodes(args.rabbits)
         rabbits_mdt = _split_nodes(args.rabbits_mdt) or None
         rabbits_mgt = _split_nodes(args.rabbits_mgt) or None
+
+    if args.alloc_count < 1:
+        print("error: --alloc-count must be at least 1")
+        return 1
 
     if standalone_mgt:
         if len(rabbits) != 1:
@@ -225,7 +237,7 @@ def run(args: argparse.Namespace) -> int:
 
     workflow_name = f"nnf-create-persistent-{args.name}"
     proposal_hook = functools.partial(
-        workflow.fill_servers_default,
+        servers.fill_servers_default,
         rabbits=rabbits,
         timeout=args.timeout,
         directive_index=0,
@@ -258,10 +270,14 @@ def run(args: argparse.Namespace) -> int:
 
     print(f"Workflow '{workflow_name}' created.")
 
-    ok, msg = workflow.run_to_completion(wf, args.timeout)
-    if not ok:
-        print(f"error: {msg}")
-        return 2
+    try:
+        ok, msg = workflow.run_to_completion(wf, args.timeout)
+        if not ok:
+            print(f"error: {msg}")
+            return 2
+    except Exception:
+        workflow.teardown_and_delete(wf.name, wf.namespace, args.timeout)
+        raise
 
     print(f"Persistent storage '{args.name}' created successfully.")
     return 0

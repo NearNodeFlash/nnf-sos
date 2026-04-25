@@ -19,6 +19,11 @@ def _make_args(**kwargs: object) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
+def test_run_invalid_name_returns_1() -> None:
+    """run() returns 1 when --name would produce an invalid K8s resource name."""
+    assert run(_make_args(name="My_Storage!")) == 1
+
+
 def test_run_success() -> None:
     """run() returns 0 when the Workflow is created and completes successfully."""
     mock_create = MagicMock(return_value={})

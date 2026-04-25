@@ -8,7 +8,6 @@ import pytest
 from nnf import workflow
 from nnf.workflow import (
     WorkflowRun,
-    _wait_for_breakdown,
     advance,
     delete,
     run_to_completion,
@@ -111,51 +110,40 @@ def test_wait_for_state_timeout() -> None:
 
 
 def test_wait_for_state_api_exception() -> None:
-    """Returns False when the k8s API raises an exception while polling."""
+    """Returns False for a non-retryable API error (e.g. 404)."""
     import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
-    exc = kubernetes.client.exceptions.ApiException(status=500, reason="Server Error")
+    exc = kubernetes.client.exceptions.ApiException(status=404, reason="Not Found")
     with patch("nnf.workflow.k8s.get_object", side_effect=exc):
         ok, msg = wait_for_state("wf", "default", "Setup", timeout=10)
     assert ok is False
     assert "API error" in msg
 
 
-# ---------------------------------------------------------------------------
-# _wait_for_breakdown
-# ---------------------------------------------------------------------------
+def test_wait_for_state_retries_on_5xx() -> None:
+    """Retries on transient 5xx errors before succeeding."""
+    import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
-
-def test_wait_for_breakdown_succeeds_immediately() -> None:
-    """Returns True when the DirectiveBreakdown is already ready."""
-    with patch("nnf.workflow.k8s.get_object", return_value={"status": {"ready": True}}):
-        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
-
+    exc = kubernetes.client.exceptions.ApiException(status=503, reason="Service Unavailable")
+    responses = [exc, exc, _obj("Setup", True)]
+    with patch("nnf.workflow.k8s.get_object", side_effect=responses), \
+            patch("nnf.workflow.time.sleep"):
+        ok, msg = wait_for_state("wf", "default", "Setup", timeout=60)
     assert ok is True
     assert msg == ""
 
 
-def test_wait_for_breakdown_timeout() -> None:
-    """Returns False after the DirectiveBreakdown timeout is exceeded."""
-    with patch("nnf.workflow.k8s.get_object", return_value={"status": {"ready": False}}), \
-            patch("nnf.workflow.time.sleep"), \
-            patch("nnf.workflow.time.monotonic", side_effect=[0.0, 999.0, 999.0]):
-        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
-
-    assert ok is False
-    assert "Timed out waiting for DirectiveBreakdown 'bd-0'" in msg
-
-
-def test_wait_for_breakdown_api_exception() -> None:
-    """Returns False when the k8s API raises while polling a DirectiveBreakdown."""
+def test_wait_for_state_retries_on_429() -> None:
+    """Retries on 429 Too Many Requests before succeeding."""
     import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
-    exc = kubernetes.client.exceptions.ApiException(status=500, reason="Server Error")
-    with patch("nnf.workflow.k8s.get_object", side_effect=exc):
-        ok, msg = _wait_for_breakdown("bd-0", "default", timeout=10)
-
-    assert ok is False
-    assert "API error fetching DirectiveBreakdown 'bd-0'" in msg
+    exc = kubernetes.client.exceptions.ApiException(status=429, reason="Too Many Requests")
+    responses = [exc, _obj("Setup", True)]
+    with patch("nnf.workflow.k8s.get_object", side_effect=responses), \
+            patch("nnf.workflow.time.sleep"):
+        ok, msg = wait_for_state("wf", "default", "Setup", timeout=60)
+    assert ok is True
+    assert msg == ""
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +185,30 @@ def test_teardown_and_delete_advances_then_deletes() -> None:
             patch("nnf.workflow.delete", mock_delete):
         teardown_and_delete("wf", "default", timeout=10)
     mock_advance.assert_called_once_with("wf", "default", "Teardown")
+    mock_delete.assert_called_once_with("wf", "default")
+
+
+def test_teardown_and_delete_still_deletes_when_advance_fails() -> None:
+    """teardown_and_delete still calls delete when advance raises ApiException."""
+    import kubernetes.client.exceptions  # type: ignore[import-untyped]
+
+    exc = kubernetes.client.exceptions.ApiException(status=500, reason="Server Error")
+    mock_delete = MagicMock()
+    with patch("nnf.workflow.advance", side_effect=exc), \
+            patch("nnf.workflow.wait_for_state") as mock_wait, \
+            patch("nnf.workflow.delete", mock_delete):
+        teardown_and_delete("wf", "default", timeout=10)
+    mock_wait.assert_not_called()
+    mock_delete.assert_called_once_with("wf", "default")
+
+
+def test_teardown_and_delete_still_deletes_when_wait_fails() -> None:
+    """teardown_and_delete still calls delete when wait_for_state returns failure."""
+    mock_delete = MagicMock()
+    with patch("nnf.workflow.advance", MagicMock()), \
+            patch("nnf.workflow.wait_for_state", return_value=(False, "Timed out")), \
+            patch("nnf.workflow.delete", mock_delete):
+        teardown_and_delete("wf", "default", timeout=10)
     mock_delete.assert_called_once_with("wf", "default")
 
 

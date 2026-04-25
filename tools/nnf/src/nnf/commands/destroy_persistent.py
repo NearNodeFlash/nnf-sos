@@ -13,6 +13,7 @@ import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
 from nnf import crd
 from nnf import k8s
+from nnf import utils
 from nnf import workflow
 from nnf.commands import add_command_parser
 
@@ -62,6 +63,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
 
 def run(args: argparse.Namespace) -> int:
     """Execute the destroy_persistent sub-command."""
+    try:
+        utils.validate_k8s_name(args.name, "nnf-destroy-persistent-")
+    except ValueError as exc:
+        print(f"error: invalid --name: {exc}")
+        return 1
+
     user_id: int = args.user_id if args.user_id is not None else os.getuid()
     group_id: int = args.group_id if args.group_id is not None else os.getgid()
     dw_directive = f"#DW destroy_persistent name={args.name}"
@@ -91,10 +98,14 @@ def run(args: argparse.Namespace) -> int:
 
     print(f"Workflow '{workflow_name}' created.")
 
-    ok, msg = workflow.run_to_completion(wf, args.timeout)
-    if not ok:
-        print(f"error: {msg}")
-        return 2
+    try:
+        ok, msg = workflow.run_to_completion(wf, args.timeout)
+        if not ok:
+            print(f"error: {msg}")
+            return 2
+    except Exception:
+        workflow.teardown_and_delete(wf.name, wf.namespace, args.timeout)
+        raise
 
     print(f"Persistent storage '{args.name}' destroyed successfully.")
     return 0
