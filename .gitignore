@@ -27,6 +27,13 @@ testbin/*
 *.swo
 *~
 
+# Python tooling artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
 commands.log
 kind-config.yaml
 standalone-playground
