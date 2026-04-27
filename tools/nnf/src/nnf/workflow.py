@@ -17,9 +17,6 @@ from nnf import k8s
 # returns (ok, message).
 StateHook = Callable[[str, str], Tuple[bool, str]]
 
-# Notification callback: receives the completed state name.
-StateCompleteHook = Callable[[str], None]
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -55,10 +52,6 @@ class WorkflowRun:
 
         * ``"Proposal"`` — populate Servers resources from DirectiveBreakdowns.
         * ``"DataIn"`` — populate the Computes resource.
-    on_state_complete:
-        List of callbacks invoked after every state completes (after any
-        transition hooks).  Each receives the state name.  Useful for
-        progress reporting.
     """
 
     def __init__(
@@ -69,7 +62,6 @@ class WorkflowRun:
         group_id: int = 0,
         dw_directives: Optional[List[str]] = None,
         state_hooks: Optional[Dict[str, List[StateHook]]] = None,
-        on_state_complete: Optional[List[StateCompleteHook]] = None,
     ) -> None:
         self.name = name
         self.namespace = namespace
@@ -77,7 +69,6 @@ class WorkflowRun:
         self.group_id = group_id
         self.dw_directives = dw_directives if dw_directives is not None else []
         self.state_hooks = state_hooks if state_hooks is not None else {}
-        self.on_state_complete = on_state_complete if on_state_complete is not None else []
 
     @property
     def manifest(self) -> Dict[str, Any]:
@@ -214,8 +205,6 @@ def run_to_completion(
     * ``wf.state_hooks[state]`` — list of hooks called in order after each
       state is ready, before advancing to the next.  Any hook returning
       ``(False, message)`` aborts the remaining hooks and the run.
-    * ``wf.on_state_complete`` — list of callbacks invoked after every state
-      (and its hooks).
 
     A hook returning ``(False, message)`` aborts the run; Teardown is triggered
     automatically.
@@ -257,10 +246,42 @@ def run_to_completion(
                 teardown_and_delete(wf.name, wf.namespace, timeout)
                 return False, msg
 
-        for cb in wf.on_state_complete:
-            cb(state)
-
     LOGGER.info("Deleting workflow '%s'...", wf.name)
     delete(wf.name, wf.namespace)
     return True, ""
+
+
+def create_and_run(wf: WorkflowRun, timeout: int) -> int:
+    """Create a Workflow resource and drive it to completion.
+
+    Handles the standard create→run→delete sequence shared by all subcommands.
+    Returns 0 on success, 2 on any handled failure.  Re-raises unexpected
+    exceptions after triggering teardown.
+    """
+    try:
+        k8s.create_object(
+            group=crd.DWS_GROUP,
+            version=crd.DWS_VERSION,
+            namespace=wf.namespace,
+            plural=crd.DWS_WORKFLOW_PLURAL,
+            body=wf.manifest,
+        )
+    except kubernetes.client.exceptions.ApiException as exc:
+        print(f"error: failed to create Workflow: {exc.reason} (HTTP {exc.status})")
+        LOGGER.info("Full error body: %s", exc.body)
+        k8s.debug_api_group(crd.DWS_GROUP)
+        return 2
+
+    print(f"Workflow '{wf.name}' created.")
+
+    try:
+        ok, msg = run_to_completion(wf, timeout)
+        if not ok:
+            print(f"error: {msg}")
+            return 2
+    except Exception:
+        teardown_and_delete(wf.name, wf.namespace, timeout)
+        raise
+
+    return 0
 

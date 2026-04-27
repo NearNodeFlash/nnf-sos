@@ -5,6 +5,7 @@
 # ---------------------------------------------------------------------------
 
 NNF_GROUP = "nnf.cray.hpe.com"
+# Update NNF_VERSION when the NNF CRDs are bumped (e.g. v1alpha11 → v1alpha12).
 NNF_VERSION = "v1alpha11"
 
 NNF_NODE_PLURAL = "nnfnodes"
@@ -21,6 +22,7 @@ NNF_SYSTEM_STORAGE_PLURAL = "nnfsystemstorages"
 # ---------------------------------------------------------------------------
 
 DWS_GROUP = "dataworkflowservices.github.io"
+# Update DWS_VERSION when the DWS CRDs are bumped (e.g. v1alpha7 → v1alpha8).
 DWS_VERSION = "v1alpha7"
 
 DWS_WORKFLOW_PLURAL = "workflows"

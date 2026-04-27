@@ -1,15 +1,16 @@
 """nnf CLI entrypoint."""
 
 import argparse
+import importlib
 import logging
+import pkgutil
 import sys
 
 import kubernetes.config  # type: ignore[import-untyped]
 
+from nnf import commands as _commands_pkg
 from nnf import k8s
 from nnf.commands import add_common_arguments
-from nnf.commands import create_persistent
-from nnf.commands import destroy_persistent
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,8 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", metavar="<command>")
     subparsers.required = True
 
-    create_persistent.register(subparsers)
-    destroy_persistent.register(subparsers)
+    for module_info in pkgutil.iter_modules(_commands_pkg.__path__):
+        mod = importlib.import_module(f"nnf.commands.{module_info.name}")
+        if hasattr(mod, "register"):
+            mod.register(subparsers)
 
     return parser
 

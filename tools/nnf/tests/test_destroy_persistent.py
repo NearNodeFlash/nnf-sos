@@ -26,59 +26,46 @@ def test_run_invalid_name_returns_1() -> None:
 
 def test_run_success() -> None:
     """run() returns 0 when the Workflow is created and completes successfully."""
-    mock_create = MagicMock(return_value={})
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", mock_create), \
-            patch("nnf.commands.destroy_persistent.workflow.run_to_completion",
-                  return_value=(True, "")):
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
         assert run(_make_args()) == 0
 
-    mock_create.assert_called_once()
-    _, kwargs = mock_create.call_args
-    body = kwargs["body"]
-    assert body["kind"] == "Workflow"
-    assert "#DW destroy_persistent name=my-psi" in body["spec"]["dwDirectives"]
+    mock_car.assert_called_once()
+    wf_arg = mock_car.call_args[0][0]
+    manifest = wf_arg.manifest
+    assert manifest["kind"] == "Workflow"
+    assert "#DW destroy_persistent name=my-psi" in manifest["spec"]["dwDirectives"]
 
 
 def test_run_directive_contains_name() -> None:
     """run() builds the correct #DW destroy_persistent directive."""
-    mock_create = MagicMock(return_value={})
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", mock_create), \
-            patch("nnf.commands.destroy_persistent.workflow.run_to_completion",
-                  return_value=(True, "")):
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
         assert run(_make_args(name="my-lustre")) == 0
 
-    _, kwargs = mock_create.call_args
-    body = kwargs["body"]
-    assert "#DW destroy_persistent name=my-lustre" in body["spec"]["dwDirectives"]
+    wf_arg = mock_car.call_args[0][0]
+    assert "#DW destroy_persistent name=my-lustre" in wf_arg.dw_directives
 
 
 def test_run_workflow_name() -> None:
     """run() uses nnf-destroy-persistent-{name} as the Workflow name."""
-    mock_create = MagicMock(return_value={})
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", mock_create), \
-            patch("nnf.commands.destroy_persistent.workflow.run_to_completion",
-                  return_value=(True, "")):
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
         assert run(_make_args(name="my-psi")) == 0
 
-    _, kwargs = mock_create.call_args
-    body = kwargs["body"]
-    assert body["metadata"]["name"] == "nnf-destroy-persistent-my-psi"
+    wf_arg = mock_car.call_args[0][0]
+    assert wf_arg.name == "nnf-destroy-persistent-my-psi"
 
 
 def test_run_create_api_error_returns_2() -> None:
     """run() returns exit code 2 when Workflow creation fails."""
-    import kubernetes.client.exceptions  # type: ignore[import-untyped]
-
-    exc = kubernetes.client.exceptions.ApiException(status=409, reason="AlreadyExists")
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", side_effect=exc):
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
 def test_run_workflow_failure_returns_2() -> None:
     """run() returns exit code 2 when run_to_completion reports failure."""
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", return_value={}), \
-            patch("nnf.commands.destroy_persistent.workflow.run_to_completion",
-                  return_value=(False, "Teardown timed out")):
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
@@ -88,13 +75,12 @@ def test_run_no_state_hooks() -> None:
 
     captured: Dict[str, object] = {}
 
-    def fake_run_to_completion(wf: WorkflowRun, timeout: int) -> object:
+    def fake_create_and_run(wf: WorkflowRun, timeout: int) -> int:
         captured["wf"] = wf
-        return True, ""
+        return 0
 
-    with patch("nnf.commands.destroy_persistent.k8s.create_object", return_value={}), \
-            patch("nnf.commands.destroy_persistent.workflow.run_to_completion",
-                  side_effect=fake_run_to_completion):
+    with patch("nnf.commands.destroy_persistent.workflow.create_and_run",
+               side_effect=fake_create_and_run):
         assert run(_make_args()) == 0
 
     wf = captured["wf"]

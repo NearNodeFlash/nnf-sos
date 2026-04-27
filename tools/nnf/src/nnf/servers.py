@@ -226,7 +226,6 @@ def _wait_for_breakdown(
 
     return False, f"Timed out waiting for DirectiveBreakdown '{name}' to be ready"
 
-
 def fill_servers(
     workflow_name: str,
     namespace: str,
@@ -234,6 +233,9 @@ def fill_servers(
     alloc_sets: List[Dict[str, Any]],
 ) -> Tuple[bool, str]:
     """Patch a named Servers resource with caller-supplied allocation sets.
+
+    # Unused by current subcommands; available for future subcommands that need
+    # explicit control over how the Servers resource is populated.
 
     Unlike ``fill_servers_default``, this does not consult a DirectiveBreakdown.
     The caller supplies the target Servers resource name and the allocation sets

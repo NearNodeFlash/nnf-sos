@@ -9,6 +9,7 @@ from nnf import workflow
 from nnf.workflow import (
     WorkflowRun,
     advance,
+    create_and_run,
     delete,
     run_to_completion,
     teardown_and_delete,
@@ -42,7 +43,6 @@ def test_workflow_run_state_hooks_default_is_empty() -> None:
     """state_hooks defaults to an empty dict when not provided."""
     wf = WorkflowRun("wf", "default", 0, [])
     assert wf.state_hooks == {}
-    assert wf.on_state_complete == []
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +219,6 @@ def test_teardown_and_delete_still_deletes_when_wait_fails() -> None:
 
 def _make_wf(
     state_hooks: object = None,
-    on_state_complete: object = None,
 ) -> WorkflowRun:
     return WorkflowRun(
         name="wf",
@@ -227,23 +226,7 @@ def _make_wf(
         user_id=1000,
         dw_directives=["#DW jobdw type=lustre capacity=1GiB"],
         state_hooks=state_hooks or {},  # type: ignore[arg-type]
-        on_state_complete=on_state_complete,  # type: ignore[arg-type]
     )
-
-
-def test_run_to_completion_on_state_complete_called_for_every_state() -> None:
-    """on_state_complete is invoked once for each workflow state."""
-    completed: List[str] = []
-
-    with patch("nnf.workflow.advance", MagicMock()), \
-            patch("nnf.workflow.wait_for_state", return_value=(True, "")), \
-            patch("nnf.workflow.delete", MagicMock()):
-        ok, _ = run_to_completion(
-            _make_wf(on_state_complete=[completed.append]), timeout=60
-        )
-
-    assert ok is True
-    assert completed == workflow.WORKFLOW_STATES
 
 
 def test_run_to_completion_success() -> None:
@@ -374,4 +357,48 @@ def test_run_to_completion_post_proposal_failure_triggers_teardown() -> None:
 
     assert ok is False
     assert "not enough rabbits" in msg
+    mock_teardown.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# create_and_run
+# ---------------------------------------------------------------------------
+
+
+def _make_simple_wf() -> WorkflowRun:
+    return WorkflowRun("wf", "default", 1000, dw_directives=["#DW jobdw type=lustre"])
+
+
+def test_create_and_run_success_returns_0() -> None:
+    """create_and_run creates the Workflow, runs it to completion, and returns 0."""
+    with patch("nnf.workflow.k8s.create_object", return_value={}), \
+            patch("nnf.workflow.run_to_completion", return_value=(True, "")):
+        assert create_and_run(_make_simple_wf(), timeout=60) == 0
+
+
+def test_create_and_run_api_error_returns_2() -> None:
+    """create_and_run returns 2 when Workflow creation fails with ApiException."""
+    import kubernetes.client.exceptions  # type: ignore[import-untyped]
+
+    exc = kubernetes.client.exceptions.ApiException(status=409, reason="AlreadyExists")
+    with patch("nnf.workflow.k8s.create_object", side_effect=exc), \
+            patch("nnf.workflow.k8s.debug_api_group"):
+        assert create_and_run(_make_simple_wf(), timeout=60) == 2
+
+
+def test_create_and_run_workflow_failure_returns_2() -> None:
+    """create_and_run returns 2 when run_to_completion reports failure."""
+    with patch("nnf.workflow.k8s.create_object", return_value={}), \
+            patch("nnf.workflow.run_to_completion", return_value=(False, "Setup timed out")):
+        assert create_and_run(_make_simple_wf(), timeout=60) == 2
+
+
+def test_create_and_run_reraises_and_triggers_teardown_on_unexpected_exception() -> None:
+    """create_and_run calls teardown_and_delete and re-raises unexpected exceptions."""
+    mock_teardown = MagicMock()
+    with patch("nnf.workflow.k8s.create_object", return_value={}), \
+            patch("nnf.workflow.run_to_completion", side_effect=RuntimeError("boom")), \
+            patch("nnf.workflow.teardown_and_delete", mock_teardown):
+        with pytest.raises(RuntimeError, match="boom"):
+            create_and_run(_make_simple_wf(), timeout=60)
     mock_teardown.assert_called_once()

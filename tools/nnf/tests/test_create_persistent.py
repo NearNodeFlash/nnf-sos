@@ -1,7 +1,7 @@
 """Tests for the create_persistent sub-command."""
 
 import argparse
-from typing import Dict, Tuple
+from typing import Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -96,16 +96,15 @@ def _make_args(**kwargs: object) -> argparse.Namespace:
 
 def test_run_success() -> None:
     """run() returns 0 when the Workflow is created and completes successfully."""
-    mock_create = MagicMock(return_value={})
-    with patch("nnf.commands.create_persistent.k8s.create_object", mock_create), \
-            patch("nnf.commands.create_persistent.workflow.run_to_completion", return_value=(True, "")):
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.create_persistent.workflow.create_and_run", mock_car):
         assert run(_make_args()) == 0
 
-    mock_create.assert_called_once()
-    _, kwargs = mock_create.call_args
-    body = kwargs["body"]
-    assert body["kind"] == "Workflow"
-    assert "create_persistent" in body["spec"]["dwDirectives"][0]
+    mock_car.assert_called_once()
+    wf_arg = mock_car.call_args[0][0]
+    manifest = wf_arg.manifest
+    assert manifest["kind"] == "Workflow"
+    assert "create_persistent" in manifest["spec"]["dwDirectives"][0]
 
 
 def test_run_comma_separated_rabbits() -> None:
@@ -114,17 +113,15 @@ def test_run_comma_separated_rabbits() -> None:
 
     captured: Dict[str, object] = {}
 
-    def fake_run_to_completion(wf: WorkflowRun, timeout: int) -> Tuple[bool, str]:
+    def fake_create_and_run(wf: WorkflowRun, timeout: int) -> int:
         captured["wf"] = wf
-        return True, ""
+        return 0
 
-    with patch("nnf.commands.create_persistent.k8s.create_object", return_value={}), \
-            patch("nnf.commands.create_persistent.workflow.run_to_completion",
-                  side_effect=fake_run_to_completion), \
+    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+               side_effect=fake_create_and_run), \
             patch("nnf.commands.create_persistent.servers.fill_servers_default",
                   return_value=(True, "")) as mock_fill:
         assert run(_make_args(rabbits=["rabbit-0,rabbit-1", "rabbit-2"])) == 0
-        captured["wf"]  # ensure captured
         hooks = captured["wf"].state_hooks["Proposal"]  # type: ignore[index]
         hooks[0]("wf-name", "default")
 
@@ -139,15 +136,12 @@ def test_run_post_proposal_hook_calls_fill_servers_default() -> None:
 
     captured: Dict[str, object] = {}
 
-    def fake_run_to_completion(wf: WorkflowRun, timeout: int) -> Tuple[bool, str]:
+    def fake_create_and_run(wf: WorkflowRun, timeout: int) -> int:
         captured["wf"] = wf
-        return True, ""
+        return 0
 
-    with patch("nnf.commands.create_persistent.k8s.create_object", return_value={}), \
-            patch(
-                "nnf.commands.create_persistent.workflow.run_to_completion",
-                side_effect=fake_run_to_completion,
-            ), \
+    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+               side_effect=fake_create_and_run), \
             patch("nnf.commands.create_persistent.servers.fill_servers_default", return_value=(True, "")) as mock_fill:
         assert run(_make_args(rabbits=["rabbit-0", "rabbit-1"])) == 0
 
@@ -173,6 +167,18 @@ def test_run_post_proposal_hook_calls_fill_servers_default() -> None:
 def test_run_bad_capacity_returns_1() -> None:
     """run() returns exit code 1 when capacity cannot be parsed."""
     assert run(_make_args(capacity="bad")) == 1
+
+
+@pytest.mark.parametrize("fs_type", ["raw", "xfs", "gfs2"])
+def test_run_rabbits_mdt_non_lustre_returns_1(fs_type: str) -> None:
+    """run() returns 1 when --rabbits-mdt is used with a non-lustre fs-type."""
+    assert run(_make_args(fs_type=fs_type, rabbits_mdt=["rabbit-1"])) == 1
+
+
+@pytest.mark.parametrize("fs_type", ["raw", "xfs", "gfs2"])
+def test_run_rabbits_mgt_non_lustre_returns_1(fs_type: str) -> None:
+    """run() returns 1 when --rabbits-mgt is used with a non-lustre fs-type."""
+    assert run(_make_args(fs_type=fs_type, rabbits_mgt=["rabbit-1"])) == 1
 
 
 @pytest.mark.parametrize("alloc_count", [0, -1])
@@ -209,17 +215,14 @@ def test_run_standalone_mgt_profile_omits_capacity_from_directive() -> None:
     mgt_profile: Dict[str, object] = {
         "data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}
     }
-    mock_create = MagicMock(return_value={})
+    mock_car = MagicMock(return_value=0)
     with patch("nnf.commands.create_persistent.profile.get_storage_profile",
                return_value=mgt_profile), \
-            patch("nnf.commands.create_persistent.k8s.create_object", mock_create), \
-            patch("nnf.commands.create_persistent.workflow.run_to_completion",
-                  return_value=(True, "")):
+            patch("nnf.commands.create_persistent.workflow.create_and_run", mock_car):
         assert run(_make_args(capacity=None, profile="mgt-profile")) == 0
 
-    _, kwargs = mock_create.call_args
-    body = kwargs["body"]
-    directive = body["spec"]["dwDirectives"][0]
+    wf_arg = mock_car.call_args[0][0]
+    directive = wf_arg.dw_directives[0]
     assert "capacity=" not in directive
     assert "profile=mgt-profile" in directive
 
@@ -244,9 +247,7 @@ def test_run_profile_unexpected_error_propagates() -> None:
 def test_run_non_lustre_fs_type_skips_profile_check() -> None:
     """run() does not fetch the storage profile when fs_type is not lustre."""
     with patch("nnf.commands.create_persistent.profile.get_storage_profile") as mock_get, \
-            patch("nnf.commands.create_persistent.k8s.create_object", return_value={}), \
-            patch("nnf.commands.create_persistent.workflow.run_to_completion",
-                  return_value=(True, "")):
+            patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=0):
         assert run(_make_args(fs_type="xfs", profile="some-profile")) == 0
     mock_get.assert_not_called()
 
@@ -315,13 +316,12 @@ def test_run_rabbit_count_picks_random_rabbits() -> None:
     all_rabbits = [f"rabbit-{i}" for i in range(10)]
     captured: Dict[str, object] = {}
 
-    def fake_run_to_completion(wf: WorkflowRun, timeout: int) -> Tuple[bool, str]:
+    def fake_create_and_run(wf: WorkflowRun, timeout: int) -> int:
         captured["wf"] = wf
-        return True, ""
+        return 0
 
-    with patch("nnf.commands.create_persistent.k8s.create_object", return_value={}), \
-            patch("nnf.commands.create_persistent.workflow.run_to_completion",
-                  side_effect=fake_run_to_completion), \
+    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+               side_effect=fake_create_and_run), \
             patch("nnf.commands.create_persistent.servers.get_rabbits_from_system_config",
                   return_value=all_rabbits), \
             patch("nnf.commands.create_persistent.servers.fill_servers_default",
@@ -349,18 +349,11 @@ def test_run_rabbit_count_unexpected_error_propagates() -> None:
 
 def test_run_create_api_error_returns_2() -> None:
     """run() returns exit code 2 when the initial Workflow creation fails."""
-    import kubernetes.client.exceptions  # type: ignore[import-untyped]
-
-    exc = kubernetes.client.exceptions.ApiException(status=409, reason="AlreadyExists")
-    with patch("nnf.commands.create_persistent.k8s.create_object", side_effect=exc):
+    with patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
 def test_run_workflow_failure_returns_2() -> None:
     """run() returns exit code 2 when run_to_completion reports failure."""
-    with patch("nnf.commands.create_persistent.k8s.create_object", return_value={}), \
-            patch(
-                "nnf.commands.create_persistent.workflow.run_to_completion",
-                return_value=(False, "Setup timed out"),
-            ):
+    with patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2

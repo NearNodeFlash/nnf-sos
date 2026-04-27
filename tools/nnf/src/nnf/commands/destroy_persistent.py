@@ -9,13 +9,9 @@ import argparse
 import logging
 import os
 
-import kubernetes.client.exceptions  # type: ignore[import-untyped]
-
-from nnf import crd
-from nnf import k8s
 from nnf import utils
 from nnf import workflow
-from nnf.commands import add_command_parser
+from nnf.commands import add_command_parser, add_workflow_arguments
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,31 +29,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         required=True,
         help="Name of the persistent storage instance to destroy.",
     )
-    parser.add_argument(
-        "--namespace",
-        default="default",
-        help="Kubernetes namespace (default: default).",
-    )
-    parser.add_argument(
-        "--user-id",
-        type=int,
-        default=None,
-        dest="user_id",
-        help="User ID that owns this storage (default: current user).",
-    )
-    parser.add_argument(
-        "--group-id",
-        type=int,
-        default=None,
-        dest="group_id",
-        help="Group ID that owns this storage (default: current group).",
-    )
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=workflow.DEFAULT_TIMEOUT,
-        help=f"Seconds to wait for each workflow state (default: {workflow.DEFAULT_TIMEOUT}).",
-    )
+    add_workflow_arguments(parser)
     parser.set_defaults(func=run)
 
 
@@ -82,30 +54,7 @@ def run(args: argparse.Namespace) -> int:
         dw_directives=[dw_directive],
     )
 
-    try:
-        k8s.create_object(
-            group=crd.DWS_GROUP,
-            version=crd.DWS_VERSION,
-            namespace=args.namespace,
-            plural=crd.DWS_WORKFLOW_PLURAL,
-            body=wf.manifest,
-        )
-    except kubernetes.client.exceptions.ApiException as exc:
-        print(f"error: failed to create Workflow: {exc.reason} (HTTP {exc.status})")
-        LOGGER.info("Full error body: %s", exc.body)
-        k8s.debug_api_group(crd.DWS_GROUP)
-        return 2
-
-    print(f"Workflow '{workflow_name}' created.")
-
-    try:
-        ok, msg = workflow.run_to_completion(wf, args.timeout)
-        if not ok:
-            print(f"error: {msg}")
-            return 2
-    except Exception:
-        workflow.teardown_and_delete(wf.name, wf.namespace, args.timeout)
-        raise
-
-    print(f"Persistent storage '{args.name}' destroyed successfully.")
-    return 0
+    rc = workflow.create_and_run(wf, args.timeout)
+    if rc == 0:
+        print(f"Persistent storage '{args.name}' destroyed successfully.")
+    return rc
