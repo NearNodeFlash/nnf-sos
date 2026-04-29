@@ -46,7 +46,8 @@ def test_build_parser_accepts_verbose_before_subcommand() -> None:
     """The shared verbose flag can be parsed at the top level."""
     args = build_parser().parse_args([
         "--verbose",
-        "create_persistent",
+        "persistent",
+        "create",
         "--name",
         "psi",
         "--fs-type",
@@ -58,13 +59,14 @@ def test_build_parser_accepts_verbose_before_subcommand() -> None:
     ])
 
     assert args.verbose is True
-    assert args.command == "create_persistent"
+    assert args.command == "persistent"
 
 
 def test_build_parser_accepts_verbose_after_subcommand() -> None:
     """The shared verbose flag can also be parsed after the subcommand."""
     args = build_parser().parse_args([
-        "create_persistent",
+        "persistent",
+        "create",
         "--verbose",
         "--name",
         "psi",
@@ -77,4 +79,4 @@ def test_build_parser_accepts_verbose_after_subcommand() -> None:
     ])
 
     assert args.verbose is True
-    assert args.command == "create_persistent"
+    assert args.command == "persistent"

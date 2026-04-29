@@ -1,4 +1,4 @@
-"""create_persistent sub-command: create a DWS PersistentStorageInstance.
+"""persistent create sub-command: create a DWS PersistentStorageInstance.
 
 Builds a #DW create_persistent directive, submits it as a Workflow, and drives
 that Workflow through every state.  The Workflow is always deleted on exit,
@@ -10,6 +10,7 @@ import functools
 import logging
 import os
 import random
+import sys
 from typing import List, Optional
 
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
@@ -25,10 +26,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    """Register the create_persistent sub-command."""
+    """Register the persistent create sub-command."""
     parser: argparse.ArgumentParser = add_command_parser(
         subparsers,
-        "create_persistent",
+        "create",
         help="Create a persistent storage instance.",
     )
     parser.add_argument(
@@ -103,18 +104,15 @@ def _split_nodes(values: Optional[List[str]]) -> List[str]:
     """
     if values is None:
         return []
-    result = []
-    for v in values:
-        result.extend(n.strip() for n in v.split(",") if n.strip())
-    return result
+    return [n.strip() for v in values for n in v.split(",") if n.strip()]
 
 
 def run(args: argparse.Namespace) -> int:
-    """Execute the create_persistent sub-command."""
+    """Execute the persistent create sub-command."""
     try:
         utils.validate_k8s_name(args.name, "nnf-create-persistent-")
     except ValueError as exc:
-        print(f"error: invalid --name: {exc}")
+        print(f"error: invalid --name: {exc}", file=sys.stderr)
         return 1
 
     # Resolve profile and check standaloneMgtPoolName (Lustre only).
@@ -123,7 +121,7 @@ def run(args: argparse.Namespace) -> int:
         try:
             profile_obj = profile.get_storage_profile(args.profile)
         except kubernetes.client.exceptions.ApiException as exc:
-            print(f"error: failed to fetch storage profile '{args.profile}': {exc}")
+            print(f"error: failed to fetch storage profile '{args.profile}': {exc}", file=sys.stderr)
             return 1
         standalone_mgt = profile.has_standalone_mgt(profile_obj)
 
@@ -131,23 +129,24 @@ def run(args: argparse.Namespace) -> int:
         if args.capacity is not None:
             print(
                 f"error: --capacity cannot be used with profile '{args.profile}' "
-                f"because it specifies standaloneMgtPoolName"
+                f"because it specifies standaloneMgtPoolName",
+                file=sys.stderr,
             )
             return 1
     else:
         if args.capacity is None:
-            print("error: --capacity is required when the profile does not specify standaloneMgtPoolName")
+            print("error: --capacity is required when the profile does not specify standaloneMgtPoolName", file=sys.stderr)
             return 1
         try:
             utils.parse_capacity(args.capacity)
         except ValueError as exc:
-            print(f"error: {exc}")
+            print(f"error: {exc}", file=sys.stderr)
             return 1
 
-    # Validate --rabbit-count mutual exclusion.
+    # Validate --rabbits-mdt/--rabbits-mgt require Lustre.
     if args.rabbits_mdt is not None or args.rabbits_mgt is not None:
         if args.fs_type != "lustre":
-            print("error: --rabbits-mdt and --rabbits-mgt are only valid when --fs-type is lustre")
+            print("error: --rabbits-mdt and --rabbits-mgt are only valid when --fs-type is lustre", file=sys.stderr)
             return 1
 
     # Validate --rabbit-count mutual exclusion.
@@ -162,48 +161,54 @@ def run(args: argparse.Namespace) -> int:
             if val is not None
         ]
         if conflicts:
-            print(f"error: --rabbit-count cannot be combined with: {', '.join(conflicts)}")
+            print(f"error: --rabbit-count cannot be combined with: {', '.join(conflicts)}", file=sys.stderr)
             return 1
         if args.rabbit_count < 1:
-            print("error: --rabbit-count must be at least 1")
+            print("error: --rabbit-count must be at least 1", file=sys.stderr)
             return 1
         try:
             all_rabbits = servers.get_rabbits_from_system_config()
         except (kubernetes.client.exceptions.ApiException, ValueError) as exc:
-            print(f"error: failed to read SystemConfiguration: {exc}")
+            print(f"error: failed to read SystemConfiguration: {exc}", file=sys.stderr)
             return 1
         if args.rabbit_count > len(all_rabbits):
             print(
                 f"error: --rabbit-count {args.rabbit_count} exceeds the "
-                f"{len(all_rabbits)} Rabbit(s) in the SystemConfiguration"
+                f"{len(all_rabbits)} Rabbit(s) in the SystemConfiguration",
+                file=sys.stderr,
             )
             return 1
         rabbits = random.sample(all_rabbits, args.rabbit_count)
         rabbits_mdt = None
         rabbits_mgt = None
     elif args.rabbits is None:
-        print("error: one of --rabbits or --rabbit-count is required")
+        print("error: one of --rabbits or --rabbit-count is required", file=sys.stderr)
         return 1
     else:
         rabbits = _split_nodes(args.rabbits)
+        if not rabbits:
+            print("error: --rabbits resolved to an empty list after normalization", file=sys.stderr)
+            return 1
         rabbits_mdt = _split_nodes(args.rabbits_mdt) or None
         rabbits_mgt = _split_nodes(args.rabbits_mgt) or None
 
     if args.alloc_count < 1:
-        print("error: --alloc-count must be at least 1")
+        print("error: --alloc-count must be at least 1", file=sys.stderr)
         return 1
 
     if standalone_mgt:
         if len(rabbits) != 1:
             print(
                 f"error: profile '{args.profile}' specifies standaloneMgtPoolName "
-                f"and requires exactly 1 Rabbit, but {len(rabbits)} were provided"
+                f"and requires exactly 1 Rabbit, but {len(rabbits)} were provided",
+                file=sys.stderr,
             )
             return 1
         if args.alloc_count != 1:
             print(
                 f"error: profile '{args.profile}' specifies standaloneMgtPoolName "
-                f"and requires --alloc-count 1"
+                f"and requires --alloc-count 1",
+                file=sys.stderr,
             )
             return 1
 

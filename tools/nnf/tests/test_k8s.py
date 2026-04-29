@@ -73,3 +73,41 @@ def test_delete_object_calls_api() -> None:
     mock_api.delete_namespaced_custom_object.assert_called_once_with(
         group="g", version="v", namespace="ns", plural="plural", name="test"
     )
+
+
+# ---------------------------------------------------------------------------
+# exec_pod
+# ---------------------------------------------------------------------------
+
+
+def test_exec_pod_strips_channel_bytes() -> None:
+    """exec_pod strips leading WebSocket channel-marker bytes when opted in."""
+    raw = "\x01{\"key\": \"value\"}"
+    mock_api = MagicMock()
+    with patch("nnf.k8s.get_core_v1_api", return_value=mock_api), \
+            patch("kubernetes.stream.stream", return_value=raw):
+        result = k8s.exec_pod("ns", "pod", ["echo"], strip_channel_bytes=True)
+
+    assert result == '{"key": "value"}'
+
+
+def test_exec_pod_preserves_channel_bytes_by_default() -> None:
+    """exec_pod does not strip channel bytes unless asked."""
+    raw = "\x01{\"key\": \"value\"}"
+    mock_api = MagicMock()
+    with patch("nnf.k8s.get_core_v1_api", return_value=mock_api), \
+            patch("kubernetes.stream.stream", return_value=raw):
+        result = k8s.exec_pod("ns", "pod", ["echo"])
+
+    assert result == raw
+
+
+def test_exec_pod_returns_clean_output_unchanged() -> None:
+    """exec_pod returns already-clean output as-is."""
+    clean = '{"key": "value"}'
+    mock_api = MagicMock()
+    with patch("nnf.k8s.get_core_v1_api", return_value=mock_api), \
+            patch("kubernetes.stream.stream", return_value=clean):
+        result = k8s.exec_pod("ns", "pod", ["echo"])
+
+    assert result == clean

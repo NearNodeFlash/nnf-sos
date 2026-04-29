@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from nnf.commands.create_persistent import run
+from nnf.commands.persistent.create import run
 from nnf.utils import parse_capacity, validate_k8s_name
 
 
@@ -97,7 +97,7 @@ def _make_args(**kwargs: object) -> argparse.Namespace:
 def test_run_success() -> None:
     """run() returns 0 when the Workflow is created and completes successfully."""
     mock_car = MagicMock(return_value=0)
-    with patch("nnf.commands.create_persistent.workflow.create_and_run", mock_car):
+    with patch("nnf.commands.persistent.create.workflow.create_and_run", mock_car):
         assert run(_make_args()) == 0
 
     mock_car.assert_called_once()
@@ -117,9 +117,9 @@ def test_run_comma_separated_rabbits() -> None:
         captured["wf"] = wf
         return 0
 
-    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+    with patch("nnf.commands.persistent.create.workflow.create_and_run",
                side_effect=fake_create_and_run), \
-            patch("nnf.commands.create_persistent.servers.fill_servers_default",
+            patch("nnf.commands.persistent.create.servers.fill_servers_default",
                   return_value=(True, "")) as mock_fill:
         assert run(_make_args(rabbits=["rabbit-0,rabbit-1", "rabbit-2"])) == 0
         hooks = captured["wf"].state_hooks["Proposal"]  # type: ignore[index]
@@ -140,9 +140,9 @@ def test_run_post_proposal_hook_calls_fill_servers_default() -> None:
         captured["wf"] = wf
         return 0
 
-    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+    with patch("nnf.commands.persistent.create.workflow.create_and_run",
                side_effect=fake_create_and_run), \
-            patch("nnf.commands.create_persistent.servers.fill_servers_default", return_value=(True, "")) as mock_fill:
+            patch("nnf.commands.persistent.create.servers.fill_servers_default", return_value=(True, "")) as mock_fill:
         assert run(_make_args(rabbits=["rabbit-0", "rabbit-1"])) == 0
 
         wf = captured["wf"]
@@ -195,7 +195,7 @@ def test_run_no_capacity_no_profile_returns_1() -> None:
 def test_run_no_capacity_profile_without_standalone_mgt_returns_1() -> None:
     """run() returns 1 when --capacity is omitted and the profile has no standaloneMgtPoolName."""
     plain_profile: Dict[str, object] = {"data": {"lustreStorage": {}}}
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                return_value=plain_profile):
         assert run(_make_args(capacity=None, profile="plain")) == 1
 
@@ -205,7 +205,7 @@ def test_run_capacity_with_standalone_mgt_profile_returns_1() -> None:
     mgt_profile: Dict[str, object] = {
         "data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}
     }
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                return_value=mgt_profile):
         assert run(_make_args(capacity="1GiB", profile="mgt-profile")) == 1
 
@@ -216,9 +216,9 @@ def test_run_standalone_mgt_profile_omits_capacity_from_directive() -> None:
         "data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}
     }
     mock_car = MagicMock(return_value=0)
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                return_value=mgt_profile), \
-            patch("nnf.commands.create_persistent.workflow.create_and_run", mock_car):
+            patch("nnf.commands.persistent.create.workflow.create_and_run", mock_car):
         assert run(_make_args(capacity=None, profile="mgt-profile")) == 0
 
     wf_arg = mock_car.call_args[0][0]
@@ -231,14 +231,14 @@ def test_run_profile_fetch_error_returns_1() -> None:
     """run() returns 1 when fetching the storage profile fails."""
     import kubernetes.client.exceptions  # type: ignore[import-untyped]
     exc = kubernetes.client.exceptions.ApiException(status=404, reason="NotFound")
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                side_effect=exc):
         assert run(_make_args(profile="missing-profile")) == 1
 
 
 def test_run_profile_unexpected_error_propagates() -> None:
     """run() should not swallow unexpected profile lookup failures."""
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                side_effect=RuntimeError("boom")):
         with pytest.raises(RuntimeError, match="boom"):
             run(_make_args(profile="broken-profile"))
@@ -246,8 +246,8 @@ def test_run_profile_unexpected_error_propagates() -> None:
 
 def test_run_non_lustre_fs_type_skips_profile_check() -> None:
     """run() does not fetch the storage profile when fs_type is not lustre."""
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile") as mock_get, \
-            patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=0):
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile") as mock_get, \
+            patch("nnf.commands.persistent.create.workflow.create_and_run", return_value=0):
         assert run(_make_args(fs_type="xfs", profile="some-profile")) == 0
     mock_get.assert_not_called()
 
@@ -257,7 +257,7 @@ def test_run_standalone_mgt_multiple_rabbits_returns_1() -> None:
     mgt_profile: Dict[str, object] = {
         "data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}
     }
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                return_value=mgt_profile):
         assert run(_make_args(capacity=None, profile="mgt-profile",
                               rabbits=["rabbit-0", "rabbit-1"])) == 1
@@ -268,7 +268,7 @@ def test_run_standalone_mgt_alloc_count_gt1_returns_1() -> None:
     mgt_profile: Dict[str, object] = {
         "data": {"lustreStorage": {"mgtOptions": {"standaloneMgtPoolName": "main-pool"}}}
     }
-    with patch("nnf.commands.create_persistent.profile.get_storage_profile",
+    with patch("nnf.commands.persistent.create.profile.get_storage_profile",
                return_value=mgt_profile):
         assert run(_make_args(capacity=None, profile="mgt-profile",
                               rabbits=["rabbit-0"], alloc_count=2)) == 1
@@ -277,6 +277,11 @@ def test_run_standalone_mgt_alloc_count_gt1_returns_1() -> None:
 def test_run_no_rabbits_source_returns_1() -> None:
     """run() returns 1 when neither --rabbits nor --rabbit-count is given."""
     assert run(_make_args(rabbits=None, rabbit_count=None)) == 1
+
+
+def test_run_rabbits_separator_only_returns_1() -> None:
+    """run() returns 1 when --rabbits contains only separators (empty after normalization)."""
+    assert run(_make_args(rabbits=[",", ",,"])) == 1
 
 
 def test_run_rabbit_count_with_rabbits_returns_1() -> None:
@@ -304,7 +309,7 @@ def test_run_rabbit_count_exceeds_available_returns_1() -> None:
     _sys_config = {
         "spec": {"storageNodes": [{"name": "r-0", "type": "Rabbit"}]}
     }
-    with patch("nnf.commands.create_persistent.servers.get_rabbits_from_system_config",
+    with patch("nnf.commands.persistent.create.servers.get_rabbits_from_system_config",
                return_value=["r-0"]):
         assert run(_make_args(rabbit_count=5, rabbits=None)) == 1
 
@@ -320,11 +325,11 @@ def test_run_rabbit_count_picks_random_rabbits() -> None:
         captured["wf"] = wf
         return 0
 
-    with patch("nnf.commands.create_persistent.workflow.create_and_run",
+    with patch("nnf.commands.persistent.create.workflow.create_and_run",
                side_effect=fake_create_and_run), \
-            patch("nnf.commands.create_persistent.servers.get_rabbits_from_system_config",
+            patch("nnf.commands.persistent.create.servers.get_rabbits_from_system_config",
                   return_value=all_rabbits), \
-            patch("nnf.commands.create_persistent.servers.fill_servers_default",
+            patch("nnf.commands.persistent.create.servers.fill_servers_default",
                   return_value=(True, "")) as mock_fill:
         assert run(_make_args(rabbit_count=3, rabbits=None)) == 0
         hooks = captured["wf"].state_hooks["Proposal"]  # type: ignore[index]
@@ -341,7 +346,7 @@ def test_run_rabbit_count_picks_random_rabbits() -> None:
 
 def test_run_rabbit_count_unexpected_error_propagates() -> None:
     """run() should not swallow unexpected SystemConfiguration lookup failures."""
-    with patch("nnf.commands.create_persistent.servers.get_rabbits_from_system_config",
+    with patch("nnf.commands.persistent.create.servers.get_rabbits_from_system_config",
                side_effect=RuntimeError("boom")):
         with pytest.raises(RuntimeError, match="boom"):
             run(_make_args(rabbit_count=1, rabbits=None))
@@ -349,11 +354,11 @@ def test_run_rabbit_count_unexpected_error_propagates() -> None:
 
 def test_run_create_api_error_returns_2() -> None:
     """run() returns exit code 2 when the initial Workflow creation fails."""
-    with patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=2):
+    with patch("nnf.commands.persistent.create.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
 def test_run_workflow_failure_returns_2() -> None:
     """run() returns exit code 2 when run_to_completion reports failure."""
-    with patch("nnf.commands.create_persistent.workflow.create_and_run", return_value=2):
+    with patch("nnf.commands.persistent.create.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
