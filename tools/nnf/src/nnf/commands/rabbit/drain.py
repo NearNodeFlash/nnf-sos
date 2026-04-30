@@ -102,7 +102,7 @@ def _annotate_storage(node_name: str, drain_date: str, drain_reason: str) -> Non
 
 def run(args: argparse.Namespace) -> int:
     """Execute the rabbit drain sub-command."""
-    drain_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    drain_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     def action(node_name: str) -> int:
         try:

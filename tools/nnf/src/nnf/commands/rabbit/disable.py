@@ -70,7 +70,7 @@ def _disable_storage(node_name: str, disable_date: str, disable_reason: str) -> 
 
 def run(args: argparse.Namespace) -> int:
     """Execute the rabbit disable sub-command."""
-    disable_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    disable_date = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     def action(node_name: str) -> int:
         try:
