@@ -2,7 +2,7 @@
 
 This directory contains a small Python helper CLI for working with NNF and DWS resources from the `nnf-sos` repository.
 
-Today the tool focuses on helper workflows around persistent storage. It is expected to grow over time with additional subcommands, so this document is the local reference point for setup, usage, and examples.
+Today the tool focuses on helper workflows around persistent storage and Rabbit node management. It is expected to grow over time with additional subcommands, so this document is the local reference point for setup, usage, and examples.
 
 ## Scope
 
@@ -11,6 +11,9 @@ The `nnf` command is intended as a repository-local helper tool, not a standalon
 - create a persistent storage instance for testing
 - destroy a persistent storage instance
 - inspect and drive workflow-based storage operations from a simple CLI
+- drain or undrain Rabbit nodes to control workflow scheduling
+- disable or enable Rabbit nodes to control workload manager allocations
+- check disk space usage on Rabbit nodes
 
 The command operates against an existing Kubernetes environment where the relevant NNF and DWS CRDs are already installed.
 
@@ -57,15 +60,16 @@ nnf --help
 Show command-specific help:
 
 ```bash
-nnf create_persistent --help
-nnf destroy_persistent --help
+nnf persistent create --help
+nnf persistent destroy --help
+nnf rabbit --help
 ```
 
 Enable verbose workflow logging:
 
 ```bash
-nnf --verbose create_persistent --help
-nnf create_persistent --verbose --help
+nnf --verbose persistent create --help
+nnf persistent create --verbose --help
 ```
 
 Both subcommands support these common flags:
@@ -78,19 +82,19 @@ Both subcommands support these common flags:
 The default timeout is `180` seconds per workflow state. On a slow or heavily loaded cluster, you may need to raise it:
 
 ```bash
-nnf create_persistent --timeout 600 ...
-nnf destroy_persistent --timeout 600 ...
+nnf persistent create --timeout 600 ...
+nnf persistent destroy --timeout 600 ...
 ```
 
-## create_persistent
+## persistent create
 
-Show help for the `create_persistent` subcommand:
+Show help for the `persistent create` subcommand:
 
 ```bash
-nnf create_persistent --help
+nnf persistent create --help
 ```
 
-Key `create_persistent` flags:
+Key `persistent create` flags:
 
 - `--name` required name of the persistent storage instance
 - `--fs-type` required filesystem type: `raw`, `xfs`, `gfs2`, `lustre`
@@ -111,7 +115,7 @@ Use `--profile` to select the `NnfStorageProfile` if the default profile is not 
 Create a simple persistent storage instance:
 
 ```bash
-nnf create_persistent \
+nnf persistent create \
   --name demo-psi \
   --fs-type xfs \
   --capacity 1GiB \
@@ -121,7 +125,7 @@ nnf create_persistent \
 Create persistent storage using multiple Rabbits:
 
 ```bash
-nnf create_persistent \
+nnf persistent create \
   --name demo-lustre \
   --fs-type lustre \
   --capacity 10GiB \
@@ -132,7 +136,7 @@ nnf create_persistent \
 For Lustre, you can optionally direct MDT and MGT allocation sets to specific Rabbits instead of using the default Rabbit list for every allocation set:
 
 ```bash
-nnf create_persistent \
+nnf persistent create \
   --name demo-lustre-tiered \
   --fs-type lustre \
   --capacity 10GiB \
@@ -153,7 +157,7 @@ If you do not specify `--rabbits-mdt` or `--rabbits-mgt`, the CLI falls back to 
 If you prefer to let the CLI choose Rabbits from the default SystemConfiguration, use `--rabbit-count` instead of `--rabbits`:
 
 ```bash
-nnf create_persistent \
+nnf persistent create \
   --name demo-random \
   --fs-type xfs \
   --capacity 5GiB \
@@ -166,7 +170,7 @@ When `--rabbit-count` is used, the CLI randomly selects that many Rabbit nodes f
 Create a standalone MGT using a profile that defines `standaloneMgtPoolName`:
 
 ```bash
-nnf create_persistent \
+nnf persistent create \
   --name demo-lustre-standalone-mgt \
   --fs-type lustre \
   --profile lustre-standalone-mgt-profile \
@@ -181,15 +185,15 @@ For a standalone-MGT profile:
 
 The CLI detects `standaloneMgtPoolName` from the selected profile and adjusts validation and the generated directive accordingly.
 
-## destroy_persistent
+## persistent destroy
 
-Show help for the `destroy_persistent` subcommand:
+Show help for the `persistent destroy` subcommand:
 
 ```bash
-nnf destroy_persistent --help
+nnf persistent destroy --help
 ```
 
-Key `destroy_persistent` flags:
+Key `persistent destroy` flags:
 
 - `--name` required name of the persistent storage instance to destroy
 - `--namespace` target namespace, default `default`
@@ -200,7 +204,101 @@ Key `destroy_persistent` flags:
 Destroy a persistent storage instance:
 
 ```bash
-nnf destroy_persistent --name demo-psi
+nnf persistent destroy --name demo-psi
+```
+
+## rabbit drain
+
+Drain one or more Rabbit nodes so that no new workflows are scheduled to them. This taints the Kubernetes node with `cray.nnf.node.drain=true` (both `NoSchedule` and `NoExecute`) and annotates the corresponding DWS Storage resource with `drain_date` and `drain_reason`.
+
+```bash
+nnf rabbit drain --help
+```
+
+Key flags:
+
+- `NODE` one or more Rabbit node names (positional)
+- `-r`, `--reason` reason for draining the node (default: `none`)
+
+Drain a single node:
+
+```bash
+nnf rabbit drain rabbit-node-0
+```
+
+Drain multiple nodes with a reason:
+
+```bash
+nnf rabbit drain rabbit-node-0 rabbit-node-1 --reason "firmware update"
+```
+
+If the node taint fails after the storage annotation succeeds, the CLI attempts to roll back the annotation. If the rollback also fails, the CLI logs the error and continues to the next node.
+
+## rabbit undrain
+
+Undrain one or more Rabbit nodes so that new workflows can be scheduled to them again. This removes the `cray.nnf.node.drain` taint from the Kubernetes node and removes the `drain_date` and `drain_reason` annotations from the DWS Storage resource.
+
+```bash
+nnf rabbit undrain --help
+```
+
+Undrain a node:
+
+```bash
+nnf rabbit undrain rabbit-node-0
+```
+
+## rabbit disable
+
+Disable one or more Rabbit nodes so that the workload manager does not use them for allocations. This sets the DWS Storage resource `spec.state` to `Disabled` and annotates it with `disable_date` and `disable_reason`.
+
+```bash
+nnf rabbit disable --help
+```
+
+Key flags:
+
+- `NODE` one or more Rabbit node names (positional)
+- `-r`, `--reason` reason for disabling the node (default: `none`)
+
+Disable a node:
+
+```bash
+nnf rabbit disable rabbit-node-0 --reason "bad disk"
+```
+
+## rabbit enable
+
+Enable one or more Rabbit nodes so that the workload manager can use them for allocations again. This sets the DWS Storage resource `spec.state` to `Enabled` and removes the `disable_date` and `disable_reason` annotations.
+
+```bash
+nnf rabbit enable --help
+```
+
+Enable a node:
+
+```bash
+nnf rabbit enable rabbit-node-0
+```
+
+## rabbit df
+
+Show disk space information for Rabbit nodes. Queries each Rabbit's node-manager pod for NVMe capacity information via the Redfish CapacitySource endpoint.
+
+```bash
+nnf rabbit df --help
+```
+
+Show disk space for all enabled and ready Rabbits:
+
+```bash
+nnf rabbit df
+```
+
+Show disk space for specific nodes:
+
+```bash
+nnf rabbit df rabbit-node-0 rabbit-node-1
 ```
 
 ## Development notes

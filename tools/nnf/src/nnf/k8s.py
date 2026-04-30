@@ -1,13 +1,14 @@
 """Shared Kubernetes client helpers."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import urllib.parse
 
 import kubernetes  # type: ignore[import-untyped]
 import kubernetes.client  # type: ignore[import-untyped]
 import kubernetes.config  # type: ignore[import-untyped]
+import kubernetes.stream  # type: ignore[import-untyped]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -128,3 +129,85 @@ def delete_object(
         plural=plural,
         name=name,
     )
+
+
+# ---------------------------------------------------------------------------
+# Core-API helpers (Nodes)
+# ---------------------------------------------------------------------------
+
+
+def get_core_v1_api() -> kubernetes.client.CoreV1Api:
+    """Return a configured CoreV1Api instance."""
+    return kubernetes.client.CoreV1Api()
+
+
+def patch_node(name: str, body: Dict[str, Any]) -> Any:
+    """Strategic-merge-patch a Node object."""
+    api = get_core_v1_api()
+    return api.patch_node(name, body)
+
+
+def list_objects(
+    group: str,
+    version: str,
+    namespace: str,
+    plural: str,
+) -> Dict[str, Any]:
+    """List namespaced custom objects."""
+    api = get_custom_objects_api()
+    return api.list_namespaced_custom_object(  # type: ignore[no-any-return]
+        group=group,
+        version=version,
+        namespace=namespace,
+        plural=plural,
+    )
+
+
+def list_pods(
+    namespace: str,
+    label_selector: str = "",
+    field_selector: str = "",
+) -> List[Any]:
+    """List pods in a namespace, optionally filtering by label or field selector."""
+    api = get_core_v1_api()
+    result = api.list_namespaced_pod(
+        namespace=namespace,
+        label_selector=label_selector,
+        field_selector=field_selector,
+    )
+    return result.items  # type: ignore[no-any-return]
+
+
+def exec_pod(
+    namespace: str,
+    pod_name: str,
+    command: List[str],
+    container: Optional[str] = None,
+    strip_channel_bytes: bool = False,
+) -> str:
+    """Execute a command inside a pod and return stdout.
+
+    When *strip_channel_bytes* is ``True``, WebSocket channel-marker bytes
+    (``\\x00``–``\\x03``) are removed from the output.  These bytes can
+    appear at frame boundaries throughout the response.  Enable this when
+    the response is expected to be text or JSON and the Kubernetes stream
+    may include binary framing.
+    """
+    api = get_core_v1_api()
+    kwargs: Dict[str, Any] = {
+        "name": pod_name,
+        "namespace": namespace,
+        "command": command,
+        "stderr": False,
+        "stdin": False,
+        "stdout": True,
+        "tty": False,
+    }
+    if container is not None:
+        kwargs["container"] = container
+    raw: str = kubernetes.stream.stream(
+        api.connect_get_namespaced_pod_exec, **kwargs
+    )
+    if strip_channel_bytes:
+        raw = raw.translate({0: None, 1: None, 2: None, 3: None})
+    return raw

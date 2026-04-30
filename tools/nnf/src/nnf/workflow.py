@@ -5,6 +5,7 @@ advance it through the full state machine, populate its Servers/Computes
 resources at the appropriate states, and clean up when done."""
 
 import logging
+import sys
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -267,7 +268,7 @@ def create_and_run(wf: WorkflowRun, timeout: int) -> int:
             body=wf.manifest,
         )
     except kubernetes.client.exceptions.ApiException as exc:
-        print(f"error: failed to create Workflow: {exc.reason} (HTTP {exc.status})")
+        print(f"error: failed to create Workflow: {exc.reason} (HTTP {exc.status})", file=sys.stderr)
         LOGGER.info("Full error body: %s", exc.body)
         k8s.debug_api_group(crd.DWS_GROUP)
         return 2
@@ -277,7 +278,7 @@ def create_and_run(wf: WorkflowRun, timeout: int) -> int:
     try:
         ok, msg = run_to_completion(wf, timeout)
         if not ok:
-            print(f"error: {msg}")
+            print(f"error: {msg}", file=sys.stderr)
             return 2
     except Exception:
         teardown_and_delete(wf.name, wf.namespace, timeout)

@@ -4,7 +4,7 @@ import argparse
 from typing import Dict
 from unittest.mock import MagicMock, patch
 
-from nnf.commands.destroy_persistent import run
+from nnf.commands.persistent.destroy import run
 
 
 def _make_args(**kwargs: object) -> argparse.Namespace:
@@ -27,7 +27,7 @@ def test_run_invalid_name_returns_1() -> None:
 def test_run_success() -> None:
     """run() returns 0 when the Workflow is created and completes successfully."""
     mock_car = MagicMock(return_value=0)
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", mock_car):
         assert run(_make_args()) == 0
 
     mock_car.assert_called_once()
@@ -40,7 +40,7 @@ def test_run_success() -> None:
 def test_run_directive_contains_name() -> None:
     """run() builds the correct #DW destroy_persistent directive."""
     mock_car = MagicMock(return_value=0)
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", mock_car):
         assert run(_make_args(name="my-lustre")) == 0
 
     wf_arg = mock_car.call_args[0][0]
@@ -50,7 +50,7 @@ def test_run_directive_contains_name() -> None:
 def test_run_workflow_name() -> None:
     """run() uses nnf-destroy-persistent-{name} as the Workflow name."""
     mock_car = MagicMock(return_value=0)
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", mock_car):
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", mock_car):
         assert run(_make_args(name="my-psi")) == 0
 
     wf_arg = mock_car.call_args[0][0]
@@ -59,13 +59,13 @@ def test_run_workflow_name() -> None:
 
 def test_run_create_api_error_returns_2() -> None:
     """run() returns exit code 2 when Workflow creation fails."""
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", return_value=2):
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
 def test_run_workflow_failure_returns_2() -> None:
     """run() returns exit code 2 when run_to_completion reports failure."""
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run", return_value=2):
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", return_value=2):
         assert run(_make_args()) == 2
 
 
@@ -79,7 +79,7 @@ def test_run_no_state_hooks() -> None:
         captured["wf"] = wf
         return 0
 
-    with patch("nnf.commands.destroy_persistent.workflow.create_and_run",
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run",
                side_effect=fake_create_and_run):
         assert run(_make_args()) == 0
 

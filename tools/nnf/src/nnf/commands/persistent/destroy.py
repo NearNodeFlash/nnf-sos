@@ -1,4 +1,4 @@
-"""destroy_persistent sub-command: destroy a DWS PersistentStorageInstance.
+"""persistent destroy sub-command: destroy a DWS PersistentStorageInstance.
 
 Builds a #DW destroy_persistent directive, submits it as a Workflow, and drives
 that Workflow through every state.  The Workflow is always deleted on exit,
@@ -8,6 +8,7 @@ whether the command succeeds or fails.
 import argparse
 import logging
 import os
+import sys
 
 from nnf import utils
 from nnf import workflow
@@ -18,10 +19,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
-    """Register the destroy_persistent sub-command."""
+    """Register the persistent destroy sub-command."""
     parser: argparse.ArgumentParser = add_command_parser(
         subparsers,
-        "destroy_persistent",
+        "destroy",
         help="Destroy a persistent storage instance.",
     )
     parser.add_argument(
@@ -34,11 +35,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
 
 
 def run(args: argparse.Namespace) -> int:
-    """Execute the destroy_persistent sub-command."""
+    """Execute the persistent destroy sub-command."""
     try:
         utils.validate_k8s_name(args.name, "nnf-destroy-persistent-")
     except ValueError as exc:
-        print(f"error: invalid --name: {exc}")
+        print(f"error: invalid --name: {exc}", file=sys.stderr)
         return 1
 
     user_id: int = args.user_id if args.user_id is not None else os.getuid()
