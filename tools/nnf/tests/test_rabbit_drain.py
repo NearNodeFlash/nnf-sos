@@ -157,7 +157,7 @@ def test_run_taint_failure_continues_to_next_node() -> None:
     exc = kubernetes.client.exceptions.ApiException(status=404, reason="NotFound")
     with patch("nnf.commands.rabbit.drain._annotate_storage"), \
             patch("nnf.commands.rabbit.drain._apply_drain_taints", side_effect=[exc, None]), \
-            patch("nnf.commands.rabbit.drain._remove_drain_annotations"):
+            patch("nnf.commands.rabbit.drain.remove_drain_annotations"):
         rc = run(_make_args(nodes=["bad-node", "good-node"]))
 
     assert rc == 1
@@ -181,7 +181,7 @@ def test_run_taint_failure_rollback_failure_continues() -> None:
     with patch("nnf.commands.rabbit.drain._annotate_storage"), \
             patch("nnf.commands.rabbit.drain._apply_drain_taints",
                   side_effect=[taint_exc, None]), \
-            patch("nnf.commands.rabbit.drain._remove_drain_annotations",
+            patch("nnf.commands.rabbit.drain.remove_drain_annotations",
                   side_effect=[rollback_exc, None]):
         rc = run(_make_args(nodes=["rabbit-0", "rabbit-1"]))
 

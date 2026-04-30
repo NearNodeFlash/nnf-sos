@@ -6,6 +6,7 @@ guaranteed, and provisioned bytes.
 """
 
 import argparse
+import ast
 import json
 import logging
 import sys
@@ -82,7 +83,12 @@ def _get_capacity(pod_name: str) -> Dict[str, int]:
         strip_channel_bytes=True,
     )
     LOGGER.info("raw exec output for %s: %r", pod_name, output[:200])
-    data = json.loads(output)
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        # The Redfish endpoint may return a Python-dict-formatted response
+        # (single quotes) instead of strict JSON.
+        data = ast.literal_eval(output)
     provided = data.get("ProvidedCapacity", {}).get("Data", {})
     return {
         "AllocatedBytes": provided.get("AllocatedBytes", 0),
@@ -132,7 +138,17 @@ def run(args: argparse.Namespace) -> int:
             continue
 
         if not _is_enabled_ready(storage):
-            skipped.append(rabbit)
+            if args.nodes:
+                spec_state = storage.get("spec", {}).get("state", "")
+                status_state = storage.get("status", {}).get("status", "")
+                print(
+                    f"error: '{rabbit}' is not Enabled/Ready "
+                    f"(spec.state={spec_state}, status={status_state})",
+                    file=sys.stderr,
+                )
+                errors += 1
+            else:
+                skipped.append(rabbit)
             continue
 
         pod_name = _find_node_manager_pod(rabbit, nm_pods)
@@ -144,7 +160,7 @@ def run(args: argparse.Namespace) -> int:
         try:
             cap = _get_capacity(pod_name)
         except (kubernetes.client.exceptions.ApiException, json.JSONDecodeError,
-                KeyError, ValueError) as exc:
+                KeyError, ValueError, SyntaxError) as exc:
             print(f"error: failed to get capacity from '{rabbit}': {exc}", file=sys.stderr)
             errors += 1
             continue

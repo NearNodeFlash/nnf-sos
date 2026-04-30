@@ -16,13 +16,17 @@ import kubernetes.client.exceptions  # type: ignore[import-untyped]
 from nnf import crd
 from nnf import k8s
 from nnf.commands import add_command_parser
-from nnf.commands.rabbit._helpers import ERROR, OK, for_each_node
+from nnf.commands.rabbit._helpers import (
+    ERROR,
+    OK,
+    TAINT_KEY,
+    TAINT_VALUE,
+    for_each_node,
+    remove_drain_annotations,
+)
 
 
 LOGGER = logging.getLogger(__name__)
-
-TAINT_KEY = "cray.nnf.node.drain"
-TAINT_VALUE = "true"
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
@@ -74,27 +78,6 @@ def _apply_drain_taints(node_name: str) -> None:
     LOGGER.info("Tainted node '%s' with %s", node_name, TAINT_KEY)
 
 
-def _remove_drain_taints(node_name: str) -> None:
-    """Remove all drain taints from a node."""
-    api = k8s.get_core_v1_api()
-    node: Any = api.read_node(node_name)
-    remaining: List[Dict[str, str]] = []
-    if node.spec.taints:
-        remaining = [
-            {"key": t.key, "value": t.value or "", "effect": t.effect}
-            for t in node.spec.taints
-            if t.key != TAINT_KEY
-        ]
-
-    body: Dict[str, Any] = {
-        "spec": {
-            "taints": remaining or None,
-        }
-    }
-    k8s.patch_node(node_name, body)
-    LOGGER.info("Removed %s taint from node '%s'", TAINT_KEY, node_name)
-
-
 def _annotate_storage(node_name: str, drain_date: str, drain_reason: str) -> None:
     """Annotate the DWS Storage resource for *node_name* with drain metadata."""
     body: Dict[str, Any] = {
@@ -117,27 +100,6 @@ def _annotate_storage(node_name: str, drain_date: str, drain_reason: str) -> Non
                 node_name, drain_date, drain_reason)
 
 
-def _remove_drain_annotations(node_name: str) -> None:
-    """Remove drain_date and drain_reason annotations from the DWS Storage resource."""
-    body: Dict[str, Any] = {
-        "metadata": {
-            "annotations": {
-                "drain_date": None,
-                "drain_reason": None,
-            }
-        }
-    }
-    k8s.patch_object(
-        group=crd.DWS_GROUP,
-        version=crd.DWS_VERSION,
-        namespace="default",
-        plural=crd.DWS_STORAGE_PLURAL,
-        name=node_name,
-        body=body,
-    )
-    LOGGER.info("Removed drain annotations from storage '%s'", node_name)
-
-
 def run(args: argparse.Namespace) -> int:
     """Execute the rabbit drain sub-command."""
     drain_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
@@ -154,7 +116,7 @@ def run(args: argparse.Namespace) -> int:
         except kubernetes.client.exceptions.ApiException as exc:
             print(f"error: failed to taint node '{node_name}': {exc.reason}", file=sys.stderr)
             try:
-                _remove_drain_annotations(node_name)
+                remove_drain_annotations(node_name)
             except kubernetes.client.exceptions.ApiException as rollback_exc:
                 print(f"error: failed to roll back storage annotation on '{node_name}': {rollback_exc.reason}", file=sys.stderr)
             return ERROR

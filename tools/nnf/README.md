@@ -232,7 +232,7 @@ Drain multiple nodes with a reason:
 nnf rabbit drain rabbit-node-0 rabbit-node-1 --reason "firmware update"
 ```
 
-If the storage annotation fails after the node taint succeeds, the CLI attempts to roll back the taint. If the rollback also fails, the CLI logs the error and continues to the next node.
+If the node taint fails after the storage annotation succeeds, the CLI attempts to roll back the annotation. If the rollback also fails, the CLI logs the error and continues to the next node.
 
 ## rabbit undrain
 

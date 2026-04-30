@@ -81,8 +81,19 @@ def test_delete_object_calls_api() -> None:
 
 
 def test_exec_pod_strips_channel_bytes() -> None:
-    """exec_pod strips leading WebSocket channel-marker bytes when opted in."""
+    """exec_pod strips WebSocket channel-marker bytes when opted in."""
     raw = "\x01{\"key\": \"value\"}"
+    mock_api = MagicMock()
+    with patch("nnf.k8s.get_core_v1_api", return_value=mock_api), \
+            patch("kubernetes.stream.stream", return_value=raw):
+        result = k8s.exec_pod("ns", "pod", ["echo"], strip_channel_bytes=True)
+
+    assert result == '{"key": "value"}'
+
+
+def test_exec_pod_strips_embedded_channel_bytes() -> None:
+    """exec_pod removes channel-marker bytes at frame boundaries mid-string."""
+    raw = "\x01{\"key\":\x01 \"value\"}"
     mock_api = MagicMock()
     with patch("nnf.k8s.get_core_v1_api", return_value=mock_api), \
             patch("kubernetes.stream.stream", return_value=raw):

@@ -8,15 +8,17 @@ Storage resource.
 import argparse
 import logging
 import sys
-from typing import Any, Dict, List
 
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
-from nnf import crd
-from nnf import k8s
 from nnf.commands import add_command_parser
-from nnf.commands.rabbit._helpers import ERROR, OK, for_each_node
-from nnf.commands.rabbit.drain import TAINT_KEY, _remove_drain_annotations, _remove_drain_taints
+from nnf.commands.rabbit._helpers import (
+    ERROR,
+    OK,
+    for_each_node,
+    remove_drain_annotations,
+    remove_drain_taints,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -43,15 +45,15 @@ def run(args: argparse.Namespace) -> int:
 
     def action(node_name: str) -> int:
         try:
-            _remove_drain_annotations(node_name)
+            remove_drain_taints(node_name)
         except kubernetes.client.exceptions.ApiException as exc:
-            print(f"error: failed to remove annotations from storage '{node_name}': {exc.reason}", file=sys.stderr)
+            print(f"error: failed to untaint node '{node_name}': {exc.reason}", file=sys.stderr)
             return ERROR
 
         try:
-            _remove_drain_taints(node_name)
+            remove_drain_annotations(node_name)
         except kubernetes.client.exceptions.ApiException as exc:
-            print(f"error: failed to untaint node '{node_name}': {exc.reason}", file=sys.stderr)
+            print(f"error: failed to remove annotations from storage '{node_name}': {exc.reason}", file=sys.stderr)
             return ERROR
         return OK
 

@@ -123,10 +123,10 @@ def test_get_capacity_parses_redfish_json() -> None:
 
 
 def test_get_capacity_rejects_non_json() -> None:
-    """_get_capacity raises JSONDecodeError for non-JSON responses."""
+    """_get_capacity raises on non-JSON/non-dict responses."""
     non_json = "this is not json"
     with patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=non_json):
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises((json.JSONDecodeError, ValueError, SyntaxError)):
             _get_capacity("nm-pod")
 
 
@@ -154,6 +154,24 @@ def test_get_capacity_with_channel_byte_prefix() -> None:
         "ConsumedBytes": 50,
         "GuaranteedBytes": 80,
         "ProvisionedBytes": 90,
+    }
+
+
+def test_get_capacity_python_dict_response() -> None:
+    """_get_capacity handles Python-dict-formatted responses (single quotes)."""
+    python_dict = (
+        "{'ProvidedCapacity': {'Data': {"
+        "'AllocatedBytes': 200, 'ConsumedBytes': 100, "
+        "'GuaranteedBytes': 160, 'ProvisionedBytes': 180}}}"
+    )
+    with patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=python_dict):
+        cap = _get_capacity("nm-pod")
+
+    assert cap == {
+        "AllocatedBytes": 200,
+        "ConsumedBytes": 100,
+        "GuaranteedBytes": 160,
+        "ProvisionedBytes": 180,
     }
 
 
@@ -240,6 +258,20 @@ def test_run_skips_disabled(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out
     assert "skipped" in out
     assert "rabbit-0" in out
+
+
+def test_run_explicit_disabled_node_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
+    """run() returns an error when a user-specified node is not Enabled/Ready."""
+    storages = [_make_storage("rabbit-0", state="Disabled", status="Ready")]
+
+    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=[]):
+        rc = run(_make_args(nodes=["rabbit-0"]))
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "not Enabled/Ready" in err
+    assert "rabbit-0" in err
 
 
 def test_run_no_storage_resource_returns_1(capsys: pytest.CaptureFixture[str]) -> None:

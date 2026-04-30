@@ -187,10 +187,11 @@ def exec_pod(
 ) -> str:
     """Execute a command inside a pod and return stdout.
 
-    When *strip_channel_bytes* is ``True``, leading WebSocket channel-marker
-    bytes (``\\x00``–``\\x03``) are stripped from the output.  Enable this
-    when the response is expected to be text or JSON and the Kubernetes
-    stream may include binary framing.
+    When *strip_channel_bytes* is ``True``, WebSocket channel-marker bytes
+    (``\\x00``–``\\x03``) are removed from the output.  These bytes can
+    appear at frame boundaries throughout the response.  Enable this when
+    the response is expected to be text or JSON and the Kubernetes stream
+    may include binary framing.
     """
     api = get_core_v1_api()
     kwargs: Dict[str, Any] = {
@@ -208,5 +209,5 @@ def exec_pod(
         api.connect_get_namespaced_pod_exec, **kwargs
     )
     if strip_channel_bytes:
-        raw = raw.lstrip("\x00\x01\x02\x03")
+        raw = raw.translate({0: None, 1: None, 2: None, 3: None})
     return raw
