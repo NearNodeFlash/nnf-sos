@@ -33,6 +33,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+tools/nnf/build/
 
 commands.log
 kind-config.yaml
