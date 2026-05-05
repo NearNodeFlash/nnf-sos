@@ -68,6 +68,24 @@ def debug_api_group(group: str) -> None:
         LOGGER.info("Could not query API group '%s': %s", group, exc)
 
 
+def get_raw(path: str) -> str:
+    """Make a raw GET request to the Kubernetes API server and return the body."""
+    client = kubernetes.client.ApiClient()
+    resp = client.call_api(
+        path, "GET",
+        auth_settings=["BearerToken"],
+        _preload_content=False,
+        _return_http_data_only=True,
+    )
+    try:
+        data = resp.data
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        return data
+    finally:
+        resp.release_conn()
+
+
 def create_object(
     group: str,
     version: str,
@@ -141,10 +159,21 @@ def get_core_v1_api() -> kubernetes.client.CoreV1Api:
     return kubernetes.client.CoreV1Api()
 
 
+def get_apps_v1_api() -> kubernetes.client.AppsV1Api:
+    """Return a configured AppsV1Api instance."""
+    return kubernetes.client.AppsV1Api()
+
+
 def patch_node(name: str, body: Dict[str, Any]) -> Any:
     """Strategic-merge-patch a Node object."""
     api = get_core_v1_api()
     return api.patch_node(name, body)
+
+
+def get_deployment(name: str, namespace: str) -> Any:
+    """Fetch a Deployment by name and namespace."""
+    api = get_apps_v1_api()
+    return api.read_namespaced_deployment(name=name, namespace=namespace)
 
 
 def list_objects(
@@ -159,6 +188,20 @@ def list_objects(
         group=group,
         version=version,
         namespace=namespace,
+        plural=plural,
+    )
+
+
+def list_cluster_objects(
+    group: str,
+    version: str,
+    plural: str,
+) -> Dict[str, Any]:
+    """List cluster-scoped (all namespaces) custom objects."""
+    api = get_custom_objects_api()
+    return api.list_cluster_custom_object(  # type: ignore[no-any-return]
+        group=group,
+        version=version,
         plural=plural,
     )
 

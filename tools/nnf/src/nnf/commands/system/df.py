@@ -36,7 +36,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         "nodes",
         nargs="*",
         metavar="NODE",
-        help="Rabbit node names to query (default: all Enabled/Ready rabbits).",
+        help="Rabbit node names to query. If omitted, queries all Enabled/Ready rabbits.",
     )
     parser.set_defaults(func=run)
 

@@ -3,7 +3,7 @@
 import argparse
 
 from nnf.commands import add_command_parser
-from nnf.commands.persistent import create, destroy
+from nnf.commands.persistent import create, destroy, share, unshare
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
@@ -18,3 +18,5 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
 
     create.register(sub)
     destroy.register(sub)
+    share.register(sub)
+    unshare.register(sub)

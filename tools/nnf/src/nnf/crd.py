@@ -8,6 +8,8 @@ NNF_GROUP = "nnf.cray.hpe.com"
 # Update NNF_VERSION when the NNF CRDs are bumped (e.g. v1alpha11 → v1alpha12).
 NNF_VERSION = "v1alpha11"
 
+NNF_IGNORE_UID_ANNOTATION = "nnf.cray.hpe.com/ignore-uid"
+
 NNF_NODE_PLURAL = "nnfnodes"
 NNF_STORAGE_PLURAL = "nnfstorages"
 NNF_ACCESS_PLURAL = "nnfaccesses"

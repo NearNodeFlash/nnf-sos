@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
 import pytest
 
-from nnf.commands.rabbit.df import (
+from nnf.commands.system.df import (
     _find_node_manager_pod,
     _format_tib,
     _get_all_storages,
@@ -111,7 +111,7 @@ def test_get_capacity_parses_redfish_json() -> None:
             }
         }
     })
-    with patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=redfish_json):
+    with patch("nnf.commands.system.df.k8s.exec_pod", return_value=redfish_json):
         cap = _get_capacity("nm-pod")
 
     assert cap == {
@@ -125,7 +125,7 @@ def test_get_capacity_parses_redfish_json() -> None:
 def test_get_capacity_rejects_non_json() -> None:
     """_get_capacity raises on non-JSON/non-dict responses."""
     non_json = "this is not json"
-    with patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=non_json):
+    with patch("nnf.commands.system.df.k8s.exec_pod", return_value=non_json):
         with pytest.raises((json.JSONDecodeError, ValueError, SyntaxError)):
             _get_capacity("nm-pod")
 
@@ -164,7 +164,7 @@ def test_get_capacity_python_dict_response() -> None:
         "'AllocatedBytes': 200, 'ConsumedBytes': 100, "
         "'GuaranteedBytes': 160, 'ProvisionedBytes': 180}}}"
     )
-    with patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=python_dict):
+    with patch("nnf.commands.system.df.k8s.exec_pod", return_value=python_dict):
         cap = _get_capacity("nm-pod")
 
     assert cap == {
@@ -182,7 +182,7 @@ def test_get_capacity_python_dict_response() -> None:
 
 def test_get_all_storages_returns_items() -> None:
     items = [{"metadata": {"name": "r-0"}}]
-    with patch("nnf.commands.rabbit.df.k8s.list_objects", return_value={"items": items}):
+    with patch("nnf.commands.system.df.k8s.list_objects", return_value={"items": items}):
         assert _get_all_storages() == items
 
 
@@ -212,9 +212,9 @@ def test_run_success(capsys: pytest.CaptureFixture[str]) -> None:
         }}
     })
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=pods), \
-            patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=cap_json):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=pods), \
+            patch("nnf.commands.system.df.k8s.exec_pod", return_value=cap_json):
         rc = run(_make_args())
 
     assert rc == 0
@@ -235,9 +235,9 @@ def test_run_specific_nodes(capsys: pytest.CaptureFixture[str]) -> None:
         }}
     })
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=pods), \
-            patch("nnf.commands.rabbit.df.k8s.exec_pod", return_value=cap_json):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=pods), \
+            patch("nnf.commands.system.df.k8s.exec_pod", return_value=cap_json):
         rc = run(_make_args(nodes=["rabbit-1"]))
 
     assert rc == 0
@@ -250,8 +250,8 @@ def test_run_skips_disabled(capsys: pytest.CaptureFixture[str]) -> None:
     """run() skips rabbits that are not Enabled/Ready and reports them."""
     storages = [_make_storage("rabbit-0", state="Disabled", status="Ready")]
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=[]):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=[]):
         rc = run(_make_args())
 
     assert rc == 0
@@ -264,8 +264,8 @@ def test_run_explicit_disabled_node_returns_1(capsys: pytest.CaptureFixture[str]
     """run() returns an error when a user-specified node is not Enabled/Ready."""
     storages = [_make_storage("rabbit-0", state="Disabled", status="Ready")]
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=[]):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=[]):
         rc = run(_make_args(nodes=["rabbit-0"]))
 
     assert rc == 1
@@ -276,8 +276,8 @@ def test_run_explicit_disabled_node_returns_1(capsys: pytest.CaptureFixture[str]
 
 def test_run_no_storage_resource_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
     """run() reports an error when a requested rabbit has no Storage resource."""
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=[]), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=[]):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=[]), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=[]):
         rc = run(_make_args(nodes=["rabbit-missing"]))
 
     assert rc == 1
@@ -288,8 +288,8 @@ def test_run_no_pod_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
     """run() reports an error when no node-manager pod is found."""
     storages = [_make_storage("rabbit-0")]
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=[]):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=[]):
         rc = run(_make_args())
 
     assert rc == 1
@@ -308,9 +308,9 @@ def test_run_capacity_error_continues(capsys: pytest.CaptureFixture[str]) -> Non
     })
     exc = kubernetes.client.exceptions.ApiException(status=500, reason="InternalError")
 
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=storages), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", return_value=pods), \
-            patch("nnf.commands.rabbit.df.k8s.exec_pod", side_effect=[exc, cap_json]):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=storages), \
+            patch("nnf.commands.system.df.k8s.list_pods", return_value=pods), \
+            patch("nnf.commands.system.df.k8s.exec_pod", side_effect=[exc, cap_json]):
         rc = run(_make_args())
 
     assert rc == 1
@@ -321,7 +321,7 @@ def test_run_capacity_error_continues(capsys: pytest.CaptureFixture[str]) -> Non
 def test_run_storage_list_failure_returns_1() -> None:
     """run() returns 1 when listing Storage resources fails."""
     exc = kubernetes.client.exceptions.ApiException(status=500, reason="InternalError")
-    with patch("nnf.commands.rabbit.df._get_all_storages", side_effect=exc):
+    with patch("nnf.commands.system.df._get_all_storages", side_effect=exc):
         rc = run(_make_args())
 
     assert rc == 1
@@ -330,8 +330,8 @@ def test_run_storage_list_failure_returns_1() -> None:
 def test_run_pod_list_failure_returns_1() -> None:
     """run() returns 1 when listing pods fails."""
     exc = kubernetes.client.exceptions.ApiException(status=500, reason="InternalError")
-    with patch("nnf.commands.rabbit.df._get_all_storages", return_value=[]), \
-            patch("nnf.commands.rabbit.df.k8s.list_pods", side_effect=exc):
+    with patch("nnf.commands.system.df._get_all_storages", return_value=[]), \
+            patch("nnf.commands.system.df.k8s.list_pods", side_effect=exc):
         rc = run(_make_args())
 
     assert rc == 1

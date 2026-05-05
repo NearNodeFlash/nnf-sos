@@ -241,5 +241,5 @@ def run(args: argparse.Namespace) -> int:
 
     rc = workflow.create_and_run(wf, args.timeout)
     if rc == 0:
-        print(f"Persistent storage '{args.name}' created successfully.")
+        print(f"Created persistent storage '{args.name}'.")
     return rc

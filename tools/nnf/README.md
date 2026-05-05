@@ -10,10 +10,12 @@ The `nnf` command is intended as a repository-local helper tool, not a standalon
 
 - create a persistent storage instance for testing
 - destroy a persistent storage instance
+- share or unshare a persistent storage instance across users
 - inspect and drive workflow-based storage operations from a simple CLI
 - drain or undrain Rabbit nodes to control workflow scheduling
 - disable or enable Rabbit nodes to control workload manager allocations
 - check disk space usage on Rabbit nodes
+- view cluster-level state summaries, FlowSchema information, and controller versions
 
 The command operates against an existing Kubernetes environment where the relevant NNF and DWS CRDs are already installed.
 
@@ -62,7 +64,10 @@ Show command-specific help:
 ```bash
 nnf persistent create --help
 nnf persistent destroy --help
+nnf persistent share --help
+nnf persistent unshare --help
 nnf rabbit --help
+nnf system --help
 ```
 
 Enable verbose workflow logging:
@@ -207,6 +212,44 @@ Destroy a persistent storage instance:
 nnf persistent destroy --name demo-psi
 ```
 
+## persistent share
+
+Share a persistent storage instance so that any user can access it, regardless of UID. This adds the `nnf.cray.hpe.com/ignore-uid` annotation to the PersistentStorageInstance.
+
+```bash
+nnf persistent share --help
+```
+
+Key flags:
+
+- `--name` required name of the persistent storage instance to share
+- `--namespace` target namespace, default `default`
+
+Share a persistent storage instance:
+
+```bash
+nnf persistent share --name demo-psi
+```
+
+## persistent unshare
+
+Unshare a persistent storage instance so that only the owning user can access it. This removes the `nnf.cray.hpe.com/ignore-uid` annotation from the PersistentStorageInstance.
+
+```bash
+nnf persistent unshare --help
+```
+
+Key flags:
+
+- `--name` required name of the persistent storage instance to unshare
+- `--namespace` target namespace, default `default`
+
+Unshare a persistent storage instance:
+
+```bash
+nnf persistent unshare --name demo-psi
+```
+
 ## rabbit drain
 
 Drain one or more Rabbit nodes so that no new workflows are scheduled to them. This taints the Kubernetes node with `cray.nnf.node.drain=true` (both `NoSchedule` and `NoExecute`) and annotates the corresponding DWS Storage resource with `drain_date` and `drain_reason`.
@@ -285,20 +328,89 @@ nnf rabbit enable rabbit-node-0
 
 Show disk space information for Rabbit nodes. Queries each Rabbit's node-manager pod for NVMe capacity information via the Redfish CapacitySource endpoint.
 
+> **Note:** This command has moved to `nnf system df`. The `rabbit df` form is no longer available.
+
 ```bash
-nnf rabbit df --help
+nnf system df --help
 ```
 
 Show disk space for all enabled and ready Rabbits:
 
 ```bash
-nnf rabbit df
+nnf system df
 ```
 
 Show disk space for specific nodes:
 
 ```bash
-nnf rabbit df rabbit-node-0 rabbit-node-1
+nnf system df rabbit-node-0 rabbit-node-1
+```
+
+## system state
+
+Report the state of Rabbit storage resources. Displays a summary of NnfNode server health/status and DWS Storage state/status, including disabled and drained nodes with their reasons. If `flux` is available, also shows compute nodes paired with unavailable Rabbits.
+
+```bash
+nnf system state --help
+```
+
+Show the cluster state summary:
+
+```bash
+nnf system state
+```
+
+## system flowschema
+
+Display Kubernetes FlowSchema and API Priority and Fairness information. Useful for diagnosing API throttling issues.
+
+```bash
+nnf system flowschema --help
+```
+
+Key flags (mutually exclusive, one is required):
+
+- `-l` list flow schemas with their priority levels
+- `-p` list priority level configurations
+- `-c NAME` view metrics for a specific flow schema
+- `-s` summary of requests by priority level
+
+List all flow schemas:
+
+```bash
+nnf system flowschema -l
+```
+
+List priority level configurations:
+
+```bash
+nnf system flowschema -p
+```
+
+View activity for a specific flow schema:
+
+```bash
+nnf system flowschema -c nnf-webhook
+```
+
+View priority level summary:
+
+```bash
+nnf system flowschema -s
+```
+
+## system version
+
+Display version information for the NNF controller by reading labels from the `nnf-controller-manager` Deployment in the `nnf-system` namespace.
+
+```bash
+nnf system version --help
+```
+
+Show the NNF controller version:
+
+```bash
+nnf system version
 ```
 
 ## Development notes

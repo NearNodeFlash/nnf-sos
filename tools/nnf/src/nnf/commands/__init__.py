@@ -12,7 +12,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--verbose",
         action="store_true",
         default=argparse.SUPPRESS,
-        help="Enable verbose logging for workflow progress and Kubernetes operations.",
+        help="Enable verbose logging.",
     )
 
 

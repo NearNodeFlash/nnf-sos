@@ -1,10 +1,13 @@
 """Tests for the destroy_persistent sub-command."""
 
 import argparse
+import pytest
 from typing import Dict
 from unittest.mock import MagicMock, patch
 
-from nnf.commands.persistent.destroy import run
+import kubernetes.client.exceptions  # type: ignore[import-untyped]
+
+from nnf.commands.persistent.destroy import _get_psi_user_id, run
 
 
 def _make_args(**kwargs: object) -> argparse.Namespace:
@@ -86,3 +89,64 @@ def test_run_no_state_hooks() -> None:
     wf = captured["wf"]
     assert isinstance(wf, WorkflowRun)
     assert wf.state_hooks == {}
+
+
+# ---------------------------------------------------------------------------
+# _get_psi_user_id
+# ---------------------------------------------------------------------------
+
+
+@patch("nnf.commands.persistent.destroy.k8s.get_object")
+def test_get_psi_user_id(mock_get: MagicMock) -> None:
+    mock_get.return_value = {"spec": {"userID": 5000}}
+    assert _get_psi_user_id("my-psi", "default") == 5000
+
+
+@patch("nnf.commands.persistent.destroy.k8s.get_object")
+def test_get_psi_user_id_string(mock_get: MagicMock) -> None:
+    """userID is sometimes stored as a string in the spec."""
+    mock_get.return_value = {"spec": {"userID": "1234"}}
+    assert _get_psi_user_id("my-psi", "default") == 1234
+
+
+# ---------------------------------------------------------------------------
+# run – user_id from PSI lookup
+# ---------------------------------------------------------------------------
+
+
+def test_run_user_id_from_psi() -> None:
+    """When --user-id is not supplied, run() fetches userID from the PSI."""
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", mock_car), \
+            patch("nnf.commands.persistent.destroy._get_psi_user_id", return_value=4242):
+        assert run(_make_args(user_id=None)) == 0
+
+    wf_arg = mock_car.call_args[0][0]
+    assert wf_arg.user_id == 4242
+
+
+def test_run_user_id_cli_overrides_psi() -> None:
+    """When --user-id is supplied, run() uses it instead of the PSI."""
+    mock_car = MagicMock(return_value=0)
+    with patch("nnf.commands.persistent.destroy.workflow.create_and_run", mock_car):
+        assert run(_make_args(user_id=9999)) == 0
+
+    wf_arg = mock_car.call_args[0][0]
+    assert wf_arg.user_id == 9999
+
+
+def test_run_psi_not_found_returns_1() -> None:
+    """run() returns 1 when the PSI does not exist."""
+    with patch("nnf.commands.persistent.destroy._get_psi_user_id",
+               side_effect=kubernetes.client.exceptions.ApiException(
+                   status=404, reason="Not Found")):
+        assert run(_make_args(user_id=None)) == 1
+
+
+def test_run_psi_missing_user_id_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
+    """run() returns 1 when the PSI spec has no userID field."""
+    with patch("nnf.commands.persistent.destroy._get_psi_user_id",
+               side_effect=KeyError("userID")):
+        assert run(_make_args(user_id=None)) == 1
+    err = capsys.readouterr().err
+    assert "userID" in err
