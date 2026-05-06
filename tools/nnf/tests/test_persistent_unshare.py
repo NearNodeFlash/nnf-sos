@@ -25,7 +25,7 @@ def test_run_success(mock_patch: MagicMock, capsys: pytest.CaptureFixture[str]) 
     assert run(_make_args()) == 0
     mock_patch.assert_called_once()
     body = mock_patch.call_args[1]["body"]
-    assert body["metadata"]["annotations"][crd.NNF_IGNORE_UID_ANNOTATION] is None
+    assert body["metadata"]["annotations"][crd.DWS_IGNORE_UID_ANNOTATION] is None
     out = capsys.readouterr().out
     assert "Unshared" in out
 

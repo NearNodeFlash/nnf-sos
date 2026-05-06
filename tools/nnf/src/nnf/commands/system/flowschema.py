@@ -141,7 +141,7 @@ def _list_priority_levels(api_version: str) -> int:
     return 0
 
 
-def _view_activity(api_version: str, cred_name: str) -> int:
+def _view_activity(api_version: str, flow_schema_name: str) -> int:
     """View metrics for a specific FlowSchema."""
     path = f"/apis/{_FLOWCONTROL_GROUP}/{api_version}/flowschemas"
     try:
@@ -153,7 +153,7 @@ def _view_activity(api_version: str, cred_name: str) -> int:
     data = json.loads(raw)
     names = [item["metadata"]["name"] for item in data.get("items", [])]
 
-    if cred_name not in names:
+    if flow_schema_name not in names:
         print("Valid flowschema NAMEs are:")
         for name in sorted(names):
             print(name)
@@ -165,7 +165,7 @@ def _view_activity(api_version: str, cred_name: str) -> int:
         print(f"error: failed to get metrics: {exc.reason}", file=sys.stderr)
         return 1
 
-    target = f'flow_schema="{cred_name}"'
+    target = f'flow_schema="{flow_schema_name}"'
     for line in metrics.splitlines():
         if target in line:
             print(line)

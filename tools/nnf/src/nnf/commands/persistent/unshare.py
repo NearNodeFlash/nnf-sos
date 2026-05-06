@@ -1,6 +1,6 @@
 """persistent unshare sub-command: remove shared access from a PSI.
 
-Removes the ``nnf.cray.hpe.com/ignore-uid`` annotation from the
+Removes the ``dataworkflowservices.github.io/ignore-uid`` annotation from the
 PersistentStorageInstance so that only the owning user may access it.
 """
 
@@ -39,7 +39,7 @@ def run(args: argparse.Namespace) -> int:
     body = {
         "metadata": {
             "annotations": {
-                crd.NNF_IGNORE_UID_ANNOTATION: None,
+                crd.DWS_IGNORE_UID_ANNOTATION: None,
             }
         }
     }

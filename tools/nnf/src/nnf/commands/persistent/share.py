@@ -1,6 +1,6 @@
 """persistent share sub-command: mark a PSI as shared (ignore UID checks).
 
-Adds the ``nnf.cray.hpe.com/ignore-uid`` annotation to the
+Adds the ``dataworkflowservices.github.io/ignore-uid`` annotation to the
 PersistentStorageInstance so that any user may access it.
 """
 
@@ -39,7 +39,7 @@ def run(args: argparse.Namespace) -> int:
     body = {
         "metadata": {
             "annotations": {
-                crd.NNF_IGNORE_UID_ANNOTATION: "true",
+                crd.DWS_IGNORE_UID_ANNOTATION: "true",
             }
         }
     }

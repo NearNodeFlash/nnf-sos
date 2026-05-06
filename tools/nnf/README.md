@@ -214,7 +214,7 @@ nnf persistent destroy --name demo-psi
 
 ## persistent share
 
-Share a persistent storage instance so that any user can access it, regardless of UID. This adds the `nnf.cray.hpe.com/ignore-uid` annotation to the PersistentStorageInstance.
+Share a persistent storage instance so that any user can access it, regardless of UID. This adds the `dataworkflowservices.github.io/ignore-uid` annotation to the PersistentStorageInstance.
 
 ```bash
 nnf persistent share --help
@@ -233,7 +233,7 @@ nnf persistent share --name demo-psi
 
 ## persistent unshare
 
-Unshare a persistent storage instance so that only the owning user can access it. This removes the `nnf.cray.hpe.com/ignore-uid` annotation from the PersistentStorageInstance.
+Unshare a persistent storage instance so that only the owning user can access it. This removes the `dataworkflowservices.github.io/ignore-uid` annotation from the PersistentStorageInstance.
 
 ```bash
 nnf persistent unshare --help
