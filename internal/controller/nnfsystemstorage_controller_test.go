@@ -540,5 +540,90 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)
 			}).ShouldNot(Succeed())
 		})
+
+		It("Reports clear error when all Rabbits are disabled", func() {
+			By("Disabling all Storage resources")
+			for _, nodeName := range nodeNames {
+				storage := &dwsv1alpha7.Storage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nodeName,
+						Namespace: corev1.NamespaceDefault,
+					},
+				}
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Spec.State = dwsv1alpha7.DisabledState
+					return k8sClient.Update(context.TODO(), storage)
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Status.Status = dwsv1alpha7.DisabledStatus
+					return k8sClient.Status().Update(context.TODO(), storage)
+				}).Should(Succeed())
+			}
+
+			nnfSystemStorage := &nnfv1alpha11.NnfSystemStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-system-storage",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha11.NnfSystemStorageSpec{
+					Type:                   "raw",
+					ComputesTarget:         nnfv1alpha11.ComputesTargetAll,
+					ExcludeDisabledRabbits: true,
+					MakeClientMounts:       false,
+					Shared:                 true,
+					Capacity:               1073741824,
+					StorageProfile: corev1.ObjectReference{
+						Name:      storageProfile.GetName(),
+						Namespace: storageProfile.GetNamespace(),
+						Kind:      reflect.TypeOf(nnfv1alpha11.NnfStorageProfile{}).Name(),
+					},
+				},
+			}
+
+			By("Creating the NnfSystemStorage")
+			Expect(k8sClient.Create(context.TODO(), nnfSystemStorage)).To(Succeed())
+
+			By("Verifying the error status reports no Rabbits available")
+			Eventually(func(g Gomega) string {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				if nnfSystemStorage.Status.Error != nil {
+					return nnfSystemStorage.Status.Error.DebugMessage
+				}
+				return ""
+			}).Should(ContainSubstring("no Rabbits available"))
+
+			Expect(nnfSystemStorage.Status.Ready).To(BeFalse())
+			Expect(nnfSystemStorage.Status.Error.Severity).To(Equal(dwsv1alpha7.SeverityMinor))
+
+			By("Deleting the NnfSystemStorage")
+			Expect(k8sClient.Delete(context.TODO(), nnfSystemStorage)).To(Succeed())
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)
+			}).ShouldNot(Succeed())
+
+			By("Re-enabling all Storage resources")
+			for _, nodeName := range nodeNames {
+				storage := &dwsv1alpha7.Storage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nodeName,
+						Namespace: corev1.NamespaceDefault,
+					},
+				}
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Spec.State = dwsv1alpha7.EnabledState
+					return k8sClient.Update(context.TODO(), storage)
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Status.Status = dwsv1alpha7.ReadyStatus
+					return k8sClient.Status().Update(context.TODO(), storage)
+				}).Should(Succeed())
+			}
+		})
 	})
 })

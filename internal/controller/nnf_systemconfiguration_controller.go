@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/kubernetes/pkg/util/taints"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -234,14 +233,14 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 
 				// NoSchedule should be there...
 				taint.Effect = corev1.TaintEffectNoSchedule
-				if !taints.TaintExists(node.Spec.Taints, taint) {
+				if !taintExists(node.Spec.Taints, taint) {
 					// The label is incorrect; the expected taint was not present.
 					staleLabel = true
 
 				}
 				// NoExecute should NOT be there...
 				taint.Effect = corev1.TaintEffectNoExecute
-				if taints.TaintExists(node.Spec.Taints, taint) {
+				if taintExists(node.Spec.Taints, taint) {
 					// The label is incorrect; this taint should not have been here.
 					staleLabel = true
 
@@ -261,7 +260,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			if effect == clearNoExecute {
 				// Remove the NoExecute taint.
 				taint.Effect = corev1.TaintEffectNoExecute
-				node, _, err = taints.RemoveTaint(node, taint)
+				node, _, err = removeTaint(node, taint)
 				if err != nil {
 					log.Error(err, "unable to clear taint", "key", taint.Key, "effect", taint.Effect)
 					return false, err
@@ -273,7 +272,7 @@ func (r *NnfSystemConfigurationReconciler) labelsAndTaints(ctx context.Context, 
 			} else {
 				// Add the taint.
 				taint.Effect = effect
-				node, doUpdate, err = taints.AddOrUpdateTaint(node, taint)
+				node, doUpdate, err = addOrUpdateTaint(node, taint)
 				if err != nil {
 					log.Error(err, "unable to add taint to spec", "key", taint.Key, "effect", taint.Effect)
 					return false, err

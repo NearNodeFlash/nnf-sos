@@ -386,6 +386,20 @@ func (r *NnfWorkflowReconciler) validatePersistentInstance(ctx context.Context, 
 	return nil
 }
 
+// PersistentStorageIgnoreUIDAnnotation allows a persistentdw directive to
+// bypass the check that workflow.spec.userID matches
+// PersistentStorageInstance.spec.userID.
+//
+// This annotation applies only to persistentdw. It does not apply to
+// destroy_persistent, which still requires a matching userID.
+const PersistentStorageIgnoreUIDAnnotation = "dataworkflowservices.github.io/ignore-uid"
+
+// persistentStorageIgnoresUID returns true when the PSI has the ignore-uid
+// annotation set to "true".
+func persistentStorageIgnoresUID(psi *dwsv1alpha7.PersistentStorageInstance) bool {
+	return strings.EqualFold(psi.Annotations[PersistentStorageIgnoreUIDAnnotation], "true")
+}
+
 // validatePersistentInstance validates the persistentdw directive.
 func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.Context, wf *dwsv1alpha7.Workflow, directive string) error {
 	// Validate that the persistent instance is available and not in the process of being deleted
@@ -401,6 +415,10 @@ func (r *NnfWorkflowReconciler) validatePersistentInstanceDirective(ctx context.
 
 	if !psi.DeletionTimestamp.IsZero() {
 		return dwsv1alpha7.NewResourceError("").WithUserMessage("Persistent storage instance '%s' is deleting", args["name"]).WithUser().WithFatal()
+	}
+
+	if !persistentStorageIgnoresUID(psi) && psi.Spec.UserID != wf.Spec.UserID {
+		return dwsv1alpha7.NewResourceError("existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, wf.Spec.UserID).WithUserMessage("User ID does not match existing persistent storage").WithFatal().WithUser()
 	}
 
 	return nil

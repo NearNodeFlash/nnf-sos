@@ -370,7 +370,7 @@ func (r *DirectiveBreakdownReconciler) createOrUpdatePersistentStorageInstance(c
 					return err
 				}
 			} else {
-				if psi.Spec.UserID != dbd.Spec.UserID {
+				if !persistentStorageIgnoresUID(psi) && psi.Spec.UserID != dbd.Spec.UserID {
 					return dwsv1alpha7.NewResourceError("existing persistent storage user ID %v does not match user ID %v", psi.Spec.UserID, dbd.Spec.UserID).WithUserMessage("User ID does not match existing persistent storage").WithFatal().WithUser()
 				}
 			}
