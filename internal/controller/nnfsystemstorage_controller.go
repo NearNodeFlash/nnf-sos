@@ -494,6 +494,21 @@ func (r *NnfSystemStorageReconciler) createNnfStorage(ctx context.Context, nnfSy
 		return dwsv1alpha7.NewResourceError("could not get Servers: %v", client.ObjectKeyFromObject(servers)).WithError(err)
 	}
 
+	// Check whether any Rabbits are available. When all Rabbits are disabled or excluded,
+	// the Servers resource will have empty storage lists, and we cannot create a valid
+	// NnfStorage (the nodes field is required). Return a clear error so the status
+	// reflects the actual problem rather than a cryptic CRD validation failure.
+	hasNodes := false
+	for i := range servers.Spec.AllocationSets {
+		if len(servers.Spec.AllocationSets[i].Storage) > 0 {
+			hasNodes = true
+			break
+		}
+	}
+	if !hasNodes {
+		return dwsv1alpha7.NewResourceError("no Rabbits available for NnfStorage '%v': all Rabbits are disabled or excluded", client.ObjectKeyFromObject(nnfSystemStorage)).WithMinor()
+	}
+
 	nnfStorage := &nnfv1alpha11.NnfStorage{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      nnfSystemStorage.GetName(),

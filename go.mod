@@ -3,8 +3,8 @@ module github.com/NearNodeFlash/nnf-sos
 go 1.25.7
 
 require (
-	github.com/DataWorkflowServices/dws v0.0.1-0.20260316202252-4e24ce7ae372
-	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20260409140943-c59379bba6df
+	github.com/DataWorkflowServices/dws v0.0.1-0.20260506165801-7e73c2416704
+	github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20260506210158-1c2551dfbf1c
 	github.com/NearNodeFlash/nnf-ec v0.0.1-0.20260310162051-7797cd568379
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
@@ -26,7 +26,6 @@ require (
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
-	k8s.io/kubernetes v1.28.4
 	k8s.io/mount-utils v0.27.1
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
 	sigs.k8s.io/controller-runtime v0.16.2

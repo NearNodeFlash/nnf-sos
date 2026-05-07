@@ -37,6 +37,27 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-dataworkflowservices-github-io-v1alpha7-persistentstorageinstance
+  failurePolicy: Fail
+  name: vpersistentstorageinstance.kb.io
+  rules:
+  - apiGroups:
+    - dataworkflowservices.github.io
+    apiVersions:
+    - v1alpha7
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - persistentstorageinstances
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-dataworkflowservices-github-io-v1alpha7-workflow
   failurePolicy: Fail
   name: vworkflow.kb.io

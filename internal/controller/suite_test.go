@@ -211,6 +211,9 @@ var _ = BeforeSuite(func() {
 	err = (&dwsv1alpha7.Workflow{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&dwsv1alpha7.PersistentStorageInstance{}).SetupWebhookWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	err = (&lusv1beta1.LustreFileSystem{}).SetupWebhookWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

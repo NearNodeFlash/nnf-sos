@@ -85,7 +85,18 @@ func (m *KindFileSystem) Mount(ctx context.Context, path string, complete bool) 
 	}
 
 	if err := os.Symlink(m.Path, path); err != nil {
-		return false, fmt.Errorf("could not create symlink mount %s: %w", path, err)
+		if !os.IsExist(err) {
+			return false, fmt.Errorf("could not create symlink mount %s: %w", path, err)
+		}
+		// Symlink already exists — verify it points to the correct target
+		existing, readErr := os.Readlink(path)
+		if readErr != nil {
+			return false, fmt.Errorf("could not read existing symlink %s: %w", path, readErr)
+		}
+		if existing != m.Path {
+			return false, fmt.Errorf("symlink %s exists but points to %s, expected %s", path, existing, m.Path)
+		}
+		// Symlink exists and points to the correct target — treat as success
 	}
 
 	m.Log.Info("Mounted mock file system in kind", "filesystem", m.Path, "mount", path)

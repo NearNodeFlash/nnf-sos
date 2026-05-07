@@ -1,4 +1,4 @@
-# github.com/DataWorkflowServices/dws v0.0.1-0.20260316202252-4e24ce7ae372
+# github.com/DataWorkflowServices/dws v0.0.1-0.20260506165801-7e73c2416704
 ## explicit; go 1.25.7
 github.com/DataWorkflowServices/dws/api/v1alpha7
 github.com/DataWorkflowServices/dws/config/crd/bases
@@ -11,7 +11,7 @@ github.com/DataWorkflowServices/dws/utils/updater
 # github.com/HewlettPackard/structex v1.0.4
 ## explicit; go 1.14
 github.com/HewlettPackard/structex
-# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20260409140943-c59379bba6df
+# github.com/NearNodeFlash/lustre-fs-operator v0.0.1-0.20260506210158-1c2551dfbf1c
 ## explicit; go 1.25.7
 github.com/NearNodeFlash/lustre-fs-operator/api/v1beta1
 github.com/NearNodeFlash/lustre-fs-operator/config/crd/bases
@@ -710,11 +710,6 @@ k8s.io/kube-openapi/pkg/schemamutation
 k8s.io/kube-openapi/pkg/spec3
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/validation/spec
-# k8s.io/kubernetes v1.28.4
-## explicit; go 1.20
-k8s.io/kubernetes/pkg/apis/core
-k8s.io/kubernetes/pkg/apis/core/helper
-k8s.io/kubernetes/pkg/util/taints
 # k8s.io/mount-utils v0.27.1
 ## explicit; go 1.20
 k8s.io/mount-utils
