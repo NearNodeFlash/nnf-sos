@@ -512,3 +512,18 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+PREFIX ?= /usr/local
+MANDIR ?= $(PREFIX)/share/man
+MAN1DIR ?= $(MANDIR)/man1
+
+MAN1PAGES = man/man1/nnf.1 man/man1/nnf-persistent.1 man/man1/nnf-rabbit.1 man/man1/nnf-system.1
+
+.PHONY: install-man uninstall-man
+
+install-man:
+	mkdir -p $(DESTDIR)$(MAN1DIR)
+	install -m 0644 $(MAN1PAGES) $(DESTDIR)$(MAN1DIR)/
+
+uninstall-man:
+	rm -f $(addprefix $(DESTDIR)$(MAN1DIR)/,$(notdir $(MAN1PAGES)))

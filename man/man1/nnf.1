@@ -1,0 +1,123 @@
+.TH NNF 1 "2026-05-08" "nnf 0.1.0" "User Commands"
+.SH NAME
+nnf \- CLI tool for managing NNF and DWS resources
+.SH SYNOPSIS
+.B nnf
+.RI [ --kubeconfig " FILE" ]
+.RI [ -v | --verbose ]
+.I command
+.RI [ options ]
+
+.PP
+.B nnf persistent
+.I action
+.RI [ options ]
+
+.PP
+.B nnf rabbit
+.I action
+.RI [ options ]
+
+.PP
+.B nnf system
+.I action
+.RI [ options ]
+
+.SH DESCRIPTION
+.B nnf
+is a command-line tool for managing Near Node Flash, NNF, and Data Workflow
+Services, DWS, resources in a Kubernetes cluster.
+
+It loads Kubernetes configuration from the path given by
+.BR --kubeconfig .
+If that option is omitted, it uses normal kubeconfig resolution, such as
+.BR KUBECONFIG
+or
+.BR ~/.kube/config ,
+and falls back to in-cluster configuration when available.
+
+Subcommands are organized into functional groups:
+.TP
+.B persistent
+Manage DWS PersistentStorageInstance resources.
+.TP
+.B rabbit
+Manage Rabbit node state.
+.TP
+.B system
+Perform cluster-level administration tasks.
+
+.SH OPTIONS
+.TP
+.BI --kubeconfig " FILE"
+Optional path to a kubeconfig file.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SH COMMANDS
+.TP
+.B persistent
+Manage persistent storage instances.
+See
+.BR nnf-persistent (1).
+.TP
+.B rabbit
+Manage Rabbit node state.
+See
+.BR nnf-rabbit (1).
+.TP
+.B system
+Cluster-level administration.
+See
+.BR nnf-system (1).
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Validation failure, lookup/update failure, or partial failure for multi-node
+operations.
+.TP
+.B 2
+Workflow-related failure, or failure to load Kubernetes configuration.
+
+.SH FILES
+.TP
+.I ~/.kube/config
+Default kubeconfig path, if
+.B --kubeconfig
+and
+.B KUBECONFIG
+are not set.
+
+.SH ENVIRONMENT
+.TP
+.B KUBECONFIG
+Standard Kubernetes client environment variable for kubeconfig resolution.
+
+.SH EXAMPLES
+.TP
+Create a persistent storage instance:
+.B nnf persistent create --name my-psi --fs-type xfs --capacity 1GiB --rabbits rabbit-0
+
+.TP
+Drain a Rabbit node:
+.B nnf rabbit drain rabbit-0
+
+.TP
+Show Rabbit disk space information:
+.B nnf system df
+
+.SH SEE ALSO
+.BR nnf-persistent (1),
+.BR nnf-rabbit (1),
+.BR nnf-system (1),
+.BR kubectl (1)
+
+.SH COPYRIGHT
+Copyright 2026 Hewlett Packard Enterprise Development LP
+.PP
+Licensed under the Apache License, Version 2.0.

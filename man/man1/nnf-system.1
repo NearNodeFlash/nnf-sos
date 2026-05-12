@@ -1,0 +1,155 @@
+.TH NNF-SYSTEM 1 "2026-05-08" "nnf 0.1.0" "User Commands"
+.SH NAME
+nnf-system \- cluster-level administration for nnf
+.SH SYNOPSIS
+.B nnf system
+.I action
+.RI [ options ]
+
+.PP
+.B nnf system df
+.RI [ NODE " ..." ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf system flowschema
+.RI [ -c " NAME" | -l | -p | -s ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf system version
+.RI [ -v | --verbose ]
+
+.SH DESCRIPTION
+.B nnf system
+provides cluster-level administration commands for NNF-related resources.
+
+Based on the provided source, the registered system subcommands are:
+.BR df ,
+.BR flowschema ,
+and
+.BR version .
+
+.SH ACTIONS
+.SS df
+Show disk space information for Rabbit nodes.
+
+This command queries each Rabbit's node-manager pod in the
+.B nnf-system
+namespace, using the Redfish
+.B /redfish/v1/StorageServices/NNF/CapacitySource
+endpoint, and displays:
+.IP \(bu 2
+Allocated bytes
+.IP \(bu 2
+Consumed bytes
+.IP \(bu 2
+Guaranteed bytes
+.IP \(bu 2
+Provisioned bytes
+
+If no nodes are specified, the command considers all DWS Storage resources and
+queries only nodes that are in Enabled/Ready state. Nodes not in Enabled/Ready
+state are skipped and reported afterward.
+
+If nodes are explicitly named, a node that is not Enabled/Ready is treated as
+an error.
+
+.TP
+.I NODE
+Rabbit node names to query. If omitted, all Enabled/Ready Rabbits are queried.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS flowschema
+Display Kubernetes API Priority and Fairness FlowSchema information.
+
+Exactly one of the following options is required:
+
+.TP
+.BI -c " NAME"
+.TQ
+.BI --activity " NAME"
+View metrics activity for a specific FlowSchema.
+.TP
+.BR -l ", " --list
+List FlowSchema resources.
+.TP
+.BR -p ", " --priority-levels
+List PriorityLevelConfiguration resources.
+.TP
+.BR -s ", " --summary
+Show the API server priority-level summary dump.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+The command discovers an available API version from the flowcontrol API group
+and prefers
+.BR v1 ,
+then
+.BR v1beta3 ,
+then
+.BR v1beta2 .
+
+.SS version
+Display version information for the NNF controller.
+
+This command reads labels from the
+.B nnf-controller-manager
+Deployment in the
+.B nnf-system
+namespace and prints them as formatted JSON.
+
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Lookup failure, API failure, or command-specific error.
+
+.SH EXAMPLES
+.TP
+Show capacity for all Enabled/Ready Rabbit nodes:
+.B nnf system df
+
+.TP
+Show capacity for selected Rabbit nodes:
+.B nnf system df rabbit-0 rabbit-1
+
+.TP
+List FlowSchemas:
+.B nnf system flowschema --list
+
+.TP
+List priority level configurations:
+.B nnf system flowschema --priority-levels
+
+.TP
+Show activity for a specific FlowSchema:
+.B nnf system flowschema --activity catch-all
+
+.TP
+Show API priority and fairness summary:
+.B nnf system flowschema --summary
+
+.TP
+Show NNF controller version labels:
+.B nnf system version
+
+.SH SEE ALSO
+.BR nnf (1),
+.BR nnf-persistent (1),
+.BR nnf-rabbit (1),
+.BR kubectl (1)
+
+.SH COPYRIGHT
+Copyright 2026 Hewlett Packard Enterprise Development LP
+.PP
+Licensed under the Apache License, Version 2.0.
