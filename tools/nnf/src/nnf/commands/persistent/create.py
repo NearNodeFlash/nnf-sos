@@ -54,7 +54,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         nargs="+",
         default=None,
         metavar="RABBIT",
-        help="One or more Rabbit node names to allocate storage on (e.g. rabbit-node-0). Mutually exclusive with --rabbit-count.",
+        help="One or more Rabbit node names to allocate storage on (e.g. rabbit-node-0). Required unless --rabbit-count is used.",
     )
     parser.add_argument(
         "--rabbits-mdt",
@@ -62,7 +62,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         default=None,
         dest="rabbits_mdt",
         metavar="RABBIT",
-        help="Rabbit nodes to use for mdt and mgtmdt allocation sets (default: --rabbits). Cannot be used with --rabbit-count.",
+        help="Override Rabbit nodes for mdt and mgtmdt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
     )
     parser.add_argument(
         "--rabbits-mgt",
@@ -70,7 +70,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         default=None,
         dest="rabbits_mgt",
         metavar="RABBIT",
-        help="Rabbit nodes to use for mgt allocation sets (default: --rabbits). Cannot be used with --rabbit-count.",
+        help="Override Rabbit nodes for mgt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
     )
     parser.add_argument(
         "--rabbit-count",
