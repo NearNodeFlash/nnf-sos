@@ -107,13 +107,19 @@ Key `persistent create` flags:
 - `--namespace` target namespace, default `default`
 - `--user-id` override owning user ID
 - `--group-id` override owning group ID
-- `--rabbits` explicit Rabbit node list
-- `--rabbits-mdt` Rabbit node list for `mdt` and `mgtmdt`
-- `--rabbits-mgt` Rabbit node list for `mgt`
-- `--rabbit-count` choose Rabbits randomly from the default SystemConfiguration instead of specifying them directly
 - `--alloc-count` number of allocations per Rabbit node, default `1`
 - `--profile` storage profile name
 - `--timeout` seconds to wait per workflow state, default `180`
+
+Rabbit selection (one of these is required):
+
+- `--rabbits` Rabbit node list for all allocation sets. Required unless `--rabbit-count` is used.
+- `--rabbit-count` pick N Rabbits at random from the SystemConfiguration. Mutually exclusive with all `--rabbits*` flags.
+
+Optional Lustre overrides (only valid with `--rabbits`):
+
+- `--rabbits-mdt` use these Rabbits for `mdt`/`mgtmdt` allocation sets instead of `--rabbits`
+- `--rabbits-mgt` use these Rabbits for `mgt` allocation sets instead of `--rabbits`
 
 Use `--profile` to select the `NnfStorageProfile` if the default profile is not desired. For Lustre, the profile drives allocation-set behavior for labels such as `ost`, `mdt`, `mgt`, and `mgtmdt`.
 
