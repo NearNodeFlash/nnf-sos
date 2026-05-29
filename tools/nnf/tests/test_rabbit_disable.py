@@ -4,6 +4,7 @@ import argparse
 from typing import Dict
 from unittest.mock import patch
 
+import pytest
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
 from nnf.commands.rabbit.disable import _disable_storage, run
@@ -86,3 +87,44 @@ def test_run_all_fail_returns_1() -> None:
         rc = run(_make_args(nodes=["rabbit-0", "rabbit-1"]))
 
     assert rc == 1
+
+
+def test_run_expands_hostlist_pattern() -> None:
+    """run() expands bracket notation into individual node operations."""
+    with patch("nnf.commands.rabbit.disable._disable_storage") as mock_dis:
+        rc = run(_make_args(nodes=["rabbit-[0-2]"]))
+
+    assert rc == 0
+    assert mock_dis.call_count == 3
+    called_nodes = [call[0][0] for call in mock_dis.call_args_list]
+    assert called_nodes == ["rabbit-0", "rabbit-1", "rabbit-2"]
+
+
+def test_run_expands_mixed_hostlist() -> None:
+    """run() expands mixed enumeration and range patterns."""
+    with patch("nnf.commands.rabbit.disable._disable_storage") as mock_dis:
+        rc = run(_make_args(nodes=["rabbit-[0,3-4]"]))
+
+    assert rc == 0
+    assert mock_dis.call_count == 3
+    called_nodes = [call[0][0] for call in mock_dis.call_args_list]
+    assert called_nodes == ["rabbit-0", "rabbit-3", "rabbit-4"]
+
+
+def test_run_malformed_hostlist_returns_1(capsys: "pytest.CaptureFixture[str]") -> None:
+    """run() returns 1 and prints an error for malformed hostlist patterns."""
+    rc = run(_make_args(nodes=["rabbit-["]))
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "invalid hostlist" in err
+    assert "rabbit-[" in err
+
+
+def test_run_empty_expansion_returns_1(capsys: "pytest.CaptureFixture[str]") -> None:
+    """run() returns 1 when hostlist expansion yields zero nodes."""
+    rc = run(_make_args(nodes=[","]))
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "zero hosts" in err

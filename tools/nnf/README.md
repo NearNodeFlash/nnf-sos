@@ -91,6 +91,30 @@ nnf persistent create --timeout 600 ...
 nnf persistent destroy --timeout 600 ...
 ```
 
+## Hostlist Support
+
+Rabbit node arguments accept plain node names and hostlist patterns in standard bracket notation.
+
+Examples:
+
+- `rabbit-node-[0-3]`
+- `rzadams[201-208]`
+- `rzadams[201,207-208]`
+
+This works for:
+
+- `nnf rabbit disable|drain|enable|undrain NODE...`
+- `nnf persistent create --rabbits ...`
+- `nnf persistent create --rabbits-mdt ...`
+- `nnf persistent create --rabbits-mgt ...`
+
+In most shells, brackets are glob characters, so quote hostlist arguments:
+
+```bash
+nnf rabbit disable 'rzadams[201-208]'
+nnf persistent create --name demo --fs-type xfs --capacity 1GiB --rabbits 'rabbit-node-[0-3]'
+```
+
 ## persistent create
 
 Show help for the `persistent create` subcommand:
@@ -113,13 +137,13 @@ Key `persistent create` flags:
 
 Rabbit selection (one of these is required):
 
-- `--rabbits` Rabbit node list for all allocation sets. Required unless `--rabbit-count` is used.
+- `--rabbits` Rabbit node list for all allocation sets. Accepts names and hostlist patterns. Required unless `--rabbit-count` is used.
 - `--rabbit-count` pick N Rabbits at random from the SystemConfiguration. Mutually exclusive with all `--rabbits*` flags.
 
 Optional Lustre overrides (only valid with `--rabbits`):
 
-- `--rabbits-mdt` use these Rabbits for `mdt`/`mgtmdt` allocation sets instead of `--rabbits`
-- `--rabbits-mgt` use these Rabbits for `mgt` allocation sets instead of `--rabbits`
+- `--rabbits-mdt` use these Rabbits for `mdt`/`mgtmdt` allocation sets instead of `--rabbits`; accepts hostlist patterns
+- `--rabbits-mgt` use these Rabbits for `mgt` allocation sets instead of `--rabbits`; accepts hostlist patterns
 
 Use `--profile` to select the `NnfStorageProfile` if the default profile is not desired. For Lustre, the profile drives allocation-set behavior for labels such as `ost`, `mdt`, `mgt`, and `mgtmdt`.
 
@@ -142,6 +166,17 @@ nnf persistent create \
   --capacity 10GiB \
   --profile lustre-storage-profile \
   --rabbits rabbit-node-0 rabbit-node-1
+```
+
+Create persistent storage using a hostlist pattern:
+
+```bash
+nnf persistent create \
+  --name demo-lustre-range \
+  --fs-type lustre \
+  --capacity 10GiB \
+  --profile lustre-storage-profile \
+  --rabbits 'rabbit-node-[0-3]'
 ```
 
 For Lustre, you can optionally direct MDT and MGT allocation sets to specific Rabbits instead of using the default Rabbit list for every allocation set:
@@ -266,7 +301,7 @@ nnf rabbit drain --help
 
 Key flags:
 
-- `NODE` one or more Rabbit node names (positional)
+- `NODE` one or more Rabbit node names or hostlist patterns (positional)
 - `-r`, `--reason` reason for draining the node (default: `none`)
 
 Drain a single node:
@@ -279,6 +314,12 @@ Drain multiple nodes with a reason:
 
 ```bash
 nnf rabbit drain rabbit-node-0 rabbit-node-1 --reason "firmware update"
+```
+
+Drain nodes using a hostlist pattern:
+
+```bash
+nnf rabbit drain 'rzadams[201-208]' --reason "firmware update"
 ```
 
 If the node taint fails after the storage annotation succeeds, the CLI attempts to roll back the annotation. If the rollback also fails, the CLI logs the error and continues to the next node.
@@ -307,13 +348,19 @@ nnf rabbit disable --help
 
 Key flags:
 
-- `NODE` one or more Rabbit node names (positional)
+- `NODE` one or more Rabbit node names or hostlist patterns (positional)
 - `-r`, `--reason` reason for disabling the node (default: `none`)
 
 Disable a node:
 
 ```bash
 nnf rabbit disable rabbit-node-0 --reason "bad disk"
+```
+
+Disable nodes using a hostlist pattern:
+
+```bash
+nnf rabbit disable 'rzadams[201-208]' --reason "maintenance"
 ```
 
 ## rabbit enable
@@ -328,6 +375,12 @@ Enable a node:
 
 ```bash
 nnf rabbit enable rabbit-node-0
+```
+
+Enable nodes using a hostlist pattern:
+
+```bash
+nnf rabbit enable 'rzadams[201,207-208]'
 ```
 
 ## rabbit df

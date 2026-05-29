@@ -33,7 +33,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         "nodes",
         nargs="+",
         metavar="NODE",
-        help="One or more Rabbit node names to disable.",
+        help="One or more Rabbit node names or hostlist patterns to disable (for example rabbit-[0-3]).",
     )
     parser.add_argument(
         "-r",

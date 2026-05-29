@@ -16,7 +16,7 @@ if setuptools_major_version() < 61:
         "python_requires": ">=3.6",
         "package_dir": {"": "src"},
         "packages": find_packages(where="src"),
-        "install_requires": ["kubernetes>=12.0,<24"],
+        "install_requires": ["kubernetes>=12.0,<24", "python-hostlist"],
         "extras_require": {
             "test": [
                 "pytest>=6.2.5,<7.1; python_version < '3.7'",
