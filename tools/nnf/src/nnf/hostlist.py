@@ -47,10 +47,7 @@ def expand_args(values: Optional[List[str]]) -> List[str]:
         return []
     result: List[str] = []
     for v in values:
-        try:
-            result.extend(_hl.expand_hostlist(v))
-        except _hl.BadHostlist as exc:
-            raise BadHostlist(f"invalid hostlist '{v}': {exc}") from exc
+        result.extend(expand(v))
     return result
 
 
