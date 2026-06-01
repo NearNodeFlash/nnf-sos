@@ -20,6 +20,7 @@ from nnf import servers
 from nnf import utils
 from nnf import workflow
 from nnf.commands import add_command_parser, add_workflow_arguments
+from nnf.hostlist import BadHostlist, expand_args
 
 
 LOGGER = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         nargs="+",
         default=None,
         metavar="RABBIT",
-        help="One or more Rabbit node names to allocate storage on (e.g. rabbit-node-0). Required unless --rabbit-count is used.",
+        help="One or more Rabbit node names or hostlist patterns to allocate storage on (for example rabbit-node-[0-3]). Required unless --rabbit-count is used.",
     )
     parser.add_argument(
         "--rabbits-mdt",
@@ -62,7 +63,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         default=None,
         dest="rabbits_mdt",
         metavar="RABBIT",
-        help="Override Rabbit nodes for mdt and mgtmdt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
+        help="Override Rabbit nodes or hostlist patterns for mdt and mgtmdt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
     )
     parser.add_argument(
         "--rabbits-mgt",
@@ -70,7 +71,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         default=None,
         dest="rabbits_mgt",
         metavar="RABBIT",
-        help="Override Rabbit nodes for mgt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
+        help="Override Rabbit nodes or hostlist patterns for mgt allocation sets. Requires --rabbits. Cannot be used with --rabbit-count.",
     )
     parser.add_argument(
         "--rabbit-count",
@@ -94,17 +95,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
     )
     add_workflow_arguments(parser)
     parser.set_defaults(func=run)
-
-
-def _split_nodes(values: Optional[List[str]]) -> List[str]:
-    """Flatten a list of node name arguments, splitting each on commas.
-
-    Allows users to write either ``--rabbits a b c`` or ``--rabbits a,b,c``
-    (or a mix of both).
-    """
-    if values is None:
-        return []
-    return [n.strip() for v in values for n in v.split(",") if n.strip()]
 
 
 def run(args: argparse.Namespace) -> int:
@@ -185,12 +175,20 @@ def run(args: argparse.Namespace) -> int:
         print("error: one of --rabbits or --rabbit-count is required", file=sys.stderr)
         return 1
     else:
-        rabbits = _split_nodes(args.rabbits)
+        try:
+            rabbits = expand_args(args.rabbits)
+        except BadHostlist as exc:
+            print(f"error: --rabbits: {exc}", file=sys.stderr)
+            return 1
         if not rabbits:
             print("error: --rabbits resolved to an empty list after normalization", file=sys.stderr)
             return 1
-        rabbits_mdt = _split_nodes(args.rabbits_mdt) or None
-        rabbits_mgt = _split_nodes(args.rabbits_mgt) or None
+        try:
+            rabbits_mdt = expand_args(args.rabbits_mdt) or None
+            rabbits_mgt = expand_args(args.rabbits_mgt) or None
+        except BadHostlist as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
 
     if args.alloc_count < 1:
         print("error: --alloc-count must be at least 1", file=sys.stderr)

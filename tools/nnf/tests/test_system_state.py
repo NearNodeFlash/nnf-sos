@@ -14,13 +14,13 @@ from nnf.commands.rabbit.state import (
     _build_annotation_rows,
     _build_node_status_rows,
     _build_storage_status_rows,
-    _compress_hostlist,
     _get_all_storages,
     _print_table,
     _run_cmd,
     _show_disabled_computes,
     run,
 )
+from nnf.hostlist import compress as _compress_hostlist
 
 
 def _make_args(**kwargs: object) -> argparse.Namespace:

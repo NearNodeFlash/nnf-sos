@@ -18,6 +18,7 @@ import kubernetes.client.exceptions  # type: ignore[import-untyped]
 from nnf import crd
 from nnf import k8s
 from nnf.commands import add_command_parser
+from nnf.hostlist import compress as _compress_hostlist
 from nnf.table import print_table as _print_table
 
 
@@ -53,55 +54,6 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         help="Report the state of Rabbit storage resources.",
     )
     parser.set_defaults(func=run)
-
-
-def _compress_hostlist(names: List[str]) -> str:
-    """Compress a list of hostnames into bracketed range notation.
-
-    For example: ["rabbit-node-1", "rabbit-node-2", "rabbit-compute-2",
-    "rabbit-compute-3", "rabbit-compute-4", "rabbit-compute-5"]
-    becomes "rabbit-compute-[2-5],rabbit-node-[1-2]".
-
-    Names that don't end in digits are left as-is.
-    """
-    if not names:
-        return ""
-    if len(names) == 1:
-        return names[0]
-
-    # Split each name into (prefix, number).  Names without a numeric
-    # suffix are kept verbatim in the output.
-    groups: Dict[str, List[int]] = {}
-    plain: List[str] = []
-    for name in sorted(names):
-        i = len(name)
-        while i > 0 and name[i - 1].isdigit():
-            i -= 1
-        if i == len(name) or i == 0:
-            plain.append(name)
-        else:
-            prefix = name[:i]
-            groups.setdefault(prefix, []).append(int(name[i:]))
-
-    parts: List[str] = []
-    for prefix in sorted(groups):
-        nums = sorted(groups[prefix])
-        if len(nums) == 1:
-            parts.append(f"{prefix}{nums[0]}")
-            continue
-        ranges: List[str] = []
-        start = end = nums[0]
-        for n in nums[1:]:
-            if n == end + 1:
-                end = n
-            else:
-                ranges.append(str(start) if start == end else f"{start}-{end}")
-                start = end = n
-        ranges.append(str(start) if start == end else f"{start}-{end}")
-        parts.append(f"{prefix}[{','.join(ranges)}]")
-
-    parts.extend(sorted(plain))
-    return ",".join(parts)
 
 
 def _get_all_nnfnodes() -> List[Dict[str, Any]]:
