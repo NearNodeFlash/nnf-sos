@@ -10,6 +10,7 @@ The `nnf` command is intended as a repository-local helper tool, not a standalon
 
 - create a persistent storage instance for testing
 - destroy a persistent storage instance
+- list existing persistent storage instances
 - share or unshare a persistent storage instance across users
 - inspect and drive workflow-based storage operations from a simple CLI
 - drain or undrain Rabbit nodes to control workflow scheduling
@@ -64,6 +65,7 @@ Show command-specific help:
 ```bash
 nnf persistent create --help
 nnf persistent destroy --help
+nnf persistent list --help
 nnf persistent share --help
 nnf persistent unshare --help
 nnf rabbit --help
@@ -252,6 +254,41 @@ Destroy a persistent storage instance:
 ```bash
 nnf persistent destroy --name demo-psi
 ```
+
+## persistent list
+
+List the PersistentStorageInstances in a namespace, along with the Rabbits backing each one.
+
+```bash
+nnf persistent list --help
+```
+
+Key flags:
+
+- `-u`, `--user-id` show only instances owned by this user ID
+- `--namespace` target namespace, default `default`
+
+List all persistent storage instances:
+
+```bash
+nnf persistent list
+```
+
+List only the instances you own:
+
+```bash
+nnf persistent list -u $(id -u)
+```
+
+Example output:
+
+```text
+NAME      USERID  FSTYPE  STATE   SHARED  RABBITS
+demo-psi  1000    lustre  Active  no      rabbit-node-[1-2]
+shared-fs 0       xfs     Active  yes     rabbit-node-1
+```
+
+The `RABBITS` column comes from the Servers resource referenced by `status.servers`; it shows `-` when that resource does not exist yet, which is normal while an instance is still `Creating`. Note that `-u` filters on ownership only, so a shared instance owned by another user is excluded even though you may be able to access it — the `SHARED` column identifies those.
 
 ## persistent share
 
