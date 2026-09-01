@@ -15,6 +15,7 @@ def _make_args(**kwargs: object) -> argparse.Namespace:
     defaults: Dict[str, object] = {
         "namespace": "default",
         "user_id": None,
+        "wide": False,
     }
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)
@@ -43,14 +44,19 @@ def _psi(
 
 
 def _servers(name: str, rabbits: List[str]) -> Dict[str, Any]:
+    return _servers_sets(name, [("ost", rabbits)])
+
+
+def _servers_sets(name: str, sets: List[Any]) -> Dict[str, Any]:
     return {
         "metadata": {"name": name},
         "spec": {
             "allocationSets": [
                 {
-                    "label": "ost",
+                    "label": label,
                     "storage": [{"name": r, "allocationCount": 1} for r in rabbits],
                 }
+                for label, rabbits in sets
             ]
         },
     }
@@ -130,6 +136,61 @@ def test_run_missing_servers_resource(
     mock_list.side_effect = _list_objects([_psi("demo")], [])
     assert run(_make_args()) == 0
     assert "demo" in capsys.readouterr().out
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_wide_breaks_out_allocation_sets(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("demo")],
+        [
+            _servers_sets(
+                "demo",
+                [
+                    ("ost", ["rabbit-node-1", "rabbit-node-2"]),
+                    ("mgtmdt", ["rabbit-node-1"]),
+                ],
+            )
+        ],
+    )
+    assert run(_make_args(wide=True)) == 0
+    out = capsys.readouterr().out
+    assert "ost:rabbit-node-[1-2] mgtmdt:rabbit-node-1" in out
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_narrow_merges_allocation_sets(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("demo")],
+        [
+            _servers_sets(
+                "demo",
+                [
+                    ("ost", ["rabbit-node-1", "rabbit-node-2"]),
+                    ("mgtmdt", ["rabbit-node-1"]),
+                ],
+            )
+        ],
+    )
+    assert run(_make_args()) == 0
+    out = capsys.readouterr().out
+    assert "rabbit-node-[1-2]" in out
+    assert "ost:" not in out
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_wide_skips_empty_allocation_sets(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("demo")], [_servers_sets("demo", [("ost", [])])]
+    )
+    assert run(_make_args(wide=True)) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[1].split()[5] == "-"
 
 
 @patch("nnf.commands.persistent.list.k8s.list_objects")

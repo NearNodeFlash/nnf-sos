@@ -44,6 +44,12 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         default="default",
         help="Kubernetes namespace (default: default).",
     )
+    parser.add_argument(
+        "-w",
+        "--wide",
+        action="store_true",
+        help="Break the RABBITS column down by allocation set label.",
+    )
     parser.set_defaults(func=run)
 
 
@@ -56,15 +62,27 @@ def _servers_name(psi: Dict[str, Any], namespace: str) -> Optional[str]:
     return str(name)
 
 
-def _rabbits(servers: Dict[str, Any]) -> str:
-    """Return the Rabbits used by a Servers resource in compressed hostlist form."""
-    names = set()
+def _allocation_sets(servers: Dict[str, Any]) -> List[Tuple[str, List[str]]]:
+    """Return (label, Rabbit names) for each allocation set, in spec order."""
+    sets: List[Tuple[str, List[str]]] = []
     for alloc_set in servers.get("spec", {}).get("allocationSets", []):
-        for storage in alloc_set.get("storage", []):
-            name = storage.get("name")
-            if name:
-                names.add(name)
-    return hostlist.compress(sorted(names))
+        names = {s["name"] for s in alloc_set.get("storage", []) if s.get("name")}
+        if names:
+            sets.append((str(alloc_set.get("label", _EMPTY)), sorted(names)))
+    return sets
+
+
+def _rabbits(servers: Dict[str, Any], wide: bool) -> str:
+    """Return the Rabbits used by a Servers resource in compressed hostlist form.
+
+    When *wide*, each allocation set is listed separately as ``label:rabbits``;
+    otherwise the sets are merged into a single hostlist.
+    """
+    sets = _allocation_sets(servers)
+    if wide:
+        return " ".join(f"{label}:{hostlist.compress(names)}" for label, names in sets)
+    merged = sorted({name for _, names in sets for name in names})
+    return hostlist.compress(merged)
 
 
 def _is_shared(psi: Dict[str, Any]) -> bool:
@@ -77,13 +95,14 @@ def _build_row(
     psi: Dict[str, Any],
     servers_by_name: Dict[str, Dict[str, Any]],
     namespace: str,
+    wide: bool,
 ) -> Tuple[str, ...]:
     """Build a single table row for a PersistentStorageInstance."""
     spec = psi.get("spec", {})
     user_id = spec.get("userID")
     name = _servers_name(psi, namespace)
     servers = servers_by_name.get(name) if name else None
-    rabbits = _rabbits(servers) if servers else ""
+    rabbits = _rabbits(servers, wide) if servers else ""
     return (
         str(psi["metadata"]["name"]),
         str(user_id) if user_id is not None else _EMPTY,
@@ -129,7 +148,7 @@ def run(args: argparse.Namespace) -> int:
         psis = [p for p in psis if p.get("spec", {}).get("userID") == args.user_id]
 
     rows: List[Tuple[str, ...]] = [
-        _build_row(psi, servers_by_name, args.namespace)
+        _build_row(psi, servers_by_name, args.namespace, args.wide)
         for psi in sorted(psis, key=lambda p: str(p["metadata"]["name"]))
     ]
 
