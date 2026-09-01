@@ -22,7 +22,7 @@ require (
 	go.openly.dev/pointy v1.3.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.1
 	k8s.io/client-go v0.28.1
@@ -80,13 +80,13 @@ require (
 	go.chromium.org/luci v0.0.0-20230227223707-c4460eb434d8 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
