@@ -23,6 +23,9 @@ _HEADERS = ("NAME", "USERID", "FSTYPE", "STATE", "SHARED", "RABBITS")
 # Placeholder for a field the resource does not carry yet.
 _EMPTY = "-"
 
+# Placeholder for an allocation set that carries no label.
+_UNLABELED = "unlabeled"
+
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     """Register the persistent list sub-command."""
@@ -68,7 +71,7 @@ def _allocation_sets(servers: Dict[str, Any]) -> List[Tuple[str, List[str]]]:
     for alloc_set in servers.get("spec", {}).get("allocationSets", []):
         names = {s["name"] for s in alloc_set.get("storage", []) if s.get("name")}
         if names:
-            sets.append((str(alloc_set.get("label", _EMPTY)), sorted(names)))
+            sets.append((str(alloc_set.get("label") or _UNLABELED), sorted(names)))
     return sets
 
 
@@ -86,9 +89,14 @@ def _rabbits(servers: Dict[str, Any], wide: bool) -> str:
 
 
 def _is_shared(psi: Dict[str, Any]) -> bool:
-    """Return True if the PSI carries the ignore-uid annotation."""
+    """Return True if the PSI carries the ignore-uid annotation.
+
+    Matched case-insensitively to agree with the workflow controller's
+    ``strings.EqualFold`` check in ``persistentStorageIgnoresUID``.
+    """
     annotations = psi.get("metadata", {}).get("annotations") or {}
-    return annotations.get(crd.DWS_IGNORE_UID_ANNOTATION) == "true"
+    value = annotations.get(crd.DWS_IGNORE_UID_ANNOTATION)
+    return value is not None and str(value).lower() == "true"
 
 
 def _build_row(

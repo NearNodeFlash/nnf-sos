@@ -1,7 +1,7 @@
 """Tests for the persistent list sub-command."""
 
 import argparse
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 from unittest.mock import MagicMock, patch
 
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
@@ -27,18 +27,23 @@ def _psi(
     fs_type: str = "lustre",
     state: str = "Active",
     servers_name: str = "",
-    servers_namespace: str = "default",
-    shared: bool = False,
+    servers_namespace: Optional[str] = "default",
+    shared: Union[bool, str] = False,
 ) -> Dict[str, Any]:
+    """Build a PSI. *servers_namespace* of None omits the key from the ref."""
     metadata: Dict[str, Any] = {"name": name}
     if shared:
-        metadata["annotations"] = {crd.DWS_IGNORE_UID_ANNOTATION: "true"}
+        value = shared if isinstance(shared, str) else "true"
+        metadata["annotations"] = {crd.DWS_IGNORE_UID_ANNOTATION: value}
+    servers_ref: Dict[str, Any] = {"name": servers_name or name}
+    if servers_namespace is not None:
+        servers_ref["namespace"] = servers_namespace
     return {
         "metadata": metadata,
         "spec": {"userID": user_id, "fsType": fs_type},
         "status": {
             "state": state,
-            "servers": {"name": servers_name or name, "namespace": servers_namespace},
+            "servers": servers_ref,
         },
     }
 
@@ -107,6 +112,17 @@ def test_run_filters_by_user_id(mock_list: MagicMock, capsys: pytest.CaptureFixt
 
 
 @patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_filters_by_user_id_zero(mock_list: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("root-owned", user_id=0), _psi("user-owned", user_id=1000)], []
+    )
+    assert run(_make_args(user_id=0)) == 0
+    out = capsys.readouterr().out
+    assert "root-owned" in out
+    assert "user-owned" not in out
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
 def test_run_reports_shared(mock_list: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
     mock_list.side_effect = _list_objects(
         [_psi("open", shared=True), _psi("closed")], []
@@ -115,6 +131,28 @@ def test_run_reports_shared(mock_list: MagicMock, capsys: pytest.CaptureFixture[
     lines = capsys.readouterr().out.splitlines()
     assert lines[1].split()[4] == "no"  # closed
     assert lines[2].split()[4] == "yes"  # open
+
+
+@pytest.mark.parametrize("annotation", ["true", "True", "TRUE"])
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_reports_shared_case_insensitively(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str], annotation: str
+) -> None:
+    # The workflow controller matches this annotation with strings.EqualFold.
+    mock_list.side_effect = _list_objects([_psi("open", shared=annotation)], [])
+    assert run(_make_args()) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[1].split()[4] == "yes"
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_does_not_report_shared_for_other_values(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects([_psi("closed", shared="false")], [])
+    assert run(_make_args()) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[1].split()[4] == "no"
 
 
 @patch("nnf.commands.persistent.list.k8s.list_objects")
@@ -127,6 +165,18 @@ def test_run_ignores_servers_in_other_namespace(
     )
     assert run(_make_args()) == 0
     assert "rabbit-node-1" not in capsys.readouterr().out
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_servers_ref_without_namespace_defaults_to_requested(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("demo", servers_namespace=None)],
+        [_servers("demo", ["rabbit-node-1"])],
+    )
+    assert run(_make_args()) == 0
+    assert "rabbit-node-1" in capsys.readouterr().out
 
 
 @patch("nnf.commands.persistent.list.k8s.list_objects")
@@ -191,6 +241,23 @@ def test_run_wide_skips_empty_allocation_sets(
     assert run(_make_args(wide=True)) == 0
     lines = capsys.readouterr().out.splitlines()
     assert lines[1].split()[5] == "-"
+
+
+@patch("nnf.commands.persistent.list.k8s.list_objects")
+def test_run_wide_marks_unlabeled_allocation_set(
+    mock_list: MagicMock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mock_list.side_effect = _list_objects(
+        [_psi("demo")],
+        [
+            {
+                "metadata": {"name": "demo"},
+                "spec": {"allocationSets": [{"storage": [{"name": "rabbit-node-3"}]}]},
+            }
+        ],
+    )
+    assert run(_make_args(wide=True)) == 0
+    assert "unlabeled:rabbit-node-3" in capsys.readouterr().out
 
 
 @patch("nnf.commands.persistent.list.k8s.list_objects")

@@ -284,9 +284,9 @@ nnf persistent list -u $(id -u)
 Example output:
 
 ```text
-NAME      USERID  FSTYPE  STATE   SHARED  RABBITS
-demo-psi  1000    lustre  Active  no      rabbit-node-[1-2]
-shared-fs 0       xfs     Active  yes     rabbit-node-1
+NAME       USERID  FSTYPE  STATE   SHARED  RABBITS
+demo-psi   1000    lustre  Active  no      rabbit-node-[1-2]
+shared-fs  0       xfs     Active  yes     rabbit-node-1
 ```
 
 By default the `RABBITS` column merges every allocation set into one hostlist. Use `--wide` to see which Rabbits hold each allocation set, which matters for Lustre where the MGT, MDT, and OSTs can land on different Rabbits:
@@ -296,9 +296,9 @@ nnf persistent list --wide
 ```
 
 ```text
-NAME      USERID  FSTYPE  STATE   SHARED  RABBITS
-demo-psi  1000    lustre  Active  no      ost:rabbit-node-[1-2] mgtmdt:rabbit-node-1
-shared-fs 0       xfs     Active  yes     xfs:rabbit-node-1
+NAME       USERID  FSTYPE  STATE   SHARED  RABBITS
+demo-psi   1000    lustre  Active  no      ost:rabbit-node-[1-2] mgtmdt:rabbit-node-1
+shared-fs  0       xfs     Active  yes     xfs:rabbit-node-1
 ```
 
 The `RABBITS` column comes from the Servers resource referenced by `status.servers`; it shows `-` when that resource does not exist yet, which is normal while an instance is still `Creating`. Note that `-u` filters on ownership only, so a shared instance owned by another user is excluded even though you may be able to access it — the `SHARED` column identifies those.
