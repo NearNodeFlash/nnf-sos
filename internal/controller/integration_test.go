@@ -1335,6 +1335,244 @@ var _ = Describe("Integration Test", func() {
 
 	})
 
+	// A compute whose namespace matches neither ClientMount controller's test filter never
+	// gets a ClientMount status written for it, so the test stands in for its clientmountd.
+	// That gives a compute that can be held in any state, including "never answers".
+	Describe("Test PostRun with a compute that cannot unmount", func() {
+		const stuckCompute = "stuck-compute"
+
+		computesAccess := func(index int) *nnfv1alpha11.NnfAccess {
+			return &nnfv1alpha11.NnfAccess{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      indexedResourceName(workflow, index) + "-computes",
+					Namespace: workflow.Namespace,
+				},
+			}
+		}
+
+		// setStuckClientMountStatus waits for the NnfAccess controller to request the given
+		// state on the stuck compute's ClientMount, then writes the status a clientmountd would.
+		setStuckClientMountStatus := func(index int, state dwsv1alpha7.ClientMountState, ready bool, resourceErr *dwsv1alpha7.ResourceErrorInfo) {
+			clientMount := &dwsv1alpha7.ClientMount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clientMountName(computesAccess(index)),
+					Namespace: stuckCompute,
+				},
+			}
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
+				g.Expect(clientMount.Spec.DesiredState).To(Equal(state))
+
+				clientMount.Status.Mounts = make([]dwsv1alpha7.ClientMountInfoStatus, len(clientMount.Spec.Mounts))
+				for i := range clientMount.Status.Mounts {
+					clientMount.Status.Mounts[i].State = state
+					clientMount.Status.Mounts[i].Ready = ready
+				}
+				clientMount.Status.AllReady = ready
+				clientMount.Status.Error = resourceErr
+				g.Expect(k8sClient.Status().Update(context.TODO(), clientMount)).To(Succeed())
+			}).Should(Succeed(), "ClientMount for index %d on %s", index, stuckCompute)
+		}
+
+		findDriverStatus := func(w *dwsv1alpha7.Workflow, index int) *dwsv1alpha7.WorkflowDriverStatus {
+			for i := range w.Status.Drivers {
+				driver := &w.Status.Drivers[i]
+				if driver.DriverID == os.Getenv("DWS_DRIVER_ID") && driver.WatchState == w.Status.State && driver.DWDIndex == index {
+					return driver
+				}
+			}
+			return nil
+		}
+
+		waitForWorkflowReady := func() {
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.Ready
+			}).Should(BeTrue())
+		}
+
+		BeforeEach(func() {
+			By("Replacing one compute on the first Rabbit with the stuck compute")
+			config := &dwsv1alpha7.SystemConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default",
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(config), config)).To(Succeed())
+				config.Spec.StorageNodes[0].ComputesAccess[0].Name = stuckCompute
+				g.Expect(k8sClient.Update(context.TODO(), config)).To(Succeed())
+			}).Should(Succeed())
+
+			// The NnfNode controller's SystemConfiguration watch only enqueues the NnfNode named by
+			// NNF_NODE_NAME, which is not one of the test Rabbits. Touch the Rabbit's NnfNode so it
+			// re-reads the configuration.
+			nnfNode := &nnfv1alpha11.NnfNode{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NnfNlcResourceName,
+					Namespace: nodeNames[0],
+				},
+			}
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNode), nnfNode)).To(Succeed())
+				if nnfNode.Annotations == nil {
+					nnfNode.Annotations = map[string]string{}
+				}
+				nnfNode.Annotations["test.nnf.cray.hpe.com/reconcile"] = uuid.NewString()
+				g.Expect(k8sClient.Update(context.TODO(), nnfNode)).To(Succeed())
+			}).Should(Succeed())
+
+			storage := &dwsv1alpha7.Storage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nodeNames[0],
+					Namespace: corev1.NamespaceDefault,
+				},
+			}
+			Eventually(func(g Gomega) []string {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+				names := []string{}
+				for _, compute := range storage.Status.Access.Computes {
+					names = append(names, compute.Name)
+				}
+				return names
+			}).Should(ContainElement(stuckCompute))
+
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), types.NamespacedName{Name: stuckCompute}, &corev1.Namespace{})
+			}).Should(Succeed())
+
+			By("Creating a workflow with two file systems")
+			workflow = &dwsv1alpha7.Workflow{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("stuck-unmount-%s", uuid.NewString()[0:8]),
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: dwsv1alpha7.WorkflowSpec{
+					DesiredState: dwsv1alpha7.StateProposal,
+					JobID:        intstr.FromString("a job id"),
+					WLMID:        "Test WLMID",
+					DWDirectives: []string{
+						"#DW jobdw name=stuck-0 type=xfs capacity=1GiB",
+						"#DW jobdw name=stuck-1 type=xfs capacity=1GiB",
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), workflow)).To(Succeed())
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.State == dwsv1alpha7.StateProposal && workflow.Status.Ready
+			}).Should(BeTrue())
+
+			By("Assigning storage")
+			for _, dbdRef := range workflow.Status.DirectiveBreakdowns {
+				dbd := &dwsv1alpha7.DirectiveBreakdown{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbdRef.Name, Namespace: dbdRef.Namespace}, dbd)).To(Succeed())
+				Expect(dbd.Status.Storage.AllocationSets).To(HaveLen(1))
+				allocSet := &dbd.Status.Storage.AllocationSets[0]
+
+				servers := &dwsv1alpha7.Servers{}
+				Expect(k8sClient.Get(context.TODO(), types.NamespacedName{Name: dbd.Status.Storage.Reference.Name, Namespace: dbd.Status.Storage.Reference.Namespace}, servers)).To(Succeed())
+
+				storage := make([]dwsv1alpha7.ServersSpecStorage, 0, len(nodeNames))
+				for _, nodeName := range nodeNames {
+					storage = append(storage, dwsv1alpha7.ServersSpecStorage{
+						AllocationCount: 1,
+						Name:            nodeName,
+					})
+				}
+				servers.Spec.AllocationSets = []dwsv1alpha7.ServersSpecAllocationSet{
+					{
+						AllocationSize: allocSet.MinimumCapacity,
+						Label:          allocSet.Label,
+						Storage:        storage,
+					},
+				}
+				Expect(k8sClient.Update(context.TODO(), servers)).To(Succeed())
+			}
+
+			By("Assigning computes, one per Rabbit, with the stuck compute on the first")
+			computes := &dwsv1alpha7.Computes{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workflow.Status.Computes.Name,
+					Namespace: workflow.Status.Computes.Namespace,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)).To(Succeed())
+			computes.Data = []dwsv1alpha7.ComputesData{{Name: stuckCompute}}
+			for idx := 1; idx < len(nodeNames); idx++ {
+				computes.Data = append(computes.Data, dwsv1alpha7.ComputesData{Name: fmt.Sprintf("compute%d", idx*16)})
+			}
+			Expect(k8sClient.Update(context.TODO(), computes)).To(Succeed())
+
+			advanceStateAndCheckReady(dwsv1alpha7.StateSetup, workflow)
+			advanceStateAndCheckReady(dwsv1alpha7.StateDataIn, workflow)
+
+			By("Advancing to PreRun and mounting on the stuck compute by hand")
+			advanceState(dwsv1alpha7.StatePreRun, workflow, 1)
+			for index := range workflow.Spec.DWDirectives {
+				setStuckClientMountStatus(index, dwsv1alpha7.ClientMountStateMounted, true, nil)
+			}
+			waitForWorkflowReady()
+		})
+
+		AfterEach(func() {
+			advanceStateAndCheckReady(dwsv1alpha7.StateTeardown, workflow)
+		})
+
+		It("Requests the compute unmount for every directive before waiting on any of them", func() {
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+
+			By("Checking that every compute NnfAccess is asked to unmount while the first is stuck")
+			for index := range workflow.Spec.DWDirectives {
+				access := computesAccess(index)
+				Eventually(func(g Gomega) string {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+					return access.Spec.DesiredState
+				}).Should(Equal("unmounted"), "NnfAccess for index %d", index)
+			}
+
+			By("Checking the workflow is still waiting on the stuck compute")
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+			Expect(workflow.Status.Ready).To(BeFalse())
+
+			By("Letting the stuck compute finish its unmounts")
+			for index := range workflow.Spec.DWDirectives {
+				setStuckClientMountStatus(index, dwsv1alpha7.ClientMountStateUnmounted, true, nil)
+			}
+			waitForWorkflowReady()
+		})
+
+		It("Reports a compute unmount error to the workflow", func() {
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+
+			By("Failing the unmount on the stuck compute for the first directive")
+			setStuckClientMountStatus(0, dwsv1alpha7.ClientMountStateUnmounted, false, dwsv1alpha7.NewResourceError("unable to unmount file system").WithMajor())
+
+			By("Checking the workflow driver status names the compute")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				driver := findDriverStatus(workflow, 0)
+				g.Expect(driver).ToNot(BeNil())
+				g.Expect(driver.Status).To(Equal(dwsv1alpha7.StatusTransientCondition))
+				g.Expect(driver.Error).To(ContainSubstring(stuckCompute))
+			}).Should(Succeed())
+
+			By("Checking the second directive's unmount was still requested")
+			access := computesAccess(1)
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+			Expect(access.Spec.DesiredState).To(Equal("unmounted"))
+
+			By("Clearing the error and letting the unmounts finish")
+			for index := range workflow.Spec.DWDirectives {
+				setStuckClientMountStatus(index, dwsv1alpha7.ClientMountStateUnmounted, true, nil)
+			}
+			waitForWorkflowReady()
+		})
+	})
+
 	Describe("Test with container directives", func() {
 		var (
 			containerProfile *nnfv1alpha11.NnfContainerProfile
