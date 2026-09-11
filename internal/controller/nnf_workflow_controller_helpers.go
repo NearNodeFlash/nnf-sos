@@ -1324,13 +1324,19 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 		return result, err
 	}
 
+	// Until the access controller resets status for the new desiredState, status.error
+	// is left over from the mounted phase and is not an unmount error.
+	if access.Status.State != "unmounted" {
+		return Requeue("pending unmount").withObject(access), nil
+	}
+
 	if access.Status.Error != nil {
 		handleWorkflowErrorByIndex(access.Status.Error, workflow, index)
 
 		return Requeue("mount/unmount error").withObject(access), nil
 	}
 
-	if access.Status.State != "unmounted" || !access.Status.Ready {
+	if !access.Status.Ready {
 		return Requeue("pending unmount").withObject(access), nil
 	}
 

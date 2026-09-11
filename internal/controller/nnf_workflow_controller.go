@@ -1115,7 +1115,7 @@ func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow
 		return r.checkContainersResults(ctx, workflow, index)
 	}
 
-	// Wait for the compute unmount requested in startPostRunState()
+	// Wait for the compute unmount requested in startPostRunState().
 	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "computes"); result != nil || err != nil {
 		if err != nil {
 			return nil, dwsv1alpha7.NewResourceError("could not unmount compute NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on compute nodes")
