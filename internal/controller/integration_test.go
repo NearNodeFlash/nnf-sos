@@ -1571,6 +1571,45 @@ var _ = Describe("Integration Test", func() {
 			}
 			waitForWorkflowReady()
 		})
+
+		// The workflow controller only trusts NnfAccess status.error once status.state matches
+		// the requested desiredState, so the access controller must reset status before any
+		// lookup that can fail. A lookup failure recorded against the old state would never be
+		// surfaced.
+		It("Records an NnfAccess lookup failure against the new desired state", func() {
+			access := computesAccess(0)
+			var clientReference corev1.ObjectReference
+
+			By("Breaking the Computes reference and requesting the unmount in one update")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				clientReference = access.Spec.ClientReference
+				access.Spec.ClientReference.Name = "does-not-exist"
+				access.Spec.DesiredState = "unmounted"
+				g.Expect(k8sClient.Update(context.TODO(), access)).To(Succeed())
+			}).Should(Succeed())
+
+			By("Checking the error is recorded with the new state")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				g.Expect(access.Status.State).To(Equal("unmounted"))
+				g.Expect(access.Status.Error).ToNot(BeNil())
+			}).Should(Succeed())
+
+			By("Restoring the reference and letting the unmount finish")
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				access.Spec.ClientReference = clientReference
+				g.Expect(k8sClient.Update(context.TODO(), access)).To(Succeed())
+			}).Should(Succeed())
+			setStuckClientMountStatus(0, dwsv1alpha7.ClientMountStateUnmounted, true, nil)
+
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				g.Expect(access.Status.Ready).To(BeTrue())
+				g.Expect(access.Status.Error).To(BeNil())
+			}).Should(Succeed())
+		})
 	})
 
 	Describe("Test with container directives", func() {
