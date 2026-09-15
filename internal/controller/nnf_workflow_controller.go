@@ -670,7 +670,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				return nil, dwsv1alpha7.NewResourceError("could not get NnfAccess %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not create data movement mount points")
 			}
 
-			if access.Status.State != "mounted" || !access.Status.Ready {
+			if access.Status.State != nnfv1alpha11.NnfAccessStateMounted || !access.Status.Ready {
 				return Requeue("pending mount").withObject(access), nil
 			}
 		}
@@ -925,7 +925,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			addJobIDLabel(access, workflow.Spec.JobID.String())
 
 			access.Spec.TeardownState = dwsv1alpha7.StatePostRun
-			access.Spec.DesiredState = "mounted"
+			access.Spec.DesiredState = nnfv1alpha11.NnfAccessStateMounted
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"

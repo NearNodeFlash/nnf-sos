@@ -903,7 +903,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 			nnfv1alpha11.AddDataMovementTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha11.NnfAccessSpec{
-				DesiredState:     "mounted",
+				DesiredState:     nnfv1alpha11.NnfAccessStateMounted,
 				TeardownState:    teardownState,
 				Target:           "all",
 				UserID:           workflow.Spec.UserID,
@@ -1302,16 +1302,17 @@ func (r *NnfWorkflowReconciler) requestNnfAccessUnmount(ctx context.Context, wor
 		return nil, nil, nil
 	}
 
-	if access.Spec.DesiredState != "unmounted" {
-		access.Spec.DesiredState = "unmounted"
+	if access.Spec.DesiredState == nnfv1alpha11.NnfAccessStateUnmounted {
+		return access, nil, nil
+	}
 
-		if err := r.Update(ctx, access); err != nil {
-			if !apierrors.IsConflict(err) {
-				return nil, nil, dwsv1alpha7.NewResourceError("could not update NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
-			}
-
-			return nil, Requeue("conflict").withObject(access), nil
+	access.Spec.DesiredState = nnfv1alpha11.NnfAccessStateUnmounted
+	if err := r.Update(ctx, access); err != nil {
+		if !apierrors.IsConflict(err) {
+			return nil, nil, dwsv1alpha7.NewResourceError("could not update NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 		}
+
+		return nil, Requeue("conflict").withObject(access), nil
 	}
 
 	return access, nil, nil
@@ -1326,7 +1327,7 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 
 	// Until the access controller resets status for the new desiredState, status.error
 	// is left over from the mounted phase and is not an unmount error.
-	if access.Status.State != "unmounted" {
+	if access.Status.State != nnfv1alpha11.NnfAccessStateUnmounted {
 		return Requeue("pending unmount").withObject(access), nil
 	}
 
@@ -1377,7 +1378,7 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessMounted(ctx context.Context, wor
 			return Requeue("mount/unmount error").withObject(access), nil
 		}
 
-		if access.Status.State != "mounted" || !access.Status.Ready {
+		if access.Status.State != nnfv1alpha11.NnfAccessStateMounted || !access.Status.Ready {
 			return Requeue("pending mount").withObject(access), nil
 		}
 	}

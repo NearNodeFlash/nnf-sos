@@ -27,6 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Values for NnfAccessSpec.DesiredState and NnfAccessStatus.State
+const (
+	NnfAccessStateMounted   = "mounted"
+	NnfAccessStateUnmounted = "unmounted"
+)
+
 // NnfAccessSpec defines the desired state of NnfAccess
 type NnfAccessSpec struct {
 	// DesiredState is the desired state for the mounts on the client
