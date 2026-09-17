@@ -97,8 +97,9 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
 	// Reset the status block if the desired state has changed. This runs before any lookup
-	// that can fail, so an error recorded on the access always belongs to the current
-	// desired state; the workflow controller relies on that when it reads status.error.
+	// that can fail, so an error the controller records from its own lookups belongs to the
+	// current desired state. Errors copied from ClientMount and NnfNodeBlockStorage children
+	// can still predate it until those children process the new spec.
 	if access.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(access, finalizerNnfAccess) && access.Spec.DesiredState != access.Status.State {
 		access.Status.State = access.Spec.DesiredState
 		access.Status.Ready = false
