@@ -903,7 +903,7 @@ func (r *NnfWorkflowReconciler) setupNnfAccessForServers(ctx context.Context, st
 			nnfv1alpha11.AddDataMovementTeardownStateLabel(access, teardownState)
 
 			access.Spec = nnfv1alpha11.NnfAccessSpec{
-				DesiredState:     "mounted",
+				DesiredState:     nnfv1alpha11.NnfAccessStateMounted,
 				TeardownState:    teardownState,
 				Target:           "all",
 				UserID:           workflow.Spec.UserID,
@@ -1275,7 +1275,10 @@ func getTargetDirectiveIndexLabel(object metav1.Object) string {
 	return labels[nnfv1alpha11.TargetDirectiveIndexLabel]
 }
 
-func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int, accessSuffix string) (*result, error) {
+// requestNnfAccessUnmount sets spec.desiredState to "unmounted" on the NnfAccess for this
+// workflow-index and suffix, without waiting for the unmount to complete. The returned
+// NnfAccess is nil when there is nothing to unmount in the current workflow state.
+func (r *NnfWorkflowReconciler) requestNnfAccessUnmount(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int, accessSuffix string) (*nnfv1alpha11.NnfAccess, *result, error) {
 	if !(accessSuffix == "computes" || accessSuffix == "servers") {
 		panic(fmt.Sprint("unhandled NnfAccess suffix", accessSuffix))
 	}
@@ -1291,33 +1294,58 @@ func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context,
 	// find it in the cache and it really does exist, we'll eventually get an event from the API server and
 	// do the unmount then.
 	if err := r.Get(ctx, client.ObjectKeyFromObject(access), access); err != nil {
-		return nil, client.IgnoreNotFound(err)
+		return nil, nil, client.IgnoreNotFound(err)
 	}
 
 	teardownState, found := access.Labels[nnfv1alpha11.DataMovementTeardownStateLabel]
-	if !found || dwsv1alpha7.WorkflowState(teardownState) == workflow.Status.State {
-		if access.Spec.DesiredState != "unmounted" {
-			access.Spec.DesiredState = "unmounted"
+	if found && dwsv1alpha7.WorkflowState(teardownState) != workflow.Status.State {
+		return nil, nil, nil
+	}
 
-			if err := r.Update(ctx, access); err != nil {
-				if !apierrors.IsConflict(err) {
-					return nil, dwsv1alpha7.NewResourceError("could not update NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
-				}
+	if access.Spec.DesiredState == nnfv1alpha11.NnfAccessStateUnmounted {
+		return access, nil, nil
+	}
 
-				return Requeue("conflict").withObject(access), nil
-			}
+	access.Spec.DesiredState = nnfv1alpha11.NnfAccessStateUnmounted
+	if err := r.Update(ctx, access); err != nil {
+		if !apierrors.IsConflict(err) {
+			return nil, nil, dwsv1alpha7.NewResourceError("could not update NnfAccess: %v", client.ObjectKeyFromObject(access)).WithError(err)
 		}
 
-		if access.Status.State != "unmounted" || !access.Status.Ready {
-			return Requeue("pending unmount").withObject(access), nil
-		}
+		return nil, Requeue("conflict").withObject(access), nil
+	}
+
+	return access, nil, nil
+}
+
+// unmountNnfAccessIfNecessary requests the unmount and then waits for it to complete.
+func (r *NnfWorkflowReconciler) unmountNnfAccessIfNecessary(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int, accessSuffix string) (*result, error) {
+	access, result, err := r.requestNnfAccessUnmount(ctx, workflow, index, accessSuffix)
+	if result != nil || err != nil || access == nil {
+		return result, err
+	}
+
+	// Until the access controller resets status for the new desiredState, status.error
+	// is left over from the mounted phase and is not an unmount error.
+	if access.Status.State != nnfv1alpha11.NnfAccessStateUnmounted {
+		return Requeue("pending unmount").withObject(access), nil
+	}
+
+	if access.Status.Error != nil {
+		handleWorkflowErrorByIndex(access.Status.Error, workflow, index)
+
+		return Requeue("mount/unmount error").withObject(access), nil
+	}
+
+	if !access.Status.Ready {
+		return Requeue("pending unmount").withObject(access), nil
 	}
 
 	return nil, nil
 }
 
-// Wait on the NnfAccesses for this workflow-index to reach the provided state.
-func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int, state string) (*result, error) {
+// Wait on the NnfAccesses for this workflow-index to be mounted and ready.
+func (r *NnfWorkflowReconciler) waitForNnfAccessMounted(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
 
 	accessSuffixes := []string{"-computes"}
 
@@ -1350,20 +1378,8 @@ func (r *NnfWorkflowReconciler) waitForNnfAccessStateAndReady(ctx context.Contex
 			return Requeue("mount/unmount error").withObject(access), nil
 		}
 
-		if state == "mounted" {
-			// When mounting, we must always go ready regardless of workflow state
-			if access.Status.State != "mounted" || !access.Status.Ready {
-				return Requeue("pending mount").withObject(access), nil
-			}
-		} else {
-			// When unmounting, we are conditionally dependent on the workflow state matching the
-			// state of the teardown label, if found.
-			teardownState, found := access.Labels[nnfv1alpha11.DataMovementTeardownStateLabel]
-			if !found || dwsv1alpha7.WorkflowState(teardownState) == workflow.Status.State {
-				if access.Status.State != "unmounted" || !access.Status.Ready {
-					return Requeue("pending unmount").withObject(access), nil
-				}
-			}
+		if access.Status.State != nnfv1alpha11.NnfAccessStateMounted || !access.Status.Ready {
+			return Requeue("pending mount").withObject(access), nil
 		}
 	}
 

@@ -96,6 +96,18 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	defer func() { err = statusUpdater.CloseWithStatusUpdate(ctx, r.Client.Status(), err) }()
 	defer func() { access.Status.SetResourceErrorAndLog(err, log) }()
 
+	// Reset the status block if the desired state has changed. This runs before any lookup
+	// that can fail, so an error the controller records from its own lookups belongs to the
+	// current desired state. Errors copied from ClientMount and NnfNodeBlockStorage children
+	// can still predate it until those children process the new spec.
+	if access.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(access, finalizerNnfAccess) && access.Spec.DesiredState != access.Status.State {
+		access.Status.State = access.Spec.DesiredState
+		access.Status.Ready = false
+		access.Status.Error = nil
+
+		return ctrl.Result{Requeue: true}, nil
+	}
+
 	// Create a list of names of the client nodes. This is pulled from either
 	// the Computes resource specified in the ClientReference or the NnfStorage
 	// resource when no ClientReference is provided. These correspond to mounting
@@ -166,15 +178,6 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		return ctrl.Result{}, nil
-	}
-
-	// Reset the status block if the desired state has changed
-	if access.Spec.DesiredState != access.Status.State {
-		access.Status.State = access.Spec.DesiredState
-		access.Status.Ready = false
-		access.Status.Error = nil
-
-		return ctrl.Result{Requeue: true}, nil
 	}
 
 	var result *ctrl.Result = nil
