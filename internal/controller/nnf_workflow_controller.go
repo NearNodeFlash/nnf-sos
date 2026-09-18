@@ -670,7 +670,7 @@ func (r *NnfWorkflowReconciler) startDataInOutState(ctx context.Context, workflo
 				return nil, dwsv1alpha7.NewResourceError("could not get NnfAccess %v", client.ObjectKeyFromObject(access)).WithError(err).WithUserMessage("could not create data movement mount points")
 			}
 
-			if access.Status.State != "mounted" || !access.Status.Ready {
+			if access.Status.State != nnfv1alpha11.NnfAccessStateMounted || !access.Status.Ready {
 				return Requeue("pending mount").withObject(access), nil
 			}
 		}
@@ -925,7 +925,7 @@ func (r *NnfWorkflowReconciler) startPreRunState(ctx context.Context, workflow *
 			addJobIDLabel(access, workflow.Spec.JobID.String())
 
 			access.Spec.TeardownState = dwsv1alpha7.StatePostRun
-			access.Spec.DesiredState = "mounted"
+			access.Spec.DesiredState = nnfv1alpha11.NnfAccessStateMounted
 			access.Spec.UserID = workflow.Spec.UserID
 			access.Spec.GroupID = workflow.Spec.GroupID
 			access.Spec.Target = "single"
@@ -1074,7 +1074,7 @@ func (r *NnfWorkflowReconciler) finishPreRunState(ctx context.Context, workflow 
 	}
 
 	// Containers do not have NNFAccesses, so only do this after r.waitForContainersToStart() would have returned
-	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "mounted")
+	result, err := r.waitForNnfAccessMounted(ctx, workflow, index)
 	if err != nil {
 		return nil, dwsv1alpha7.NewResourceError("could not mount rabbit NnfAccess for index %v", index).WithError(err).WithUserMessage("could not mount file system on compute nodes")
 	} else if result != nil {
@@ -1092,11 +1092,33 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 		return r.waitForContainersToFinish(ctx, workflow, index)
 	}
 
-	// Unmount the NnfAccess for the compute nodes. This will free the compute nodes to be used
-	// in a different job even if there is data movement happening on the Rabbits.
-	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "computes"); result != nil || err != nil {
+	// Request the unmount of the NnfAccess for the compute nodes, but don't wait for it here.
+	// The driver loop stops at the first directive that is not done, so waiting in the "start"
+	// function would keep the unmount for every later directive from being requested until this
+	// one finishes. finishPostRunState() does the waiting. Unmounting the computes first frees
+	// them to be used in a different job even if there is data movement happening on the Rabbits.
+	if _, result, err := r.requestNnfAccessUnmount(ctx, workflow, index, "computes"); result != nil || err != nil {
 		if err != nil {
 			return nil, dwsv1alpha7.NewResourceError("").WithError(err).WithUserMessage("could not unmount file system from compute nodes")
+		}
+
+		return result, nil
+	}
+
+	return nil, nil
+}
+
+func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
+	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
+
+	if dwArgs["command"] == "container" {
+		return r.checkContainersResults(ctx, workflow, index)
+	}
+
+	// Wait for the compute unmount requested in startPostRunState().
+	if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "computes"); result != nil || err != nil {
+		if err != nil {
+			return nil, dwsv1alpha7.NewResourceError("could not unmount compute NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on compute nodes")
 		}
 
 		return result, nil
@@ -1125,41 +1147,16 @@ func (r *NnfWorkflowReconciler) startPostRunState(ctx context.Context, workflow 
 
 	if fsType == "gfs2" || fsType == "lustre" || fsType == "raw" {
 		if result, err := r.unmountNnfAccessIfNecessary(ctx, workflow, index, "servers"); result != nil || err != nil {
-			return result, err
+			if err != nil {
+				return nil, dwsv1alpha7.NewResourceError("could not unmount server NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on Rabbit nodes")
+			}
+
+			return result, nil
 		}
-	}
-
-	return nil, nil
-}
-
-func (r *NnfWorkflowReconciler) finishPostRunState(ctx context.Context, workflow *dwsv1alpha7.Workflow, index int) (*result, error) {
-	dwArgs, _ := dwdparse.BuildArgsMap(workflow.Spec.DWDirectives[index])
-
-	if dwArgs["command"] == "container" {
-		return r.checkContainersResults(ctx, workflow, index)
-	}
-
-	result, err := r.waitForNnfAccessStateAndReady(ctx, workflow, index, "unmounted")
-	if err != nil {
-		return nil, dwsv1alpha7.NewResourceError("could not unmount compute NnfAccess for index %v", index).WithError(err).WithUserMessage("could not unmount file system on compute nodes")
-	} else if result != nil {
-		return result, nil
 	}
 
 	// Any user created copy-offload data movement requests created during run must report any errors to the workflow.
-	matchingLabels := dwsv1alpha7.MatchingOwner(workflow)
-	matchingLabels[nnfv1alpha11.DataMovementTeardownStateLabel] = string(dwsv1alpha7.StatePostRun)
-
-	dataMovementList := &nnfv1alpha11.NnfDataMovementList{}
-	if err := r.List(ctx, dataMovementList, matchingLabels); err != nil {
-		return nil, dwsv1alpha7.NewResourceError("could not list NnfDataMovements with labels: %v", matchingLabels).WithError(err).WithUserMessage("could not find data movement information")
-	}
-
 	for _, dm := range dataMovementList.Items {
-		if dm.Status.State != nnfv1alpha11.DataMovementConditionTypeFinished {
-			return Requeue("pending data movement").withObject(&dm), nil
-		}
-
 		if dm.Status.Status == nnfv1alpha11.DataMovementConditionReasonFailed {
 			handleWorkflowErrorByIndex(dwsv1alpha7.NewResourceError("data movement %v failed", client.ObjectKeyFromObject(&dm)).WithUserMessage("data movement failed").WithFatal(), workflow, index)
 			return Requeue("error").withObject(&dm), nil

@@ -10,17 +10,17 @@ from unittest.mock import MagicMock, patch
 import kubernetes.client.exceptions  # type: ignore[import-untyped]
 
 from nnf import crd
-from nnf.commands.system.state import (
+from nnf.commands.rabbit.state import (
     _build_annotation_rows,
     _build_node_status_rows,
     _build_storage_status_rows,
-    _compress_hostlist,
     _get_all_storages,
     _print_table,
     _run_cmd,
     _show_disabled_computes,
     run,
 )
+from nnf.hostlist import compress as _compress_hostlist
 
 
 def _make_args(**kwargs: object) -> argparse.Namespace:
@@ -235,7 +235,7 @@ def test_build_storage_status_rows_includes_unexpected_values() -> None:
     assert ("Cordoned", "Recovering", "1", "rabbit-9") in rows
 
 
-@patch("nnf.commands.system.state.k8s.list_objects")
+@patch("nnf.commands.rabbit.state.k8s.list_objects")
 def test_get_all_storages_uses_local_k8s_helper(mock_list_objects: MagicMock) -> None:
     mock_list_objects.return_value = {"items": [{"metadata": {"name": "rabbit-0"}}]}
 
@@ -311,9 +311,9 @@ def test_build_annotation_rows_null_annotations() -> None:
 # ---------------------------------------------------------------------------
 
 
-@patch("nnf.commands.system.state._show_disabled_computes")
-@patch("nnf.commands.system.state._get_all_storages")
-@patch("nnf.commands.system.state._get_all_nnfnodes")
+@patch("nnf.commands.rabbit.state._show_disabled_computes")
+@patch("nnf.commands.rabbit.state._get_all_storages")
+@patch("nnf.commands.rabbit.state._get_all_nnfnodes")
 def test_run_success(
     mock_nodes: MagicMock,
     mock_storages: MagicMock,
@@ -335,9 +335,9 @@ def test_run_success(
     assert "rabbit-0" in out
 
 
-@patch("nnf.commands.system.state._show_disabled_computes")
-@patch("nnf.commands.system.state._get_all_storages")
-@patch("nnf.commands.system.state._get_all_nnfnodes")
+@patch("nnf.commands.rabbit.state._show_disabled_computes")
+@patch("nnf.commands.rabbit.state._get_all_storages")
+@patch("nnf.commands.rabbit.state._get_all_nnfnodes")
 def test_run_with_annotations(
     mock_nodes: MagicMock,
     mock_storages: MagicMock,
@@ -357,9 +357,9 @@ def test_run_with_annotations(
     assert "test" in out
 
 
-@patch("nnf.commands.system.state._show_disabled_computes")
-@patch("nnf.commands.system.state._get_all_storages")
-@patch("nnf.commands.system.state._get_all_nnfnodes")
+@patch("nnf.commands.rabbit.state._show_disabled_computes")
+@patch("nnf.commands.rabbit.state._get_all_storages")
+@patch("nnf.commands.rabbit.state._get_all_nnfnodes")
 def test_run_nnfnode_api_error(
     mock_nodes: MagicMock,
     mock_storages: MagicMock,
@@ -375,9 +375,9 @@ def test_run_nnfnode_api_error(
     assert "NnfNode" in err
 
 
-@patch("nnf.commands.system.state._show_disabled_computes")
-@patch("nnf.commands.system.state._get_all_storages")
-@patch("nnf.commands.system.state._get_all_nnfnodes")
+@patch("nnf.commands.rabbit.state._show_disabled_computes")
+@patch("nnf.commands.rabbit.state._get_all_storages")
+@patch("nnf.commands.rabbit.state._get_all_nnfnodes")
 def test_run_storage_api_error(
     mock_nodes: MagicMock,
     mock_storages: MagicMock,
@@ -398,25 +398,25 @@ def test_run_storage_api_error(
 # ---------------------------------------------------------------------------
 
 
-@patch("nnf.commands.system.state.subprocess.run")
+@patch("nnf.commands.rabbit.state.subprocess.run")
 def test_run_cmd_success(mock_run: MagicMock) -> None:
     mock_run.return_value = MagicMock(returncode=0, stdout="hello\n", stderr="")
     assert _run_cmd(["echo", "hello"]) == "hello"
 
 
-@patch("nnf.commands.system.state.subprocess.run")
+@patch("nnf.commands.rabbit.state.subprocess.run")
 def test_run_cmd_failure(mock_run: MagicMock) -> None:
     mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="err")
     assert _run_cmd(["false"]) is None
 
 
-@patch("nnf.commands.system.state.subprocess.run")
+@patch("nnf.commands.rabbit.state.subprocess.run")
 def test_run_cmd_oserror(mock_run: MagicMock) -> None:
     mock_run.side_effect = OSError("not found")
     assert _run_cmd(["missing"]) is None
 
 
-@patch("nnf.commands.system.state.subprocess.run")
+@patch("nnf.commands.rabbit.state.subprocess.run")
 def test_run_cmd_timeout(mock_run: MagicMock) -> None:
     mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
     assert _run_cmd(["slow"]) is None
@@ -427,16 +427,16 @@ def test_run_cmd_timeout(mock_run: MagicMock) -> None:
 # ---------------------------------------------------------------------------
 
 
-@patch("nnf.commands.system.state.shutil.which", return_value=None)
+@patch("nnf.commands.rabbit.state.shutil.which", return_value=None)
 def test_show_disabled_computes_no_flux(mock_which: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
     _show_disabled_computes()
     out = capsys.readouterr().out
     assert "Disabled Computes" not in out
 
 
-@patch("nnf.commands.system.state._run_cmd_print")
-@patch("nnf.commands.system.state._run_cmd")
-@patch("nnf.commands.system.state.shutil.which", return_value="/usr/bin/flux")
+@patch("nnf.commands.rabbit.state._run_cmd_print")
+@patch("nnf.commands.rabbit.state._run_cmd")
+@patch("nnf.commands.rabbit.state.shutil.which", return_value="/usr/bin/flux")
 def test_show_disabled_computes_with_flux(
     mock_which: MagicMock,
     mock_run_cmd: MagicMock,
@@ -465,10 +465,10 @@ def test_show_disabled_computes_with_flux(
     )
 
 
-@patch("nnf.commands.system.state.os.path.isfile", return_value=True)
-@patch("nnf.commands.system.state._run_cmd_print")
-@patch("nnf.commands.system.state._run_cmd")
-@patch("nnf.commands.system.state.shutil.which", return_value="/usr/bin/flux")
+@patch("nnf.commands.rabbit.state.os.path.isfile", return_value=True)
+@patch("nnf.commands.rabbit.state._run_cmd_print")
+@patch("nnf.commands.rabbit.state._run_cmd")
+@patch("nnf.commands.rabbit.state.shutil.which", return_value="/usr/bin/flux")
 def test_show_disabled_computes_with_nodeattr(
     mock_which: MagicMock,
     mock_run_cmd: MagicMock,
@@ -495,8 +495,8 @@ def test_show_disabled_computes_with_nodeattr(
     )
 
 
-@patch("nnf.commands.system.state._run_cmd")
-@patch("nnf.commands.system.state.shutil.which", return_value="/usr/bin/flux")
+@patch("nnf.commands.rabbit.state._run_cmd")
+@patch("nnf.commands.rabbit.state.shutil.which", return_value="/usr/bin/flux")
 def test_show_disabled_computes_no_badrabbit(
     mock_which: MagicMock,
     mock_run_cmd: MagicMock,
@@ -508,8 +508,8 @@ def test_show_disabled_computes_no_badrabbit(
     assert "Disabled Computes" not in out
 
 
-@patch("nnf.commands.system.state._run_cmd")
-@patch("nnf.commands.system.state.shutil.which", return_value="/usr/bin/flux")
+@patch("nnf.commands.rabbit.state._run_cmd")
+@patch("nnf.commands.rabbit.state.shutil.which", return_value="/usr/bin/flux")
 def test_show_disabled_computes_empty_jgf(
     mock_which: MagicMock,
     mock_run_cmd: MagicMock,

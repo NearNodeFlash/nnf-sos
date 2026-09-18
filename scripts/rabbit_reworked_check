@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# 5UF part number from the JBOD indicates that the rabbit has the 0-ohm resistor fix.
+# Getting nothing indicates a rabbit that has not been reworked.
+#
+# Running:
+#  rabbit_reworked_check -Lw "$(nodeattr -q rabbit | sed "s/\([[0-9]\)/-jbod\1/")" | cat -n
+#  rabbit_reworked_check -Lw "$(nodeattr -q rabbit | sed "s/\([[0-9]\)/-jbod\1")" | perl -pe "s/ 5UF[\dA-Za-z]{7}/ 5UFxxxxxxx/" | dshbak -c
+#
+# For example:
+#   $ rabbit_reworked_check -w tuolumne-jbod201
+#   tuolumne-jbod201: 5UF332L7YK
+
+clush "$@" "i2cdump -fy 1 0x54 | grep '^80: ' | cut -F 18- | sed 's/\.\+$//'"

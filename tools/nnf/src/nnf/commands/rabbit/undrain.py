@@ -35,7 +35,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
         "nodes",
         nargs="+",
         metavar="NODE",
-        help="One or more Rabbit node names to undrain.",
+        help="One or more Rabbit node names or hostlist patterns to undrain (for example rabbit-[0-3]).",
     )
     parser.set_defaults(func=run)
 

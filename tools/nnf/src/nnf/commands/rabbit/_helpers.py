@@ -1,10 +1,12 @@
 """Shared helpers for rabbit sub-commands."""
 
 import logging
+import sys
 from typing import Any, Callable, Dict, List
 
 from nnf import crd
 from nnf import k8s
+from nnf.hostlist import BadHostlist, expand_args
 
 
 LOGGER = logging.getLogger(__name__)
@@ -74,8 +76,16 @@ def for_each_node(
     *success_msg* is a format string with one ``{}`` placeholder for the node
     name.
     """
+    try:
+        expanded = expand_args(nodes)
+    except BadHostlist as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if not expanded:
+        print("error: node list resolved to zero hosts", file=sys.stderr)
+        return 1
     errors = 0
-    for node_name in nodes:
+    for node_name in expanded:
         rc = action(node_name)
         if rc != OK:
             errors += 1

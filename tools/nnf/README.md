@@ -10,6 +10,7 @@ The `nnf` command is intended as a repository-local helper tool, not a standalon
 
 - create a persistent storage instance for testing
 - destroy a persistent storage instance
+- list existing persistent storage instances
 - share or unshare a persistent storage instance across users
 - inspect and drive workflow-based storage operations from a simple CLI
 - drain or undrain Rabbit nodes to control workflow scheduling
@@ -64,6 +65,7 @@ Show command-specific help:
 ```bash
 nnf persistent create --help
 nnf persistent destroy --help
+nnf persistent list --help
 nnf persistent share --help
 nnf persistent unshare --help
 nnf rabbit --help
@@ -91,6 +93,30 @@ nnf persistent create --timeout 600 ...
 nnf persistent destroy --timeout 600 ...
 ```
 
+## Hostlist Support
+
+Rabbit node arguments accept plain node names and hostlist patterns in standard bracket notation.
+
+Examples:
+
+- `rabbit-node-[0-3]`
+- `rzadams[201-208]`
+- `rzadams[201,207-208]`
+
+This works for:
+
+- `nnf rabbit disable|drain|enable|undrain NODE...`
+- `nnf persistent create --rabbits ...`
+- `nnf persistent create --rabbits-mdt ...`
+- `nnf persistent create --rabbits-mgt ...`
+
+In most shells, brackets are glob characters, so quote hostlist arguments:
+
+```bash
+nnf rabbit disable 'rzadams[201-208]'
+nnf persistent create --name demo --fs-type xfs --capacity 1GiB --rabbits 'rabbit-node-[0-3]'
+```
+
 ## persistent create
 
 Show help for the `persistent create` subcommand:
@@ -107,13 +133,19 @@ Key `persistent create` flags:
 - `--namespace` target namespace, default `default`
 - `--user-id` override owning user ID
 - `--group-id` override owning group ID
-- `--rabbits` explicit Rabbit node list
-- `--rabbits-mdt` Rabbit node list for `mdt` and `mgtmdt`
-- `--rabbits-mgt` Rabbit node list for `mgt`
-- `--rabbit-count` choose Rabbits randomly from the default SystemConfiguration instead of specifying them directly
 - `--alloc-count` number of allocations per Rabbit node, default `1`
 - `--profile` storage profile name
 - `--timeout` seconds to wait per workflow state, default `180`
+
+Rabbit selection (one of these is required):
+
+- `--rabbits` Rabbit node list for all allocation sets. Accepts names and hostlist patterns. Required unless `--rabbit-count` is used.
+- `--rabbit-count` pick N Rabbits at random from the SystemConfiguration. Mutually exclusive with all `--rabbits*` flags.
+
+Optional Lustre overrides (only valid with `--rabbits`):
+
+- `--rabbits-mdt` use these Rabbits for `mdt`/`mgtmdt` allocation sets instead of `--rabbits`; accepts hostlist patterns
+- `--rabbits-mgt` use these Rabbits for `mgt` allocation sets instead of `--rabbits`; accepts hostlist patterns
 
 Use `--profile` to select the `NnfStorageProfile` if the default profile is not desired. For Lustre, the profile drives allocation-set behavior for labels such as `ost`, `mdt`, `mgt`, and `mgtmdt`.
 
@@ -136,6 +168,17 @@ nnf persistent create \
   --capacity 10GiB \
   --profile lustre-storage-profile \
   --rabbits rabbit-node-0 rabbit-node-1
+```
+
+Create persistent storage using a hostlist pattern:
+
+```bash
+nnf persistent create \
+  --name demo-lustre-range \
+  --fs-type lustre \
+  --capacity 10GiB \
+  --profile lustre-storage-profile \
+  --rabbits 'rabbit-node-[0-3]'
 ```
 
 For Lustre, you can optionally direct MDT and MGT allocation sets to specific Rabbits instead of using the default Rabbit list for every allocation set:
@@ -212,6 +255,54 @@ Destroy a persistent storage instance:
 nnf persistent destroy --name demo-psi
 ```
 
+## persistent list
+
+List the PersistentStorageInstances in a namespace, along with the Rabbits backing each one.
+
+```bash
+nnf persistent list --help
+```
+
+Key flags:
+
+- `-u`, `--user-id` show only instances owned by this user ID
+- `-w`, `--wide` break the `RABBITS` column down by allocation set label
+- `--namespace` target namespace, default `default`
+
+List all persistent storage instances:
+
+```bash
+nnf persistent list
+```
+
+List only the instances you own:
+
+```bash
+nnf persistent list -u $(id -u)
+```
+
+Example output:
+
+```text
+NAME       USERID  FSTYPE  STATE   SHARED  RABBITS
+demo-psi   1000    lustre  Active  no      rabbit-node-[1-2]
+shared-fs  0       xfs     Active  yes     rabbit-node-1
+```
+
+By default the `RABBITS` column merges every allocation set into one hostlist. Use `--wide` to see which Rabbits hold each allocation set, which matters for Lustre where the MGT, MDT, and OSTs can land on different Rabbits:
+
+```bash
+nnf persistent list --wide
+```
+
+```text
+NAME       USERID  FSTYPE  STATE   SHARED  RABBITS
+demo-psi   1000    lustre  Active  no      ost:rabbit-node-[1-2] mgtmdt:rabbit-node-1
+shared-fs  0       xfs     Active  yes     xfs:rabbit-node-1
+```
+
+The `RABBITS` column comes from the Servers resource referenced by `status.servers`; it shows `-` when that resource does not exist yet, which is normal while an instance is still `Creating`. Note that `-u` filters on ownership only, so a shared instance owned by another user is excluded even though you may be able to access it — the `SHARED` column identifies those.
+
 ## persistent share
 
 Share a persistent storage instance so that any user can access it, regardless of UID. This adds the `dataworkflowservices.github.io/ignore-uid` annotation to the PersistentStorageInstance.
@@ -260,7 +351,7 @@ nnf rabbit drain --help
 
 Key flags:
 
-- `NODE` one or more Rabbit node names (positional)
+- `NODE` one or more Rabbit node names or hostlist patterns (positional)
 - `-r`, `--reason` reason for draining the node (default: `none`)
 
 Drain a single node:
@@ -273,6 +364,12 @@ Drain multiple nodes with a reason:
 
 ```bash
 nnf rabbit drain rabbit-node-0 rabbit-node-1 --reason "firmware update"
+```
+
+Drain nodes using a hostlist pattern:
+
+```bash
+nnf rabbit drain 'rzadams[201-208]' --reason "firmware update"
 ```
 
 If the node taint fails after the storage annotation succeeds, the CLI attempts to roll back the annotation. If the rollback also fails, the CLI logs the error and continues to the next node.
@@ -301,13 +398,19 @@ nnf rabbit disable --help
 
 Key flags:
 
-- `NODE` one or more Rabbit node names (positional)
+- `NODE` one or more Rabbit node names or hostlist patterns (positional)
 - `-r`, `--reason` reason for disabling the node (default: `none`)
 
 Disable a node:
 
 ```bash
 nnf rabbit disable rabbit-node-0 --reason "bad disk"
+```
+
+Disable nodes using a hostlist pattern:
+
+```bash
+nnf rabbit disable 'rzadams[201-208]' --reason "maintenance"
 ```
 
 ## rabbit enable
@@ -322,6 +425,12 @@ Enable a node:
 
 ```bash
 nnf rabbit enable rabbit-node-0
+```
+
+Enable nodes using a hostlist pattern:
+
+```bash
+nnf rabbit enable 'rzadams[201,207-208]'
 ```
 
 ## rabbit df

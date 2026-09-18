@@ -1,0 +1,285 @@
+.TH NNF-PERSISTENT 1 "2026-05-08" "nnf 0.1.0" "User Commands"
+.SH NAME
+nnf-persistent \- manage DWS PersistentStorageInstance resources
+.SH SYNOPSIS
+.B nnf persistent
+.I action
+.RI [ options ]
+
+.PP
+.B nnf persistent create
+.BI --name " NAME"
+.BI --fs-type " {raw|xfs|gfs2|lustre}"
+.RI [ --capacity " SIZE" ]
+.RI [ --rabbits " RABBIT " ...]
+.RI [ --rabbits-mdt " RABBIT " ...]
+.RI [ --rabbits-mgt " RABBIT " ...]
+.RI [ --rabbit-count " N" ]
+.RI [ --alloc-count " N" ]
+.RI [ --profile " PROFILE" ]
+.RI [ --namespace " NAMESPACE" ]
+.RI [ --user-id " UID" ]
+.RI [ --group-id " GID" ]
+.RI [ --timeout " SECONDS" ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf persistent destroy
+.BI --name " NAME"
+.RI [ --namespace " NAMESPACE" ]
+.RI [ --user-id " UID" ]
+.RI [ --group-id " GID" ]
+.RI [ --timeout " SECONDS" ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf persistent share
+.BI --name " NAME"
+.RI [ --namespace " NAMESPACE" ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf persistent unshare
+.BI --name " NAME"
+.RI [ --namespace " NAMESPACE" ]
+.RI [ -v | --verbose ]
+
+.SH DESCRIPTION
+.B nnf persistent
+manages DWS PersistentStorageInstance resources.
+
+The
+.B create
+and
+.B destroy
+actions submit DWS Workflows and drive them through all workflow states. The
+Workflow is deleted on exit whether the operation succeeds or fails.
+
+The
+.B share
+and
+.B unshare
+actions are used allow a PersistentStorageInstance to be shared between users.
+
+.SH ACTIONS
+.SS create
+Create a persistent storage instance.
+
+Builds a
+.B #DW create_persistent
+directive and submits it as a Workflow.
+
+.TP
+.BI --name " NAME"
+Name of the persistent storage instance.
+.TP
+.BI --fs-type " TYPE"
+Filesystem type, one of
+.BR raw ,
+.BR xfs ,
+.BR gfs2 ,
+or
+.BR lustre .
+.TP
+.BI --capacity " SIZE"
+Allocation capacity per Rabbit, for example
+.B 1GiB
+or
+.BR 500MiB .
+Required unless the selected Lustre profile specifies
+.B standaloneMgtPoolName.
+.TP
+.BI --rabbits " RABBIT " ...
+One or more Rabbit node names. May be given as separate values or comma-separated values.
+Mutually exclusive with
+.BR --rabbit-count .
+.TP
+.BI --rabbits-mdt " RABBIT " ...
+Rabbit nodes for
+.B mdt
+and
+.B mgtmdt
+allocation sets. Defaults to
+.BR --rabbits .
+Valid only with
+.BR --fs-type " lustre" .
+Cannot be combined with
+.BR --rabbit-count .
+.TP
+.BI --rabbits-mgt " RABBIT " ...
+Rabbit nodes for
+.B mgt
+allocation sets. Defaults to
+.BR --rabbits .
+Valid only with
+.BR --fs-type " lustre" .
+Cannot be combined with
+.BR --rabbit-count .
+.TP
+.BI --rabbit-count " N"
+Number of Rabbits to choose at random from the
+.B default/default
+SystemConfiguration. Mutually exclusive with
+.BR --rabbits ,
+.BR --rabbits-mdt ,
+and
+.BR --rabbits-mgt .
+.TP
+.BI --alloc-count " N"
+Number of allocations per Rabbit node. Default is 1.
+.TP
+.BI --profile " PROFILE"
+Storage profile name to include in the directive.
+.TP
+.BI --namespace " NAMESPACE"
+Kubernetes namespace. Default is
+.BR default .
+.TP
+.BI --user-id " UID"
+User ID that owns this storage. Default is the current user ID.
+.TP
+.BI --group-id " GID"
+Group ID that owns this storage. Default is the current group ID.
+.TP
+.BI --timeout " SECONDS"
+Seconds to wait for each workflow state. Default is 180.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS "create validation rules"
+.IP \(bu 2
+One of
+.B --rabbits
+or
+.B --rabbit-count
+is required.
+.IP \(bu 2
+.B --rabbit-count
+must be at least 1.
+.IP \(bu 2
+.B --alloc-count
+must be at least 1.
+.IP \(bu 2
+.B --rabbits-mdt
+and
+.B --rabbits-mgt
+are valid only for Lustre.
+.IP \(bu 2
+If a Lustre profile specifies
+.B standaloneMgtPoolName,
+then
+.B --capacity
+must not be used, exactly one Rabbit must be selected, and
+.B --alloc-count
+must be 1.
+.IP \(bu 2
+If the profile does not specify
+.B standaloneMgtPoolName,
+then
+.B --capacity
+is required.
+
+.SS destroy
+Destroy a persistent storage instance.
+
+Builds a
+.B #DW destroy_persistent
+directive and submits it as a Workflow.
+
+.TP
+.BI --name " NAME"
+Name of the persistent storage instance to destroy.
+.TP
+.BI --namespace " NAMESPACE"
+Kubernetes namespace. Default is
+.BR default .
+.TP
+.BI --user-id " UID"
+User ID for the workflow. If omitted, the command attempts to read
+.B userID
+from the target PersistentStorageInstance.
+.TP
+.BI --group-id " GID"
+Group ID for the workflow. Default is the current group ID.
+.TP
+.BI --timeout " SECONDS"
+Seconds to wait for each workflow state. Default is 180.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS share
+Mark a persistent storage instance as shared by adding the
+.B dataworkflowservices.github.io/ignore-uid
+annotation.
+
+.TP
+.BI --name " NAME"
+Name of the persistent storage instance to share.
+.TP
+.BI --namespace " NAMESPACE"
+Kubernetes namespace. Default is
+.BR default .
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS unshare
+Remove shared access by removing the
+.B dataworkflowservices.github.io/ignore-uid
+annotation.
+
+.TP
+.BI --name " NAME"
+Name of the persistent storage instance to unshare.
+.TP
+.BI --namespace " NAMESPACE"
+Kubernetes namespace. Default is
+.BR default .
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Validation error, lookup failure, or patch failure.
+.TP
+.B 2
+Workflow creation or workflow execution failure.
+
+.SH EXAMPLES
+.TP
+Create an XFS persistent storage instance:
+.B nnf persistent create --name my-psi --fs-type xfs --capacity 1GiB --rabbits rabbit-0
+
+.TP
+Create a Lustre persistent storage instance on three random Rabbits:
+.B nnf persistent create --name lustre-a --fs-type lustre --capacity 1TiB --rabbit-count 3
+
+.TP
+Destroy a persistent storage instance:
+.B nnf persistent destroy --name my-psi
+
+.TP
+Share a persistent storage instance:
+.B nnf persistent share --name my-psi
+
+.TP
+Unshare a persistent storage instance:
+.B nnf persistent unshare --name my-psi
+
+.SH SEE ALSO
+.BR nnf (1),
+.BR nnf-rabbit (1),
+.BR nnf-system (1),
+.BR kubectl (1)
+
+.SH COPYRIGHT
+Copyright 2026 Hewlett Packard Enterprise Development LP
+.PP
+Licensed under the Apache License, Version 2.0.

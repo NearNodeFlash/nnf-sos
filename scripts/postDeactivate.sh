@@ -1,5 +1,14 @@
 #!/bin/bash
 
+if [[ $# -gt 0 ]]; then
+    if [[ $1 = "-h" || $1 = "--help" ]]; then
+        echo "Stop pacemaker.  Used by clientmountd, on compute nodes, after a job using GFS2 has finished."
+        echo "Not intended for sysadmin use."
+        echo "Usage: $0 [-h|--help]"
+        exit 1
+    fi
+fi
+
 # Redirect stdout and stderr to syslog
 exec 1> >(logger -s -t $(basename $0)) 2>&1
 

@@ -3,7 +3,7 @@
 import argparse
 
 from nnf.commands import add_command_parser
-from nnf.commands.rabbit import disable, drain, enable, undrain
+from nnf.commands.rabbit import state, disable, drain, enable, undrain
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
@@ -16,6 +16,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
     sub = rabbit_parser.add_subparsers(dest="rabbit_command", metavar="<action>")
     sub.required = True
 
+    state.register(sub)
     disable.register(sub)
     drain.register(sub)
     enable.register(sub)
