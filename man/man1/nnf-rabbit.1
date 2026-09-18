@@ -1,0 +1,167 @@
+.TH NNF-RABBIT 1 "2026-05-08" "nnf 0.1.0" "User Commands"
+.SH NAME
+nnf-rabbit \- manage Rabbit node state
+.SH SYNOPSIS
+.B nnf rabbit
+.I action
+.RI [ options ]
+
+.PP
+.B nnf rabbit state
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf rabbit disable
+.RI [ -r " REASON" ]
+.I NODE
+.RI [ NODE " ..." ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf rabbit drain
+.RI [ -r " REASON" ]
+.I NODE
+.RI [ NODE " ..." ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf rabbit enable
+.I NODE
+.RI [ NODE " ..." ]
+.RI [ -v | --verbose ]
+
+.PP
+.B nnf rabbit undrain
+.I NODE
+.RI [ NODE " ..." ]
+.RI [ -v | --verbose ]
+
+.SH DESCRIPTION
+.B nnf rabbit
+These actions operate on Rabbit-related Kubernetes resources, including
+Kubernetes Node objects, NnfNode resources, and DWS Storage resources.
+
+.SH ACTIONS
+.SS state
+Report the state of Rabbit storage resources.
+
+This action displays a summary of:
+.IP \(bu 2
+NnfNode server health and status
+.IP \(bu 2
+DWS Storage state and status
+.IP \(bu 2
+Disabled and drained Rabbit nodes, including dates and reasons
+.IP \(bu 2
+Compute nodes associated with Rabbits that are marked with the
+badrabbit property.  These computes nodes will not be allocated by
+flux for jobs requiring rabbit resources.
+
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS disable
+Disable one or more Rabbit nodes so Flux does not use them for allocations.
+
+.TP
+.I NODE
+One or more Rabbit node names to disable.
+.TP
+.BI -r " REASON"
+.TQ
+.BI --reason " REASON"
+Reason for disabling the node. Default is
+.BR none .
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS drain
+Drain one or more Rabbit nodes to terminate the NNF pods running there.
+This can be used to unmount the global Lustre filesystem from the nnf-dm-worker
+pod.
+
+This taints the Kubernetes Node with
+.B cray.nnf.node.drain=true
+for both
+.B NoSchedule
+and
+.B NoExecute
+
+If tainting the node fails after annotations are applied, the command attempts
+to roll back the drain annotations.
+
+.TP
+.I NODE
+One or more Rabbit node names to drain.
+.TP
+.BI -r " REASON"
+.TQ
+.BI --reason " REASON"
+Reason for draining the node. Default is
+.BR none .
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS enable
+Enable one or more Rabbit nodes so Flux can use them for allocations again.
+
+.TP
+.I NODE
+One or more Rabbit node names to enable.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SS undrain
+Undrain one or more Rabbit nodes which removes the taints allowing the NNF pods
+to be scheduled and started.
+
+.TP
+.I NODE
+One or more Rabbit node names to undrain.
+.TP
+.BR -v ", " --verbose
+Enable verbose logging.
+
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+One or more requested operations failed, or resource queries failed.
+
+.SH EXAMPLES
+.TP
+Show Rabbit state summary:
+.B nnf rabbit state
+
+.TP
+Disable a Rabbit with a reason:
+.B nnf rabbit disable --reason 'scheduled maintenance' rabbit-0
+
+.TP
+Drain multiple Rabbit nodes:
+.B nnf rabbit drain rabbit-0 rabbit-1
+
+.TP
+Enable a Rabbit:
+.B nnf rabbit enable rabbit-0
+
+.TP
+Undrain a Rabbit:
+.B nnf rabbit undrain rabbit-0
+
+.SH SEE ALSO
+.BR nnf (1),
+.BR nnf-persistent (1),
+.BR nnf-system (1),
+.BR kubectl (1)
+
+.SH COPYRIGHT
+Copyright 2026 Hewlett Packard Enterprise Development LP
+.PP
+Licensed under the Apache License, Version 2.0.

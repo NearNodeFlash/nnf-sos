@@ -130,6 +130,29 @@ def test_run_comma_separated_rabbits() -> None:
     assert call_kwargs["rabbits"] == ["rabbit-0", "rabbit-1", "rabbit-2"]
 
 
+def test_run_hostlist_expansion_rabbits() -> None:
+    """run() expands hostlist bracket patterns in --rabbits."""
+    from nnf.workflow import WorkflowRun
+
+    captured: Dict[str, object] = {}
+
+    def fake_create_and_run(wf: WorkflowRun, timeout: int) -> int:
+        captured["wf"] = wf
+        return 0
+
+    with patch("nnf.commands.persistent.create.workflow.create_and_run",
+               side_effect=fake_create_and_run), \
+            patch("nnf.commands.persistent.create.servers.fill_servers_default",
+                  return_value=(True, "")) as mock_fill:
+        assert run(_make_args(rabbits=["rabbit-[0-2]"])) == 0
+        hooks = captured["wf"].state_hooks["Proposal"]  # type: ignore[index]
+        hooks[0]("wf-name", "default")
+
+    mock_fill.assert_called_once()
+    _, call_kwargs = mock_fill.call_args
+    assert call_kwargs["rabbits"] == ["rabbit-0", "rabbit-1", "rabbit-2"]
+
+
 def test_run_post_proposal_hook_calls_fill_servers_default() -> None:
     """run() attaches a Proposal hook that delegates to fill_servers_default."""
     from nnf.workflow import WorkflowRun

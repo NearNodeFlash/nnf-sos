@@ -3,7 +3,7 @@
 import argparse
 
 from nnf.commands import add_command_parser
-from nnf.commands.system import df, flowschema, state, version
+from nnf.commands.system import df, flowschema, version
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
@@ -18,5 +18,4 @@ def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[ty
 
     df.register(sub)
     flowschema.register(sub)
-    state.register(sub)
     version.register(sub)
