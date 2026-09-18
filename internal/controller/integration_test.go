@@ -1610,6 +1610,137 @@ var _ = Describe("Integration Test", func() {
 				g.Expect(access.Status.Error).To(BeNil())
 			}).Should(Succeed())
 		})
+
+		// disableStuckCompute marks the stuck compute Disabled in the SystemStatus, which the
+		// NnfAccess controller treats as offline, and removes the SystemStatus when the spec ends.
+		disableStuckCompute := func() {
+			By("Marking the stuck compute Disabled in the SystemStatus")
+			systemStatus := &dwsv1alpha7.SystemStatus{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Data: dwsv1alpha7.SystemStatusData{
+					Nodes: map[string]dwsv1alpha7.SystemNodeStatus{
+						stuckCompute: dwsv1alpha7.SystemNodeStatusDisabled,
+					},
+				},
+			}
+			Expect(k8sClient.Create(context.TODO(), systemStatus)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(context.TODO(), systemStatus)).To(Succeed())
+				Eventually(func() error {
+					return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(systemStatus), &dwsv1alpha7.SystemStatus{})
+				}).ShouldNot(Succeed())
+			})
+		}
+
+		stuckClientMount := func(index int) *dwsv1alpha7.ClientMount {
+			clientMount := &dwsv1alpha7.ClientMount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      clientMountName(computesAccess(index)),
+					Namespace: stuckCompute,
+				},
+			}
+			Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
+			return clientMount
+		}
+
+		// recreateStuckClientMounts deletes the stuck compute's ClientMounts and waits for the
+		// NnfAccess controller to recreate them, leaving them with no status and no finalizer.
+		recreateStuckClientMounts := func() {
+			By("Deleting the stuck compute's ClientMounts so the NnfAccess controller recreates them without status")
+			for index := range workflow.Spec.DWDirectives {
+				clientMount := stuckClientMount(index)
+				oldUID := clientMount.GetUID()
+				Expect(k8sClient.Delete(context.TODO(), clientMount)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(clientMount), clientMount)).To(Succeed())
+					g.Expect(clientMount.GetUID()).ToNot(Equal(oldUID))
+				}).Should(Succeed(), "ClientMount for index %d on %s is recreated", index, stuckCompute)
+				Expect(clientMount.Status.Mounts).To(BeEmpty())
+				Expect(clientMount.GetFinalizers()).To(BeEmpty())
+			}
+		}
+
+		// The common failure: PreRun mounted successfully, then the compute died during the job.
+		// Its ClientMount still reports the mounted state, and any error it recorded on the way
+		// down stays with it. Nothing will ever update it.
+		It("Unmounts past an offline compute whose ClientMount still reports mounted", func() {
+			By("Recording an error on the stuck compute's first ClientMount before it goes offline")
+			setStuckClientMountStatus(0, dwsv1alpha7.ClientMountStateMounted, true, dwsv1alpha7.NewResourceError("device went away").WithMajor())
+
+			disableStuckCompute()
+
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+			waitForWorkflowReady()
+
+			By("Checking the unmount completed while the stuck compute still reports mounted")
+			for index := range workflow.Spec.DWDirectives {
+				clientMount := stuckClientMount(index)
+				Expect(clientMount.Spec.DesiredState).To(Equal(dwsv1alpha7.ClientMountStateUnmounted))
+				Expect(clientMount.Status.Mounts).To(HaveLen(len(clientMount.Spec.Mounts)))
+				for _, mount := range clientMount.Status.Mounts {
+					Expect(mount.State).To(Equal(dwsv1alpha7.ClientMountStateMounted))
+				}
+			}
+			Expect(stuckClientMount(0).Status.Error).ToNot(BeNil())
+		})
+
+		// A compute that stopped responding before clientmountd ever reconciled its ClientMount
+		// leaves no status and no finalizer behind. Once the compute is marked offline, the
+		// unmount must not wait on it.
+		It("Unmounts past an offline compute whose ClientMount status was never initialized", func() {
+			// The deployed manifest sets this, which makes the access controller's child timeout
+			// loop the first check a finalizer-less ClientMount meets. The suite leaves it unset.
+			DeferCleanup(os.Setenv, "NNF_CHILD_RESOURCE_TIMEOUT_SECONDS", os.Getenv("NNF_CHILD_RESOURCE_TIMEOUT_SECONDS"))
+			Expect(os.Setenv("NNF_CHILD_RESOURCE_TIMEOUT_SECONDS", "300")).To(Succeed())
+
+			disableStuckCompute()
+			recreateStuckClientMounts()
+
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+			waitForWorkflowReady()
+
+			By("Checking the unmount completed without the stuck compute ever reporting status")
+			for index := range workflow.Spec.DWDirectives {
+				clientMount := stuckClientMount(index)
+				Expect(clientMount.Spec.DesiredState).To(Equal(dwsv1alpha7.ClientMountStateUnmounted))
+				Expect(clientMount.Status.Mounts).To(BeEmpty())
+			}
+		})
+
+		// The same uninitialized ClientMount on a compute that is merely slow must still be
+		// waited on. Only the offline classification lets the unmount proceed, never time.
+		// The child timeout stays unset here: the stand-in never adds clientmountd's finalizer,
+		// so the timeout loop would hold the healthy compute even after it reports.
+		It("Waits for a healthy compute whose ClientMount status was never initialized", func() {
+			recreateStuckClientMounts()
+
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+
+			By("Checking every compute NnfAccess is asked to unmount")
+			for index := range workflow.Spec.DWDirectives {
+				access := computesAccess(index)
+				Eventually(func(g Gomega) string {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+					return access.Spec.DesiredState
+				}).Should(Equal("unmounted"), "NnfAccess for index %d", index)
+			}
+
+			By("Checking the workflow keeps waiting on the stuck compute")
+			Consistently(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(workflow), workflow)).To(Succeed())
+				return workflow.Status.Ready
+			}, "3s").Should(BeFalse())
+
+			By("Letting the stuck compute report its unmounts")
+			for index := range workflow.Spec.DWDirectives {
+				setStuckClientMountStatus(index, dwsv1alpha7.ClientMountStateUnmounted, true, nil)
+			}
+			waitForWorkflowReady()
+		})
 	})
 
 	Describe("Test with container directives", func() {
