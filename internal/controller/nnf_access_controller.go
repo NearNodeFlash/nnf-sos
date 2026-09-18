@@ -1193,8 +1193,22 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 	}
 
-	// Check the clientmounts for any errors first
-	for _, clientMount := range clientMounts {
+	// During unmount, drop the ClientMounts on offline and fenced computes before any of the
+	// checks below, so a compute that stopped responding cannot hold up cleanup on the healthy
+	// nodes, whether or not clientmountd ever reconciled its ClientMount.
+	pendingClientMounts := clientMounts
+	fencedNodes := []string{}
+	offlineNodes := []string{}
+	if access.Spec.DesiredState == "unmounted" {
+		var err error
+		pendingClientMounts, fencedNodes, offlineNodes, err = r.dropOfflineClientMounts(ctx, access, clientMounts)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	// Surface any error the pending ClientMounts carry before checking readiness.
+	for _, clientMount := range pendingClientMounts {
 		if clientMount.Status.Error != nil {
 			return false, dwsv1alpha7.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 		}
@@ -1208,7 +1222,7 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 			childTimeout = 300
 		}
 
-		for _, clientMount := range clientMounts {
+		for _, clientMount := range pendingClientMounts {
 			// check if the finalizer has been added by the controller on the Rabbit
 			if len(clientMount.GetFinalizers()) > 0 {
 				continue
@@ -1223,48 +1237,44 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 	}
 
 	// Check whether the clientmounts have finished mounting/unmounting
-	for _, clientMount := range clientMounts {
+	allMountsReady := true
+	uninitialized := []string{}
+	for _, clientMount := range pendingClientMounts {
+		// clientmountd sizes status.mounts to spec.mounts on its first reconcile.
 		if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
-			return false, nil
+			uninitialized = append(uninitialized, clientMount.GetNamespace())
+			allMountsReady = false
+			continue
 		}
 
-		// Check if all mounts are ready and in the correct state
-		allMountsReady := true
 		for _, mount := range clientMount.Status.Mounts {
 			if string(mount.State) != access.Status.State || !mount.Ready {
 				allMountsReady = false
 				break
 			}
 		}
+	}
 
-		// If mounts aren't ready, check if this compute node is offline/fenced
-		// Only do the expensive offline check when we need it to handle failures gracefully
-		if !allMountsReady || access.Spec.DesiredState == "unmounted" {
-			offline, fenced, err := r.checkOfflineOrFencedCompute(ctx, access, &clientMount)
-			if err != nil {
-				return false, err
-			}
+	// Every ClientMount passes through this state during a normal mount, so it is only worth
+	// a log line during unmount. With the child timeout set, a ClientMount clientmountd has
+	// never claimed is held by that loop instead, so this names only ClientMounts whose
+	// spec.mounts was rewritten after their status was sized.
+	if len(uninitialized) > 0 && access.Spec.DesiredState == "unmounted" {
+		log.Info("waiting for ClientMount status to be initialized", "nodes", uninitialized)
+	}
 
-			// Skip fenced computes during unmount so cleanup can proceed on healthy nodes.
-			// Reconcile will detect fenced computes and report errors after unmount completes.
-			if fenced && access.Spec.DesiredState == "unmounted" {
-				log.Info("skipping fenced compute during unmount", "node name", clientMount.GetNamespace())
-				continue
-			}
-
-			// If the compute node is offline and we're unmounting, ignore any mount status
-			// from this node since it can't respond. The filesystem won't be remounted if the
-			// compute comes back since spec.desiredState is "unmounted"
-			if offline && access.Spec.DesiredState == "unmounted" {
-				log.Info("ignoring ClientMount from offline compute node during unmount", "node name", clientMount.GetNamespace())
-				continue
-			}
+	if !allMountsReady {
+		// Only while the healthy computes are still unmounting; once they finish, the fenced
+		// error is reported by reconcile and requeued indefinitely.
+		if len(fencedNodes) > 0 {
+			log.Info("skipping fenced computes during unmount", "nodes", fencedNodes)
 		}
 
-		// If mounts aren't ready and node isn't offline (or we're not unmounting), return false
-		if !allMountsReady {
-			return false, nil
+		if len(offlineNodes) > 0 {
+			log.Info("ignoring ClientMounts from offline computes during unmount", "nodes", offlineNodes)
 		}
+
+		return false, nil
 	}
 
 	if len(clientMounts) != len(clientList) {
@@ -1290,6 +1300,37 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 func clientMountName(access *nnfv1alpha11.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
+}
+
+// dropOfflineClientMounts returns the ClientMounts whose compute is neither offline nor fenced,
+// along with the names of the fenced and offline computes that were dropped.
+// Any error a dropped ClientMount carries is dropped with it. The file system won't be remounted
+// if the compute comes back since spec.desiredState is "unmounted". Reconcile detects fenced
+// computes and reports the error after unmount completes.
+func (r *NnfAccessReconciler) dropOfflineClientMounts(ctx context.Context, access *nnfv1alpha11.NnfAccess, clientMounts []dwsv1alpha7.ClientMount) ([]dwsv1alpha7.ClientMount, []string, []string, error) {
+	pending := []dwsv1alpha7.ClientMount{}
+	fencedNodes := []string{}
+	offlineNodes := []string{}
+	for _, clientMount := range clientMounts {
+		offline, fenced, err := r.checkOfflineOrFencedCompute(ctx, access, &clientMount)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		if fenced {
+			fencedNodes = append(fencedNodes, clientMount.GetNamespace())
+			continue
+		}
+
+		if offline {
+			offlineNodes = append(offlineNodes, clientMount.GetNamespace())
+			continue
+		}
+
+		pending = append(pending, clientMount)
+	}
+
+	return pending, fencedNodes, offlineNodes, nil
 }
 
 // removeOfflineClientMounts deletes the NnfClientMount finalizer from any ClientMounts that
