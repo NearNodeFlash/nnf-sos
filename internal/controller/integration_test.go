@@ -1611,6 +1611,33 @@ var _ = Describe("Integration Test", func() {
 			}).Should(Succeed())
 		})
 
+		// The access controller resets NnfAccess status when it sees the new desiredState and
+		// then reads the ClientMounts. A ClientMount that has not processed the request yet still
+		// carries its mounted-phase status, and any error there belongs to the previous phase.
+		It("Does not report a mounted-phase ClientMount error against the unmount", func() {
+			By("Recording an error on the stuck compute's first ClientMount while it is mounted")
+			setStuckClientMountStatus(0, dwsv1alpha7.ClientMountStateMounted, true, dwsv1alpha7.NewResourceError("device failure").WithMajor())
+
+			advanceState(dwsv1alpha7.StatePostRun, workflow, 1)
+
+			By("Checking the NnfAccess picks up the unmount and stays free of the stale error")
+			access := computesAccess(0)
+			Eventually(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				g.Expect(access.Status.State).To(Equal("unmounted"))
+			}).Should(Succeed())
+			Consistently(func(g Gomega) {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(access), access)).To(Succeed())
+				g.Expect(access.Status.Error).To(BeNil())
+			}, "2s").Should(Succeed())
+
+			By("Letting the stuck compute finish its unmounts")
+			for index := range workflow.Spec.DWDirectives {
+				setStuckClientMountStatus(index, dwsv1alpha7.ClientMountStateUnmounted, true, nil)
+			}
+			waitForWorkflowReady()
+		})
+
 		// disableStuckCompute marks the stuck compute Disabled in the SystemStatus, which the
 		// NnfAccess controller treats as offline, and removes the SystemStatus when the spec ends.
 		disableStuckCompute := func() {
