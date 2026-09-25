@@ -37,6 +37,11 @@ import (
 	nnfv1alpha11 "github.com/NearNodeFlash/nnf-sos/api/v1alpha11"
 )
 
+const (
+	accessTestUserID  uint32 = 1051
+	accessTestGroupID uint32 = 1052
+)
+
 var _ = Describe("Access Controller Test", func() {
 
 	nodeNames := []string{
@@ -271,6 +276,37 @@ var _ = Describe("Access Controller Test", func() {
 
 			verifyClientMount(storage, storageProfile, nodeNames)
 		})
+
+		It("Creates Raw Client Mount", func() {
+
+			storage := &nnfv1alpha11.NnfStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-access-test-storage-raw",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha11.NnfStorageSpec{
+					FileSystemType: "raw",
+					AllocationSets: []nnfv1alpha11.NnfStorageAllocationSetSpec{
+						{
+							Name:     "raw",
+							Capacity: 50000000000,
+							Nodes: []nnfv1alpha11.NnfStorageAllocationNodes{
+								{
+									Count: 1,
+									Name:  nodeNames[0],
+								},
+								{
+									Count: 1,
+									Name:  nodeNames[1],
+								},
+							},
+						},
+					},
+				},
+			}
+
+			verifyClientMount(storage, storageProfile, nodeNames)
+		})
 	})
 })
 
@@ -297,6 +333,8 @@ func verifyClientMount(storage *nnfv1alpha11.NnfStorage, storageProfile *nnfv1al
 			MakeClientMounts: true,
 			MountPath:        mountPath,
 			MountPathPrefix:  mountPath,
+			UserID:           accessTestUserID,
+			GroupID:          accessTestGroupID,
 
 			StorageReference: corev1.ObjectReference{
 				Kind:      reflect.TypeOf(nnfv1alpha11.NnfStorage{}).Name(),
@@ -355,6 +393,15 @@ func verifyClientMount(storage *nnfv1alpha11.NnfStorage, storageProfile *nnfv1al
 			Expect(mount.Spec.Mounts[0].MountPath).To(Equal(p))
 		}
 
+		// The user and group IDs are used for the $USERID and $GROUPID command variables,
+		// so they must be present for every file system type and not just the ones that
+		// set permissions.
+		Expect(mount.Spec.Mounts[0].UserID).To(Equal(accessTestUserID))
+		Expect(mount.Spec.Mounts[0].GroupID).To(Equal(accessTestGroupID))
+
+		// SetPermissions is what makes the ClientMount reconciler chown the mount path, so it
+		// must stay off for the file system types that only want the IDs for command variables.
+		Expect(mount.Spec.Mounts[0].SetPermissions).To(Equal(storage.Spec.FileSystemType == "raw"))
 	}
 
 	By("Set NNF Access Desired State to unmounted")

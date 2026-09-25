@@ -560,10 +560,10 @@ func (r *NnfAccessReconciler) mapClientNetworkStorage(ctx context.Context, acces
 			ObjectReference: access.Spec.StorageReference,
 		}
 
-		if os.Getenv("ENVIRONMENT") == "kind" {
-			mountInfo.UserID = access.Spec.UserID
-			mountInfo.GroupID = access.Spec.GroupID
-		}
+		// The ClientMount reconciler turns these into the $USERID and $GROUPID command
+		// variables, so they must be set even when the mount doesn't set permissions.
+		mountInfo.UserID = access.Spec.UserID
+		mountInfo.GroupID = access.Spec.GroupID
 
 		storageMapping[client] = append(storageMapping[client], mountInfo)
 	}
@@ -657,18 +657,16 @@ func (r *NnfAccessReconciler) mapClientLocalStorage(ctx context.Context, access 
 					mountInfo.Type = "none"
 					mountInfo.TargetType = "file"
 					mountInfo.Options = "bind"
-					mountInfo.UserID = access.Spec.UserID
-					mountInfo.GroupID = access.Spec.GroupID
 					mountInfo.SetPermissions = true
 				} else {
 					mountInfo.TargetType = "directory"
 					mountInfo.Type = nnfStorage.Spec.FileSystemType
 				}
 
-				if os.Getenv("ENVIRONMENT") == "kind" {
-					mountInfo.UserID = access.Spec.UserID
-					mountInfo.GroupID = access.Spec.GroupID
-				}
+				// The ClientMount reconciler turns these into the $USERID and $GROUPID command
+				// variables, so they must be set even when the mount doesn't set permissions.
+				mountInfo.UserID = access.Spec.UserID
+				mountInfo.GroupID = access.Spec.GroupID
 
 				// If no ClientReference exists, then the mounts are for the Rabbit nodes. Use references
 				// to the NnfNodeStorage resource so the client mounter can access the swordfish objects
