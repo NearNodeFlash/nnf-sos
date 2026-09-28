@@ -98,8 +98,8 @@ func (r *NnfAccessReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Reset the status block if the desired state has changed. This runs before any lookup
 	// that can fail, so an error the controller records from its own lookups belongs to the
-	// current desired state. Errors copied from ClientMount and NnfNodeBlockStorage children
-	// can still predate it until those children process the new spec.
+	// current desired state. Errors copied from NnfNodeBlockStorage children can still predate
+	// it until those children process the new spec.
 	if access.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(access, finalizerNnfAccess) && access.Spec.DesiredState != access.Status.State {
 		access.Status.State = access.Spec.DesiredState
 		access.Status.Ready = false
@@ -1205,9 +1205,10 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 		}
 	}
 
-	// Surface any error the pending ClientMounts carry before checking readiness.
+	// Surface any error the pending ClientMounts carry before checking readiness. A ClientMount
+	// that has not picked up the new desiredState yet still carries its previous-phase error.
 	for _, clientMount := range pendingClientMounts {
-		if clientMount.Status.Error != nil {
+		if clientMount.Status.Error != nil && clientMountAtState(&clientMount, access.Status.State) {
 			return false, dwsv1alpha7.NewResourceError("Node: %s", clientMount.GetNamespace()).WithError(clientMount.Status.Error)
 		}
 	}
@@ -1298,6 +1299,23 @@ func (r *NnfAccessReconciler) getClientMountStatus(ctx context.Context, access *
 
 func clientMountName(access *nnfv1alpha11.NnfAccess) string {
 	return access.Namespace + "-" + access.Name
+}
+
+// clientMountAtState reports whether clientmountd has acknowledged the given desiredState on
+// every mount. clientmountd sets mounts[].state to the desired state and clears status.error in
+// the same status update, so an error seen alongside the new state belongs to that state.
+func clientMountAtState(clientMount *dwsv1alpha7.ClientMount, state string) bool {
+	if len(clientMount.Status.Mounts) != len(clientMount.Spec.Mounts) {
+		return false
+	}
+
+	for _, mount := range clientMount.Status.Mounts {
+		if string(mount.State) != state {
+			return false
+		}
+	}
+
+	return true
 }
 
 // dropOfflineClientMounts returns the ClientMounts whose compute is neither offline nor fenced,
