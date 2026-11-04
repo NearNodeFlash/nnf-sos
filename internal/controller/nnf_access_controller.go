@@ -254,6 +254,9 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha11.Nn
 	}
 
 	if !ready {
+		// Don't report Ready based on an earlier mount while storage groups for
+		// new clients are still pending.
+		access.Status.Ready = false
 		return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
