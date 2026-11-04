@@ -1,6 +1,6 @@
 module github.com/NearNodeFlash/nnf-sos
 
-go 1.26.5
+go 1.26.7
 
 require (
 	github.com/DataWorkflowServices/dws v0.0.1-0.20260917212251-497364aa69a5
