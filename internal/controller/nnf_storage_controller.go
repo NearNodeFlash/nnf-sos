@@ -501,6 +501,8 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 
 	for _, nnfNodeBlockStorage := range nnfNodeBlockStorages {
 		if !nnfNodeBlockStorage.Status.Ready {
+			allocationSet.Ready = false
+			nnfStorage.Status.Ready = false
 			return &ctrl.Result{}, nil
 		}
 	}
@@ -512,6 +514,8 @@ func (r *NnfStorageReconciler) aggregateNodeBlockStorageStatus(ctx context.Conte
 		if nnfStorage.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of NnfNodeBlockStorages", "found", len(nnfNodeBlockStorages), "expected", len(nnfStorage.Spec.AllocationSets[allocationSetIndex].Nodes))
 		}
+		allocationSet.Ready = false
+		nnfStorage.Status.Ready = false
 		return &ctrl.Result{}, nil
 	}
 
@@ -847,6 +851,8 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	for _, nnfNodeStorage := range nnfNodeStorages {
 		if !nnfNodeStorage.Status.Ready {
+			storage.Status.AllocationSets[allocationSetIndex].Ready = false
+			storage.Status.Ready = false
 			return &ctrl.Result{}, nil
 		}
 	}
@@ -867,6 +873,8 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		if storage.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of NnfNodeStorages", "found", found, "expected", expected)
 		}
+		storage.Status.AllocationSets[allocationSetIndex].Ready = false
+		storage.Status.Ready = false
 		return &ctrl.Result{}, nil
 	}
 
