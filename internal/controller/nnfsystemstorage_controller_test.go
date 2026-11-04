@@ -21,8 +21,10 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -624,6 +626,129 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 					return k8sClient.Status().Update(context.TODO(), storage)
 				}).Should(Succeed())
 			}
+		})
+
+		It("re-adds compute access when a disabled Rabbit is re-enabled", func() {
+			setStorageState := func(nodeName string, state dwsv1alpha7.ResourceState, status dwsv1alpha7.ResourceStatus) {
+				storage := &dwsv1alpha7.Storage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      nodeName,
+						Namespace: corev1.NamespaceDefault,
+					},
+				}
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Spec.State = state
+					return k8sClient.Update(context.TODO(), storage)
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) error {
+					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+					storage.Status.Status = status
+					return k8sClient.Status().Update(context.TODO(), storage)
+				}).Should(Succeed())
+			}
+
+			By("Disabling the second Rabbit before the NnfSystemStorage exists")
+			setStorageState(nodeNames[0], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
+			setStorageState(nodeNames[1], dwsv1alpha7.DisabledState, dwsv1alpha7.DisabledStatus)
+
+			// Pin the compute list so re-enabling the Rabbit changes only the NnfStorage,
+			// not the Computes resource. This keeps the test deterministic: the Computes
+			// watch can otherwise enqueue the NnfAccess at a lucky time and self-heal.
+			includeComputes := []string{}
+			for rabbit := range nodeNames {
+				for compute := 0; compute < 16; compute++ {
+					includeComputes = append(includeComputes, fmt.Sprintf("%d-%d", rabbit, compute))
+				}
+			}
+
+			nnfSystemStorage := &nnfv1alpha11.NnfSystemStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-system-storage",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha11.NnfSystemStorageSpec{
+					Type:                   "raw",
+					ComputesTarget:         nnfv1alpha11.ComputesTargetAll,
+					IncludeComputes:        includeComputes,
+					ExcludeDisabledRabbits: true,
+					MakeClientMounts:       false,
+					Shared:                 true,
+					Capacity:               1073741824,
+					StorageProfile: corev1.ObjectReference{
+						Name:      storageProfile.GetName(),
+						Namespace: storageProfile.GetNamespace(),
+						Kind:      reflect.TypeOf(nnfv1alpha11.NnfStorageProfile{}).Name(),
+					},
+				},
+			}
+
+			By("Creating the NnfSystemStorage")
+			Expect(k8sClient.Create(context.TODO(), nnfSystemStorage)).To(Succeed())
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				return nnfSystemStorage.Status.Ready
+			}).Should(BeTrue())
+
+			servers := &dwsv1alpha7.Servers{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfSystemStorage.GetName(),
+					Namespace: nnfSystemStorage.GetNamespace(),
+				},
+			}
+			Eventually(func(g Gomega) error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)
+			}).Should(Succeed())
+
+			Expect(servers.Spec.AllocationSets).To(HaveLen(1))
+			Expect(servers.Spec.AllocationSets[0].Storage).To(HaveLen(1))
+
+			computes := &dwsv1alpha7.Computes{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfSystemStorage.GetName(),
+					Namespace: nnfSystemStorage.GetNamespace(),
+				},
+			}
+			Eventually(func(g Gomega) error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(computes), computes)
+			}).Should(Succeed())
+
+			Expect(computes.Data).To(HaveLen(32))
+
+			// Drain any trailing RequeueAfter (<=2s) left in the NnfAccess queue from the
+			// initial mount, so nothing re-runs it after the re-enable by timing luck. The
+			// disabled Rabbit must have no NnfNodeBlockStorage while it is disabled.
+			nnfNodeBlockStorage := &nnfv1alpha11.NnfNodeBlockStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default-nnf-system-storage-system-storage-0",
+					Namespace: nodeNames[1],
+				},
+			}
+			Consistently(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)
+			}, 3*time.Second).ShouldNot(Succeed())
+
+			By("Re-enabling the second Rabbit")
+			setStorageState(nodeNames[1], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
+
+			By("Verifying the re-enabled Rabbit's computes get block storage access")
+			Eventually(func(g Gomega) []string {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)).To(Succeed())
+				g.Expect(nnfNodeBlockStorage.Spec.Allocations).To(HaveLen(1))
+				return nnfNodeBlockStorage.Spec.Allocations[0].Access
+			}).Should(SatisfyAll(HaveLen(17), ContainElement("1-0"), ContainElement("1-15")))
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				return nnfSystemStorage.Status.Ready
+			}).Should(BeTrue())
+
+			By("Deleting the NnfSystemStorage")
+			Expect(k8sClient.Delete(context.TODO(), nnfSystemStorage)).To(Succeed())
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)
+			}).ShouldNot(Succeed())
 		})
 	})
 })
