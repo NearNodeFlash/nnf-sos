@@ -851,8 +851,11 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 
 	for _, nnfNodeStorage := range nnfNodeStorages {
 		if !nnfNodeStorage.Status.Ready {
-			storage.Status.AllocationSets[allocationSetIndex].Ready = false
-			storage.Status.Ready = false
+			// The skipOST0 probe peeks with an offset expected count; it must not write status.
+			if !skipOST0 {
+				storage.Status.AllocationSets[allocationSetIndex].Ready = false
+				storage.Status.Ready = false
+			}
 			return &ctrl.Result{}, nil
 		}
 	}
@@ -873,8 +876,10 @@ func (r *NnfStorageReconciler) aggregateNodeStorageStatus(ctx context.Context, s
 		if storage.GetDeletionTimestamp().IsZero() {
 			log.Info("unexpected number of NnfNodeStorages", "found", found, "expected", expected)
 		}
-		storage.Status.AllocationSets[allocationSetIndex].Ready = false
-		storage.Status.Ready = false
+		if !skipOST0 {
+			storage.Status.AllocationSets[allocationSetIndex].Ready = false
+			storage.Status.Ready = false
+		}
 		return &ctrl.Result{}, nil
 	}
 
