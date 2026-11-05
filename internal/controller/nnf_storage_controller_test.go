@@ -168,6 +168,21 @@ var _ = Describe("NNFStorage Controller Test", func() {
 			Expect(storage.Status).To(Equal(before))
 		})
 
+		It("does not write status when all expected children are ready", func() {
+			storage := newStorage()
+			// Start unready so the guarded Ready=true write would be observable.
+			storage.Status.AllocationSets[0].Ready = false
+			storage.Status.Ready = false
+			before := *storage.Status.DeepCopy()
+			// One ready child: found=1 matches expected=1 (one less than the node count).
+			r := newReconciler(newChild("rabbit-probe-node-1", true))
+
+			res, err := r.aggregateNodeStorageStatus(context.TODO(), storage, 0, false, true)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res).To(BeNil())
+			Expect(storage.Status).To(Equal(before))
+		})
+
 		It("still downgrades Ready outside the probe", func() {
 			storage := newStorage()
 			r := newReconciler(newChild("rabbit-probe-node-1", true), newChild("rabbit-probe-node-2", false))
