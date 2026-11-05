@@ -1719,7 +1719,7 @@ func (r *NnfAccessReconciler) NnfStorageEnqueueRequests(ctx context.Context, o c
 		return requests
 	}
 
-	// Find all the NnfAccess resources with the same owner as the NnfStorage resource
+	// Find all the NnfAccess resources with the same owner as the NnfStorage resource.
 	listOptions := []client.ListOption{
 		client.MatchingLabels(map[string]string{
 			dwsv1alpha7.OwnerKindLabel:      ownerKind,
