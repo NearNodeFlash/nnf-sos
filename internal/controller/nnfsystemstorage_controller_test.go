@@ -44,6 +44,26 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		"rabbit-systemstorage-node-1",
 		"rabbit-systemstorage-node-2"}
 
+	setStorageState := func(nodeName string, state dwsv1alpha7.ResourceState, status dwsv1alpha7.ResourceStatus) {
+		storage := &dwsv1alpha7.Storage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      nodeName,
+				Namespace: corev1.NamespaceDefault,
+			},
+		}
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+			storage.Spec.State = state
+			return k8sClient.Update(context.TODO(), storage)
+		}).Should(Succeed())
+
+		Eventually(func(g Gomega) error {
+			g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
+			storage.Status.Status = status
+			return k8sClient.Status().Update(context.TODO(), storage)
+		}).Should(Succeed())
+	}
+
 	nnfNodes := [2]*nnfv1alpha11.NnfNode{}
 	nodes := [2]*corev1.Node{}
 
@@ -629,26 +649,6 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		})
 
 		It("re-adds compute access when a disabled Rabbit is re-enabled", func() {
-			setStorageState := func(nodeName string, state dwsv1alpha7.ResourceState, status dwsv1alpha7.ResourceStatus) {
-				storage := &dwsv1alpha7.Storage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      nodeName,
-						Namespace: corev1.NamespaceDefault,
-					},
-				}
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-					storage.Spec.State = state
-					return k8sClient.Update(context.TODO(), storage)
-				}).Should(Succeed())
-
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-					storage.Status.Status = status
-					return k8sClient.Status().Update(context.TODO(), storage)
-				}).Should(Succeed())
-			}
-
 			By("Disabling the second Rabbit before the NnfSystemStorage exists")
 			setStorageState(nodeNames[0], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
 			setStorageState(nodeNames[1], dwsv1alpha7.DisabledState, dwsv1alpha7.DisabledStatus)
@@ -743,6 +743,7 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
+			Expect(nnfSystemStorage.Status.Error).To(BeNil())
 
 			By("Deleting the NnfSystemStorage")
 			Expect(k8sClient.Delete(context.TODO(), nnfSystemStorage)).To(Succeed())
@@ -752,26 +753,6 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 		})
 
 		It("drops Ready while a re-enabled Rabbit provisions", func() {
-			setStorageState := func(nodeName string, state dwsv1alpha7.ResourceState, status dwsv1alpha7.ResourceStatus) {
-				storage := &dwsv1alpha7.Storage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      nodeName,
-						Namespace: corev1.NamespaceDefault,
-					},
-				}
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-					storage.Spec.State = state
-					return k8sClient.Update(context.TODO(), storage)
-				}).Should(Succeed())
-
-				Eventually(func(g Gomega) error {
-					g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(storage), storage)).To(Succeed())
-					storage.Status.Status = status
-					return k8sClient.Status().Update(context.TODO(), storage)
-				}).Should(Succeed())
-			}
-
 			By("Disabling the second Rabbit before the NnfSystemStorage exists")
 			setStorageState(nodeNames[0], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
 			setStorageState(nodeNames[1], dwsv1alpha7.DisabledState, dwsv1alpha7.DisabledStatus)
@@ -816,6 +797,104 @@ var _ = Describe("NnfSystemStorage Controller Test", func() {
 				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
 				return nnfSystemStorage.Status.Ready
 			}).Should(BeTrue())
+			Expect(nnfSystemStorage.Status.Error).To(BeNil())
+
+			By("Deleting the NnfSystemStorage")
+			Expect(k8sClient.Delete(context.TODO(), nnfSystemStorage)).To(Succeed())
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)
+			}).ShouldNot(Succeed())
+		})
+
+		It("heals compute access after a live Rabbit disable and re-enable", func() {
+			// Unlike the specs above, the NnfSystemStorage exists before the Rabbit is
+			// disabled, so the Rabbit's children survive the shrink with their access
+			// intact. This pins the re-grow path so it keeps healing when a future
+			// change cleans up children on shrink.
+			setStorageState(nodeNames[0], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
+			setStorageState(nodeNames[1], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
+
+			nnfSystemStorage := &nnfv1alpha11.NnfSystemStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nnf-system-storage",
+					Namespace: corev1.NamespaceDefault,
+				},
+				Spec: nnfv1alpha11.NnfSystemStorageSpec{
+					Type:                   "raw",
+					ComputesTarget:         nnfv1alpha11.ComputesTargetAll,
+					ExcludeDisabledRabbits: true,
+					MakeClientMounts:       false,
+					Shared:                 true,
+					Capacity:               1073741824,
+					StorageProfile: corev1.ObjectReference{
+						Name:      storageProfile.GetName(),
+						Namespace: storageProfile.GetNamespace(),
+						Kind:      reflect.TypeOf(nnfv1alpha11.NnfStorageProfile{}).Name(),
+					},
+				},
+			}
+
+			By("Creating the NnfSystemStorage on both Rabbits")
+			Expect(k8sClient.Create(context.TODO(), nnfSystemStorage)).To(Succeed())
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				return nnfSystemStorage.Status.Ready
+			}).Should(BeTrue())
+
+			nnfNodeBlockStorage := &nnfv1alpha11.NnfNodeBlockStorage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "default-nnf-system-storage-system-storage-0",
+					Namespace: nodeNames[1],
+				},
+			}
+			Eventually(func(g Gomega) []string {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)).To(Succeed())
+				g.Expect(nnfNodeBlockStorage.Spec.Allocations).To(HaveLen(1))
+				return nnfNodeBlockStorage.Spec.Allocations[0].Access
+			}).Should(HaveLen(17))
+
+			By("Disabling the second Rabbit while the NnfSystemStorage is live")
+			setStorageState(nodeNames[1], dwsv1alpha7.DisabledState, dwsv1alpha7.DisabledStatus)
+
+			servers := &dwsv1alpha7.Servers{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nnfSystemStorage.GetName(),
+					Namespace: nnfSystemStorage.GetNamespace(),
+				},
+			}
+			Eventually(func(g Gomega) []dwsv1alpha7.ServersSpecStorage {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+				g.Expect(servers.Spec.AllocationSets).To(HaveLen(1))
+				return servers.Spec.AllocationSets[0].Storage
+			}).Should(HaveLen(1))
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				return nnfSystemStorage.Status.Ready
+			}).Should(BeTrue())
+			Expect(nnfSystemStorage.Status.Error).To(BeNil())
+
+			By("Re-enabling the second Rabbit")
+			setStorageState(nodeNames[1], dwsv1alpha7.EnabledState, dwsv1alpha7.ReadyStatus)
+
+			By("Verifying the Rabbit's computes have block storage access again")
+			Eventually(func(g Gomega) []dwsv1alpha7.ServersSpecStorage {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(servers), servers)).To(Succeed())
+				g.Expect(servers.Spec.AllocationSets).To(HaveLen(1))
+				return servers.Spec.AllocationSets[0].Storage
+			}).Should(HaveLen(2))
+
+			Eventually(func(g Gomega) []string {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfNodeBlockStorage), nnfNodeBlockStorage)).To(Succeed())
+				g.Expect(nnfNodeBlockStorage.Spec.Allocations).To(HaveLen(1))
+				return nnfNodeBlockStorage.Spec.Allocations[0].Access
+			}).Should(SatisfyAll(HaveLen(17), ContainElement("1-0"), ContainElement("1-15")))
+
+			Eventually(func(g Gomega) bool {
+				g.Expect(k8sClient.Get(context.TODO(), client.ObjectKeyFromObject(nnfSystemStorage), nnfSystemStorage)).To(Succeed())
+				return nnfSystemStorage.Status.Ready
+			}).Should(BeTrue())
+			Expect(nnfSystemStorage.Status.Error).To(BeNil())
 
 			By("Deleting the NnfSystemStorage")
 			Expect(k8sClient.Delete(context.TODO(), nnfSystemStorage)).To(Succeed())
