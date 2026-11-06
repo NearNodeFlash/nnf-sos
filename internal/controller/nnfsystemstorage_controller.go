@@ -640,6 +640,15 @@ func (r *NnfSystemStorageReconciler) waitForNnfStorage(ctx context.Context, nnfS
 		return true, dwsv1alpha7.NewResourceError("storage resource error: %v", client.ObjectKeyFromObject(nnfStorage)).WithError(nnfStorage.Status.Error)
 	}
 
+	// Status lags spec after a node add/remove; system storage always uses
+	// SharedAllocation, so one allocation per spec node is expected. This check
+	// must come after the error check: a failed child never raises the count.
+	for i := range nnfStorage.Spec.AllocationSets {
+		if nnfStorage.Status.AllocationSets[i].AllocationCount != len(nnfStorage.Spec.AllocationSets[i].Nodes) {
+			return true, nil
+		}
+	}
+
 	if !nnfStorage.Status.Ready {
 		return true, nil
 	}

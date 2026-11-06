@@ -254,6 +254,9 @@ func (r *NnfAccessReconciler) mount(ctx context.Context, access *nnfv1alpha11.Nn
 	}
 
 	if !ready {
+		// Don't report Ready based on an earlier mount while storage groups for
+		// new clients are still pending.
+		access.Status.Ready = false
 		return &ctrl.Result{RequeueAfter: time.Second * 2}, nil
 	}
 
@@ -1686,6 +1689,58 @@ func (r *NnfAccessReconciler) ComputesEnqueueRequests(ctx context.Context, o cli
 	return requests
 }
 
+// NnfStorageEnqueueRequests triggers on an NnfStorage resource. It finds any NnfAccess resources
+// with the same owner as the NnfStorage resource and adds them to the Request list. Only an
+// NnfSystemStorage mutates an NnfStorage after creation, so same-owner matching is sufficient;
+// accesses with a different owner than their referenced storage (data movement, persistent
+// storage) poll via RequeueAfter while unfinished.
+func (r *NnfAccessReconciler) NnfStorageEnqueueRequests(ctx context.Context, o client.Object) []reconcile.Request {
+	log := r.Log.WithValues("NnfStorage", "Enqueue")
+
+	requests := []reconcile.Request{}
+
+	labels := o.GetLabels()
+	if labels == nil {
+		return requests
+	}
+
+	ownerName, exists := labels[dwsv1alpha7.OwnerNameLabel]
+	if !exists {
+		return requests
+	}
+
+	ownerNamespace, exists := labels[dwsv1alpha7.OwnerNamespaceLabel]
+	if !exists {
+		return requests
+	}
+
+	ownerKind, exists := labels[dwsv1alpha7.OwnerKindLabel]
+	if !exists {
+		return requests
+	}
+
+	// Find all the NnfAccess resources with the same owner as the NnfStorage resource.
+	listOptions := []client.ListOption{
+		client.MatchingLabels(map[string]string{
+			dwsv1alpha7.OwnerKindLabel:      ownerKind,
+			dwsv1alpha7.OwnerNameLabel:      ownerName,
+			dwsv1alpha7.OwnerNamespaceLabel: ownerNamespace,
+		}),
+	}
+
+	nnfAccessList := &nnfv1alpha11.NnfAccessList{}
+	if err := r.List(ctx, nnfAccessList, listOptions...); err != nil {
+		log.Info("Could not list NnfAccesses", "error", err)
+		return requests
+	}
+
+	for _, nnfAccess := range nnfAccessList.Items {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: nnfAccess.GetName(), Namespace: nnfAccess.GetNamespace()}})
+	}
+
+	return requests
+}
+
 func (r *NnfAccessReconciler) getChildObjects() []dwsv1alpha7.ObjectList {
 	return []dwsv1alpha7.ObjectList{
 		&dwsv1alpha7.ClientMountList{},
@@ -1694,27 +1749,18 @@ func (r *NnfAccessReconciler) getChildObjects() []dwsv1alpha7.ObjectList {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NnfAccessReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// NOTE: NNF Access controller also depends on NNF Storage and NNF Node Storage status'
-	// as part of its reconcile sequence. But since there is not a very good way to translate
-	// from these resources to the associated NNF Access resource as one would typically do
-	// in an EqueueRequestsFromMapFunc(), the Reconciler instead requeues until the necessary
-	// resource state is observed.
-	//
-	// For NNF Storage updates, a job DW maps well to the two NNF Access
-	//     i.e. o.GetName() + "-computes"     and o.GetName() + "-servers"
-	// But for a persistent DW there is no good translation.
-	//
-	// For NNF Node Storage updates, a job DW is pretty straight forward using ownership
-	// labels to get the parent NNF Storage. But for a persistent DW it has the same problem
-	// as NNF Storage.
-	//
-	// Matt or Tony might be able to clean this up.
+	// NOTE: The NNF Access controller also depends on NNF Node Storage status as part of its
+	// reconcile sequence. There is not a very good way to translate from an NNF Node Storage
+	// to the associated NNF Access, so the Reconciler instead requeues until the necessary
+	// resource state is observed. NNF Storage updates are translated to NNF Access resources
+	// through their shared owner labels.
 
 	maxReconciles := runtime.GOMAXPROCS(0)
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxReconciles}).
 		For(&nnfv1alpha11.NnfAccess{}).
 		Watches(&dwsv1alpha7.Computes{}, handler.EnqueueRequestsFromMapFunc(r.ComputesEnqueueRequests)).
+		Watches(&nnfv1alpha11.NnfStorage{}, handler.EnqueueRequestsFromMapFunc(r.NnfStorageEnqueueRequests)).
 		Watches(&dwsv1alpha7.ClientMount{}, handler.EnqueueRequestsFromMapFunc(dwsv1alpha7.OwnerLabelMapFunc)).
 		Complete(r)
 }
